@@ -2,9 +2,20 @@
 
 This document serves as the definitive blueprint and systematic, phase-by-phase approach to building Project Cortex. Each phase represents a small, implementable chunk designed to incrementally build the Autonomous Knowledge Engine from the ground up.
 
+> **Status legend:** ✅ Done · 🚧 In progress · ⏳ Planned
+
+| Phase | Title | Status |
+|---|---|---|
+| 1 | Ingestion & Monitoring Foundation | ✅ Done |
+| 2 | LLM Synthesis Engine | ✅ Done |
+| 3 | Knowledge Storage & Cost Control | ✅ Done |
+| 4 | MCP Server Integration | ✅ Done |
+| 4.5 | Dual-Route IDE Integration | ✅ Done (added beyond original plan) |
+| 5 | CLI Polish & Daemonization | 🚧 In progress |
+
 ---
 
-## 🏗️ Phase 1: Ingestion & Monitoring Foundation (The Eyes)
+## 🏗️ Phase 1: Ingestion & Monitoring Foundation (The Eyes) — ✅ Done
 
 **Layman's Terms**
 Setting up a background "watchdog" that constantly monitors your project folder. Every time you save a file, it notices exactly what lines of code you changed.
@@ -30,9 +41,13 @@ Implement a robust, debounced file-system watcher using `chokidar`. Develop a di
 - ✅ **Pros**: Extremely lightweight; forms the rock-solid foundation required for all downstream processing.
 - ❌ **Cons**: At this stage, the system only sees raw text changes and has zero semantic understanding of what the code actually does.
 
+**Status notes**
+- [src/core/watcher.ts](src/core/watcher.ts) wraps `chokidar` with a 3-second debounce, loads the project's `.gitignore` via the `ignore` package, and hard-codes ignores for `.git`, `.knowledge`, `node_modules`, `dist`.
+- [src/core/diff.ts](src/core/diff.ts) exposes two surfaces: `getFileDiff()` for the daemon (single file vs. `HEAD`, with an untracked-file fallback) and `getPendingDiff()` for the MCP server (combines committed and uncommitted changes since `.last_sync_commit`).
+
 ---
 
-## 🧠 Phase 2: LLM Synthesis Engine (The Brain)
+## 🧠 Phase 2: LLM Synthesis Engine (The Brain) — ✅ Done
 
 **Layman's Terms**
 Connecting an AI to the watchdog. When the watchdog sees a code change, it hands it to the AI. The AI analyzes the change and summarizes the "why" and "what" in structured, plain English.
@@ -58,37 +73,49 @@ Integrate the Vercel AI SDK (`@ai-sdk/core`, `@ai-sdk/openai`). Design strict sy
 - ✅ **Pros**: Transforms raw, chaotic code changes into highly valuable, semantic architectural insights.
 - ❌ **Cons**: Introduces network latency and API costs. Prompt engineering must be precise to avoid generating "fluff" documentation.
 
+**Status notes**
+- [src/llm/client.ts](src/llm/client.ts) calls `generateObject()` against `gpt-4o`.
+- The Zod schema lives in its own module ([src/llm/schema.ts](src/llm/schema.ts)) so both the daemon and the MCP `save_synthesis` validator share one source of truth.
+- `CORTEX_MOCK_AI=true` short-circuits the LLM call with a deterministic synthesis — used to exercise the pipeline end-to-end without burning tokens.
+
 ---
 
-## 💾 Phase 3: Knowledge Storage & Generation (The Memory)
+## 💾 Phase 3: Knowledge Storage & Cost Control (The Memory) — ✅ Done
 
 **Layman's Terms**
-Taking the AI's brilliant insights and neatly organizing them into a permanent `.knowledge` folder in your project. It acts like an automated Wikipedia for your codebase.
+Taking the AI's brilliant insights and neatly organizing them into a permanent `.knowledge` folder. To save you money, we're adding a "Manual Sync" mode—the AI only thinks when you type `cortex-sync`.
 
 **Technical Terms**
-Implement file I/O operations to translate the LLM's structured JSON into formatted Markdown. Maintain an `index.md` catalog, append to a chronological `log.md`, and generate individual entity/concept pages using bidirectional linking syntax (`[[ConceptName]]`) for compatibility with tools like Obsidian.
+Implement a dual-mode ingestion pipeline (Auto/Manual). In Manual mode, file diffs are buffered in an in-memory queue. Upon receiving the `cortex-sync` command via `stdin`, the system batches these diffs into a single LLM request. The resulting structured JSON is then serialized into Markdown files with Obsidian-style bidirectional links (`[[Concept]]`).
 
 **Architecture & System Design**
-- **Core Components**: `src/knowledge/writer.ts`, `src/knowledge/indexer.ts`
-- **Design Pattern**: Repository Pattern for abstracting file system reads/writes.
-- **Key Considerations**: Concurrency control. We must ensure two simultaneous code changes don't cause race conditions that corrupt the `index.md` file. Implement simple async queueing for file writes.
+- **Core Components**: `src/knowledge/writer.ts`, `src/index.ts` (Sync logic).
+- **Design Pattern**: Command Pattern for the sync trigger; Batch Processing for LLM calls.
+- **Key Considerations**: 
+    - **Cost Efficiency**: Batching multiple file changes into a single prompt significantly reduces token overhead.
+    - **File Integrity**: Ensure atomic writes to `index.md` to prevent corruption during heavy ingestion.
 
 **Definition of Ready (DoR)**
-- Phase 2 is complete, producing reliable structured JSON representing project knowledge.
+- Phase 2 (LLM Client) is integrated and supports synthesis.
+- `INGESTION_MODE` is configurable via `.env`.
 
 **Definition of Done (DoD)**
-- Markdown files are correctly generated, updated, and formatted based on LLM output.
-- `index.md` reflects an accurate state of the `.knowledge` folder.
-- Bidirectional links are correctly formatted.
-- Concurrent write attempts are safely queued to prevent file corruption.
+- Markdown files are correctly generated in the `.knowledge` folder.
+- `cortex-sync` successfully triggers a batch synthesis of all queued changes.
+- The MCP server successfully serves the content of these real files (replacing mock strings).
 
 **Pros & Cons**
-- ✅ **Pros**: Creates persistent, version-controllable, human-readable documentation that developers can actually browse.
-- ❌ **Cons**: Managing the state of cross-linked Markdown files can be complex, especially when refactoring deletes old concepts.
+- ✅ **Pros**: Gives the user total control over API billing. Persists knowledge in a human-readable, searchable wiki.
+- ❌ **Cons**: Manual mode requires the user to remember to sync their changes.
+
+**Status notes**
+- [src/knowledge/writer.ts](src/knowledge/writer.ts) owns all `.knowledge/` I/O: per-entity files, per-concept files, `log.md` append, and a fresh `index.md` regenerated from disk on every sync.
+- `.knowledge/.last_sync_commit` records the synced HEAD so `getPendingDiff()` can compute a precise delta on the next run.
+- Manual mode is wired in [src/cli/watch.ts](src/cli/watch.ts): diffs accumulate in an in-memory `Map`. Typing `cortex sync` into the **same terminal** where `cortex watch` is running (stdin listener, not a CLI subcommand) batches them into a single LLM call.
 
 ---
 
-## 🔌 Phase 4: MCP Server Integration (The Mouth)
+## 🔌 Phase 4: MCP Server Integration (The Mouth) — ✅ Done
 
 **Layman's Terms**
 Exposing our automated Wikipedia so that other AI tools (like Cursor or Claude Code) can plug in and read it instantly, giving them full context of your project without you having to explain it.
@@ -113,18 +140,51 @@ Implement the Model Context Protocol (MCP) using `@modelcontextprotocol/sdk`. St
 - ✅ **Pros**: Solves the core "lost context" problem for AI coding assistants. Massively boosts the capabilities of any connected agent.
 - ❌ **Cons**: Requires the user to manually configure their external IDE/Agent to point to the Cortex MCP server.
 
+**Status notes**
+- Implemented in [src/mcp/server.ts](src/mcp/server.ts) over STDIO. The tool surface evolved beyond the original sketch into a *workflow*:
+  * `get_cortex_status` — init state + last-sync commit.
+  * `get_pending_changes` — returns the diff since `.last_sync_commit`, the current index, and a ready-to-execute Librarian prompt pack. This is what powers the IDE route.
+  * `save_synthesis` — Zod-validates incoming synthesis JSON and writes it to `.knowledge/`.
+  * `read_knowledge_index` — reads `index.md`.
+- The server is constructed two ways: standalone (launched by an IDE config) and embedded inside `cortex watch`, so an IDE-triggered sync can talk to the running daemon.
+
 ---
 
-## ⚙️ Phase 5: CLI Polish & Daemonization (The Operations)
+## 🔁 Phase 4.5: Dual-Route IDE Integration — ✅ Done
 
 **Layman's Terms**
-Wrapping everything up into a sleek command-line tool so you can simply type `cortex start` and let it run quietly in the background.
+Adding a "no API key" option: if you already pay for Claude Code / Cursor / Windsurf / VS Code Copilot, Cortex piggybacks on that subscription. Your IDE's AI does the synthesis. Cortex just hands it the diff and validates the result.
 
 **Technical Terms**
-Finalize the `commander` implementation. Add commands for `init` (bootstrapping `.knowledge`), `start` (running the watcher), and `status`. Investigate basic daemonization or recommend running via `pm2`/`tmux` for persistent background execution.
+A second ingestion route where the IDE's own model is the Librarian. The MCP server is registered into each IDE's config and exposes the Librarian prompts via `get_pending_changes`; the IDE runs the synthesis and POSTs the result back via `save_synthesis`. Same Zod schema, same writer, same `.knowledge/` layout — only the executor changes.
 
 **Architecture & System Design**
-- **Core Components**: `src/cli/index.ts`, `bin/cortex.js`
+- **Core Components**: [src/cli/setup.ts](src/cli/setup.ts), [src/cli/init.ts](src/cli/init.ts), [.claude/commands/](.claude/commands/).
+- **Design Pattern**: Strategy — the daemon and the IDE are two interchangeable executors of the Librarian role against one shared schema.
+- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`.
+- **Slash commands** shipped for Claude Code: `/ingest_cortex`, `/cortex_status`, `/read_knowledge`.
+
+**Definition of Done (DoD)**
+- `cortex init` walks the user through choosing a route and scaffolds the appropriate config (`.env` or IDE registration).
+- `cortex setup [targets...]` writes the Cortex MCP entry into each chosen IDE's config file, with `all` as a convenience alias.
+- Build artifact path (`dist/mcp/server.js`) is verified before writing IDE configs, with a clear error if the user hasn't run `npm run build`.
+
+**Pros & Cons**
+- ✅ **Pros**: Zero marginal token cost for users on existing IDE plans. Same output schema as the daemon, so consumers don't care which route produced the knowledge.
+- ❌ **Cons**: Synthesis quality is now coupled to whichever model the IDE happens to use. Requires the user to remember to run `npm run build` before `cortex setup`.
+
+---
+
+## ⚙️ Phase 5: CLI Polish & Daemonization (The Operations) — 🚧 In progress
+
+**Layman's Terms**
+Wrapping everything up into a sleek command-line tool so you can simply type `cortex start` and let it run quietly in the background. Also giving users a way to change their provider, model, or ingestion mode at any time without re-running `cortex init` from scratch.
+
+**Technical Terms**
+Finalize the `commander` implementation. Add commands for `status` (showing current config) and `config` (interactive or flag-driven settings editor). Investigate basic daemonization or recommend running via `pm2`/`tmux` for persistent background execution.
+
+**Architecture & System Design**
+- **Core Components**: `src/cli/index.ts`, `src/cli/config.ts` (new), `bin/cortex.js`
 - **Design Pattern**: Command Pattern.
 - **Key Considerations**: Ensuring graceful shutdown handlers (`SIGINT`, `SIGTERM`) so the watcher cleans up and any pending LLM writes finish before the process exits.
 
@@ -133,13 +193,25 @@ Finalize the `commander` implementation. Add commands for `init` (bootstrapping 
 
 **Definition of Done (DoD)**
 - `cortex init` successfully scaffolds a project.
-- `cortex start` successfully launches the watcher and MCP server together.
+- `cortex config` lets users change provider, model, and ingestion mode from the terminal without re-running init.
+- `cortex status` prints the current config (provider, model, mode, last sync).
 - Process gracefully exits on `SIGINT` without corrupting files.
 - NPM package is structured properly for global execution (`npm link` / `npx`).
 
 **Pros & Cons**
 - ✅ **Pros**: Provides a professional, polished Developer Experience (DX).
 - ❌ **Cons**: True background daemonization across different OS (Windows/Mac/Linux) can introduce environment-specific bugs.
+
+**Status notes**
+- ✅ `cortex init`, `cortex watch`, `cortex setup` are implemented via `commander` in [src/cli/index.ts](src/cli/index.ts).
+- ✅ `cortex init` writes `.env`, asks provider/model/mode, and updates `.gitignore` automatically.
+- ✅ Multi-provider support (`openai`, `anthropic`, `google`, `local`) implemented in [src/llm/client.ts](src/llm/client.ts) via `CORTEX_PROVIDER` and `CORTEX_MODEL` env vars.
+- ⏳ `cortex config` — interactive terminal command to change provider, model, or ingestion mode in an existing `.env` without re-running init. Should support both interactive prompts and direct flags (e.g. `cortex config --provider anthropic --mode manual`).
+- ⏳ `cortex status` — prints current `.env` config (provider, model, mode) and last-sync commit from `.knowledge/.last_sync_commit`.
+- ⏳ Cross-platform daemonization (Windows service / launchd / systemd guidance, or a recommendation to use `pm2`).
+- ⏳ Lockfile (`.knowledge/cortex.lock`) to prevent two `cortex watch` processes from racing on the same project.
+- ⏳ Structured logger swap-in (`pino`/`winston`) replacing ad-hoc `console.log`.
+- ⏳ Graceful `SIGINT`/`SIGTERM` shutdown that finishes any in-flight LLM write before exiting.
 
 ---
 
