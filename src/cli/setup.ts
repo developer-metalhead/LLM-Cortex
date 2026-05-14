@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "url";
 
 interface IDETarget {
   name: string;
@@ -8,9 +9,14 @@ interface IDETarget {
 }
 
 function getMCPEntry() {
+  const nodePath = process.execPath;
+  const scriptPath = fileURLToPath(import.meta.url);
+  // The entry point is index.js in the same directory (dist/cli/)
+  const entryPath = path.join(path.dirname(scriptPath), "index.js");
+
   return {
-    command: "cortex",
-    args: ["mcp"],
+    command: nodePath,
+    args: [entryPath, "mcp"],
   };
 }
 

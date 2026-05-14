@@ -203,6 +203,8 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 - ✅ `cortex init`, `cortex watch`, `cortex setup` implemented.
 - ✅ `cortex status` — Reports config, knowledge health, and daemon lock state.
 - ✅ `cortex config` — Supports interactive prompts and direct flags.
+- ✅ `cortex mcp` — Provides a portable, "Repo-Aware" entry point for all major IDEs.
+- ✅ Smart Root Detection — Implemented `findProjectRoot` to dynamically locate `.knowledge` from any IDE context.
 - ✅ Structured logging — `pino` integrated for daemon observability.
 - ✅ Lockfile and Graceful Shutdown — Ensures process exclusivity and clean exits.
 

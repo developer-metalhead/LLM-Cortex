@@ -9,10 +9,22 @@ import { runWatch } from "./watch.js";
 import { runStatus } from "./status.js";
 import { runConfig } from "./config.js";
 import { CortexMCPServer } from "../mcp/server.js";
+import fs from "fs";
+
+function findProjectRoot(startDir: string): string {
+  let current = startDir;
+  while (current !== path.parse(current).root) {
+    if (fs.existsSync(path.join(current, ".knowledge")) || fs.existsSync(path.join(current, ".git"))) {
+      return current;
+    }
+    current = path.dirname(current);
+  }
+  return startDir;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = process.cwd();
+const projectRoot = findProjectRoot(process.cwd());
 
 const program = new Command();
 

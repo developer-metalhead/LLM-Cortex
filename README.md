@@ -126,12 +126,14 @@ Run this in any new repository to set up the `.knowledge` base:
 cortex init
 ```
 
-### 2. Configure your IDE (Portable Setup)
+### 2. Configure your IDE (Portable & Robust Setup)
 To use Cortex within your IDE (Claude Code, Cursor, Antigravity, etc.), run:
 ```bash
 cortex setup all
 ```
-**Why this is better:** This command registers `cortex mcp` as the server. Because it uses the IDE's current working directory, **Cortex automatically switches its knowledge base** whenever you open a different project. No hardcoded paths required.
+**Why this is better:**
+- **Zero Configuration**: Automatically finds your `node` path and script location.
+- **Repo-Aware**: Because it uses the IDE's current working directory (and has smart parent-folder climbing), **Cortex automatically switches its knowledge base** whenever you open a different project. No hardcoded paths required.
 
 ### 3. Background Ingestion (API Route)
 If you are using an API key (OpenAI/Anthropic) instead of an IDE, start the daemon:
@@ -146,11 +148,11 @@ cortex watch
 | Command | Description |
 |---------|-------------|
 | `cortex init` | Interactive setup for a new project. |
-| `cortex status` | Check health, config, and last sync status. |
-| `cortex config` | Update LLM provider or ingestion mode. |
-| `cortex setup` | Register MCP server in IDE configs. |
-| `cortex watch` | Start background diff-to-knowledge daemon. |
-| `cortex mcp` | Start the MCP server (used by IDEs). |
+| `cortex status` | Check health, config, knowledge base location, and last sync status. |
+| `cortex config` | Update LLM provider, model, or ingestion mode via interactive prompts or flags. |
+| `cortex setup` | Register MCP server in IDE configs with absolute path resolution. |
+| `cortex watch` | Start background diff-to-knowledge daemon with lockfile protection. |
+| `cortex mcp` | Start the MCP server in STDIO mode (used by IDEs). |
 
 ---
 
