@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "path";
 import { KnowledgeManager } from "../knowledge/writer.js";
@@ -26,10 +28,76 @@ export class CortexMCPServer {
 
     this.server = new Server(
       { name: "project-cortex", version: "1.0.0" },
-      { capabilities: { tools: {} } }
+      { capabilities: { tools: {}, prompts: {} } }
     );
 
     this.setupHandlers();
+    this.setupPromptHandlers();
+  }
+
+  private setupPromptHandlers() {
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+      prompts: [
+        {
+          name: "ingest",
+          description: "Synthesize all recent code changes into the knowledge base.",
+        },
+        {
+          name: "status",
+          description: "Check the health and configuration of Project Cortex.",
+        },
+        {
+          name: "read",
+          description: "Read the project's architectural knowledge index.",
+        }
+      ],
+    }));
+
+    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+      if (request.params.name === "ingest") {
+        return {
+          description: "Synthesize all recent code changes into the knowledge base.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Please run the 'ingest' workflow: call get_pending_changes, follow the Librarian instructions, and save the synthesis.",
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "status") {
+        return {
+          description: "Check the health and configuration of Project Cortex.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Show me the current Cortex status using get_cortex_status.",
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "read") {
+        return {
+          description: "Read the project's architectural knowledge index.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Read the project knowledge index using read_knowledge_index.",
+              },
+            },
+          ],
+        };
+      }
+      throw new Error(`Prompt not found: ${request.params.name}`);
+    });
   }
 
   private setupHandlers() {

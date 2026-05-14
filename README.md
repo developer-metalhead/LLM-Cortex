@@ -44,6 +44,24 @@ Cortex is not a general document summarizer. Its Librarian prompt is tuned for s
 
 ---
 
+## 🚀 IDE Integration Guide
+
+Project Cortex surfaces its power through native IDE features. Once you run `cortex setup`, you can use these shortcuts:
+
+### 🌌 In Antigravity
+Type **`/`** in the chat bar to see these **Local Workflows**:
+-   **`/ingest`** — Synthesizes all recent code changes into the brain.
+-   **`/read`** — Opens the interlinked architectural knowledge index.
+-   **`/status`** — Checks the health and sync state of the brain.
+
+### 🤖 In Claude Code / Claude Desktop
+Cortex exposes these as **Native MCP Prompts**:
+-   **`ingest`** — Triggers the Librarian synthesis loop.
+-   **`read`** — Retrieves the project's knowledge graph.
+-   **`status`** — Reports configuration and last sync commit.
+
+---
+
 ## Installation
 
 ```bash
