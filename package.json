@@ -1,0 +1,27 @@
+{
+  "name": "projectcortex",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "> **The Autonomous Brain for your Codebase.**",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.63",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ai": "^6.0.182",
+    "chokidar": "^5.0.0",
+    "commander": "^14.0.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "tsx": "^4.21.1",
+    "typescript": "^6.0.3"
+  }
+}
