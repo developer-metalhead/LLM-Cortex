@@ -118,32 +118,48 @@ CORTEX_MODEL=qwen2.5          # or llama3, mistral, phi4, deepseek-r1, gemma3, e
 
 Then start the daemon:
 
+## 🚀 Usage
+
+### 1. Initialize a Project
+Run this in any new repository to set up the `.knowledge` base:
+```bash
+cortex init
+```
+
+### 2. Configure your IDE (Portable Setup)
+To use Cortex within your IDE (Claude Code, Cursor, Antigravity, etc.), run:
+```bash
+cortex setup all
+```
+**Why this is better:** This command registers `cortex mcp` as the server. Because it uses the IDE's current working directory, **Cortex automatically switches its knowledge base** whenever you open a different project. No hardcoded paths required.
+
+### 3. Background Ingestion (API Route)
+If you are using an API key (OpenAI/Anthropic) instead of an IDE, start the daemon:
 ```bash
 cortex watch
 ```
 
-Cortex will now synthesize your codebase in the background as you code.
+---
 
-**Ingestion modes:**
+## 🛠️ CLI Reference
 
-| Mode | Behavior |
-|---|---|
-| `auto` (default) | Synthesizes every file save automatically |
-| `manual` | Queues changes until you manually flush them |
+| Command | Description |
+|---------|-------------|
+| `cortex init` | Interactive setup for a new project. |
+| `cortex status` | Check health, config, and last sync status. |
+| `cortex config` | Update LLM provider or ingestion mode. |
+| `cortex setup` | Register MCP server in IDE configs. |
+| `cortex watch` | Start background diff-to-knowledge daemon. |
+| `cortex mcp` | Start the MCP server (used by IDEs). |
 
-Set the mode in your `.env`:
+---
 
-```env
-INGESTION_MODE=manual
-```
+## 📂 Multi-Project Usage
+Project Cortex is designed to be installed once and used everywhere. Unlike global MCPs (like Figma) which pull from a central cloud, Cortex is **Repo-Aware**:
 
-**Flushing in manual mode:** `cortex sync` is not a separate CLI command — it is a text trigger you type directly into the terminal where `cortex watch` is already running. When the watcher is in manual mode it prints:
-
-```
-Manual mode active. Type "cortex sync" to flush pending changes.
-```
-
-Type `cortex sync` and press Enter in that same terminal to batch all queued diffs into a single LLM call.
+1. **Install once**: `npm install -g projectcortex` (or `npm link`).
+2. **Context-aware**: When you open your IDE, it launches `cortex mcp`.
+3. **Automatic Switching**: The `cortex` binary detects your current project root via the IDE's working directory. It will automatically read the `.knowledge` folder of whichever project you are currently working on.
 
 ---
 
@@ -225,18 +241,6 @@ In Claude Code, the included slash commands wire these tools together:
 | `/ingest_cortex` | Pulls pending changes, runs the Librarian synthesis, calls `save_synthesis` |
 | `/cortex_status` | Reports init status and last-sync commit |
 | `/read_knowledge` | Prints the current knowledge index |
-
----
-
-## CLI Reference
-
-| Command | Description |
-|---|---|
-| `cortex init` | Interactive setup — choose API keys or IDE route, scaffold `.knowledge/`, write `.env` |
-| `cortex watch` | Start the background daemon (API keys route). Also embeds the MCP server. |
-| `cortex setup [targets...]` | Register the Cortex MCP server in IDE configs. |
-| `cortex status` | Show current configuration, knowledge base status, and last synced commit. |
-| `cortex config` | Interactively or via flags (`--provider`, `--mode`) update settings. |
 
 ---
 

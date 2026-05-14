@@ -7,10 +7,10 @@ interface IDETarget {
   writeConfig: (serverPath: string, configPath: string) => Promise<void>;
 }
 
-function getMCPEntry(serverPath: string, projectRoot: string) {
+function getMCPEntry() {
   return {
-    command: "node",
-    args: [serverPath, "--root", projectRoot],
+    command: "cortex",
+    args: ["mcp"],
   };
 }
 
@@ -40,7 +40,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath, projectRoot);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -50,7 +50,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath, projectRoot);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -62,8 +62,8 @@ function getIDETargets(projectRoot: string): IDETarget[] {
         config.servers = config.servers || {};
         config.servers["project-cortex"] = {
           type: "stdio",
-          command: "node",
-          args: [sPath, "--root", projectRoot],
+          command: "cortex",
+          args: ["mcp"],
         };
         await writeJsonFile(configPath, config);
       },
@@ -79,7 +79,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath, projectRoot);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -93,7 +93,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath, projectRoot);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -103,7 +103,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath, projectRoot);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
