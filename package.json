@@ -4,9 +4,14 @@
   "type": "module",
   "description": "> **The Autonomous Brain for your Codebase.**",
   "main": "index.js",
+  "bin": {
+    "cortex": "./bin/cortex.js"
+  },
   "scripts": {
     "dev": "tsx src/index.ts",
     "mcp": "tsx src/mcp/server.ts",
+    "build": "tsc",
+    "setup": "tsx src/cli/index.ts setup",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

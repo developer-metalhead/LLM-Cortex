@@ -18,17 +18,12 @@ export class CortexWatcher extends EventEmitter {
   }
 
   async start() {
-    console.log(`🚀 Starting Project Cortex Watcher...`);
-    console.log(`📂 Watching directory: ${this.targetDir}`);
-
     // Load .gitignore patterns
     try {
       const gitignorePath = path.join(this.targetDir, '.gitignore');
       const gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
       this.ignoreManager.add(gitignoreContent);
-      console.log(`📝 Loaded .gitignore patterns.`);
     } catch (error) {
-      console.warn(`⚠️ No .gitignore found. Using default ignores.`);
     }
 
     // Add internal ignores
@@ -67,17 +62,12 @@ export class CortexWatcher extends EventEmitter {
 
     if (filesToProcess.length === 0) return;
 
-    console.log(`⏳ Processing ${filesToProcess.length} changed files...`);
-
     for (const filePath of filesToProcess) {
       const relPath = path.relative(this.targetDir, filePath);
       const diff = await getFileDiff(this.targetDir, filePath);
       
       if (diff) {
-        console.log(`[SYNTHESIS REQUIRED] ${relPath}`);
         this.emit('file_changed', { filePath: relPath, diff });
-      } else {
-         console.log(`[IGNORED] ${relPath} (No significant diff)`);
       }
     }
   }

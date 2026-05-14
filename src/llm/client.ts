@@ -1,33 +1,17 @@
 import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { z } from 'zod';
 import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from './prompts.js';
 import dotenv from 'dotenv';
+import { SynthesisSchema, type Synthesis } from './schema.js';
 
-dotenv.config();
+export { SynthesisSchema, type Synthesis } from './schema.js';
 
-// Schema for the Librarian's synthesis output
-export const SynthesisSchema = z.object({
-  summary: z.string().describe('A brief (1-2 sentence) high-level summary of the change.'),
-  entities: z.array(z.object({
-    name: z.string().describe('Name of the file, class, or module.'),
-    action: z.enum(['create', 'update', 'delete']),
-    description: z.string().describe('What changed in this specific entity.'),
-    links: z.array(z.string()).describe('Bidirectional links to other entities or concepts.')
-  })).describe('Specific codebase components that were modified.'),
-  concepts: z.array(z.object({
-    name: z.string().describe('The name of the architectural concept (e.g., AuthStrategy).'),
-    description: z.string().describe('Definition or update of the abstract concept.'),
-  })).describe('Abstract architectural patterns or business logic ideas.'),
-  warnings: z.array(z.string()).describe('Potential contradictions, technical debt, or architectural drift identified.')
-});
-
-export type Synthesis = z.infer<typeof SynthesisSchema>;
+dotenv.config({ quiet: true } as any);
 
 export async function synthesizeChanges(diff: string, context: string): Promise<Synthesis | null> {
   // --- MOCK ENGINE (FOR TESTING ONLY) ---
   if (process.env.CORTEX_MOCK_AI === 'true') {
-    console.log('🧪 [MOCK MODE] Simulating LLM Synthesis...');
+    console.error('Testing [MOCK MODE] Simulating LLM Synthesis...');
     return {
       summary: "Simulated summary of your project changes.",
       entities: [
@@ -50,7 +34,7 @@ export async function synthesizeChanges(diff: string, context: string): Promise<
   // ---------------------------------------
 
   if (!process.env.OPENAI_API_KEY) {
-    console.warn('⚠️ OPENAI_API_KEY is not set. Skipping synthesis.');
+    console.error('OPENAI_API_KEY is not set. Skipping synthesis.');
     return null;
   }
 
@@ -64,7 +48,7 @@ export async function synthesizeChanges(diff: string, context: string): Promise<
 
     return object;
   } catch (error) {
-    console.error('❌ Synthesis Error:', error);
+    console.error('Synthesis Error:', error);
     return null;
   }
 }
