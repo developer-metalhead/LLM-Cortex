@@ -8,10 +8,11 @@ import { runInit } from "./init.js";
 import { runWatch } from "./watch.js";
 import { runStatus } from "./status.js";
 import { runConfig } from "./config.js";
+import { CortexMCPServer } from "../mcp/server.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, "../..");
+const projectRoot = process.cwd();
 
 const program = new Command();
 
@@ -63,6 +64,15 @@ program
   .option("-M, --mode <mode>", "Ingestion mode (auto/manual)")
   .action(async (options) => {
     await runConfig(projectRoot, options);
+  });
+
+program
+  .command("mcp")
+  .description("Start the Cortex MCP server (STDIO mode)")
+  .option("-r, --root <path>", "Project root directory", projectRoot)
+  .action(async (options) => {
+    const server = new CortexMCPServer(options.root);
+    await server.start();
   });
 
 program.parse();
