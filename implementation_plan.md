@@ -175,43 +175,36 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 
 ---
 
-## ⚙️ Phase 5: CLI Polish & Daemonization (The Operations) — 🚧 In progress
+## ⚙️ Phase 5: CLI Polish & Daemonization (The Operations) — ✅ Done
 
 **Layman's Terms**
 Wrapping everything up into a sleek command-line tool so you can simply type `cortex start` and let it run quietly in the background. Also giving users a way to change their provider, model, or ingestion mode at any time without re-running `cortex init` from scratch.
 
 **Technical Terms**
-Finalize the `commander` implementation. Add commands for `status` (showing current config) and `config` (interactive or flag-driven settings editor). Investigate basic daemonization or recommend running via `pm2`/`tmux` for persistent background execution.
+Finalize the `commander` implementation. Add commands for `status` (showing current config) and `config` (interactive or flag-driven settings editor). Implement a lockfile mechanism and graceful shutdown handlers. Transition to structured logging.
 
 **Architecture & System Design**
-- **Core Components**: `src/cli/index.ts`, `src/cli/config.ts` (new), `bin/cortex.js`
+- **Core Components**: `src/cli/index.ts`, `src/cli/status.ts`, `src/cli/config.ts`, `src/core/logger.ts`.
 - **Design Pattern**: Command Pattern.
 - **Key Considerations**: Ensuring graceful shutdown handlers (`SIGINT`, `SIGTERM`) so the watcher cleans up and any pending LLM writes finish before the process exits.
 
 **Definition of Ready (DoR)**
-- All prior phases (1-4) are fully functional and integrated.
+- All prior phases (1-4.5) are fully functional and integrated.
 
 **Definition of Done (DoD)**
-- `cortex init` successfully scaffolds a project.
-- `cortex config` lets users change provider, model, and ingestion mode from the terminal without re-running init.
-- `cortex status` prints the current config (provider, model, mode, last sync).
+- `cortex status` prints current config (provider, model, mode, last sync).
+- `cortex config` lets users change provider, model, and ingestion mode from the terminal.
 - Process gracefully exits on `SIGINT` without corrupting files.
-- NPM package is structured properly for global execution (`npm link` / `npx`).
-
-**Pros & Cons**
-- ✅ **Pros**: Provides a professional, polished Developer Experience (DX).
-- ❌ **Cons**: True background daemonization across different OS (Windows/Mac/Linux) can introduce environment-specific bugs.
+- Lockfile (`.knowledge/cortex.lock`) prevents multiple instances.
+- Structured logger (`pino`) implemented.
+- NPM package is structured properly for global execution.
 
 **Status notes**
-- ✅ `cortex init`, `cortex watch`, `cortex setup` are implemented via `commander` in [src/cli/index.ts](src/cli/index.ts).
-- ✅ `cortex init` writes `.env`, asks provider/model/mode, and updates `.gitignore` automatically.
-- ✅ Multi-provider support (`openai`, `anthropic`, `google`, `local`) implemented in [src/llm/client.ts](src/llm/client.ts) via `CORTEX_PROVIDER` and `CORTEX_MODEL` env vars.
-- ⏳ `cortex config` — interactive terminal command to change provider, model, or ingestion mode in an existing `.env` without re-running init. Should support both interactive prompts and direct flags (e.g. `cortex config --provider anthropic --mode manual`).
-- ⏳ `cortex status` — prints current `.env` config (provider, model, mode) and last-sync commit from `.knowledge/.last_sync_commit`.
-- ⏳ Cross-platform daemonization (Windows service / launchd / systemd guidance, or a recommendation to use `pm2`).
-- ⏳ Lockfile (`.knowledge/cortex.lock`) to prevent two `cortex watch` processes from racing on the same project.
-- ⏳ Structured logger swap-in (`pino`/`winston`) replacing ad-hoc `console.log`.
-- ⏳ Graceful `SIGINT`/`SIGTERM` shutdown that finishes any in-flight LLM write before exiting.
+- ✅ `cortex init`, `cortex watch`, `cortex setup` implemented.
+- ✅ `cortex status` — Reports config, knowledge health, and daemon lock state.
+- ✅ `cortex config` — Supports interactive prompts and direct flags.
+- ✅ Structured logging — `pino` integrated for daemon observability.
+- ✅ Lockfile and Graceful Shutdown — Ensures process exclusivity and clean exits.
 
 ---
 

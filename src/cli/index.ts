@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import { setupIDE, getAvailableTargets } from "./setup.js";
 import { runInit } from "./init.js";
 import { runWatch } from "./watch.js";
+import { runStatus } from "./status.js";
+import { runConfig } from "./config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +46,23 @@ program
     console.log("Registering Project Cortex MCP server...\n");
     await setupIDE(projectRoot, targets);
     console.log("\nDone. Restart your IDE to activate the MCP connection.");
+  });
+
+program
+  .command("status")
+  .description("Show the current status of Project Cortex")
+  .action(async () => {
+    await runStatus(projectRoot);
+  });
+
+program
+  .command("config")
+  .description("Update the Project Cortex configuration")
+  .option("-p, --provider <provider>", "LLM provider")
+  .option("-m, --model <model>", "LLM model")
+  .option("-M, --mode <mode>", "Ingestion mode (auto/manual)")
+  .action(async (options) => {
+    await runConfig(projectRoot, options);
   });
 
 program.parse();

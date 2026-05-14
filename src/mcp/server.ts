@@ -200,7 +200,15 @@ export class CortexMCPServer {
 // Standalone runner (when launched directly by an IDE via MCP config)
 const __selfUrl = new URL(`file:///${path.resolve(process.argv[1]).replace(/\\/g, "/")}`).href;
 if (import.meta.url === __selfUrl) {
-  const projectRoot = process.cwd();
+  // Parse simple command line args: node server.js --root /path/to/project
+  let projectRoot = process.cwd();
+  const rootArgIndex = process.argv.indexOf("--root");
+  if (rootArgIndex !== -1 && process.argv[rootArgIndex + 1]) {
+    projectRoot = path.resolve(process.argv[rootArgIndex + 1]);
+  }
+
+  console.error(`[Cortex] Starting MCP server with root: ${projectRoot}`);
+  
   const server = new CortexMCPServer(projectRoot);
   server.start().catch((err) => {
     console.error("Failed to start MCP server:", err);

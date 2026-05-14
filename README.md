@@ -233,12 +233,35 @@ In Claude Code, the included slash commands wire these tools together:
 | Command | Description |
 |---|---|
 | `cortex init` | Interactive setup — choose API keys or IDE route, scaffold `.knowledge/`, write `.env` |
-| `cortex watch` | Start the background daemon (API keys route). Also embeds the MCP server so IDE tools can trigger real syncs against the same process. |
-| `cortex setup [targets...]` | Register the Cortex MCP server in IDE configs. Targets: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, or `all`. |
+| `cortex watch` | Start the background daemon (API keys route). Also embeds the MCP server. |
+| `cortex setup [targets...]` | Register the Cortex MCP server in IDE configs. |
+| `cortex status` | Show current configuration, knowledge base status, and last synced commit. |
+| `cortex config` | Interactively or via flags (`--provider`, `--mode`) update settings. |
 
-**Manual sync (API keys route, `INGESTION_MODE=manual`):** `cortex sync` is not a CLI subcommand — type it directly into the terminal where `cortex watch` is running to flush all queued diffs as a single batched LLM call. This is cheaper than per-save synthesis on large refactors.
+---
 
-> Build before `cortex setup` — the IDE configs point at `dist/mcp/server.js`. Run `npm run build` first.
+## Daemonization (Background Execution)
+
+To keep Cortex running permanently in the background without keeping a terminal open, we recommend using a process manager like **PM2**.
+
+### Running with PM2
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start the Cortex daemon
+pm2 start "cortex watch" --name cortex
+
+# Monitor logs
+pm2 logs cortex
+
+# Ensure it starts on system reboot
+pm2 save
+pm2 startup
+```
+
+Alternatively, you can run it inside a **tmux** or **screen** session.
 
 ---
 

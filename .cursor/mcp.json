@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "project-cortex": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\LLM-Cortex\\dist\\mcp\\server.js",
+        "--root",
+        "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\LLM-Cortex"
+      ]
+    }
+  }
+}
