@@ -1,4 +1,5 @@
 import { CortexWatcher } from './core/watcher.js';
+import { synthesizeChanges } from './llm/client.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,18 +11,27 @@ const rootDir = path.resolve(__dirname, '..');
 
 const watcher = new CortexWatcher(rootDir);
 
-watcher.on('file_changed', ({ filePath, diff }) => {
+watcher.on('file_changed', async ({ filePath, diff }) => {
   console.log(`\n--- DIFF CAPTURED FOR ${filePath} ---`);
-  // Print first 5 lines of diff to avoid spamming console
-  console.log(diff.split('\n').slice(0, 5).join('\n'));
-  console.log('...\n-----------------------------------\n');
   
-  // Here we will eventually pass the diff to the LLM
+  // PHASE 2: LLM Synthesis
+  console.log(`🧠 Synthesizing architectural impact...`);
+  
+  // For now, context is empty until Phase 3 (Knowledge Manager) is implemented
+  const synthesis = await synthesizeChanges(diff, 'Initial state: Empty Knowledge Base.');
+  
+  if (synthesis) {
+    console.log(`✨ AI INSIGHTS for ${filePath}:`);
+    console.log(JSON.stringify(synthesis, null, 2));
+    console.log('-----------------------------------\n');
+  } else {
+    console.log(`⏭️  Synthesis skipped (Missing API Key or Error).`);
+    console.log('-----------------------------------\n');
+  }
 });
 
 watcher.on('file_deleted', (filePath) => {
   console.log(`\n[ALERT] File deleted: ${filePath}`);
-  // Here we will eventually notify the LLM to update concepts
 });
 
 watcher.start();
