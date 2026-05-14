@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { setupIDE, getAvailableTargets } from "./setup.js";
 import { runInit } from "./init.js";
@@ -9,8 +10,8 @@ import { runWatch } from "./watch.js";
 import { runStatus } from "./status.js";
 import { runConfig } from "./config.js";
 import { CortexMCPServer } from "../mcp/server.js";
-import fs from "fs";
 
+// Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;
   while (current !== path.parse(current).root) {
@@ -31,7 +32,7 @@ const program = new Command();
 program
   .name("cortex")
   .description("Project Cortex — The Autonomous Brain for your Codebase")
-  .version("1.0.0");
+  .version("0.1.0");
 
 program
   .command("init")
@@ -45,6 +46,23 @@ program
   .description("Start the Cortex background daemon (API keys route)")
   .action(async () => {
     await runWatch(projectRoot);
+  });
+
+program
+  .command("status")
+  .description("Check the health and configuration of Project Cortex")
+  .action(async () => {
+    await runStatus(projectRoot);
+  });
+
+program
+  .command("config")
+  .description("Update LLM provider, model, or ingestion mode")
+  .option("-p, --provider <provider>", "LLM provider (openai, anthropic, google, local)")
+  .option("-m, --model <model>", "LLM model ID")
+  .option("-i, --mode <mode>", "Ingestion mode (auto, manual)")
+  .action(async (options) => {
+    await runConfig(projectRoot, options);
   });
 
 program
@@ -62,28 +80,10 @@ program
   });
 
 program
-  .command("status")
-  .description("Show the current status of Project Cortex")
-  .action(async () => {
-    await runStatus(projectRoot);
-  });
-
-program
-  .command("config")
-  .description("Update the Project Cortex configuration")
-  .option("-p, --provider <provider>", "LLM provider")
-  .option("-m, --model <model>", "LLM model")
-  .option("-M, --mode <mode>", "Ingestion mode (auto/manual)")
-  .action(async (options) => {
-    await runConfig(projectRoot, options);
-  });
-
-program
   .command("mcp")
   .description("Start the Cortex MCP server (STDIO mode)")
-  .option("-r, --root <path>", "Project root directory", projectRoot)
-  .action(async (options) => {
-    const server = new CortexMCPServer(options.root);
+  .action(async () => {
+    const server = new CortexMCPServer(projectRoot);
     await server.start();
   });
 

@@ -1,14 +1,21 @@
 {
   "name": "projectcortex",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "> **The Autonomous Brain for your Codebase.**",
-  "main": "index.js",
+  "main": "dist/index.js",
   "bin": {
     "cortex": "./bin/cortex.js"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    ".claude",
+    ".agents"
+  ],
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/cli/index.ts",
     "mcp": "tsx src/mcp/server.ts",
     "build": "tsc",
     "setup": "tsx src/cli/index.ts setup",
