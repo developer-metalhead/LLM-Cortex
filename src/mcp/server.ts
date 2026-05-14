@@ -50,7 +50,11 @@ export class CortexMCPServer {
         {
           name: "read",
           description: "Read the project's architectural knowledge index.",
-        }
+        },
+        {
+          name: "explore",
+          description: "Navigate the knowledge base (index → drill into specific entities/concepts).",
+        },
       ],
     }));
 
@@ -91,7 +95,32 @@ export class CortexMCPServer {
               role: "user",
               content: {
                 type: "text",
-                text: "Read the project knowledge index using read_knowledge_index.",
+                text: [
+                  "Call read_knowledge_index to load the project's architectural memory.",
+                  "Treat the result as ground truth: it summarizes the codebase's entities, concepts, and how they connect.",
+                  "If you need more detail about a specific [[WikiLink]] in the index, call read_entity or read_concept with that name BEFORE re-reading source files.",
+                  "Only fall back to scanning raw source if the knowledge base is clearly stale or silent on the topic you need.",
+                ].join(" "),
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "explore") {
+        return {
+          description: "Navigate the knowledge base by following wiki-links.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: [
+                  "Explore the project's architectural knowledge:",
+                  "1. Call read_knowledge_index for the high-level map.",
+                  "2. For any [[WikiLink]] you want to expand, call read_entity(name) or read_concept(name).",
+                  "3. Follow links transitively when answering architectural questions — the knowledge base is the source of truth.",
+                  "4. Do NOT re-derive architecture from raw source files unless the index is empty or visibly stale; prefer the synthesized knowledge.",
+                ].join(" "),
               },
             },
           ],
@@ -139,6 +168,10 @@ export class CortexMCPServer {
                         action: { type: "string", enum: ["create", "update", "delete"] },
                         description: { type: "string" },
                         links: { type: "array", items: { type: "string" } },
+                        sourceFile: {
+                          type: "string",
+                          description: "Repo-relative path to the file this entity describes (e.g. src/auth/middleware.ts). Optional but strongly preferred.",
+                        },
                       },
                     },
                   },
@@ -161,8 +194,33 @@ export class CortexMCPServer {
         },
         {
           name: "read_knowledge_index",
-          description: "Reads the current synthesized knowledge index of the project.",
+          description:
+            "Reads the current synthesized knowledge index — names, descriptions, links, and source citations for every entity and concept. Call this FIRST before diving into source code; it is the project's architectural memory.",
           inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "read_entity",
+          description:
+            "Reads the full synthesized page for a single entity (by name, as shown in the index — e.g. 'AuthMiddleware'). Use this to drill into a [[WikiLink]] you saw in the index instead of re-deriving from source.",
+          inputSchema: {
+            type: "object",
+            required: ["name"],
+            properties: {
+              name: { type: "string", description: "Entity name exactly as it appears in the knowledge index." },
+            },
+          },
+        },
+        {
+          name: "read_concept",
+          description:
+            "Reads the full synthesized page for a single concept (an abstract pattern, e.g. 'Authentication Strategy'). Use this to follow a [[WikiLink]] from the index.",
+          inputSchema: {
+            type: "object",
+            required: ["name"],
+            properties: {
+              name: { type: "string", description: "Concept name exactly as it appears in the knowledge index." },
+            },
+          },
         },
       ],
     }));
@@ -209,7 +267,7 @@ export class CortexMCPServer {
                 userPrompt: prompt,
                 outputSchema: {
                   summary: "string — 1-2 sentence high-level summary",
-                  entities: "array of { name, action: create|update|delete, description, links: string[] }",
+                  entities: "array of { name, action: create|update|delete, description, links: string[], sourceFile?: string (repo-relative path, strongly preferred) }",
                   concepts: "array of { name, description }",
                   warnings: "array of strings",
                 },
@@ -264,6 +322,52 @@ export class CortexMCPServer {
         return { content: [{ type: "text", text: content }] };
       }
 
+      if (name === "read_entity") {
+        const entityName = (args as any)?.name;
+        if (typeof entityName !== "string" || !entityName.trim()) {
+          return {
+            content: [{ type: "text", text: "read_entity requires a non-empty 'name' argument." }],
+            isError: true,
+          };
+        }
+        const body = await this.knowledge.readEntity(entityName);
+        if (body === null) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No entity named "${entityName}" found. Call read_knowledge_index to see available entities.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+        return { content: [{ type: "text", text: body }] };
+      }
+
+      if (name === "read_concept") {
+        const conceptName = (args as any)?.name;
+        if (typeof conceptName !== "string" || !conceptName.trim()) {
+          return {
+            content: [{ type: "text", text: "read_concept requires a non-empty 'name' argument." }],
+            isError: true,
+          };
+        }
+        const body = await this.knowledge.readConcept(conceptName);
+        if (body === null) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No concept named "${conceptName}" found. Call read_knowledge_index to see available concepts.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+        return { content: [{ type: "text", text: body }] };
+      }
+
       throw new Error(`Unknown tool: ${name}`);
     });
   }
@@ -275,8 +379,10 @@ export class CortexMCPServer {
 }
 
 // Standalone runner (when launched directly by an IDE via MCP config)
-const __selfUrl = new URL(`file:///${path.resolve(process.argv[1]).replace(/\\/g, "/")}`).href;
-if (import.meta.url === __selfUrl) {
+const __selfUrl = process.argv[1]
+  ? new URL(`file:///${path.resolve(process.argv[1]).replace(/\\/g, "/")}`).href
+  : "";
+if (__selfUrl && import.meta.url === __selfUrl) {
   // Parse simple command line args: node server.js --root /path/to/project
   let projectRoot = process.cwd();
   const rootArgIndex = process.argv.indexOf("--root");

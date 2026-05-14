@@ -44,22 +44,6 @@ Cortex is not a general document summarizer. Its Librarian prompt is tuned for s
 
 ---
 
-## 🚀 IDE Integration Guide
-
-Project Cortex surfaces its power through native IDE features. Once you run `cortex setup`, you can use these shortcuts:
-
-### 🌌 In Antigravity
-Type **`/`** in the chat bar to see these **Local Workflows**:
--   **`/ingest`** — Synthesizes all recent code changes into the brain.
--   **`/read`** — Opens the interlinked architectural knowledge index.
--   **`/status`** — Checks the health and sync state of the brain.
-
-### 🤖 In Claude Code / Claude Desktop
-Cortex exposes these as **Native MCP Prompts**:
--   **`ingest`** — Triggers the Librarian synthesis loop.
--   **`read`** — Retrieves the project's knowledge graph.
--   **`status`** — Reports configuration and last sync commit.
-
 ---
 
 ## Installation
@@ -161,16 +145,74 @@ cortex watch
 
 ---
 
-## 🛠️ CLI Reference
+## 🛠️ Command Reference
 
-| Command | Description |
-|---------|-------------|
-| `cortex init` | Interactive setup for a new project. |
-| `cortex status` | Check health, config, knowledge base location, and last sync status. |
-| `cortex config` | Update LLM provider, model, or ingestion mode via interactive prompts or flags. |
-| `cortex setup` | Register MCP server in IDE configs with absolute path resolution. |
-| `cortex watch` | Start background diff-to-knowledge daemon with lockfile protection. |
-| `cortex mcp` | Start the MCP server in STDIO mode (used by IDEs). |
+There are two layers of commands. **CLI commands** manage the daemon and setup — you run them in a terminal. **Knowledge commands** interact with the knowledge base while you code — you run them inside your IDE or from the daemon terminal.
+
+### CLI commands (terminal)
+
+These are always `cortex <command>` in a regular terminal, regardless of which route you use.
+
+| Command | When you use it |
+|---------|----------------|
+| `cortex init` | Once, when setting up a new project. Creates `.knowledge/`, configures your provider. |
+| `cortex setup [target]` | Once per IDE. Registers Cortex as an MCP server so your IDE can talk to it. |
+| `cortex watch` | **Route 1 only.** Starts the background daemon. Leave it running — it synthesizes on every file save automatically. |
+| `cortex read` | Print the full knowledge index to the terminal — what Cortex knows about your codebase. |
+| `cortex read --entity <name>` | Print the full page for a specific entity (e.g. `cortex read --entity AuthMiddleware`). |
+| `cortex read --concept <name>` | Print the full page for a specific concept. |
+| `cortex config` | When you want to change your LLM provider, model, or ingestion mode. |
+| `cortex status` | Check the last sync commit, project root, and whether the knowledge base is initialized. |
+| `cortex mcp` | Internal — IDEs call this automatically. You don't run it manually. |
+
+### Knowledge commands (inside your IDE — Route 2 / MCP)
+
+These run inside Claude Code, Cursor, or any connected IDE. They let you and your AI interact with the knowledge base during coding.
+
+
+
+
+### In Antigravity
+Type **`/`** in the chat bar to see these **Local Workflows**:
+-   **`/ingest`** — Synthesizes all recent code changes into the brain.
+-   **`/read`** — Opens the interlinked architectural knowledge index.
+-   **`/status`** — Checks the health and sync state of the brain.
+-   **`/explore`** — Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth.
+
+
+
+#### In Claude Code — slash commands
+
+| Command | What it does |
+|---|---|
+| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. |
+| `/read_knowledge` | **See what the AI knows.** Prints the full rich knowledge index — every entity and concept with its description, source file, and links. |
+| `/cortex_status` | **Check sync state.** Shows the last-sync commit SHA and whether the knowledge base is initialized. |
+
+#### In Claude Code — MCP prompts
+
+Cortex also exposes these as native MCP prompts (accessible via the IDE's prompt picker):
+
+| Prompt | What it does |
+|---|---|
+| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. |
+| `read` | Reads the rich index and instructs the AI to use it (not re-scan source). |
+| `explore` | Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth. |
+| `status` | Checks Cortex initialization and last sync. |
+
+#### In Cursor / Windsurf
+
+Use `@project-cortex` in Agent mode. The MCP tools (`get_pending_changes`, `read_knowledge_index`, `read_entity`, `read_concept`, `save_synthesis`) are available to the agent directly.
+
+### Route 1 (daemon) — how to trigger each action
+
+If you're using `cortex watch` with an API key instead of an IDE, here's how the same operations work:
+
+| Action | How to do it |
+|---|---|
+| **Ingest** | Automatic — the daemon synthesizes on every file save. In `manual` mode, type `cortex sync` in the terminal where the daemon is running to flush queued changes. |
+| **Read knowledge** | `cortex read` — prints the full index to the terminal. `cortex read --entity <name>` to drill into one entity. |
+| **Check status** | `cortex status` in any terminal. |
 
 ---
 
@@ -203,13 +245,7 @@ Supported: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`
 
 **Restart your IDE** after running setup.
 
-Once connected, trigger synthesis from inside your IDE:
-
-| IDE | How to trigger |
-|---|---|
-| Claude Code | Type `/ingest_cortex` |
-| Cursor / Windsurf | Use `@project-cortex` in Agent mode |
-| VS Code Copilot | Agent mode picks it up automatically |
+Once connected, the full command reference is in the [Command Reference](#️-command-reference) section above.
 
 ---
 
@@ -219,16 +255,21 @@ Both routes produce the same output in your project root:
 
 ```
 .knowledge/
-├── index.md             # The catalog — agents read this first
+├── index.md             # Rich catalog — names + descriptions + source paths + links (agents read this first)
+├── state.json           # Canonical state (index.md is rendered from this)
 ├── log.md               # Append-only architectural timeline (with warnings)
-├── entities/            # Per-file/module knowledge pages
-├── concepts/            # Abstract architectural patterns
+├── entities/            # Per-file/module knowledge pages (deep-read via read_entity)
+├── concepts/            # Abstract architectural patterns (deep-read via read_concept)
 └── .last_sync_commit    # Git SHA marking the last synthesized commit
 ```
 
-All plain Markdown. Open `.knowledge/` in [Obsidian](https://obsidian.md) for a visual graph of your architecture.
+All plain Markdown (plus one JSON state file). Open `.knowledge/` in [Obsidian](https://obsidian.md) for a visual graph of your architecture.
 
 The `.last_sync_commit` file lets Cortex compute precise git diffs between syncs, so each synthesis only processes work the Librarian hasn't already seen.
+
+### The index is self-sufficient
+
+`index.md` now includes full descriptions, source file paths, and outbound links for every entity and concept — not just names. This means any AI that reads it can immediately answer architectural questions without re-scanning source code.
 
 ---
 
@@ -239,28 +280,89 @@ When connected via MCP, your IDE's agent has access to these tools:
 | Tool | What it does |
 |---|---|
 | `get_cortex_status` | Check if Cortex is initialized and when it last synced |
-| `get_pending_changes` | Returns the git diff since last sync, the current knowledge index, and the Librarian system + user prompts |
+| `get_pending_changes` | Returns the git diff since last sync, the full rich knowledge index (as context for the Librarian), and the synthesis prompt |
 | `save_synthesis` | Accepts the synthesized JSON result, validates it with Zod, and writes it to `.knowledge/` |
-| `read_knowledge_index` | Returns the current knowledge index |
+| `read_knowledge_index` | Returns the rich `index.md` — names, descriptions, source paths, and links. **Call this first** before reading any source files |
+| `read_entity` | Returns the full synthesized page for one entity (e.g. `AuthMiddleware`). Follow [[WikiLinks]] from the index with this |
+| `read_concept` | Returns the full synthesized page for one concept (e.g. `Authentication Strategy`). Same as above for concepts |
 
 The synthesis JSON returned to `save_synthesis` must match this shape:
 
 ```ts
 {
   summary: string,
-  entities: { name, action: "create" | "update" | "delete", description, links: string[] }[],
-  concepts: { name, description }[],
+  entities: {
+    name: string,
+    action: "create" | "update" | "delete",
+    description: string,
+    links: string[],
+    sourceFile?: string   // repo-relative path, strongly preferred
+  }[],
+  concepts: { name: string, description: string }[],
   warnings: string[]
 }
 ```
 
 In Claude Code, the included slash commands wire these tools together:
 
-| Command | Effect |
+| Command | What it does |
 |---|---|
-| `/ingest_cortex` | Pulls pending changes, runs the Librarian synthesis, calls `save_synthesis` |
-| `/cortex_status` | Reports init status and last-sync commit |
-| `/read_knowledge` | Prints the current knowledge index |
+| `/ingest_cortex` | Synthesizes all pending git changes into the knowledge base |
+| `/cortex_status` | Shows init status, last-sync commit, and project root |
+| `/read_knowledge` | Prints the full rich knowledge index — what the AI currently knows |
+
+### How the AI uses the knowledge
+
+After an ingest, the AI's knowledge about your codebase lives in `.knowledge/`. Here's the read hierarchy:
+
+1. **`/read_knowledge`** (or `read_knowledge_index`) — the fast skim. Every entity and concept with its description, source file, and links in one view.
+2. **`read_entity <name>`** — drill into one entity's full synthesized page when you need more depth.
+3. **`read_concept <name>`** — same for abstract concepts.
+4. **Source files** — only opened if the knowledge base is visibly stale or doesn't cover the topic.
+
+The AI is instructed to navigate the knowledge graph (following `[[WikiLinks]]` via `read_entity`/`read_concept`) rather than re-scanning raw source. This is what makes it faster and more architecturally precise than vanilla RAG.
+
+---
+
+## 🧪 How to verify the AI is using the knowledge (not re-scanning files)
+
+### Route 1 — API keys / daemon
+
+1. **Check the knowledge exists and is populated:**
+   ```bash
+   cortex read
+   ```
+   You should see entities and concepts with full descriptions. If you see `_No entities yet._`, the daemon hasn't synced yet — check `cortex status` for the last sync commit.
+
+2. **Check what context the daemon sends to the LLM:**
+   When `cortex watch` processes a file change, it calls `getKnowledgeSummary()` which now returns the rich index (descriptions + links + source paths), not just names. This is the "prior knowledge" the LLM sees before synthesizing a new diff. You can verify what it would see by running `cortex read` — that's the exact string the daemon passes as context.
+
+3. **Check a specific entity is up to date:**
+   ```bash
+   cortex read --entity CortexMCPServer
+   ```
+   If the description matches what you know the code does, the knowledge is current. If it's stale or wrong, run a re-ingest.
+
+### Route 2 — IDE / Claude Code
+
+1. **See what the AI currently knows:**
+   ```
+   /read_knowledge
+   ```
+   This calls `read_knowledge_index` directly and shows you the exact index the AI will reference before answering questions.
+
+2. **Watch the tools the AI calls:**
+   In Claude Code, tool calls are visible in the conversation. When you ask an architectural question, the AI **should** call `read_knowledge_index` or `read_entity` first. If it jumps straight to `Grep` or `Read` on `src/` files without checking the knowledge first — the knowledge base is likely empty or stale, and you need to `/ingest_cortex`.
+
+3. **The litmus test:**
+   Ask Claude Code: *"How does authentication work in this codebase?"*
+   - **Using knowledge:** It calls `read_knowledge_index`, finds `[[AuthService]]` and `[[JWTStrategy]]`, calls `read_entity` on them, and answers from those synthesized descriptions.
+   - **Re-scanning:** It calls `Grep` for `auth` across `src/`, reads multiple raw files, and re-derives the answer from scratch.
+
+   If you see the second pattern, your knowledge base is stale — run `/ingest_cortex` to bring it up to date.
+
+4. **Force a navigation test:**
+   After ingesting, ask: *"What is the CortexMCPServer and what does it link to?"* — the exact answer is in the knowledge index. If the AI answers accurately without reading `src/mcp/server.ts`, it's using the knowledge.
 
 ---
 

@@ -24,6 +24,7 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
   * [src/cli/init.ts](src/cli/init.ts) — Interactive wizard that picks between the API-keys route and the IDE route, scaffolds `.knowledge/`, writes `.env`, and updates `.gitignore`.
   * [src/cli/watch.ts](src/cli/watch.ts) — Boots the file watcher, the Knowledge Manager, and an embedded MCP server. Owns the per-file (auto) and batched (manual) sync flows.
   * [src/cli/setup.ts](src/cli/setup.ts) — Writes the Cortex MCP entry into supported IDE config files (Claude Code, Cursor, VS Code, Windsurf, Claude Desktop).
+  * [src/cli/read.ts](src/cli/read.ts) — `cortex read` command. Prints the full rich knowledge index to stdout. Accepts `--entity <name>` and `--concept <name>` flags to drill into a specific page.
 
 ### B. The File Watcher (`src/core/watcher.ts`)
 * **Responsibility**: Monitor the project directory for `add`, `change`, and `unlink` events and emit semantic events with diffs attached.
@@ -44,7 +45,10 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
 
 ### E. The Knowledge Manager (`src/knowledge/writer.ts`)
 * **Responsibility**: All file I/O against `.knowledge/`. The only writer in the system.
-* **Behavior**: Initializes the directory layout, appends timestamped entries to `log.md` (summary + impacted entities + warnings), writes one `.md` per entity and concept (or **deletes** the entity file when `action: "delete"`), regenerates `index.md` from the filesystem on every save, and persists the synced HEAD commit to `.last_sync_commit`.
+* **State layer**: Maintains `.knowledge/state.json` as the canonical store — a JSON object keyed by entity/concept name, holding `{ description, links, sourceFile?, lastRefined }`. On startup, `init()` migrates existing entity/concept markdown files into `state.json` if it doesn't exist yet (best-effort parse of legacy layout).
+* **Index rendering**: `updateIndex()` regenerates `index.md` from `state.json` — now a **rich index** with full descriptions, source citations, and outbound `[[WikiLink]]` sets per entry (not just a flat name list). This is what both the Librarian (ingest context) and downstream AIs (read tools) see.
+* **Deep-read access**: `readEntity(name)` and `readConcept(name)` return the full markdown page for a named entity/concept. Used by the `read_entity`/`read_concept` MCP tools so downstream AIs can follow wiki-links without opening source files.
+* **Write flow**: `saveSynthesis()` applies each entity action (create/update/delete) to both `state.json` and the per-entity markdown file, then triggers `updateIndex()`. Deletions remove from both state and disk atomically.
 
 ### E.1 Structured logging (`src/core/logger.ts`)
 * **Responsibility**: Daemon-only logging via `createDaemonLogger(projectRoot)`.
@@ -54,9 +58,12 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
 * **Responsibility**: Bridge between Cortex's synthesized knowledge and active coding agents via the Model Context Protocol.
 * **Tools exposed**:
   * `get_cortex_status` — init state + last-sync commit.
-  * `get_pending_changes` — bundles the diff since last sync, the current knowledge index, the Librarian system prompt, and the output schema description. This is the IDE route's "do the synthesis" prompt-pack.
-  * `save_synthesis` — Zod-validates the synthesis JSON, writes it to `.knowledge/`, advances `.last_sync_commit`.
-  * `read_knowledge_index` — returns `.knowledge/index.md`.
+  * `get_pending_changes` — bundles the diff since last sync, the **rich** knowledge index (descriptions + links + source paths) as `CURRENT CONTEXT` for the Librarian, and the output schema. This is the IDE route's synthesis prompt-pack.
+  * `save_synthesis` — Zod-validates the synthesis JSON (including the new optional `sourceFile` field), writes it to `.knowledge/`, advances `.last_sync_commit`.
+  * `read_knowledge_index` — returns the rich `index.md`. Call this first; it's the project's architectural memory.
+  * `read_entity(name)` — returns the full markdown page for a named entity. Downstream AIs use this to follow `[[WikiLinks]]` from the index without opening source files.
+  * `read_concept(name)` — same for abstract concepts.
+* **Prompts exposed**: `ingest`, `status`, `read`, `explore`. The `read` and `explore` prompts explicitly instruct the consuming AI to navigate the knowledge graph (index → `read_entity`/`read_concept`) rather than re-scanning source code.
 * **Modes**: When constructed by `cortex watch`, the server is embedded with an optional `onAfterKnowledgeSave` callback: after a successful `save_synthesis`, the daemon clears its in-memory manual-mode diff queue so IDE ingestion does not leave stale queued deltas. When launched standalone by an IDE (via the registered config), it runs purely as an MCP STDIO server against `process.cwd()`.
 
 ---
@@ -75,7 +82,7 @@ sequenceDiagram
 
     Dev->>Watcher: save src/auth.ts
     Watcher-->>Watcher: debounce 3s
-    Watcher->>LLM: file diff + current index.md
+    Watcher->>LLM: file diff + rich index.md (descriptions + links)
     LLM-->>Watcher: SynthesisSchema JSON
     Watcher->>KM: saveSynthesis(...)
     KM->>FS: write entities/, concepts/, append log.md, rewrite index.md, bump .last_sync_commit
@@ -94,8 +101,8 @@ sequenceDiagram
     Dev->>IDE: /ingest_cortex
     IDE->>MCP: get_pending_changes
     MCP->>Git: diff lastSyncCommit..HEAD + uncommitted
-    MCP->>KM: read index.md
-    MCP-->>IDE: { systemPrompt, userPrompt, outputSchema }
+    MCP->>KM: read rich index.md (descriptions + links, as CURRENT CONTEXT)
+    MCP-->>IDE: { systemPrompt, userPrompt (with full context), outputSchema }
     IDE-->>IDE: synthesize using IDE's own LLM
     IDE->>MCP: save_synthesis({ summary, entities, concepts, warnings })
     MCP->>KM: validate (Zod) + saveSynthesis(...) + bump .last_sync_commit
@@ -133,7 +140,8 @@ project-cortex/
 │   │   ├── index.ts             # commander program
 │   │   ├── init.ts              # interactive setup wizard
 │   │   ├── watch.ts             # daemon (watcher + LLM + embedded MCP)
-│   │   └── setup.ts             # IDE config writer
+│   │   ├── setup.ts             # IDE config writer
+│   │   └── read.ts              # cortex read — prints knowledge index / entity / concept
 │   ├── core/
 │   │   ├── watcher.ts           # chokidar + .gitignore + debounce
 │   │   ├── diff.ts              # per-file diff + since-last-sync diff
@@ -164,10 +172,11 @@ When Cortex runs on a user's repository, it generates and maintains this structu
 
 ```text
 .knowledge/
-├── index.md             # Master catalog (regenerated from filesystem on every sync)
+├── index.md             # Rich catalog — descriptions + source paths + links (rendered from state.json)
+├── state.json           # Canonical state: { entities: { name → {description, links, sourceFile, lastRefined} }, concepts: {...} }
 ├── log.md               # Append-only chronological trajectory + warnings per entry
-├── entities/            # Specific files/modules (e.g. AuthController.md)
-├── concepts/            # Abstract systems spanning multiple files (e.g. DatabaseStrategy.md)
+├── entities/            # Per-entity markdown pages (deep-read target of read_entity)
+├── concepts/            # Per-concept markdown pages (deep-read target of read_concept)
 └── .last_sync_commit    # Git SHA used by getPendingDiff()
 ```
 

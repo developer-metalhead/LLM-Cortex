@@ -7,6 +7,7 @@ export const SynthesisSchema = z.object({
     action: z.enum(["create", "update", "delete"]),
     description: z.string(),
     links: z.array(z.string()),
+    sourceFile: z.string().optional(),
   })),
   concepts: z.array(z.object({
     name: z.string(),

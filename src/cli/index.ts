@@ -9,6 +9,7 @@ import { runInit } from "./init.js";
 import { runWatch } from "./watch.js";
 import { runStatus } from "./status.js";
 import { runConfig } from "./config.js";
+import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
 
@@ -90,6 +91,15 @@ program
     console.log("Registering Project Cortex MCP server...\n");
     await setupIDE(projectRoot, targets);
     console.log("\nDone. Restart your IDE to activate the MCP connection.");
+  });
+
+program
+  .command("read")
+  .description("Print the knowledge index (or a specific entity/concept page)")
+  .option("-e, --entity <name>", "Print the full page for a specific entity")
+  .option("-c, --concept <name>", "Print the full page for a specific concept")
+  .action(async (options) => {
+    await runRead(projectRoot, options);
   });
 
 program

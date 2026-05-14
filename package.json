@@ -48,7 +48,7 @@
   "bugs": {
     "url": "https://github.com/developer-metalhead/LLM-Cortex/issues"
   },
-  "homepage": "https://github.com/developer-metalhead/LLM-Cortex#readme",
+  "homepage": "https://github.com/developer-metalhead",
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
     "@ai-sdk/google": "^3.0.73",
