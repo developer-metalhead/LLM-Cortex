@@ -14,15 +14,20 @@ export async function runWatch(projectRoot: string): Promise<void> {
 
   const lockPath = path.join(projectRoot, ".knowledge", "cortex.lock");
 
-  // Check for lockfile
+  // Robust Lockfile Check
   try {
-    await fs.access(lockPath);
-    logger.error("Cortex daemon is already running (lockfile exists).");
-    process.exit(1);
-  } catch {
-    // Lock doesn't exist, create it
-    await fs.writeFile(lockPath, process.pid.toString());
+    const existingPid = await fs.readFile(lockPath, "utf8");
+    try {
+      process.kill(parseInt(existingPid), 0);
+      logger.error(`Cortex daemon is already running (PID: ${existingPid}).`);
+      process.exit(1);
+    } catch (e) {
+      logger.warn({ stalePid: existingPid }, "Stale lockfile detected. Overwriting...");
+    }
+  } catch (e) {
+    // Lock doesn't exist
   }
+  await fs.writeFile(lockPath, process.pid.toString());
 
   const mode = process.env.INGESTION_MODE || "auto";
   logger.info({ mode, projectRoot }, "Cortex daemon starting");

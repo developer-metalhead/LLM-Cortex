@@ -97,6 +97,16 @@ function getIDETargets(projectRoot: string): IDETarget[] {
         await writeJsonFile(configPath, config);
       },
     },
+    {
+      name: "antigravity",
+      configPath: path.join(projectRoot, ".antigravity", "mcp.json"),
+      writeConfig: async (sPath, configPath) => {
+        const config = await readJsonSafe(configPath);
+        config.mcpServers = config.mcpServers || {};
+        config.mcpServers["project-cortex"] = getMCPEntry(sPath, projectRoot);
+        await writeJsonFile(configPath, config);
+      },
+    },
   ];
 }
 
@@ -141,5 +151,12 @@ export async function setupIDE(
 }
 
 export function getAvailableTargets(): string[] {
-  return ["claude-code", "cursor", "vscode", "windsurf", "claude-desktop"];
+  return [
+    "claude-code",
+    "cursor",
+    "vscode",
+    "windsurf",
+    "claude-desktop",
+    "antigravity",
+  ];
 }

@@ -32,11 +32,17 @@ export async function runStatus(projectRoot: string): Promise<void> {
   // Daemon Info
   const lockPath = path.join(projectRoot, ".knowledge", "cortex.lock");
   let isRunning = false;
+  let pid = "";
   try {
-    await fs.access(lockPath);
-    isRunning = true;
+    pid = await fs.readFile(lockPath, "utf8");
+    try {
+      process.kill(parseInt(pid), 0);
+      isRunning = true;
+    } catch {
+      isRunning = false;
+    }
   } catch {}
 
   console.log(`  [Daemon]`);
-  console.log(`  Process:   ${isRunning ? "Running" : "Stopped"}\n`);
+  console.log(`  Process:   ${isRunning ? `Running (PID: ${pid})` : "Stopped"}\n`);
 }
