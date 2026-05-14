@@ -52,16 +52,37 @@ export async function runInit(projectRoot: string): Promise<void> {
     }
 
     if (!envExists) {
-      const provider = await ask(rl, "  LLM provider? [openai / local] (default: openai): ");
-      const isLocal = provider.trim().toLowerCase() === "local";
+      console.log("  Supported providers: openai, anthropic, google, local\n");
+      const providerInput = await ask(rl, "  LLM provider? [openai / anthropic / google / local] (default: openai): ");
+      const provider = providerInput.trim().toLowerCase() || "openai";
 
-      let envContent = "";
-      if (isLocal) {
+      let envContent = `CORTEX_PROVIDER=${provider}\n`;
+
+      if (provider === "local") {
         const baseUrl = await ask(rl, "  Local LLM base URL (e.g. http://localhost:11434/v1): ");
-        envContent = `OPENAI_BASE_URL=${baseUrl.trim()}\nOPENAI_API_KEY=local\n`;
+        envContent += `LOCAL_BASE_URL=${baseUrl.trim()}\n`;
+      } else if (provider === "anthropic") {
+        const key = await ask(rl, "  Anthropic API key (sk-ant-...): ");
+        envContent += `ANTHROPIC_API_KEY=${key.trim()}\n`;
+      } else if (provider === "google") {
+        const key = await ask(rl, "  Google AI API key: ");
+        envContent += `GOOGLE_GENERATIVE_AI_API_KEY=${key.trim()}\n`;
       } else {
         const key = await ask(rl, "  OpenAI API key (sk-...): ");
-        envContent = `OPENAI_API_KEY=${key.trim()}\n`;
+        envContent += `OPENAI_API_KEY=${key.trim()}\n`;
+      }
+
+      const modelDefaults: Record<string, string> = {
+        openai: "gpt-4o",
+        anthropic: "claude-sonnet-4-6",
+        google: "gemini-1.5-pro",
+        local: "gpt-4o",
+      };
+      const defaultModel = modelDefaults[provider] || "gpt-4o";
+      const modelInput = await ask(rl, `  Model? (default: ${defaultModel}): `);
+      const model = modelInput.trim();
+      if (model && model !== defaultModel) {
+        envContent += `CORTEX_MODEL=${model}\n`;
       }
 
       const mode = await ask(rl, "  Ingestion mode? [auto / manual] (default: auto): ");

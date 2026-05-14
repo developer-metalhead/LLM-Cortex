@@ -1,96 +1,150 @@
 # Project Cortex: Architecture & System Design
 
-This document serves as the technical blueprint for building Project Cortex. It outlines the core components, data flow, tech stack, and dependencies required to build the Autonomous Knowledge Engine.
+This document is the technical blueprint for Project Cortex. It outlines the core components, data flow, tech stack, and dependencies that make up the Autonomous Knowledge Engine.
 
 ---
 
 ## 1. System Overview
 
-Cortex is a local-first, headless Node.js daemon that operates in two primary modes:
-1.  **Active Ingestion (The Daemon)**: A background process that watches the user's source code, leverages LLMs to synthesize architectural changes, and writes the output to a local `.knowledge` folder in human-readable Markdown.
-2.  **Context Serving (The MCP Server)**: An integration layer that exposes the synthesized `.knowledge` folder to external AI agents (Claude Code, Cursor, Antigravity) via the Model Context Protocol (MCP).
+Cortex is a local-first Node.js tool that operates in two interoperable modes, both targeting the same `.knowledge/` output:
+
+1. **Active Ingestion (The Daemon — `cortex watch`)**: A background process that watches the user's source code, leverages an LLM via the user's own API key to synthesize architectural changes, and writes the output to `.knowledge/`.
+2. **IDE-Driven Ingestion (The MCP Server — `cortex setup`)**: A standalone MCP server that exposes the synthesized knowledge folder *and* the pending diff to external coding agents (Claude Code, Cursor, Windsurf, Claude Desktop, VS Code Copilot). In this mode the IDE's own AI performs the synthesis — Cortex supplies the prompts and validates the result.
+
+Both modes share the same Knowledge Manager, schema, and storage layout. The daemon embeds the MCP server, so an IDE can trigger a real-time sync against a running watcher.
 
 ---
 
 ## 2. Core Components
 
-### A. The File Watcher (`watcher/`)
-*   **Responsibility**: Monitor the project directory (`src/`, `lib/`, etc.) for `add`, `change`, and `unlink` events.
-*   **Behavior**: Implements debouncing to prevent spamming the LLM when a developer saves a file multiple times rapidly. Ignores `.git`, `node_modules`, and the `.knowledge` folder to prevent recursive loops.
+### A. The CLI (`src/cli/`)
+* **Responsibility**: Entry point for the developer. Wires the rest of the system together.
+* **Files**:
+  * [src/cli/index.ts](src/cli/index.ts) — `commander` setup for `init`, `watch`, `setup`.
+  * [src/cli/init.ts](src/cli/init.ts) — Interactive wizard that picks between the API-keys route and the IDE route, scaffolds `.knowledge/`, writes `.env`, and updates `.gitignore`.
+  * [src/cli/watch.ts](src/cli/watch.ts) — Boots the file watcher, the Knowledge Manager, and an embedded MCP server. Owns the per-file (auto) and batched (manual) sync flows.
+  * [src/cli/setup.ts](src/cli/setup.ts) — Writes the Cortex MCP entry into supported IDE config files (Claude Code, Cursor, VS Code, Windsurf, Claude Desktop).
 
-### B. The Extraction Pipeline (`llm/`)
-*   **Responsibility**: Converts raw code changes into semantic architectural knowledge.
-*   **Behavior**: Takes a git diff or file content, packages it with the current `.knowledge/index.md` state, and sends it to an LLM. It forces the LLM to return Structured JSON (e.g., `filesToUpdate`, `newConcepts`, `contradictions`).
+### B. The File Watcher (`src/core/watcher.ts`)
+* **Responsibility**: Monitor the project directory for `add`, `change`, and `unlink` events and emit semantic events with diffs attached.
+* **Behavior**: Wraps `chokidar` with a 3-second debounce (rapid `Cmd+S` produces a single emission). Respects the project's `.gitignore` via the `ignore` package and hard-codes ignores for `.git/**`, `.knowledge/**`, `node_modules/**`, `dist/**` to prevent recursive loops.
 
-### C. The knowledge Manager (`knowledge/`)
-*   **Responsibility**: Handles file I/O operations for the `.knowledge` directory.
-*   **Behavior**: Parses the LLM's JSON response and executes the file writes. It manages the creation of new Markdown pages, appends to existing pages, and ensures bidirectional linking (`[[Concept]]`) is maintained for Obsidian compatibility.
+### C. The Diff Layer (`src/core/diff.ts`)
+* **Responsibility**: Convert filesystem events into reviewable code changes.
+* **Behavior**: Two surfaces:
+  * `getFileDiff(targetDir, filePath)` — used by the daemon. Tries `git diff HEAD -- <file>`; falls back to inlining untracked file contents.
+  * `getPendingDiff(projectRoot, lastSyncCommit)` — used by the MCP server. Combines `git diff <lastSyncCommit>..HEAD` with uncommitted `git diff HEAD`, so a sync covers everything since the previous one regardless of how many commits happened in between.
 
-### D. The MCP Server (`mcp/`)
-*   **Responsibility**: Act as the bridge between Cortex's synthesized knowledge and active coding agents.
-*   **Behavior**: Exposes tools like `get_architecture_overview`, `read_concept`, and `report_new_learning`.
+### D. The LLM Engine (`src/llm/`)
+* **Responsibility**: Convert raw code changes into semantic architectural knowledge.
+* **Files**:
+  * [src/llm/schema.ts](src/llm/schema.ts) — Shared Zod `SynthesisSchema` (summary / entities / concepts / warnings) reused by both the daemon and the MCP `save_synthesis` validator.
+  * [src/llm/prompts.ts](src/llm/prompts.ts) — The Librarian system prompt and the diff-injection user-prompt template.
+  * [src/llm/client.ts](src/llm/client.ts) — `synthesizeChanges()` calls `generateObject()` from the Vercel AI SDK against `gpt-4o`. Honors `CORTEX_MOCK_AI=true` to return a deterministic mock synthesis for tests.
+
+### E. The Knowledge Manager (`src/knowledge/writer.ts`)
+* **Responsibility**: All file I/O against `.knowledge/`. The only writer in the system.
+* **Behavior**: Initializes the directory layout, appends timestamped entries to `log.md` (summary + impacted entities + warnings), writes one `.md` per entity and concept, regenerates `index.md` from the filesystem on every save, and persists the synced HEAD commit to `.last_sync_commit`.
+
+### F. The MCP Server (`src/mcp/server.ts`)
+* **Responsibility**: Bridge between Cortex's synthesized knowledge and active coding agents via the Model Context Protocol.
+* **Tools exposed**:
+  * `get_cortex_status` — init state + last-sync commit.
+  * `get_pending_changes` — bundles the diff since last sync, the current knowledge index, the Librarian system prompt, and the output schema description. This is the IDE route's "do the synthesis" prompt-pack.
+  * `save_synthesis` — Zod-validates the synthesis JSON, writes it to `.knowledge/`, advances `.last_sync_commit`.
+  * `read_knowledge_index` — returns `.knowledge/index.md`.
+* **Modes**: When constructed by `cortex watch`, the server is embedded and can call back into the daemon's sync function. When launched standalone by an IDE (via the registered config), it runs purely as an MCP STDIO server against `process.cwd()`.
 
 ---
 
-## 3. Data Flow (Mermaid Diagram)
+## 3. Data Flow
+
+### Route 1 — API Keys (auto mode)
 
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Watcher as Cortex Watcher
-    participant LLM as Cortex LLM Engine
-    participant knowledge as .knowledge/ (Markdown)
-    participant Agent as External AI Agent (e.g. Claude)
+    participant Watcher as CortexWatcher
+    participant LLM as synthesizeChanges (gpt-4o)
+    participant KM as KnowledgeManager
+    participant FS as .knowledge/
 
-    %% Ingestion Flow
-    Dev->>Watcher: Saves src/auth.js
-    Watcher-->>Watcher: Debounce (3s)
-    Watcher->>LLM: Pass diff & current knowledge Index
-    LLM->>LLM: Extract concepts, link, flag errors
-    LLM->>knowledge: Update auth_module.md, warnings.md
-    
-    %% Query Flow
-    Agent->>knowledge: Query via MCP Server (read_concept)
-    knowledge-->>Agent: Returns clean, synthesized markdown
-    Agent-->>Dev: Provides accurate, context-aware answer
+    Dev->>Watcher: save src/auth.ts
+    Watcher-->>Watcher: debounce 3s
+    Watcher->>LLM: file diff + current index.md
+    LLM-->>Watcher: SynthesisSchema JSON
+    Watcher->>KM: saveSynthesis(...)
+    KM->>FS: write entities/, concepts/, append log.md, rewrite index.md, bump .last_sync_commit
+```
+
+### Route 2 — IDE / MCP
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant IDE as IDE Agent (Claude Code / Cursor)
+    participant MCP as Cortex MCP Server
+    participant KM as KnowledgeManager
+    participant Git as git diff
+
+    Dev->>IDE: /ingest_cortex
+    IDE->>MCP: get_pending_changes
+    MCP->>Git: diff lastSyncCommit..HEAD + uncommitted
+    MCP->>KM: read index.md
+    MCP-->>IDE: { systemPrompt, userPrompt, outputSchema }
+    IDE-->>IDE: synthesize using IDE's own LLM
+    IDE->>MCP: save_synthesis({ summary, entities, concepts, warnings })
+    MCP->>KM: validate (Zod) + saveSynthesis(...) + bump .last_sync_commit
+    MCP-->>IDE: "Saved N entities, M concepts"
 ```
 
 ---
 
 ## 4. Tech Stack & Dependencies
 
-The project will be built as a standalone CLI tool using **Node.js** and **TypeScript** for strict type safety, especially when handling LLM JSON outputs.
+Built as a standalone CLI in **Node.js + TypeScript** (strict, ESM, `module: NodeNext`). Compiles to `dist/` via `tsc`.
 
-### Core Dependencies
-*   **CLI Framework**: `commander` (For handling `cortex init`, `cortex start`)
-*   **File System**: `chokidar` (Robust file watching, better than native `fs.watch`)
-*   **LLM Orchestration**: `@ai-sdk/core` & `@ai-sdk/openai` (Vercel AI SDK allows us to easily swap between OpenAI, Anthropic, or local models).
-*   **Validation**: `zod` (For enforcing strict JSON schemas on the LLM output).
-*   **MCP Integration**: `@modelcontextprotocol/sdk` (Official SDK for building the server).
-*   **Utilities**: `dotenv` (API keys), `ignore` (Parsing `.gitignore` rules).
+### Runtime Dependencies
+* **CLI Framework**: `commander` — `cortex init / watch / setup`.
+* **File System**: `chokidar` — robust file watching.
+* **LLM Orchestration**: `ai` (Vercel AI SDK) + `@ai-sdk/openai` — `generateObject` with structured-output enforcement. Swapping to Anthropic or a local OpenAI-compatible endpoint is a one-line change in [src/llm/client.ts](src/llm/client.ts).
+* **Schema Validation**: `zod` — enforces the LLM output shape end-to-end (daemon and MCP both reuse `SynthesisSchema`).
+* **MCP**: `@modelcontextprotocol/sdk` — STDIO server.
+* **Utilities**: `dotenv` (API keys / `INGESTION_MODE`), `ignore` (parses `.gitignore`).
+
+### Test Hook
+* `CORTEX_MOCK_AI=true` — short-circuits `synthesizeChanges()` to return a deterministic synthesis, so the full daemon → writer → MCP pipeline can be exercised without LLM calls or API keys.
 
 ---
 
-## 5. Folder Structure Blueprint
+## 5. Folder Structure (Current)
 
 ```text
 project-cortex/
 ├── bin/
-│   └── cortex.js            # CLI Entry point
+│   └── cortex.js                # CLI entry point → dist/cli/index.js
 ├── src/
-│   ├── cli/                 # Commander logic (init, watch)
+│   ├── index.ts                 # Direct daemon entry (delegates to runWatch)
+│   ├── cli/
+│   │   ├── index.ts             # commander program
+│   │   ├── init.ts              # interactive setup wizard
+│   │   ├── watch.ts             # daemon (watcher + LLM + embedded MCP)
+│   │   └── setup.ts             # IDE config writer
 │   ├── core/
-│   │   ├── watcher.ts       # Chokidar implementation
-│   │   ├── diff.ts          # Git diff extraction logic
-│   │   └── config.ts        # Loads CORTEX.md or cortex.json
+│   │   ├── watcher.ts           # chokidar + .gitignore + debounce
+│   │   └── diff.ts              # per-file diff + since-last-sync diff
 │   ├── llm/
-│   │   ├── prompts.ts       # System prompts for the Librarian
-│   │   └── client.ts        # AI SDK implementation with Zod schemas
+│   │   ├── client.ts            # generateObject + mock mode
+│   │   ├── prompts.ts           # Librarian system + extraction templates
+│   │   └── schema.ts            # shared Zod SynthesisSchema
 │   ├── knowledge/
-│   │   ├── writer.ts        # Markdown generation and file I/O
-│   │   └── indexer.ts       # Maintains the index.md catalog
+│   │   └── writer.ts            # all .knowledge/ file I/O + index
 │   └── mcp/
-│       └── server.ts        # The MCP Server exposing tools
+│       └── server.ts            # MCP server (4 tools) — embeddable & standalone
+├── .claude/commands/            # Claude Code slash commands shipped with the repo
+│   ├── ingest_cortex.md
+│   ├── cortex_status.md
+│   └── read_knowledge.md
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -100,21 +154,27 @@ project-cortex/
 
 ## 6. The Knowledge Data Schema (Output)
 
-When Cortex runs on a user's repository, it generates and maintains this structure in their project root:
+When Cortex runs on a user's repository, it generates and maintains this structure in the project root:
 
 ```text
 .knowledge/
-├── index.md             # The catalog. Agent reads this first.
-├── log.md               # Append-only chronological trajectory.
-├── warnings.md          # Contradictions or architectural drift.
-├── entities/            # Specific files/modules (e.g., AuthController.md)
-└── concepts/            # Abstract ideas spanning files (e.g., DatabaseStrategy.md)
+├── index.md             # Master catalog (regenerated from filesystem on every sync)
+├── log.md               # Append-only chronological trajectory + warnings per entry
+├── entities/            # Specific files/modules (e.g. AuthController.md)
+├── concepts/            # Abstract systems spanning multiple files (e.g. DatabaseStrategy.md)
+└── .last_sync_commit    # Git SHA used by getPendingDiff()
 ```
 
-## 7. Next Implementation Steps
+The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/llm/schema.ts).
 
-1.  Initialize Node/TypeScript project (`package.json`, `tsconfig.json`).
-2.  Install core dependencies (`chokidar`, `commander`, `zod`, `ai`).
-3.  Build the CLI skeleton (`bin/cortex.js`).
-4.  Implement the File Watcher to log changes to the console.
-5.  Connect the LLM engine to generate a dummy Markdown file.
+---
+
+## 7. Status & Next Steps
+
+Phases 1–4 of the [implementation plan](implementation_plan.md) are functional. The remaining work is in Phase 5 (CLI polish):
+
+1. `cortex status` subcommand (currently exposed only via MCP `get_cortex_status`).
+2. Structured logging (`pino`/`winston`) replacing ad-hoc `console.log`.
+3. Cross-platform daemonization guidance (Windows service / launchd / systemd).
+4. Lockfile to prevent two `cortex watch` instances from racing on the same `.knowledge/`.
+5. Unit + integration tests around the Watcher → LLM → Writer pipeline (mock-mode hook is already in place).

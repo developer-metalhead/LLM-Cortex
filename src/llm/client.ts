@@ -1,5 +1,8 @@
 import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { anthropic } from '@ai-sdk/anthropic';
+import { google } from '@ai-sdk/google';
 import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from './prompts.js';
 import dotenv from 'dotenv';
 import { SynthesisSchema, type Synthesis } from './schema.js';
@@ -7,6 +10,54 @@ import { SynthesisSchema, type Synthesis } from './schema.js';
 export { SynthesisSchema, type Synthesis } from './schema.js';
 
 dotenv.config({ quiet: true } as any);
+
+type Provider = 'openai' | 'anthropic' | 'google' | 'local';
+
+const PROVIDER_DEFAULTS: Record<Provider, string> = {
+  openai: 'gpt-4o',
+  anthropic: 'claude-sonnet-4-6',
+  google: 'gemini-1.5-pro',
+  local: 'gpt-4o',
+};
+
+function resolveModel() {
+  const provider = (process.env.CORTEX_PROVIDER || 'openai').toLowerCase() as Provider;
+  const model = process.env.CORTEX_MODEL || PROVIDER_DEFAULTS[provider] || PROVIDER_DEFAULTS.openai;
+
+  switch (provider) {
+    case 'anthropic':
+      if (!process.env.ANTHROPIC_API_KEY) {
+        console.error('ANTHROPIC_API_KEY is not set. Skipping synthesis.');
+        return null;
+      }
+      return anthropic(model);
+
+    case 'google':
+      if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+        console.error('GOOGLE_GENERATIVE_AI_API_KEY is not set. Skipping synthesis.');
+        return null;
+      }
+      return google(model);
+
+    case 'local': {
+      const baseUrl = process.env.LOCAL_BASE_URL;
+      if (!baseUrl) {
+        console.error('LOCAL_BASE_URL is not set. Skipping synthesis.');
+        return null;
+      }
+      const localProvider = createOpenAICompatible({ name: 'local', baseURL: baseUrl });
+      return localProvider(model);
+    }
+
+    case 'openai':
+    default:
+      if (!process.env.OPENAI_API_KEY) {
+        console.error('OPENAI_API_KEY is not set. Skipping synthesis.');
+        return null;
+      }
+      return openai(model);
+  }
+}
 
 export async function synthesizeChanges(diff: string, context: string): Promise<Synthesis | null> {
   // --- MOCK ENGINE (FOR TESTING ONLY) ---
@@ -33,14 +84,13 @@ export async function synthesizeChanges(diff: string, context: string): Promise<
   }
   // ---------------------------------------
 
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY is not set. Skipping synthesis.');
-    return null;
-  }
+  const model = resolveModel();
+  if (!model) return null;
 
   try {
     const { object } = await generateObject({
-      model: openai('gpt-4o'), // Or your preferred model
+      model,
+      output: 'object',
       schema: SynthesisSchema,
       system: LIBRARIAN_SYSTEM_PROMPT,
       prompt: EXTRACTION_PROMPT_TEMPLATE(diff, context),
