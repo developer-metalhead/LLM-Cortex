@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "url";
 
 interface IDETarget {
   name: string;
@@ -7,10 +8,15 @@ interface IDETarget {
   writeConfig: (serverPath: string, configPath: string) => Promise<void>;
 }
 
-function getMCPEntry(serverPath: string) {
+function getMCPEntry() {
+  const nodePath = process.execPath;
+  const scriptPath = fileURLToPath(import.meta.url);
+  // The entry point is index.js in the same directory (dist/cli/)
+  const entryPath = path.join(path.dirname(scriptPath), "index.js");
+
   return {
-    command: "node",
-    args: [serverPath],
+    command: nodePath,
+    args: [entryPath, "mcp"],
   };
 }
 
@@ -40,7 +46,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -50,7 +56,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -62,8 +68,8 @@ function getIDETargets(projectRoot: string): IDETarget[] {
         config.servers = config.servers || {};
         config.servers["project-cortex"] = {
           type: "stdio",
-          command: "node",
-          args: [sPath],
+          command: "cortex",
+          args: ["mcp"],
         };
         await writeJsonFile(configPath, config);
       },
@@ -79,7 +85,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath);
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -93,7 +99,17 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(sPath);
+        config.mcpServers["project-cortex"] = getMCPEntry();
+        await writeJsonFile(configPath, config);
+      },
+    },
+    {
+      name: "antigravity",
+      configPath: path.join(projectRoot, ".antigravity", "mcp.json"),
+      writeConfig: async (sPath, configPath) => {
+        const config = await readJsonSafe(configPath);
+        config.mcpServers = config.mcpServers || {};
+        config.mcpServers["project-cortex"] = getMCPEntry();
         await writeJsonFile(configPath, config);
       },
     },
@@ -141,5 +157,12 @@ export async function setupIDE(
 }
 
 export function getAvailableTargets(): string[] {
-  return ["claude-code", "cursor", "vscode", "windsurf", "claude-desktop"];
+  return [
+    "claude-code",
+    "cursor",
+    "vscode",
+    "windsurf",
+    "claude-desktop",
+    "antigravity",
+  ];
 }

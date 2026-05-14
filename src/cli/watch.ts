@@ -1,8 +1,10 @@
+import fs from "fs/promises";
 import path from "path";
 import { CortexWatcher } from "../core/watcher.js";
 import { KnowledgeManager } from "../knowledge/writer.js";
 import { synthesizeChanges } from "../llm/client.js";
 import { CortexMCPServer } from "../mcp/server.js";
+import { daemonLogger as logger } from "../core/logger.js";
 
 const pendingDiffs: Map<string, string> = new Map();
 
@@ -10,13 +12,29 @@ export async function runWatch(projectRoot: string): Promise<void> {
   const knowledge = new KnowledgeManager(projectRoot);
   await knowledge.init();
 
+  const lockPath = path.join(projectRoot, ".knowledge", "cortex.lock");
+
+  // Robust Lockfile Check
+  try {
+    const existingPid = await fs.readFile(lockPath, "utf8");
+    try {
+      process.kill(parseInt(existingPid), 0);
+      logger.error(`Cortex daemon is already running (PID: ${existingPid}).`);
+      process.exit(1);
+    } catch (e) {
+      logger.warn({ stalePid: existingPid }, "Stale lockfile detected. Overwriting...");
+    }
+  } catch (e) {
+    // Lock doesn't exist
+  }
+  await fs.writeFile(lockPath, process.pid.toString());
+
   const mode = process.env.INGESTION_MODE || "auto";
-  console.log(`  Cortex daemon starting (mode: ${mode})`);
-  console.log(`  Watching: ${projectRoot}\n`);
+  logger.info({ mode, projectRoot }, "Cortex daemon starting");
 
   async function performSync() {
     if (pendingDiffs.size === 0) {
-      console.log("  Nothing to sync.");
+      logger.info("Nothing to sync.");
       return;
     }
 
@@ -25,7 +43,7 @@ export async function runWatch(projectRoot: string): Promise<void> {
       batchDiff += `\nFILE: ${file}\n${diff}\n-------------------\n`;
     }
 
-    console.log(`  Synthesizing ${pendingDiffs.size} pending change(s)...`);
+    logger.info({ count: pendingDiffs.size }, "Synthesizing pending changes...");
     const context = await knowledge.getKnowledgeSummary();
     const synthesis = await synthesizeChanges(batchDiff, context);
 
@@ -33,11 +51,23 @@ export async function runWatch(projectRoot: string): Promise<void> {
       await knowledge.saveSynthesis(synthesis);
       await knowledge.updateLastSyncCommit(projectRoot);
       pendingDiffs.clear();
-      console.log("  Sync complete. Knowledge base updated.");
+      logger.info("Sync complete. Knowledge base updated.");
     } else {
-      console.log("  Synthesis failed — check your API key.");
+      logger.error("Synthesis failed — check your API key.");
     }
   }
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    logger.info("Cortex daemon shutting down...");
+    try {
+      await fs.unlink(lockPath);
+    } catch (e) {}
+    process.exit(0);
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 
   // Start MCP server embedded in daemon so IDE tools also trigger real syncs
   const mcpServer = new CortexMCPServer(projectRoot, performSync);
@@ -49,22 +79,22 @@ export async function runWatch(projectRoot: string): Promise<void> {
   watcher.on("file_changed", async ({ filePath, diff }: { filePath: string; diff: string }) => {
     if (mode === "manual") {
       pendingDiffs.set(filePath, diff);
-      console.log(`  Queued: ${filePath} (type "cortex sync" to flush)`);
+      logger.info({ filePath }, "Queued change (manual mode)");
       return;
     }
 
-    console.log(`  Change detected: ${filePath}`);
+    logger.info({ filePath }, "Change detected");
     const context = await knowledge.getKnowledgeSummary();
     const synthesis = await synthesizeChanges(diff, context);
     if (synthesis) {
       await knowledge.saveSynthesis(synthesis);
       await knowledge.updateLastSyncCommit(projectRoot);
-      console.log(`  Synthesized: ${filePath}`);
+      logger.info({ filePath }, "Synthesized successfully");
     }
   });
 
   watcher.on("file_deleted", (filePath: string) => {
-    console.log(`  Deleted: ${filePath}`);
+    logger.info({ filePath }, "File deleted");
   });
 
   // Manual sync via stdin when in manual mode

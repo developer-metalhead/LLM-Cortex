@@ -112,7 +112,7 @@ export async function runInit(projectRoot: string): Promise<void> {
   } else {
     // IDE route
     console.log("\n  IDE route selected.\n");
-    console.log("  Available targets: claude-code, cursor, vscode, windsurf, claude-desktop\n");
+    console.log("  Available targets: claude-code, cursor, vscode, windsurf, claude-desktop, antigravity\n");
 
     const input = await ask(rl, '  Which IDEs to configure? (comma-separated, or "all"): ');
     const targets = input.trim() === "all"
@@ -123,8 +123,23 @@ export async function runInit(projectRoot: string): Promise<void> {
     await setupIDE(projectRoot, targets);
 
     console.log("\n  Done. Restart your IDE to activate the MCP connection.");
-    console.log("  Then use /ingest_cortex (Claude Code) or @project-cortex (Cursor) to synthesize.\n");
+    
+    if (targets.includes("antigravity") || targets.includes("all")) {
+      console.log("  For Antigravity: Ask me 'What tools do you have from project-cortex?' to verify.");
+    }
+    
+    if (targets.includes("claude-code") || targets.includes("all")) {
+      console.log("  For Claude Code: Use /ingest_cortex to synthesize.");
+    }
+
+    if (targets.includes("cursor") || targets.includes("all")) {
+      console.log("  For Cursor: Use @project-cortex to synthesize.");
+    }
+    console.log("");
   }
 
   rl.close();
 }
+
+
+//poop fart

@@ -118,32 +118,50 @@ CORTEX_MODEL=qwen2.5          # or llama3, mistral, phi4, deepseek-r1, gemma3, e
 
 Then start the daemon:
 
+## 🚀 Usage
+
+### 1. Initialize a Project
+Run this in any new repository to set up the `.knowledge` base:
+```bash
+cortex init
+```
+
+### 2. Configure your IDE (Portable & Robust Setup)
+To use Cortex within your IDE (Claude Code, Cursor, Antigravity, etc.), run:
+```bash
+cortex setup all
+```
+**Why this is better:**
+- **Zero Configuration**: Automatically finds your `node` path and script location.
+- **Repo-Aware**: Because it uses the IDE's current working directory (and has smart parent-folder climbing), **Cortex automatically switches its knowledge base** whenever you open a different project. No hardcoded paths required.
+
+### 3. Background Ingestion (API Route)
+If you are using an API key (OpenAI/Anthropic) instead of an IDE, start the daemon:
 ```bash
 cortex watch
 ```
 
-Cortex will now synthesize your codebase in the background as you code.
+---
 
-**Ingestion modes:**
+## 🛠️ CLI Reference
 
-| Mode | Behavior |
-|---|---|
-| `auto` (default) | Synthesizes every file save automatically |
-| `manual` | Queues changes until you manually flush them |
+| Command | Description |
+|---------|-------------|
+| `cortex init` | Interactive setup for a new project. |
+| `cortex status` | Check health, config, knowledge base location, and last sync status. |
+| `cortex config` | Update LLM provider, model, or ingestion mode via interactive prompts or flags. |
+| `cortex setup` | Register MCP server in IDE configs with absolute path resolution. |
+| `cortex watch` | Start background diff-to-knowledge daemon with lockfile protection. |
+| `cortex mcp` | Start the MCP server in STDIO mode (used by IDEs). |
 
-Set the mode in your `.env`:
+---
 
-```env
-INGESTION_MODE=manual
-```
+## 📂 Multi-Project Usage
+Project Cortex is designed to be installed once and used everywhere. Unlike global MCPs (like Figma) which pull from a central cloud, Cortex is **Repo-Aware**:
 
-**Flushing in manual mode:** `cortex sync` is not a separate CLI command — it is a text trigger you type directly into the terminal where `cortex watch` is already running. When the watcher is in manual mode it prints:
-
-```
-Manual mode active. Type "cortex sync" to flush pending changes.
-```
-
-Type `cortex sync` and press Enter in that same terminal to batch all queued diffs into a single LLM call.
+1. **Install once**: `npm install -g projectcortex` (or `npm link`).
+2. **Context-aware**: When you open your IDE, it launches `cortex mcp`.
+3. **Automatic Switching**: The `cortex` binary detects your current project root via the IDE's working directory. It will automatically read the `.knowledge` folder of whichever project you are currently working on.
 
 ---
 
@@ -228,17 +246,28 @@ In Claude Code, the included slash commands wire these tools together:
 
 ---
 
-## CLI Reference
+## Daemonization (Background Execution)
 
-| Command | Description |
-|---|---|
-| `cortex init` | Interactive setup — choose API keys or IDE route, scaffold `.knowledge/`, write `.env` |
-| `cortex watch` | Start the background daemon (API keys route). Also embeds the MCP server so IDE tools can trigger real syncs against the same process. |
-| `cortex setup [targets...]` | Register the Cortex MCP server in IDE configs. Targets: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, or `all`. |
+To keep Cortex running permanently in the background without keeping a terminal open, we recommend using a process manager like **PM2**.
 
-**Manual sync (API keys route, `INGESTION_MODE=manual`):** `cortex sync` is not a CLI subcommand — type it directly into the terminal where `cortex watch` is running to flush all queued diffs as a single batched LLM call. This is cheaper than per-save synthesis on large refactors.
+### Running with PM2
 
-> Build before `cortex setup` — the IDE configs point at `dist/mcp/server.js`. Run `npm run build` first.
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start the Cortex daemon
+pm2 start "cortex watch" --name cortex
+
+# Monitor logs
+pm2 logs cortex
+
+# Ensure it starts on system reboot
+pm2 save
+pm2 startup
+```
+
+Alternatively, you can run it inside a **tmux** or **screen** session.
 
 ---
 

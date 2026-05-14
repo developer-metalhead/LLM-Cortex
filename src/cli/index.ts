@@ -6,10 +6,25 @@ import { fileURLToPath } from "url";
 import { setupIDE, getAvailableTargets } from "./setup.js";
 import { runInit } from "./init.js";
 import { runWatch } from "./watch.js";
+import { runStatus } from "./status.js";
+import { runConfig } from "./config.js";
+import { CortexMCPServer } from "../mcp/server.js";
+import fs from "fs";
+
+function findProjectRoot(startDir: string): string {
+  let current = startDir;
+  while (current !== path.parse(current).root) {
+    if (fs.existsSync(path.join(current, ".knowledge")) || fs.existsSync(path.join(current, ".git"))) {
+      return current;
+    }
+    current = path.dirname(current);
+  }
+  return startDir;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, "../..");
+const projectRoot = findProjectRoot(process.cwd());
 
 const program = new Command();
 
@@ -44,6 +59,32 @@ program
     console.log("Registering Project Cortex MCP server...\n");
     await setupIDE(projectRoot, targets);
     console.log("\nDone. Restart your IDE to activate the MCP connection.");
+  });
+
+program
+  .command("status")
+  .description("Show the current status of Project Cortex")
+  .action(async () => {
+    await runStatus(projectRoot);
+  });
+
+program
+  .command("config")
+  .description("Update the Project Cortex configuration")
+  .option("-p, --provider <provider>", "LLM provider")
+  .option("-m, --model <model>", "LLM model")
+  .option("-M, --mode <mode>", "Ingestion mode (auto/manual)")
+  .action(async (options) => {
+    await runConfig(projectRoot, options);
+  });
+
+program
+  .command("mcp")
+  .description("Start the Cortex MCP server (STDIO mode)")
+  .option("-r, --root <path>", "Project root directory", projectRoot)
+  .action(async (options) => {
+    const server = new CortexMCPServer(options.root);
+    await server.start();
   });
 
 program.parse();
