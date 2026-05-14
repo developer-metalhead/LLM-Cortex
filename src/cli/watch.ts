@@ -4,13 +4,17 @@ import { CortexWatcher } from "../core/watcher.js";
 import { KnowledgeManager } from "../knowledge/writer.js";
 import { synthesizeChanges } from "../llm/client.js";
 import { CortexMCPServer } from "../mcp/server.js";
-import { daemonLogger as logger } from "../core/logger.js";
+import { createDaemonLogger } from "../core/logger.js";
+import { loadCortexEnv } from "../core/env.js";
 
 const pendingDiffs: Map<string, string> = new Map();
 
 export async function runWatch(projectRoot: string): Promise<void> {
+  loadCortexEnv(projectRoot);
   const knowledge = new KnowledgeManager(projectRoot);
   await knowledge.init();
+
+  const logger = createDaemonLogger(projectRoot).child({ component: "daemon" });
 
   const lockPath = path.join(projectRoot, ".knowledge", "cortex.lock");
 
@@ -69,8 +73,11 @@ export async function runWatch(projectRoot: string): Promise<void> {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  // Start MCP server embedded in daemon so IDE tools also trigger real syncs
-  const mcpServer = new CortexMCPServer(projectRoot, performSync);
+  // Embedded MCP: after IDE save_synthesis, clear manual-mode queue (already ingested via MCP)
+  const mcpServer = new CortexMCPServer(projectRoot, async () => {
+    pendingDiffs.clear();
+    logger.info("Pending diff queue cleared after MCP save_synthesis.");
+  });
   await mcpServer.start();
 
   const watcher = new CortexWatcher(projectRoot);

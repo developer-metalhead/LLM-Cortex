@@ -11,20 +11,21 @@ import { KnowledgeManager } from "../knowledge/writer.js";
 import { SynthesisSchema } from "../llm/schema.js";
 import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from "../llm/prompts.js";
 import { getPendingDiff } from "../core/diff.js";
+import { loadCortexEnv } from "../core/env.js";
 
 export class CortexMCPServer {
   private server: Server;
   private knowledgeDir: string;
   private projectRoot: string;
   private knowledge: KnowledgeManager;
-  // Optional callback wired in when running inside the daemon
-  private onSyncRequested?: () => Promise<void>;
+  // Optional: e.g. embedded in `cortex watch` to clear manual diff queue after IDE-driven save
+  private onAfterKnowledgeSave?: () => Promise<void>;
 
-  constructor(projectRoot: string, onSync?: () => Promise<void>) {
+  constructor(projectRoot: string, onAfterKnowledgeSave?: () => Promise<void>) {
     this.projectRoot = projectRoot;
     this.knowledgeDir = path.join(projectRoot, ".knowledge");
     this.knowledge = new KnowledgeManager(projectRoot);
-    this.onSyncRequested = onSync;
+    this.onAfterKnowledgeSave = onAfterKnowledgeSave;
 
     this.server = new Server(
       { name: "project-cortex", version: "1.0.0" },
@@ -240,6 +241,14 @@ export class CortexMCPServer {
         await this.knowledge.saveSynthesis(parsed.data);
         await this.knowledge.updateLastSyncCommit(this.projectRoot);
 
+        if (this.onAfterKnowledgeSave) {
+          try {
+            await this.onAfterKnowledgeSave();
+          } catch (err) {
+            console.error("[Cortex MCP] onAfterKnowledgeSave failed:", err);
+          }
+        }
+
         return {
           content: [
             {
@@ -274,6 +283,8 @@ if (import.meta.url === __selfUrl) {
   if (rootArgIndex !== -1 && process.argv[rootArgIndex + 1]) {
     projectRoot = path.resolve(process.argv[rootArgIndex + 1]);
   }
+
+  loadCortexEnv(projectRoot);
 
   console.error(`[Cortex] Starting MCP server with root: ${projectRoot}`);
   

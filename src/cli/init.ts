@@ -1,12 +1,14 @@
 import fs from "fs/promises";
 import path from "path";
 import readline from "readline";
+import { loadCortexEnv } from "../core/env.js";
 
 function ask(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => rl.question(question, resolve));
 }
 
 export async function runInit(projectRoot: string): Promise<void> {
+  loadCortexEnv(projectRoot);
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
   console.log("\n  Project Cortex — Setup\n");
@@ -92,14 +94,22 @@ export async function runInit(projectRoot: string): Promise<void> {
 
       await fs.writeFile(envPath, envContent, "utf8");
       console.log(`\n  Created .env`);
+      console.log("  Optional: put shared API keys in ~/.cortexrc (same KEY=value format); project .env overrides.");
 
-      // Add .env to .gitignore if present
+      // Add .env / cortex.log to .gitignore if present
       const gitignorePath = path.join(projectRoot, ".gitignore");
       try {
         const gitignore = await fs.readFile(gitignorePath, "utf8");
+        const toAppend: string[] = [];
         if (!gitignore.includes(".env")) {
-          await fs.appendFile(gitignorePath, "\n.env\n");
-          console.log("  Added .env to .gitignore");
+          toAppend.push(".env");
+        }
+        if (!gitignore.includes("cortex.log")) {
+          toAppend.push("cortex.log");
+        }
+        if (toAppend.length > 0) {
+          await fs.appendFile(gitignorePath, `\n${toAppend.join("\n")}\n`);
+          console.log(`  Added to .gitignore: ${toAppend.join(", ")}`);
         }
       } catch {
         // no .gitignore, that's fine
@@ -140,6 +150,3 @@ export async function runInit(projectRoot: string): Promise<void> {
 
   rl.close();
 }
-
-
-//poop fart

@@ -37,8 +37,6 @@ async function writeJsonFile(filePath: string, data: Record<string, any>) {
 const home = process.env.HOME || process.env.USERPROFILE || "";
 
 function getIDETargets(projectRoot: string): IDETarget[] {
-  const serverPath = path.join(projectRoot, "dist", "mcp", "server.js");
-
   return [
     {
       name: "claude-code",
@@ -120,14 +118,12 @@ export async function setupIDE(
   projectRoot: string,
   targets: string[]
 ): Promise<void> {
-  const serverPath = path.join(projectRoot, "dist", "mcp", "server.js");
+  const cliEntry = path.join(projectRoot, "dist", "cli", "index.js");
 
   try {
-    await fs.access(serverPath);
+    await fs.access(cliEntry);
   } catch {
-    console.error(
-      `Error: MCP server not built. Run "npm run build" first.`
-    );
+    console.error(`Error: CLI not built. Run "npm run build" first.`);
     process.exit(1);
   }
 
@@ -148,7 +144,7 @@ export async function setupIDE(
     }
 
     try {
-      await target.writeConfig(serverPath, target.configPath);
+      await target.writeConfig(cliEntry, target.configPath);
       console.error(`  [ok] ${target.name} → ${target.configPath}`);
     } catch (err: any) {
       console.error(`  [fail] ${target.name}: ${err.message}`);

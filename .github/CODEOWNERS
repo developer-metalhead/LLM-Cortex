@@ -1,0 +1,5 @@
+# Default owners for everything in the repo.
+# Used when branch protection has "Require review from Code Owners" enabled.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @developer-metalhead

@@ -65,7 +65,7 @@ Cortex exposes these as **Native MCP Prompts**:
 ## Installation
 
 ```bash
-npm install -g project-cortex
+npm install -g projectcortex
 ```
 
 ---
@@ -109,7 +109,7 @@ The model you run is entirely up to you: Qwen, Llama, Mistral, Phi, DeepSeek, Ge
 
 > `LOCAL_BASE_URL` points Cortex at your local server. No API key is needed — local servers don't authenticate requests.
 
-A typical `.env` looks like one of these:
+A typical `.env` looks like one of these (optional: put shared keys in `~/.cortexrc` using the same `KEY=value` format — project `.env` overrides):
 
 ```env
 # OpenAI cloud
@@ -177,7 +177,7 @@ cortex watch
 ## 📂 Multi-Project Usage
 Project Cortex is designed to be installed once and used everywhere. Unlike global MCPs (like Figma) which pull from a central cloud, Cortex is **Repo-Aware**:
 
-1. **Install once**: `npm install -g projectcortex` (or `npm link`).
+1. **Install once**: `npm install -g projectcortex` (or `npm link` from a clone).
 2. **Context-aware**: When you open your IDE, it launches `cortex mcp`.
 3. **Automatic Switching**: The `cortex` binary detects your current project root via the IDE's working directory. It will automatically read the `.knowledge` folder of whichever project you are currently working on.
 
@@ -286,6 +286,36 @@ pm2 startup
 ```
 
 Alternatively, you can run it inside a **tmux** or **screen** session.
+
+While `cortex watch` is running, logs are written to **`cortex.log`** in the project root (JSON lines) as well as pretty-printed to the terminal.
+
+---
+
+## Publishing and version bumps (maintainers)
+
+This package uses [semantic versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`). For `0.1.x`, breaking changes are still allowed under common `0.x` practice, but prefer bumping **minor** for behavior changes and **patch** for fixes.
+
+1. **Commit** your work on `main` (or your release branch).
+2. **Bump the version** (updates `package.json` and creates a git tag):
+
+   ```bash
+   npm version patch   # 0.1.0 → 0.1.1 — bugfixes, safe tweaks
+   npm version minor   # 0.1.0 → 0.2.0 — new features, larger changes
+   npm version major   # 0.1.0 → 1.0.0 — first stable API / breaking changes you want to signal
+   ```
+
+   Add `-m "v%s"` if you want a custom tag message: `npm version patch -m "Release v%s"`.
+
+3. **Push** the commit and tag: `git push && git push --tags`
+4. **Publish** to npm (runs `prepublishOnly` → `build` + `test` automatically):
+
+   ```bash
+   npm publish
+   ```
+
+   Use `npm publish --dry-run` first to inspect the tarball without uploading.
+
+To verify the tarball locally before publishing: `npm pack` then `npm install -g ./projectcortex-<version>.tgz`.
 
 ---
 

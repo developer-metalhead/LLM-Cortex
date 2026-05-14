@@ -10,6 +10,7 @@ import { runWatch } from "./watch.js";
 import { runStatus } from "./status.js";
 import { runConfig } from "./config.js";
 import { CortexMCPServer } from "../mcp/server.js";
+import { loadCortexEnv } from "../core/env.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -25,14 +26,26 @@ function findProjectRoot(startDir: string): string {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function readCliVersion(): string {
+  const pkgPath = path.join(__dirname, "..", "..", "package.json");
+  try {
+    const raw = fs.readFileSync(pkgPath, "utf8");
+    return JSON.parse(raw).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 const projectRoot = findProjectRoot(process.cwd());
+loadCortexEnv(projectRoot);
 
 const program = new Command();
 
 program
   .name("cortex")
   .description("Project Cortex — The Autonomous Brain for your Codebase")
-  .version("0.1.0");
+  .version(readCliVersion());
 
 program
   .command("init")

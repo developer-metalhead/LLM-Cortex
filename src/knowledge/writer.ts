@@ -82,6 +82,14 @@ export class KnowledgeManager {
     for (const entity of synthesis.entities) {
       const safeName = entity.name.replace(/[/\\:*?"<>|]/g, "_");
       const entityPath = path.join(this.knowledgeDir, "entities", `${safeName}.md`);
+      if (entity.action === "delete") {
+        try {
+          await fs.unlink(entityPath);
+        } catch {
+          // already absent
+        }
+        continue;
+      }
       const content = `# Entity: ${entity.name}\n\n> ${entity.description}\n\n### Relations\n- **Action:** ${entity.action}\n- **Links:** ${entity.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")}\n\n---\n*Last Refined: ${timestamp}*`;
       await fs.writeFile(entityPath, content);
     }
