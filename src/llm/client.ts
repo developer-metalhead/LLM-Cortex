@@ -25,6 +25,30 @@ export const SynthesisSchema = z.object({
 export type Synthesis = z.infer<typeof SynthesisSchema>;
 
 export async function synthesizeChanges(diff: string, context: string): Promise<Synthesis | null> {
+  // --- MOCK ENGINE (FOR TESTING ONLY) ---
+  if (process.env.CORTEX_MOCK_AI === 'true') {
+    console.log('🧪 [MOCK MODE] Simulating LLM Synthesis...');
+    return {
+      summary: "Simulated summary of your project changes.",
+      entities: [
+        {
+          name: "ProjectCore.ts",
+          action: "update",
+          description: "Simulated architectural update.",
+          links: ["[[CortexLogic]]"]
+        }
+      ],
+      concepts: [
+        {
+          name: "CortexLogic",
+          description: "The core logic of the Cortex engine."
+        }
+      ],
+      warnings: ["Mock Mode is active."]
+    };
+  }
+  // ---------------------------------------
+
   if (!process.env.OPENAI_API_KEY) {
     console.warn('⚠️ OPENAI_API_KEY is not set. Skipping synthesis.');
     return null;

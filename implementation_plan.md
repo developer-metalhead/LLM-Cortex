@@ -60,31 +60,33 @@ Integrate the Vercel AI SDK (`@ai-sdk/core`, `@ai-sdk/openai`). Design strict sy
 
 ---
 
-## 💾 Phase 3: Knowledge Storage & Generation (The Memory)
+## 💾 Phase 3: Knowledge Storage & Cost Control (The Memory)
 
 **Layman's Terms**
-Taking the AI's brilliant insights and neatly organizing them into a permanent `.knowledge` folder in your project. It acts like an automated Wikipedia for your codebase.
+Taking the AI's brilliant insights and neatly organizing them into a permanent `.knowledge` folder. To save you money, we're adding a "Manual Sync" mode—the AI only thinks when you type `cortex-sync`.
 
 **Technical Terms**
-Implement file I/O operations to translate the LLM's structured JSON into formatted Markdown. Maintain an `index.md` catalog, append to a chronological `log.md`, and generate individual entity/concept pages using bidirectional linking syntax (`[[ConceptName]]`) for compatibility with tools like Obsidian.
+Implement a dual-mode ingestion pipeline (Auto/Manual). In Manual mode, file diffs are buffered in an in-memory queue. Upon receiving the `cortex-sync` command via `stdin`, the system batches these diffs into a single LLM request. The resulting structured JSON is then serialized into Markdown files with Obsidian-style bidirectional links (`[[Concept]]`).
 
 **Architecture & System Design**
-- **Core Components**: `src/knowledge/writer.ts`, `src/knowledge/indexer.ts`
-- **Design Pattern**: Repository Pattern for abstracting file system reads/writes.
-- **Key Considerations**: Concurrency control. We must ensure two simultaneous code changes don't cause race conditions that corrupt the `index.md` file. Implement simple async queueing for file writes.
+- **Core Components**: `src/knowledge/writer.ts`, `src/index.ts` (Sync logic).
+- **Design Pattern**: Command Pattern for the sync trigger; Batch Processing for LLM calls.
+- **Key Considerations**: 
+    - **Cost Efficiency**: Batching multiple file changes into a single prompt significantly reduces token overhead.
+    - **File Integrity**: Ensure atomic writes to `index.md` to prevent corruption during heavy ingestion.
 
 **Definition of Ready (DoR)**
-- Phase 2 is complete, producing reliable structured JSON representing project knowledge.
+- Phase 2 (LLM Client) is integrated and supports synthesis.
+- `INGESTION_MODE` is configurable via `.env`.
 
 **Definition of Done (DoD)**
-- Markdown files are correctly generated, updated, and formatted based on LLM output.
-- `index.md` reflects an accurate state of the `.knowledge` folder.
-- Bidirectional links are correctly formatted.
-- Concurrent write attempts are safely queued to prevent file corruption.
+- Markdown files are correctly generated in the `.knowledge` folder.
+- `cortex-sync` successfully triggers a batch synthesis of all queued changes.
+- The MCP server successfully serves the content of these real files (replacing mock strings).
 
 **Pros & Cons**
-- ✅ **Pros**: Creates persistent, version-controllable, human-readable documentation that developers can actually browse.
-- ❌ **Cons**: Managing the state of cross-linked Markdown files can be complex, especially when refactoring deletes old concepts.
+- ✅ **Pros**: Gives the user total control over API billing. Persists knowledge in a human-readable, searchable wiki.
+- ❌ **Cons**: Manual mode requires the user to remember to sync their changes.
 
 ---
 

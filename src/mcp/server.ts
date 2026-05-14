@@ -4,6 +4,14 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "../../");
+const KNOWLEDGE_DIR = path.join(rootDir, ".knowledge");
 
 const server = new Server(
   {
@@ -31,7 +39,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "read_knowledge_index",
-        description: "Reads the synthesized architectural knowledge index of the project. (Currently Mocked for Testing)",
+        description: "Reads the synthesized architectural knowledge index of the project.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -48,22 +56,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [
         {
           type: "text",
-          text: "Cortex Engine is online. (Passive Mode: Waiting for external agent to process files).",
+          text: "Cortex Engine is online. (Mode: Manual/Auto synthesis supported).",
         },
       ],
     };
   }
 
   if (request.params.name === "read_knowledge_index") {
-    // In Phase 3, this will read from .knowledge/index.md
-    return {
-      content: [
-        {
-          type: "text",
-          text: "# Cortex Knowledge Base (MOCK)\n\nThis is a placeholder. In the future, this will contain the AI-synthesized architecture of the project.",
-        },
-      ],
-    };
+    try {
+      const indexPath = path.join(KNOWLEDGE_DIR, "index.md");
+      const content = await fs.readFile(indexPath, "utf-8");
+      return {
+        content: [
+          {
+            type: "text",
+            text: content,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "No knowledge base found yet. Please run 'cortex-sync' or wait for auto-ingestion.",
+          },
+        ],
+      };
+    }
   }
 
   throw new Error(`Tool not found: ${request.params.name}`);
