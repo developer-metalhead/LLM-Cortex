@@ -44,7 +44,11 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
 
 ### E. The Knowledge Manager (`src/knowledge/writer.ts`)
 * **Responsibility**: All file I/O against `.knowledge/`. The only writer in the system.
-* **Behavior**: Initializes the directory layout, appends timestamped entries to `log.md` (summary + impacted entities + warnings), writes one `.md` per entity and concept, regenerates `index.md` from the filesystem on every save, and persists the synced HEAD commit to `.last_sync_commit`.
+* **Behavior**: Initializes the directory layout, appends timestamped entries to `log.md` (summary + impacted entities + warnings), writes one `.md` per entity and concept (or **deletes** the entity file when `action: "delete"`), regenerates `index.md` from the filesystem on every save, and persists the synced HEAD commit to `.last_sync_commit`.
+
+### E.1 Structured logging (`src/core/logger.ts`)
+* **Responsibility**: Daemon-only logging via `createDaemonLogger(projectRoot)`.
+* **Behavior**: Writes pretty logs to stdout and JSON lines to `cortex.log` in the project root (via `pino` transports).
 
 ### F. The MCP Server (`src/mcp/server.ts`)
 * **Responsibility**: Bridge between Cortex's synthesized knowledge and active coding agents via the Model Context Protocol.
@@ -53,7 +57,7 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
   * `get_pending_changes` — bundles the diff since last sync, the current knowledge index, the Librarian system prompt, and the output schema description. This is the IDE route's "do the synthesis" prompt-pack.
   * `save_synthesis` — Zod-validates the synthesis JSON, writes it to `.knowledge/`, advances `.last_sync_commit`.
   * `read_knowledge_index` — returns `.knowledge/index.md`.
-* **Modes**: When constructed by `cortex watch`, the server is embedded and can call back into the daemon's sync function. When launched standalone by an IDE (via the registered config), it runs purely as an MCP STDIO server against `process.cwd()`.
+* **Modes**: When constructed by `cortex watch`, the server is embedded with an optional `onAfterKnowledgeSave` callback: after a successful `save_synthesis`, the daemon clears its in-memory manual-mode diff queue so IDE ingestion does not leave stale queued deltas. When launched standalone by an IDE (via the registered config), it runs purely as an MCP STDIO server against `process.cwd()`.
 
 ---
 
@@ -107,7 +111,7 @@ Built as a standalone CLI in **Node.js + TypeScript** (strict, ESM, `module: Nod
 ### Runtime Dependencies
 * **CLI Framework**: `commander` — `cortex init / watch / setup`.
 * **File System**: `chokidar` — robust file watching.
-* **LLM Orchestration**: `ai` (Vercel AI SDK) + `@ai-sdk/openai` — `generateObject` with structured-output enforcement. Swapping to Anthropic or a local OpenAI-compatible endpoint is a one-line change in [src/llm/client.ts](src/llm/client.ts).
+* **LLM Orchestration**: `ai` (Vercel AI SDK) plus `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, and `@ai-sdk/openai-compatible` — `generateObject` with structured-output enforcement. Provider is selected via `CORTEX_PROVIDER` in [src/llm/client.ts](src/llm/client.ts).
 * **Schema Validation**: `zod` — enforces the LLM output shape end-to-end (daemon and MCP both reuse `SynthesisSchema`).
 * **MCP**: `@modelcontextprotocol/sdk` — STDIO server.
 * **Utilities**: `dotenv` (API keys / `INGESTION_MODE`), `ignore` (parses `.gitignore`).
@@ -132,7 +136,9 @@ project-cortex/
 │   │   └── setup.ts             # IDE config writer
 │   ├── core/
 │   │   ├── watcher.ts           # chokidar + .gitignore + debounce
-│   │   └── diff.ts              # per-file diff + since-last-sync diff
+│   │   ├── diff.ts              # per-file diff + since-last-sync diff
+│   │   ├── env.ts               # ~/.cortexrc + project .env loader
+│   │   └── logger.ts            # pino factory for daemon (stdout + cortex.log)
 │   ├── llm/
 │   │   ├── client.ts            # generateObject + mock mode
 │   │   ├── prompts.ts           # Librarian system + extraction templates
@@ -140,7 +146,7 @@ project-cortex/
 │   ├── knowledge/
 │   │   └── writer.ts            # all .knowledge/ file I/O + index
 │   └── mcp/
-│       └── server.ts            # MCP server (4 tools) — embeddable & standalone
+│       └── server.ts            # MCP server (4 tools + prompts) — embeddable & standalone
 ├── .claude/commands/            # Claude Code slash commands shipped with the repo
 │   ├── ingest_cortex.md
 │   ├── cortex_status.md
@@ -171,10 +177,10 @@ The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/l
 
 ## 7. Status & Next Steps
 
-Phases 1–4 of the [implementation plan](implementation_plan.md) are functional. The remaining work is in Phase 5 (CLI polish):
+Phases 1–5 of the [implementation plan](implementation_plan.md) are implemented in code: CLI (`init`, `watch`, `status`, `config`, `setup`, `mcp`), git-aware diffs, multi-provider LLM synthesis with bounded retries, `.knowledge/` writer (including entity deletes), MCP tools + prompts, embedded MCP in `cortex watch` with post-save queue clearing, lockfile (`.knowledge/cortex.lock`), `pino` logging to stdout and `cortex.log`, global `~/.cortexrc` plus project `.env` loading, and a starter `npm test` suite under `tests/`.
 
-1. `cortex status` subcommand (currently exposed only via MCP `get_cortex_status`).
-2. Structured logging (`pino`/`winston`) replacing ad-hoc `console.log`.
-3. Cross-platform daemonization guidance (Windows service / launchd / systemd).
-4. Lockfile to prevent two `cortex watch` instances from racing on the same `.knowledge/`.
-5. Unit + integration tests around the Watcher → LLM → Writer pipeline (mock-mode hook is already in place).
+**Still optional / incremental:**
+
+1. Broader automated coverage (watcher, diff, MCP handlers, E2E temp repos).
+2. Persistent offline queue when the LLM fails in **auto** mode (today, failed saves are retried up to three times per call; manual mode retains queued diffs until a successful `cortex sync`).
+3. Cross-platform daemon install docs (Windows service / launchd / systemd) beyond the README PM2 section.

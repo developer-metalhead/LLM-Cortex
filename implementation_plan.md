@@ -11,7 +11,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 3 | Knowledge Storage & Cost Control | ✅ Done |
 | 4 | MCP Server Integration | ✅ Done |
 | 4.5 | Dual-Route IDE Integration | ✅ Done (added beyond original plan) |
-| 5 | CLI Polish & Daemonization | 🚧 In progress |
+| 5 | CLI Polish & Daemonization | ✅ Done |
 
 ---
 
@@ -67,14 +67,14 @@ Integrate the Vercel AI SDK (`@ai-sdk/core`, `@ai-sdk/openai`). Design strict sy
 **Definition of Done (DoD)**
 - The system successfully sends diffs to the LLM using the Vercel AI SDK.
 - The LLM responds strictly according to the defined `zod` JSON schema.
-- Retries and timeout fallbacks are implemented.
+- Retries for transient LLM failures: up to **3** attempts with backoff in [src/llm/client.ts](src/llm/client.ts) (not a durable disk queue).
 
 **Pros & Cons**
 - ✅ **Pros**: Transforms raw, chaotic code changes into highly valuable, semantic architectural insights.
 - ❌ **Cons**: Introduces network latency and API costs. Prompt engineering must be precise to avoid generating "fluff" documentation.
 
 **Status notes**
-- [src/llm/client.ts](src/llm/client.ts) calls `generateObject()` against `gpt-4o`.
+- [src/llm/client.ts](src/llm/client.ts) calls `generateObject()` with the provider from `CORTEX_PROVIDER` (OpenAI, Anthropic, Google, or local OpenAI-compatible).
 - The Zod schema lives in its own module ([src/llm/schema.ts](src/llm/schema.ts)) so both the daemon and the MCP `save_synthesis` validator share one source of truth.
 - `CORTEX_MOCK_AI=true` short-circuits the LLM call with a deterministic synthesis — used to exercise the pipeline end-to-end without burning tokens.
 
@@ -124,7 +124,7 @@ Exposing our automated Wikipedia so that other AI tools (like Cursor or Claude C
 Implement the Model Context Protocol (MCP) using `@modelcontextprotocol/sdk`. Stand up a local STDIO or HTTP server that exposes specific tools (`read_architecture`, `get_concept`, `list_warnings`) to external AI clients.
 
 **Architecture & System Design**
-- **Core Components**: `src/mcp/server.ts`, `src/mcp/tools.ts`
+- **Core Components**: `src/mcp/server.ts` (all MCP tools and prompts are defined here).
 - **Design Pattern**: RPC (Remote Procedure Call) Server pattern.
 - **Key Considerations**: Mapping the Markdown folder structure into clean, easily digestible text streams for external agents to consume efficiently.
 
@@ -201,12 +201,14 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 
 **Status notes**
 - ✅ `cortex init`, `cortex watch`, `cortex setup` implemented.
-- ✅ `cortex status` — Reports config, knowledge health, and daemon lock state.
+- ✅ `cortex status` — Reports config, knowledge health, daemon lock state, and `cortex.log` hint.
 - ✅ `cortex config` — Supports interactive prompts and direct flags.
 - ✅ `cortex mcp` — Provides a portable, "Repo-Aware" entry point for all major IDEs.
 - ✅ Smart Root Detection — Implemented `findProjectRoot` to dynamically locate `.knowledge` from any IDE context.
-- ✅ Structured logging — `pino` integrated for daemon observability.
+- ✅ Structured logging — `pino` integrated for daemon observability (stdout + `cortex.log`).
 - ✅ Lockfile and Graceful Shutdown — Ensures process exclusivity and clean exits.
+- ✅ Global env — `~/.cortexrc` loaded before project `.env` via [src/core/env.ts](src/core/env.ts).
+- ✅ Starter tests — `npm test` runs `tests/*.test.ts` (schema + writer delete behavior).
 
 ---
 
@@ -215,20 +217,20 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 To elevate Project Cortex from a prototype to a **Viable Product**, the following cross-cutting concerns are established as global requirements:
 
 1.  **Testing Strategy**
-    *   **Unit Tests**: Core utilities (diff extraction, JSON parsing, Markdown writing) must be isolated and tested.
+    *   **Unit Tests**: Core utilities (diff extraction, JSON parsing, Markdown writing) — starter coverage in `tests/`; expand over time.
     *   **Integration Tests**: Test the Watcher -> LLM -> Writer pipeline using mocked LLM responses.
     *   **End-to-End (E2E)**: Simulate file saves in a mock repository and verify the resulting `.knowledge` outputs.
 
 2.  **Telemetry, Logging, and Observability**
-    *   Transition from `console.log` to a structured logger (e.g., `pino` or `winston`) in Phase 5.
-    *   Implement clear log levels: `DEBUG` (diff contents), `INFO` (file changes), `WARN` (LLM retries), `ERROR` (write failures).
-    *   Write logs to a local file (`cortex.log`) so the daemon's health can be monitored when running in the background.
+    *   ✅ Structured logger (`pino`) with stdout + `cortex.log` in the project root during `cortex watch`.
+    *   Clear log levels: `DEBUG` / `INFO` / `WARN` / `ERROR` via `LOG_LEVEL`.
+    *   ✅ Local log file (`cortex.log`) for background monitoring.
 
 3.  **Security & Secrets Management**
     *   API Keys must never be logged.
-    *   Support loading keys from a global `~/.cortexrc` or project-local `.env`.
+    *   ✅ Support loading keys from a global `~/.cortexrc` or project-local `.env` ([src/core/env.ts](src/core/env.ts)); project `.env` overrides global keys.
     *   `cortex init` MUST automatically add `.env` to the project's `.gitignore`.
 
 4.  **Error Recovery & Resiliency**
-    *   **LLM Outages**: If the AI API is down, the watcher should queue diffs and retry later, rather than dropping knowledge.
-    *   **File Locking**: Implement a lockfile mechanism (`.knowledge/cortex.lock`) to prevent multiple `cortex` instances from running in the same directory simultaneously and corrupting the index.
+    *   **LLM Outages**: The watcher retries each synthesis call up to three times; a durable disk-backed queue for auto mode is still optional future work.
+    *   **File Locking**: ✅ Implement a lockfile mechanism (`.knowledge/cortex.lock`) to prevent multiple `cortex` instances from running in the same directory simultaneously and corrupting the index.

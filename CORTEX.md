@@ -8,6 +8,7 @@ The primary goal of the `.knowledge/` directory is to maintain an **up-to-date a
 ## 2. Directory Conventions
 * **Raw Sources**: The source of truth is the actual codebase (`src/`, `lib/`, `api/`, etc.). These are strictly read-only for Cortex.
 * **Knowledge Output**: All generated knowledge must be written to `.knowledge/`.
+* **Secrets**: Optional global defaults live in `~/.cortexrc` (`KEY=value`, same as `.env`). Project-local `.env` overrides those values when both are present.
   * `.knowledge/index.md` — Master catalog. Regenerated from the filesystem on every sync.
   * `.knowledge/log.md` — Chronological append-only history. Each entry carries summary + impacted entities + warnings.
   * `.knowledge/entities/` — Pages mapping 1:1 to specific files/classes/modules.

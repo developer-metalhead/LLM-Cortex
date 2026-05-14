@@ -1,19 +1,30 @@
 import pino from "pino";
+import path from "path";
 
-const isDev = process.env.NODE_ENV === "development";
-
-export const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-      ignore: "pid,hostname",
-      translateTime: "HH:MM:ss Z",
+/**
+ * Daemon logger: human-readable stdout (pino-pretty) + JSON lines in `cortex.log` at project root.
+ */
+export function createDaemonLogger(projectRoot: string) {
+  const logPath = path.join(projectRoot, "cortex.log");
+  return pino({
+    level: process.env.LOG_LEVEL || "info",
+    transport: {
+      targets: [
+        {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            ignore: "pid,hostname",
+            translateTime: "HH:MM:ss Z",
+          },
+          level: "info",
+        },
+        {
+          target: "pino/file",
+          options: { destination: logPath, append: true, mkdir: false },
+          level: "info",
+        },
+      ],
     },
-  },
-});
-
-// Helper for daemon logs
-export const daemonLogger = logger.child({ component: "daemon" });
-export const mcpLogger = logger.child({ component: "mcp" });
+  });
+}

@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import readline from "readline";
+import { loadCortexEnv } from "../core/env.js";
 
 function ask(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => rl.question(question, resolve));
@@ -10,6 +11,7 @@ export async function runConfig(
   projectRoot: string,
   options: { provider?: string; model?: string; mode?: string }
 ): Promise<void> {
+  loadCortexEnv(projectRoot);
   const envPath = path.join(projectRoot, ".env");
   let envContent = "";
 

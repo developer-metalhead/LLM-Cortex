@@ -2,7 +2,7 @@
   "name": "projectcortex",
   "version": "0.1.0",
   "type": "module",
-  "description": "> **The Autonomous Brain for your Codebase.**",
+  "description": "The Autonomous Brain for your codebase — compiled architectural knowledge for AI-assisted development.",
   "main": "dist/index.js",
   "bin": {
     "cortex": "./bin/cortex.js"
@@ -19,11 +19,35 @@
     "mcp": "tsx src/mcp/server.ts",
     "build": "tsc",
     "setup": "tsx src/cli/index.ts setup",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test tests/*.test.ts",
+    "prepublishOnly": "npm run build && npm test"
   },
-  "keywords": [],
-  "author": "",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "cortex",
+    "knowledge-base",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "llm",
+    "documentation",
+    "architecture",
+    "cli",
+    "chokidar",
+    "git"
+  ],
+  "author": "https://github.com/developer-metalhead",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/developer-metalhead/LLM-Cortex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/developer-metalhead/LLM-Cortex/issues"
+  },
+  "homepage": "https://github.com/developer-metalhead/LLM-Cortex#readme",
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
     "@ai-sdk/google": "^3.0.73",

@@ -1,15 +1,16 @@
-import { generateObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { anthropic } from '@ai-sdk/anthropic';
-import { google } from '@ai-sdk/google';
-import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from './prompts.js';
-import dotenv from 'dotenv';
-import { SynthesisSchema, type Synthesis } from './schema.js';
+import { generateObject } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { anthropic } from "@ai-sdk/anthropic";
+import { google } from "@ai-sdk/google";
+import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from "./prompts.js";
+import { SynthesisSchema, type Synthesis } from "./schema.js";
 
-export { SynthesisSchema, type Synthesis } from './schema.js';
+export { SynthesisSchema, type Synthesis } from "./schema.js";
 
-dotenv.config({ quiet: true } as any);
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 type Provider = 'openai' | 'anthropic' | 'google' | 'local';
 
@@ -87,18 +88,24 @@ export async function synthesizeChanges(diff: string, context: string): Promise<
   const model = resolveModel();
   if (!model) return null;
 
-  try {
-    const { object } = await generateObject({
-      model,
-      output: 'object',
-      schema: SynthesisSchema,
-      system: LIBRARIAN_SYSTEM_PROMPT,
-      prompt: EXTRACTION_PROMPT_TEMPLATE(diff, context),
-    });
-
-    return object;
-  } catch (error) {
-    console.error('Synthesis Error:', error);
-    return null;
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { object } = await generateObject({
+        model,
+        output: "object",
+        schema: SynthesisSchema,
+        system: LIBRARIAN_SYSTEM_PROMPT,
+        prompt: EXTRACTION_PROMPT_TEMPLATE(diff, context),
+      });
+      return object;
+    } catch (error) {
+      if (attempt === maxAttempts) {
+        console.error("Synthesis Error:", error);
+        return null;
+      }
+      await sleep(1000 * attempt);
+    }
   }
+  return null;
 }
