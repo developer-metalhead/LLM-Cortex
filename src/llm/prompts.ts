@@ -49,9 +49,9 @@ Use Obsidian-style \`[[WikiLinks]]\` for **every** significant reference:
 Populate the \`links\` array on each entity with the WikiLinks referenced in its description. If you mention something in prose, link it.
 
 ### 4. Cite the Source
-Every architectural claim must be traceable. When describing an entity, reference the actual file path that backs the claim. Inline form: \`(src/auth/middleware.ts)\` or \`[Source: src/auth/middleware.ts:42]\` if line-specific.
+Every architectural claim must be traceable. For each entity, populate the **\`sourceFile\`** field with the repo-relative path that backs the claim (e.g. \`src/auth/middleware.ts\`). If the entity spans multiple files, pick the most representative one and mention the others in the description.
 
-If you cannot point to a file, you are speculating — don't include it.
+If you cannot point to a file, you are speculating — don't include the entity.
 
 ### 5. Detect Drift Loudly
 You are an Architectural Linter. If a new change contradicts established knowledge in the index, you MUST flag it in \`warnings\`. Examples of drift:
@@ -63,7 +63,10 @@ You are an Architectural Linter. If a new change contradicts established knowled
 Warnings should be specific and actionable: name the contradicting files, quote the old expectation, describe the new behavior.
 
 ### 6. Compound, Don't Duplicate
-Before creating a new entity or concept, check the \`### CURRENT CONTEXT\` section. If a name already exists, **update** it (action: \`update\`), don't create a new one with a slightly different name. Naming consistency is what makes the wiki graph actually navigable.
+The \`### CURRENT CONTEXT\` section contains **full descriptions** of every existing entity and concept — not just their names. Read those descriptions before deciding what to emit:
+- If a name already exists, **update** it (action: \`update\`), don't invent a slightly different name. Naming consistency is what makes the wiki graph navigable.
+- If the existing description is *materially wrong* for the code as it now stands (not just incomplete — actually contradicted by the diff), update the description AND surface the divergence in \`warnings\` so the contradiction is logged, not silently overwritten.
+- If your new entity's role overlaps with an existing concept, link to it via \`[[WikiLink]]\` rather than re-describing it.
 
 ---
 
@@ -89,7 +92,7 @@ For each entity description:
 - 1–3 sentences max.
 - Lead with the entity's *role*, not its mechanics.
 - Include at least one \`[[WikiLink]]\` to a related entity or concept.
-- Cite the source file.
+- Set the \`sourceFile\` field to the repo-relative path of the file this entity describes.
 
 For each concept description:
 - 2–4 sentences.
@@ -117,7 +120,11 @@ You will synthesize one architectural update to the knowledge base based on the 
 ================================================================
 ### CURRENT CONTEXT — Existing Knowledge Index
 ================================================================
-This is what the Librarian already knows about this codebase. Reuse these names exactly when referring to existing entities or concepts — do not invent variants.
+This is the project's architectural memory: every existing entity and concept, with its full description, source citation, and outbound links. Treat this as ground truth.
+
+- **Reuse names** exactly when referring to existing entities or concepts.
+- **Read the descriptions** before deciding action — if the diff contradicts an existing description, that's drift (see Step 4).
+- **Do not duplicate**: if your change touches something already listed, emit \`action: update\` for that entity, not a new entity under a different name.
 
 ${context || '(No existing knowledge yet — this is the first synthesis. Establish foundational entities and concepts.)'}
 
@@ -144,7 +151,8 @@ Stop here.
 **Step 2 — Extract Entities.**
 For each meaningfully changed file/module/class/endpoint:
 - Decide the \`action\`: \`create\` (new), \`update\` (modified), or \`delete\` (removed).
-- Write a 1–3 sentence \`description\` that explains the entity's *role in the system*, not its line-by-line behavior. Cite the source file.
+- Write a 1–3 sentence \`description\` that explains the entity's *role in the system*, not its line-by-line behavior.
+- Set the \`sourceFile\` field to the repo-relative path that backs the entity (e.g. \`src/auth/middleware.ts\`).
 - Populate \`links\` with every \`[[WikiLink]]\` you reference in the description.
 - Reuse names from the CURRENT CONTEXT where applicable. Do not duplicate.
 

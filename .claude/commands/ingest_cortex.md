@@ -7,12 +7,16 @@ You are acting as the Project Cortex Librarian. Follow these steps exactly:
 
 3. Follow the `systemPrompt` instructions. Use the `userPrompt` to analyze the code changes.
 
-4. Produce a synthesis object that strictly matches `outputSchema`:
+4. The `userPrompt` contains the **full existing knowledge index** (with descriptions, source paths, and links for every entity/concept). Read it carefully before deciding what to emit:
+   - If a name already exists in the index, emit `action: update` — do not invent a new name.
+   - If the diff contradicts an existing description, emit a `warnings` entry naming both the old expectation and the new contradicting file.
+
+5. Produce a synthesis object that strictly matches `outputSchema`:
    - `summary`: 1-2 sentence high-level summary of what changed
-   - `entities`: array of modified files/modules with name, action (create/update/delete), description, and links
+   - `entities`: array with name, action (create/update/delete), description, links, and **sourceFile** (repo-relative path, e.g. `src/auth/middleware.ts`)
    - `concepts`: array of abstract architectural patterns introduced or updated
    - `warnings`: array of contradictions or architectural drift detected
 
-5. Call `save_synthesis` with your synthesis object as the `synthesis` argument.
+6. Call `save_synthesis` with your synthesis object as the `synthesis` argument.
 
-6. Report back to the user: how many entities and concepts were saved, and the summary.
+7. Report back to the user: how many entities and concepts were saved, and the summary.

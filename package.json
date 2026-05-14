@@ -1,6 +1,6 @@
 {
   "name": "projectcortex",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "The Autonomous Brain for your codebase — compiled architectural knowledge for AI-assisted development.",
   "main": "dist/index.js",
@@ -48,7 +48,7 @@
   "bugs": {
     "url": "https://github.com/developer-metalhead/LLM-Cortex/issues"
   },
-  "homepage": "https://github.com/developer-metalhead/LLM-Cortex#readme",
+  "homepage": "https://github.com/developer-metalhead",
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
     "@ai-sdk/google": "^3.0.73",
