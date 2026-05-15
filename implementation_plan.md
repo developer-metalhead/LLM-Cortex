@@ -259,8 +259,15 @@ Four related additions, all sharing one schema/migration:
    ```
    This is the missing half of "compounding architectural memory": today we record what *is*, not what was tried and rejected. Whenever an `update` synthesis includes a `replaces:` clause (LLM-emitted free text in the description, e.g. *"replaces the cookie-session approach which broke under SameSite=Strict"*), the writer extracts and persists it as a failed-approach record. The CURRENT CONTEXT for future ingests includes the failed-approaches block for every touched entity, so the LLM (and the human reading the page) sees *"we already tried X, here's why it didn't stick"* before re-proposing it.
 
+5. **On-demand concept persistence (`save_concept` MCP tool).** A new MCP tool alongside `save_synthesis` that lets an IDE agent explicitly persist an architectural insight discovered during a query — without needing to trigger a file-save-based ingest cycle. When a developer asks an architectural question (e.g., "how does auth flow into the session store?") and the agent synthesizes a novel answer — a comparison, a discovered coupling, an analysis — that answer evaporates into chat history under the current design. `save_concept` gives the agent a path to file it:
+   ```ts
+   // MCP tool signature
+   save_concept({ name: string; description: string; links?: string[] })
+   ```
+   The MCP server creates a new concept page (or updates an existing one if the name matches), appends to `log.md` / `log.jsonl`, and regenerates `index.md`. Same Zod validation as `save_synthesis`; same writer pipeline; the only difference is it bypasses the diff → LLM ingest cycle and writes directly from the agent's query-time synthesis. The principle: **good answers should outlive the conversation that produced them.**
+
 **Architecture & System Design**
-- **Core Components**: Extend `src/llm/schema.ts` (constraints + relationships + failedApproaches fields), `src/knowledge/writer.ts` (constraint validation + staleness propagation over typed edges + failed-approaches persistence), `src/mcp/server.ts` (`save_synthesis` rejection contract), `src/llm/prompts.ts` (inject constraints, typed-edge guidance, and failed-approaches into CURRENT CONTEXT).
+- **Core Components**: Extend `src/llm/schema.ts` (constraints + relationships + failedApproaches fields), `src/knowledge/writer.ts` (constraint validation + staleness propagation over typed edges + failed-approaches persistence), `src/mcp/server.ts` (`save_synthesis` rejection contract + new `save_concept` tool registration), `src/llm/prompts.ts` (inject constraints, typed-edge guidance, and failed-approaches into CURRENT CONTEXT).
 - **Design Pattern**: The constraints field is a tiny declarative rule engine. Blast-radius is a reverse-graph traversal over `state.json`. Typed edges are a thin upgrade — a discriminated union, not a new store. Failed approaches are an append-only sub-log per entity.
 - **Key Considerations**:
   - Constraint **violation detection** is hybrid: the LLM produces structured "edges introduced" output (imports added, callers added) and the writer checks those against declared rules. We do not run an AST parser ourselves — that's brittle across languages. The LLM is the AST.
@@ -280,10 +287,11 @@ Four related additions, all sharing one schema/migration:
 - Legacy `links[]` arrays auto-migrate to typed `relationships[]` on first load, with no manual user step.
 - Failed-approach records appear in CURRENT CONTEXT for any touched entity, capped at 10 most recent per entity.
 - `cortex status` reports stale-entity count and a `cortex audit stale` command lists them.
-- Tests cover: constraint persistence, violation rejection, stale propagation across a 2-hop typed graph, legacy-links migration, failed-approach capture + replay in CURRENT CONTEXT.
+- `save_concept` MCP tool is registered; calling it with `{ name, description, links? }` creates or updates a concept page, appends to `log.md` / `log.jsonl`, and regenerates `index.md` — identical write path as `save_synthesis`, no diff or LLM call required.
+- Tests cover: constraint persistence, violation rejection, stale propagation across a 2-hop typed graph, legacy-links migration, failed-approach capture + replay in CURRENT CONTEXT, `save_concept` create vs. update behavior, `save_concept` log emission.
 
 **Pros & Cons**
-- ✅ **Pros**: Moves Cortex from "passive memory" to "active guardrail" — the stated north star. Typed edges make blast-radius honest, not just a flat fan-out count. Failed-approaches close the "compounding memory" loop in the negative direction — the project stops re-litigating settled architectural decisions. Constraint enforcement gives teams a hard line, not a soft warning.
+- ✅ **Pros**: Moves Cortex from "passive memory" to "active guardrail" — the stated north star. Typed edges make blast-radius honest, not just a flat fan-out count. Failed-approaches close the "compounding memory" loop in the negative direction — the project stops re-litigating settled architectural decisions. Constraint enforcement gives teams a hard line, not a soft warning. `save_concept` closes the query-result persistence gap: good architectural answers now outlive the conversation that produced them.
 - ❌ **Cons**: LLM-driven edge detection has false-negative risk (the model may miss an import). Mitigated by treating constraints as defense-in-depth, not the only line of defense. Staleness can be noisy on large refactors — needs a "mark all reconciled" escape hatch. Failed-approaches risk turning into a graveyard of obsolete context if not capped; the 10-record cap and the LLM's discretion to *deliberately* re-propose are the safeguards.
 
 ---
