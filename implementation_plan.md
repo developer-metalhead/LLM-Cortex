@@ -161,8 +161,9 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 **Architecture & System Design**
 - **Core Components**: [src/cli/setup.ts](src/cli/setup.ts), [src/cli/init.ts](src/cli/init.ts), [.claude/commands/](.claude/commands/).
 - **Design Pattern**: Strategy — the daemon and the IDE are two interchangeable executors of the Librarian role against one shared schema.
-- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`.
+- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity`.
 - **Slash commands** shipped for Claude Code: `/ingest_cortex`, `/cortex_status`, `/read_knowledge`.
+- **Antigravity workflows** shipped under `.agents/workflows/`: `ingest`, `read`, `status`, `explore`.
 
 **Definition of Done (DoD)**
 - `cortex init` walks the user through choosing a route and scaffolds the appropriate config (`.env` or IDE registration).
@@ -234,3 +235,15 @@ To elevate Project Cortex from a prototype to a **Viable Product**, the followin
 4.  **Error Recovery & Resiliency**
     *   **LLM Outages**: The watcher retries each synthesis call up to three times; a durable disk-backed queue for auto mode is still optional future work.
     *   **File Locking**: ✅ Implement a lockfile mechanism (`.knowledge/cortex.lock`) to prevent multiple `cortex` instances from running in the same directory simultaneously and corrupting the index.
+
+---
+
+## 🩹 Post-Launch Fixes (v0.3.2)
+
+Bugs discovered after first public release and corrected before v0.3.2.
+
+| # | Issue | Root Cause | Fix |
+|---|---|---|---|
+| 1 | **STDOUT pollution — `invalid character 'â'`** | `pino-pretty` was writing colored output to STDOUT, corrupting the MCP STDIO stream which IDEs expect to contain only JSON. | `destination: 2` added to the `pino-pretty` transport in `src/core/logger.ts`, routing all pretty logs to STDERR. |
+| 2 | **Antigravity config not detected** | `cortex setup antigravity` wrote to `.antigravity/mcp.json` without the `$typeName` field required by Cascade plugin loaders; the correct filename is `mcp_config.json`. | `src/cli/setup.ts` antigravity target updated: path changed to `mcp_config.json`, entry now includes `$typeName: "exa.cascade_plugins_pb.CascadePluginCommandTemplate"` and `env: { DOTENV_CONFIG_QUIET: "1" }`. |
+| 3 | **Bootstrap ingestion captures cosmetic noise** | On first run with an empty index, `get_pending_changes` returns only the most recent git diff (e.g. the Cortex install commit), giving the Librarian too little context to synthesize a meaningful architecture picture. | Both `.claude/commands/ingest_cortex.md` and `.agents/workflows/ingest.md` now include a bootstrap check: if the knowledge index is empty, perform a full `src/` directory scan rather than relying on the diff alone. |

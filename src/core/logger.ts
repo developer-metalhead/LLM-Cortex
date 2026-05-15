@@ -16,6 +16,7 @@ export function createDaemonLogger(projectRoot: string) {
             colorize: true,
             ignore: "pid,hostname",
             translateTime: "HH:MM:ss Z",
+            destination: 2, // STDERR — keeps STDOUT clean for MCP stdio transport
           },
           level: "info",
         },

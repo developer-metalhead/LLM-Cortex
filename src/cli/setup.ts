@@ -105,11 +105,15 @@ function getIDETargets(projectRoot: string): IDETarget[] {
     },
     {
       name: "antigravity",
-      configPath: path.join(projectRoot, ".antigravity", "mcp.json"),
+      configPath: path.join(projectRoot, ".antigravity", "mcp_config.json"),
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
+        config.mcpServers["project-cortex"] = {
+          $typeName: "exa.cascade_plugins_pb.CascadePluginCommandTemplate",
+          ...getMCPEntry(projectRoot),
+          env: { DOTENV_CONFIG_QUIET: "1" },
+        };
         await writeJsonFile(configPath, config);
       },
     },

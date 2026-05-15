@@ -23,7 +23,7 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
   * [src/cli/index.ts](src/cli/index.ts) — `commander` setup for `init`, `watch`, `setup`.
   * [src/cli/init.ts](src/cli/init.ts) — Interactive wizard that picks between the API-keys route and the IDE route, scaffolds `.knowledge/`, writes `.env`, and updates `.gitignore`.
   * [src/cli/watch.ts](src/cli/watch.ts) — Boots the file watcher, the Knowledge Manager, and an embedded MCP server. Owns the per-file (auto) and batched (manual) sync flows.
-  * [src/cli/setup.ts](src/cli/setup.ts) — Writes the Cortex MCP entry into supported IDE config files (Claude Code, Cursor, VS Code, Windsurf, Claude Desktop).
+  * [src/cli/setup.ts](src/cli/setup.ts) — Writes the Cortex MCP entry into supported IDE config files (Claude Code, Cursor, VS Code, Windsurf, Claude Desktop, Antigravity). The Antigravity target writes `.antigravity/mcp_config.json` with `$typeName` metadata required by Cascade loaders.
   * [src/cli/read.ts](src/cli/read.ts) — `cortex read` command. Prints the full rich knowledge index to stdout. Accepts `--entity <name>` and `--concept <name>` flags to drill into a specific page.
 
 ### B. The File Watcher (`src/core/watcher.ts`)
@@ -52,7 +52,7 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
 
 ### E.1 Structured logging (`src/core/logger.ts`)
 * **Responsibility**: Daemon-only logging via `createDaemonLogger(projectRoot)`.
-* **Behavior**: Writes pretty logs to stdout and JSON lines to `cortex.log` in the project root (via `pino` transports).
+* **Behavior**: Writes pretty logs to **STDERR** (not STDOUT) and JSON lines to `cortex.log` in the project root (via `pino` transports). Routing to STDERR is critical — STDOUT must remain clean for the MCP STDIO transport.
 
 ### F. The MCP Server (`src/mcp/server.ts`)
 * **Responsibility**: Bridge between Cortex's synthesized knowledge and active coding agents via the Model Context Protocol.
@@ -159,6 +159,11 @@ project-cortex/
 │   ├── ingest_cortex.md
 │   ├── cortex_status.md
 │   └── read_knowledge.md
+├── .agents/workflows/           # Antigravity local workflow definitions
+│   ├── ingest.md
+│   ├── read.md
+│   ├── status.md
+│   └── explore.md
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -186,7 +191,12 @@ The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/l
 
 ## 7. Status & Next Steps
 
-Phases 1–5 of the [implementation plan](implementation_plan.md) are implemented in code: CLI (`init`, `watch`, `status`, `config`, `setup`, `mcp`), git-aware diffs, multi-provider LLM synthesis with bounded retries, `.knowledge/` writer (including entity deletes), MCP tools + prompts, embedded MCP in `cortex watch` with post-save queue clearing, lockfile (`.knowledge/cortex.lock`), `pino` logging to stdout and `cortex.log`, global `~/.cortexrc` plus project `.env` loading, and a starter `npm test` suite under `tests/`.
+Phases 1–5 of the [implementation plan](implementation_plan.md) are implemented in code: CLI (`init`, `watch`, `status`, `config`, `setup`, `mcp`), git-aware diffs, multi-provider LLM synthesis with bounded retries, `.knowledge/` writer (including entity deletes), MCP tools + prompts, embedded MCP in `cortex watch` with post-save queue clearing, lockfile (`.knowledge/cortex.lock`), `pino` logging to STDERR and `cortex.log`, global `~/.cortexrc` plus project `.env` loading, and a starter `npm test` suite under `tests/`.
+
+Post-launch fixes applied (v0.3.2):
+- **STDOUT pollution**: `pino-pretty` transport routed to STDERR (`destination: 2`) so the MCP STDIO stream is never corrupted.
+- **Antigravity config**: `cortex setup antigravity` now writes `.antigravity/mcp_config.json` (not `mcp.json`) with `$typeName: "exa.cascade_plugins_pb.CascadePluginCommandTemplate"` required by Cascade loaders.
+- **Bootstrap ingestion**: Both the Claude Code slash command and Antigravity workflow now detect an empty knowledge index on first run and perform a full `src/` directory scan instead of relying solely on the git diff.
 
 **Still optional / incremental:**
 

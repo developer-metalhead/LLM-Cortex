@@ -173,8 +173,10 @@ These run inside Claude Code, Cursor, or any connected IDE. They let you and you
 
 
 ### In Antigravity
+Run `cortex setup antigravity` (or `cortex setup all`) once to register Cortex. This writes `.antigravity/mcp_config.json` with the correct Cascade plugin metadata so Antigravity's loader picks it up automatically.
+
 Type **`/`** in the chat bar to see these **Local Workflows**:
--   **`/ingest`** — Synthesizes all recent code changes into the brain.
+-   **`/ingest`** — Synthesizes all recent code changes into the brain. On first run (empty index), automatically performs a full `src/` scan instead of relying on the git diff alone.
 -   **`/read`** — Opens the interlinked architectural knowledge index.
 -   **`/status`** — Checks the health and sync state of the brain.
 -   **`/explore`** — Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth.
@@ -185,7 +187,7 @@ Type **`/`** in the chat bar to see these **Local Workflows**:
 
 | Command | What it does |
 |---|---|
-| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. |
+| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. On first run with an empty index, performs a full `src/` scan instead of relying on the diff alone. |
 | `/read_knowledge` | **See what the AI knows.** Prints the full rich knowledge index — every entity and concept with its description, source file, and links. |
 | `/cortex_status` | **Check sync state.** Shows the last-sync commit SHA and whether the knowledge base is initialized. |
 
@@ -195,7 +197,7 @@ Cortex also exposes these as native MCP prompts (accessible via the IDE's prompt
 
 | Prompt | What it does |
 |---|---|
-| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. |
+| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. Bootstraps from a full `src/` scan when the index is empty. |
 | `read` | Reads the rich index and instructs the AI to use it (not re-scan source). |
 | `explore` | Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth. |
 | `status` | Checks Cortex initialization and last sync. |
@@ -241,7 +243,7 @@ cortex setup all
 cortex setup claude-code cursor
 ```
 
-Supported: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`
+Supported: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity`
 
 **Restart your IDE** after running setup.
 
@@ -389,7 +391,7 @@ pm2 startup
 
 Alternatively, you can run it inside a **tmux** or **screen** session.
 
-While `cortex watch` is running, logs are written to **`cortex.log`** in the project root (JSON lines) as well as pretty-printed to the terminal.
+While `cortex watch` is running, logs are written to **`cortex.log`** in the project root (JSON lines) as well as pretty-printed to the terminal via STDERR — STDOUT is kept clean for the MCP stdio transport.
 
 ---
 

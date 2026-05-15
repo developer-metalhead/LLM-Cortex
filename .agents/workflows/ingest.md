@@ -12,7 +12,11 @@ Trigger the architectural knowledge synthesis loop for the current project.
 
 2. The tool returns a JSON object with `systemPrompt`, `userPrompt`, `outputSchema`, and `instructions`.
 
-3. The `userPrompt` contains the **full existing knowledge index** — descriptions, source paths, and links for every entity/concept. Read it carefully before deciding what to emit:
+3. **Bootstrap check**: inspect the `userPrompt` to see if the knowledge index is empty (no entities or concepts listed).
+   - **If the index is empty (first run)**: ignore the git diff as the primary source. Instead, read the `src/` directory to build a complete architectural picture of the codebase — its modules, entry points, key abstractions, and how they connect. Use this full scan as the basis for synthesis, treating every file as `action: create`.
+   - **If the index has existing entries**: proceed with the diff-based flow below.
+
+4. The `userPrompt` contains the **full existing knowledge index** — descriptions, source paths, and links for every entity/concept. Read it carefully before deciding what to emit:
    - If a name already exists in the index, emit `action: update` — do not invent a new name.
    - If the diff contradicts an existing description, emit a `warnings` entry naming both the old expectation and the new contradicting file.
 
