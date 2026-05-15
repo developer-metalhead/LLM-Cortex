@@ -190,7 +190,26 @@ The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/l
 
 ---
 
-## 7. Status & Next Steps
+## 7. Roadmap: From Memory to Guardrail to Workflow
+
+Phases 1–5 establish Cortex as a **passive architectural memory** — it reads, synthesizes, links, and serves. The planned phases move it across three further bands:
+
+**Band A — Active Guardrail (Phases 6–7).** Enforcement and observability on top of the existing knowledge graph.
+* **Phase 6 — Constraints & Blast-Radius.** Entities and concepts gain an optional `constraints` field (`mustNotImport`, `mustNotBeCalledBy`, free-form `contract`). `save_synthesis` rejects syntheses that introduce violating edges, returning a structured error instead of a soft `warnings[]` entry. In parallel, `action: update` on an entity propagates a `staleSince` timestamp to every entity linking inbound, so a change to a foundational module surfaces its blast radius automatically.
+* **Phase 7 — Audit & Traceability.** Every synthesis dual-emits to `log.md` (human-readable) and a new `log.jsonl` (queryable). CLI surfaces (`cortex log --entity <name>`, `cortex log --since <commit>`, `cortex audit stale`) and matching MCP tools (`audit_entity`, `audit_since`) turn the append-only log into a debuggable event stream.
+
+**Band B — Surfaces & Interaction (Phases 8–10).** New projections of the same `state.json` graph, no new data.
+* **Phase 8 — Visual Knowledge Graph.** `cortex graph` emits Mermaid for PRs and docs; `cortex serve` opens a local-only browseable graph viewer with click-through to entity pages. Stale entities and warnings render visually distinct.
+* **Phase 9 — Refactoring Impact Preview.** The inverse of Phase 6's reactive blast-radius: `cortex impact <entity>` and `impact_analysis` MCP tool answer *before* the refactor — "what depends on this, ranked by hop distance, and what would break if I deleted it?"
+* **Phase 10 — Onboarding & Guided Reading.** A new synthesis output mode: `cortex onboard` produces a centrality-ranked, audience-tuned reading path through the knowledge base. The "compounding architectural memory" pays back for humans, not just AIs.
+
+**Band C — Team & Workflow (Phases 11–12).** Cortex graduates from individual tool to team gate.
+* **Phase 11 — Monorepo Federation.** One `.knowledge/` per workspace, with a federated index and cross-workspace `[[ws:Entity]]` links. Cross-workspace constraints (Phase 6) become enforcement for module-boundary contracts that no language tooling enforces at the workspace level.
+* **Phase 12 — Git & CI Integration.** `cortex install-hooks` adds a pre-push hook; a published GitHub Action posts a sticky PR comment with the architectural diff (entities created/updated/deleted, new warnings, constraint violations that block the PR). Defense in depth: local hook catches issues before push, CI catches them before merge.
+
+**Explicitly rejected**: bi-directional source injection (writing Cortex-generated comments back into `src/`), Cortex Cloud / remote shared knowledge, in-house AST parsing, custom per-project prompt plugins. Full rationale lives in the [implementation plan's "out of scope" section](implementation_plan.md). The read-only-source invariant from [CORTEX.md §2](CORTEX.md) is a load-bearing boundary; the local-first principle is what makes Cortex easy to adopt; both stay non-negotiable.
+
+## 8. Status & Next Steps
 
 Phases 1–5 of the [implementation plan](implementation_plan.md) are implemented in code: CLI (`init`, `watch`, `status`, `config`, `setup`, `mcp`), git-aware diffs, multi-provider LLM synthesis with bounded retries, `.knowledge/` writer (including entity deletes), MCP tools + prompts, embedded MCP in `cortex watch` with post-save queue clearing, lockfile (`.knowledge/cortex.lock`), `pino` logging to STDERR and `cortex.log`, global `~/.cortexrc` plus project `.env` loading, and a starter `npm test` suite under `tests/`.
 

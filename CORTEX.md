@@ -63,6 +63,8 @@ Cortex acts as an architectural linter. When new code contradicts an established
 * Include a clear warning in the `warnings[]` array of the synthesis (e.g. *"`[[Auth Module]]` claims we use JWTs, but the newly ingested `auth.ts` uses session cookies. Please resolve."*).
 * The Knowledge Manager surfaces these warnings inline in the matching `log.md` entry, where they remain part of the architectural timeline.
 
+Today this policy is **advisory**: warnings are logged, not enforced. [Phase 6 of the implementation plan](implementation_plan.md) tightens it: entities may declare hard `constraints` (`mustNotImport`, `mustNotBeCalledBy`, free-form `contract`) which `save_synthesis` enforces — a violating synthesis is rejected with a structured error rather than logged as a warning. Phase 6 also propagates `staleSince` timestamps along the inbound link graph when an entity is materially updated, so the blast radius of a change is observable without manual auditing.
+
 ## 7. The Read / Navigate Flow
 Cortex is designed so downstream AIs **read the knowledge**, not re-derive it from source. The MCP surface for consumers:
 
@@ -72,5 +74,16 @@ Cortex is designed so downstream AIs **read the knowledge**, not re-derive it fr
 
 The MCP prompts `read` and `explore` instruct consumers to navigate via these tools rather than re-scanning `src/`. Source files should only be opened when the knowledge base is visibly stale or silent on the topic.
 
+Planned projections of this same graph (no schema changes, just new renderers) include Mermaid graph emission and a local browse UI ([Phase 8](implementation_plan.md)), proactive impact preview via `impact_analysis` ([Phase 9](implementation_plan.md)), centrality-ranked onboarding output ([Phase 10](implementation_plan.md)), and cross-workspace federation with `[[workspace:Entity]]` link syntax ([Phase 11](implementation_plan.md)). All read-only over `state.json` — none mutate the canonical store.
+
 ## 8. Mock Mode (Testing)
 Setting `CORTEX_MOCK_AI=true` in the daemon's environment short-circuits the LLM call and returns a deterministic synthesis. Use this when wiring up the watcher → writer → MCP pipeline without burning tokens or requiring a real key. Mock-mode output is intentionally tagged with a `"Mock Mode is active."` warning so it is never mistaken for real synthesis.
+
+## 9. The Read-Only-Source Boundary
+Cortex's authority stops at `.knowledge/`. The Librarian — daemon or IDE agent — **must not** write back into `src/`, `lib/`, `api/`, or any other source tree. This boundary is deliberate, not incidental:
+
+* **Watcher feedback loop**: a Librarian that writes to `src/` would trigger its own watcher, producing infinite re-ingestion.
+* **Git history hygiene**: machine-authored comments in source code produce noisy diffs and tangle blame with human authorship.
+* **Editor conflict surface**: developer-authored comments and Cortex-authored comments would collide on every refactor.
+
+Architectural metadata — entity descriptions, source citations, `[[WikiLinks]]`, constraints, drift warnings — lives exclusively in `.knowledge/`. The `index.md` and per-entity pages are the developer's view onto that metadata; the MCP `read_*` tools are the agent's view. Source files remain the developer's sole authoring surface.
