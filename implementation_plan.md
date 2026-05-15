@@ -299,9 +299,23 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
 1. **Structured log emission alongside markdown.** Every `saveSynthesis()` also appends a JSON line to `.knowledge/log.jsonl` with `{ timestamp, commit?, summary, entities: [], concepts: [], warnings: [] }`. Markdown stays as the human-readable surface; JSONL is the queryable one.
 2. **Evidence anchoring on citations.** Extend the `sourceFile` field per entity into a richer optional `evidence` block:
    ```ts
-   evidence?: { sourceFile: string; lineRange?: [number, number]; commit?: string }[];
+   evidence?: {
+     sourceFile: string;
+     lineRange?: [number, number];
+     commit?: string;
+     content?: string;   // literal text of the cited lines, captured at synthesis time
+   }[];
    ```
-   The Librarian is prompted to anchor each entity to one or more `(file, line-range, commit-at-synthesis)` triples. This separates **claim** (the synthesized description) from **evidence** (the lines that justify it), and lets `cortex audit` answer *"is this claim still backed by code that exists?"* by checking whether the cited range still resolves at HEAD. A claim whose evidence range has been deleted or shifted is auto-flagged as **drift-evidence-lost** in the audit output. Existing `sourceFile`-only records stay valid — `evidence` is purely additive.
+   The Librarian is prompted to anchor each entity to one or more `(file, line-range, commit-at-synthesis, content-snapshot)` quadruples. This separates **claim** (the synthesized description) from **evidence** (the lines that justify it), and lets `cortex audit` answer *"is this claim still backed by code that exists, and does the code still match what was synthesized against?"* — string comparison against `content`, not just line-range existence. A claim whose evidence content has shifted at HEAD is flagged **drift-content-changed**; a range that no longer resolves is flagged **drift-evidence-lost**. Existing `sourceFile`-only records stay valid — every field on `evidence` except `sourceFile` is optional.
+
+   **Bounded by design** to avoid turning the wiki into a code mirror (rejected — see out-of-scope):
+   - ≤ 2 evidence entries per entity
+   - ≤ 10 lines per `content` snapshot
+   - ≤ ~500 chars of code per entity total
+
+   **Secret-redaction pass.** Before persisting `content`, the writer runs the snippet through a regex pass that strips lines matching common secret patterns (`(?i)(api[_-]?key|secret|password|bearer|token)\s*[:=]\s*['"][^'"]+['"]`). Redacted lines are replaced with `// [redacted by Cortex]` and the entity gets a `warnings[]` entry naming the file so the developer knows a secret was inline at synthesis time — separately from whether it should have been.
+
+   **Librarian prompt rule.** Quoting is opt-in, not default: the prompt instructs *"include a content snippet only when it materially clarifies the entity's role — otherwise omit `content` and keep the pointer-only form."* Bad quotes (imports block, boilerplate) are worse than no quotes.
 3. **CLI query commands.**
    - `cortex log --entity <name>` — every log entry that touched a given entity.
    - `cortex log --since <commit|date>` — entries since a given point.
@@ -333,15 +347,17 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
 - `log.jsonl` is written alongside `log.md` on every synthesis.
 - The CLI subcommands above (`cortex log --entity / --since / --warnings`, `cortex audit stale / evidence`, `cortex lint`) work against a real `.knowledge/`.
 - `audit_entity`, `audit_since`, `audit_evidence`, and `evolution_entity` are registered MCP tools.
-- `evidence` field accepted by the schema; evidence-loss surfaces in `cortex audit evidence` and in `cortex status`.
+- `evidence` field (including optional `content` snapshot) accepted by the schema; evidence-loss and content-drift surface in `cortex audit evidence` and `cortex status`.
+- Secret-redaction pass strips matching lines from `content` snapshots before persistence and emits a warning naming the source file.
+- Per-entity quoting bounds (≤ 2 entries, ≤ 10 lines per snippet, ≤ 500 chars total) enforced by `save_synthesis`; over-budget snippets are rejected with a structured error so the Librarian retries with a smaller quote.
 - `cortex lint` flags orphans, disconnected silos, missing source files, `depends_on` cycles, god-module candidates, contradiction-heavy entities, and duplicate-candidate pairs — with exit code 1 on blocking issues.
 - `cortex evolution <entity>` reconstructs a per-entity timeline from `log.jsonl`; `--replay --at <commit>` reproduces the rendered `index.md` as it stood at that commit.
 - Backfill migration runs cleanly on a pre-Phase-7 `.knowledge/` directory.
 - Tests cover: dual-emit, query-by-entity, since-filter, warnings-only filter, evidence-drift detection, silo detection on a synthetic 3-component graph.
 
 **Pros & Cons**
-- ✅ **Pros**: Turns the architectural log from a reading artifact into a debugging tool. "When did this drift first appear?" becomes one command. Evidence anchoring closes the gap between "Cortex claims X" and "the code still does X." Silo detection catches the slow-growing problem of disconnected knowledge clusters before they fragment the graph. Closes the loop with Phase 6 — once you flag drift, you also need to find it later.
-- ❌ **Cons**: Adds a parallel storage format. JSONL and `log.md` must stay in sync; divergence would be confusing. Mitigated by writing both from the same code path. Evidence anchoring puts more burden on the Librarian prompt (it must pick line ranges, not just file names); mitigated by treating `lineRange` as optional and `commit` as auto-stamped at synthesis time.
+- ✅ **Pros**: Turns the architectural log from a reading artifact into a debugging tool. "When did this drift first appear?" becomes one command. Evidence anchoring (with optional content snapshots) closes the gap between *"Cortex claims X"* and *"the code at synthesis time looked like Y, and now looks like Z"* — drift becomes a literal string diff, not a guess. Quoted snippets also make `cortex find` answer *"have we written this pattern before?"* across the entire architectural history without falling back to `git log -G`. Silo detection catches the slow-growing problem of disconnected knowledge clusters before they fragment the graph. Closes the loop with Phase 6 — once you flag drift, you also need to find it later.
+- ❌ **Cons**: Adds a parallel storage format. JSONL and `log.md` must stay in sync; divergence would be confusing. Mitigated by writing both from the same code path. Evidence anchoring puts more burden on the Librarian prompt (it must pick line ranges + decide whether to quote content); mitigated by treating every evidence subfield except `sourceFile` as optional and by the *"quote only when it clarifies"* prompt rule. Quoted snippets risk concentrating secrets if a developer commits an API key inline; mitigated by the redaction pass and the warning emission.
 
 ---
 
@@ -436,7 +452,7 @@ A new synthesis *output mode* — no schema changes, no new data, just a differe
   - Centrality scoring: PageRank over the directed typed-edge graph (Phase 6), restricted to `depends_on` / `called_by` / `parent_of` edges so `contradicts` cycles don't skew the ranking. Damping factor 0.85 (standard). High-centrality entities are read first because everything else points at them.
   - Concept ordering: parent-summary concepts first, then cross-cutting concepts, then entities — so the reader gets the module map, then the abstractions, then the implementations.
   - Estimated reading time: ~150 words/min, plus a flat 30s per `[[WikiLink]]` follow.
-  - `cortex find` matches against entity/concept names, descriptions, and source paths; case-insensitive substring + whitespace-tokenized OR. No fancy ranking — exact-name matches come first, then description hits.
+  - `cortex find` matches against entity/concept names, descriptions, source paths, and (when present) Phase 7 quoted `evidence[].content` snippets; case-insensitive substring + whitespace-tokenized OR. No fancy ranking — exact-name matches come first, then description hits, then snippet hits. Snippet hits answer *"have we written this pattern before, and where?"* without leaving the knowledge layer.
 
 **Definition of Ready (DoR)**
 - Knowledge base has at least ~20 entities (smaller bases don't need onboarding — just read the index).

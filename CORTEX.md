@@ -54,7 +54,7 @@ Any deviation (missing field, wrong action enum) is rejected by `save_synthesis`
 * `constraints` per entity (Phase 6) — `{ mustNotImport?, mustNotBeCalledBy?, contract? }`. Declares hard architectural lines; violations are rejected by `save_synthesis` rather than logged as warnings.
 * `relationships` per entity (Phase 6) — `{ target, kind }[]` with `kind ∈ { depends_on, called_by, supports, contradicts, derived_from, parent_of }`. The typed-edge replacement for flat `links[]`; legacy `links[]` auto-lift to `depends_on` on first load. The flat `[[WikiLink]]` projection in `index.md` is preserved.
 * `failedApproaches` per entity and per concept (Phase 6) — `{ summary, reason, recordedAt, commit? }[]`. Replayed into CURRENT CONTEXT so the Librarian sees what was tried and rejected before re-proposing it.
-* `evidence` per entity (Phase 7) — `{ sourceFile, lineRange?, commit? }[]`. Anchors a claim to specific lines so audits can verify the citation still resolves at HEAD.
+* `evidence` per entity (Phase 7) — `{ sourceFile, lineRange?, commit?, content? }[]`. Anchors a claim to specific lines so audits can verify the citation still resolves at HEAD. The optional `content` field captures a bounded literal-text snapshot of those lines at synthesis time (≤ 10 lines, ≤ 2 entries, ≤ 500 chars per entity), with a secret-pattern redaction pass before persistence; this lets `cortex audit evidence` flag content drift via string comparison and lets `cortex find` (Phase 10) search across quoted code patterns. The bound is deliberate — Cortex is not a code mirror.
 * `staleSince` (Phase 6, derived) — ISO timestamp stamped by the writer on inbound dependents of a mutated entity. Not LLM-emitted.
 
 ## 5. Formatting Rules
