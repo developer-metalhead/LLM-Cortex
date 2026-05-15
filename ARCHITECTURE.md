@@ -45,8 +45,8 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
 
 ### E. The Knowledge Manager (`src/knowledge/writer.ts`)
 * **Responsibility**: All file I/O against `.knowledge/`. The only writer in the system.
-* **State layer**: Maintains `.knowledge/state.json` as the canonical store — a JSON object keyed by entity/concept name, holding `{ description, links, sourceFile?, lastRefined }`. On startup, `init()` migrates existing entity/concept markdown files into `state.json` if it doesn't exist yet (best-effort parse of legacy layout).
-* **Index rendering**: `updateIndex()` regenerates `index.md` from `state.json` — now a **rich index** with full descriptions, source citations, and outbound `[[WikiLink]]` sets per entry (not just a flat name list). This is what both the Librarian (ingest context) and downstream AIs (read tools) see.
+* **State layer**: Maintains `.knowledge/state.json` as the canonical store — a JSON object keyed by entity/concept name, holding `{ description, links, sourceFile?, lastRefined }` today, plus `{ constraints?, relationships?, failedApproaches?, evidence?, staleSince? }` once Phases 6–7 land. On startup, `init()` migrates existing entity/concept markdown files into `state.json` if it doesn't exist yet (best-effort parse of legacy layout). A second migration lifts legacy `links[]` arrays into `relationships[]` with `kind: "depends_on"` (Phase 6).
+* **Index rendering**: `updateIndex()` regenerates `index.md` from `state.json` — now a **rich index** with full descriptions, source citations, and outbound `[[WikiLink]]` sets per entry (not just a flat name list). The flat-link projection is preserved post-Phase-6 so Obsidian/human readers see no churn even as typed edges power graph traversal under the hood. This is what both the Librarian (ingest context) and downstream AIs (read tools) see.
 * **Deep-read access**: `readEntity(name)` and `readConcept(name)` return the full markdown page for a named entity/concept. Used by the `read_entity`/`read_concept` MCP tools so downstream AIs can follow wiki-links without opening source files.
 * **Write flow**: `saveSynthesis()` applies each entity action (create/update/delete) to both `state.json` and the per-entity markdown file, then triggers `updateIndex()`. Deletions remove from both state and disk atomically.
 
@@ -188,6 +188,20 @@ When Cortex runs on a user's repository, it generates and maintains this structu
 
 The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/llm/schema.ts).
 
+### Schema evolution at a glance
+
+Today's schema is intentionally tight. Each planned phase adds an **optional** field — never a required one — so older `.knowledge/` directories keep loading without manual migration:
+
+| Phase | Field added | Where it lives | Purpose |
+|---|---|---|---|
+| 6 | `constraints?: { mustNotImport?, mustNotBeCalledBy?, contract? }` | per-entity | Hard architectural lines enforced at `save_synthesis`. |
+| 6 | `relationships?: { target, kind }[]` | per-entity | Typed edges (`depends_on` / `called_by` / `supports` / `contradicts` / `derived_from` / `parent_of`) over the flat `links[]`. |
+| 6 | `failedApproaches?: { summary, reason, recordedAt, commit? }[]` | per-entity & per-concept | Anti-repetition memory replayed into CURRENT CONTEXT. |
+| 6 | `staleSince?: string` (derived) | per-entity | Inbound blast-radius stamp; not LLM-emitted. |
+| 7 | `evidence?: { sourceFile, lineRange?, commit? }[]` | per-entity | Anchored citation so audit can verify the claim still resolves. |
+
+The migration policy is uniform: any legacy record without one of these fields is loaded as-is, with the missing field treated as `undefined`. Legacy `links[]` is the only field that gets auto-lifted (into `relationships[]` with `kind: "depends_on"`) because the graph traversal in Phase 6 depends on it being present.
+
 ---
 
 ## 7. Roadmap: From Memory to Guardrail to Workflow
@@ -195,19 +209,22 @@ The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/l
 Phases 1–5 establish Cortex as a **passive architectural memory** — it reads, synthesizes, links, and serves. The planned phases move it across three further bands:
 
 **Band A — Active Guardrail (Phases 6–7).** Enforcement and observability on top of the existing knowledge graph.
-* **Phase 6 — Constraints & Blast-Radius.** Entities and concepts gain an optional `constraints` field (`mustNotImport`, `mustNotBeCalledBy`, free-form `contract`). `save_synthesis` rejects syntheses that introduce violating edges, returning a structured error instead of a soft `warnings[]` entry. In parallel, `action: update` on an entity propagates a `staleSince` timestamp to every entity linking inbound, so a change to a foundational module surfaces its blast radius automatically.
-* **Phase 7 — Audit & Traceability.** Every synthesis dual-emits to `log.md` (human-readable) and a new `log.jsonl` (queryable). CLI surfaces (`cortex log --entity <name>`, `cortex log --since <commit>`, `cortex audit stale`) and matching MCP tools (`audit_entity`, `audit_since`) turn the append-only log into a debuggable event stream.
+* **Phase 6 — Constraints, Typed Edges, Blast-Radius & Failed-Approach Memory.** Entities gain an optional `constraints` field (`mustNotImport`, `mustNotBeCalledBy`, free-form `contract`). `save_synthesis` rejects syntheses that introduce violating edges. The flat `links[]` array is lifted to `relationships[]` carrying typed edges (`depends_on`, `called_by`, `supports`, `contradicts`, `derived_from`, `parent_of`) so blast-radius and impact analysis traverse the graph honestly. `action: update` on an entity propagates `staleSince` along inbound `depends_on` / `called_by` edges. A new `failedApproaches[]` array captures architectural dead-ends, replayed into CURRENT CONTEXT so the Librarian (and human readers) see what was already tried and why it didn't stick.
+* **Phase 7 — Audit, Evidence & Lint.** Every synthesis dual-emits to `log.md` (human-readable) and `log.jsonl` (queryable). Citations are upgraded from a single `sourceFile` to an `evidence[]` block carrying line ranges and commit anchors, so an audit can answer *"is this claim still backed by code that exists?"*. CLI surfaces (`cortex log --entity`, `cortex log --since`, `cortex audit stale`, `cortex audit evidence`, `cortex lint`) and matching MCP tools (`audit_entity`, `audit_since`, `audit_evidence`) turn the append-only log into a debuggable event stream. `cortex lint` flags orphaned entities, disconnected knowledge silos, and missing source files.
 
 **Band B — Surfaces & Interaction (Phases 8–10).** New projections of the same `state.json` graph, no new data.
 * **Phase 8 — Visual Knowledge Graph.** `cortex graph` emits Mermaid for PRs and docs; `cortex serve` opens a local-only browseable graph viewer with click-through to entity pages. Stale entities and warnings render visually distinct.
 * **Phase 9 — Refactoring Impact Preview.** The inverse of Phase 6's reactive blast-radius: `cortex impact <entity>` and `impact_analysis` MCP tool answer *before* the refactor — "what depends on this, ranked by hop distance, and what would break if I deleted it?"
-* **Phase 10 — Onboarding & Guided Reading.** A new synthesis output mode: `cortex onboard` produces a centrality-ranked, audience-tuned reading path through the knowledge base. The "compounding architectural memory" pays back for humans, not just AIs.
+* **Phase 10 — Onboarding, Parent Summaries & Search.** A new synthesis output mode: `cortex onboard` produces a centrality-ranked, audience-tuned reading path through the knowledge base. Parent-summary concepts auto-emit for directories with ≥5 entities, giving the reader a module map before the implementation detail. `cortex find --type entity|concept|parent` adds category-scoped lookup over `state.json`. The "compounding architectural memory" pays back for humans, not just AIs.
 
 **Band C — Team & Workflow (Phases 11–12).** Cortex graduates from individual tool to team gate.
 * **Phase 11 — Monorepo Federation.** One `.knowledge/` per workspace, with a federated index and cross-workspace `[[ws:Entity]]` links. Cross-workspace constraints (Phase 6) become enforcement for module-boundary contracts that no language tooling enforces at the workspace level.
 * **Phase 12 — Git & CI Integration.** `cortex install-hooks` adds a pre-push hook; a published GitHub Action posts a sticky PR comment with the architectural diff (entities created/updated/deleted, new warnings, constraint violations that block the PR). Defense in depth: local hook catches issues before push, CI catches them before merge.
 
-**Explicitly rejected**: bi-directional source injection (writing Cortex-generated comments back into `src/`), Cortex Cloud / remote shared knowledge, in-house AST parsing, custom per-project prompt plugins. Full rationale lives in the [implementation plan's "out of scope" section](implementation_plan.md). The read-only-source invariant from [CORTEX.md §2](CORTEX.md) is a load-bearing boundary; the local-first principle is what makes Cortex easy to adopt; both stay non-negotiable.
+**Band D — Token Economics (Phase 13).** Knowledge becomes exportable and predictable in cost.
+* **Phase 13 — Context Packs, Cost Simulation, Response Compression.** `cortex context build --budget <tokens> --scope <entity>` exports a self-contained, token-bounded markdown bundle for any other agent (pasted into a one-shot Claude call, ChatGPT, a colleague's IDE without MCP). `cortex test-cost` reports the estimated input/output tokens and dollar cost of the next sync per configured provider — no LLM calls, deterministic from diff size + index size. MCP responses gain a per-session content-addressed cache: repeated large blocks within one session collapse to `§ref:<hash>§` pointers that a new `resolve_refs` tool can rehydrate, amortizing per-call token cost on high-volume agents.
+
+**Explicitly rejected**: bi-directional source injection (writing Cortex-generated comments back into `src/`), Cortex Cloud / remote shared knowledge, in-house AST parsing, custom per-project prompt plugins, symmetric encryption of entities, chat-turn decision extraction, import-graph pre-caching, parallel `rationale.json` logs, review-gated falsifiable claims. Full rationale lives in the [implementation plan's "out of scope" section](implementation_plan.md). The read-only-source invariant from [CORTEX.md §2](CORTEX.md) is a load-bearing boundary; the local-first principle is what makes Cortex easy to adopt; both stay non-negotiable.
 
 ## 8. Status & Next Steps
 

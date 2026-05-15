@@ -19,6 +19,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 10 | Onboarding & Guided Reading | ⏳ Planned |
 | 11 | Monorepo Federation | ⏳ Planned |
 | 12 | Git & CI Integration | ⏳ Planned |
+| 13 | Token Economics & Context Packs | ⏳ Planned |
 
 ---
 
@@ -218,6 +219,8 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 - ✅ Global env — `~/.cortexrc` loaded before project `.env` via [src/core/env.ts](src/core/env.ts).
 - ✅ Starter tests — `npm test` runs `tests/*.test.ts` (schema + writer delete behavior).
 
+**Planned follow-up (small):** `cortex status --next` emits a single state-aware recommendation derived from `state.json` and `.last_sync_commit` (e.g. *"N files changed since last sync — run `cortex sync`"*, *"3 entities are stale after the [[AuthMiddleware]] update — run `/ingest_cortex`"*, *"knowledge base is empty — run `/ingest`"*). One line, no flags beyond `--next`. Purely additive; reads existing state.
+
 ---
 
 ## 🚧 Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — ⏳ Planned
@@ -226,7 +229,7 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 Today, Cortex *remembers* your architecture and tells the AI when it forgets. The next step is to *enforce* it: declare rules like "the Connect 4 module must not import from Chess," and have Cortex reject any synthesis that violates them. Plus, when a foundational module changes shape, automatically flag every entity that depends on it as "potentially broken."
 
 **Technical Terms**
-Two related additions:
+Four related additions, all sharing one schema/migration:
 
 1. **Declared constraints on entities/concepts.** Extend the synthesis schema with an optional `constraints` field per entity:
    ```ts
@@ -238,30 +241,46 @@ Two related additions:
    ```
    Constraints persist in `state.json` once declared. On every subsequent ingest, the LLM is shown the constraints for every touched entity as part of `CURRENT CONTEXT`. `save_synthesis` rejects the call if the resulting synthesis declares a state that violates a constraint (e.g., a new import edge that hits a `mustNotImport` pattern). Rejection returns a structured error pointing at the offending file and the violated rule, forcing the agent to refactor before retrying.
 
-2. **Blast-radius flagging on entity mutation.** When `action: update` materially changes an entity's description or `sourceFile`, the writer walks the inbound link graph (every entity whose `links[]` contains the mutated entity's name) and stamps a `staleSince: <ISO timestamp>` field on each dependent record. `state.json` gains a derived `stalenessIndex` so `cortex status` and `read_knowledge_index` can surface "N entities are downstream of a change you haven't reconciled yet."
+2. **Typed relationships (replaces flat `links[]`).** Extend each entity with a `relationships[]` array carrying both the target and the edge kind:
+   ```ts
+   relationships?: { target: string; kind: "depends_on" | "called_by" | "supports" | "contradicts" | "derived_from" | "parent_of" }[];
+   ```
+   The plain `links[]` array stays as the projection used by humans and the rendered `index.md`; `relationships[]` is the canonical, machine-readable graph. Typed edges make blast-radius traversal honest (a `contradicts` edge propagates differently than a `depends_on` edge) and unlock Phase 9's hypothetical-delete report ("17 dependents would break; 3 contradictions would be resolved"). Migration: existing flat `links[]` records are auto-lifted to `{ target, kind: "depends_on" }` on first load, so no manual upgrade is needed.
+
+3. **Blast-radius flagging on entity mutation.** When `action: update` materially changes an entity's description or `sourceFile`, the writer walks the inbound `relationships[]` graph (every entity whose `relationships[]` has the mutated entity as a `target` with kind `depends_on` or `called_by`) and stamps a `staleSince: <ISO timestamp>` field on each dependent record. `state.json` gains a derived `stalenessIndex` so `cortex status` and `read_knowledge_index` can surface "N entities are downstream of a change you haven't reconciled yet."
+
+4. **Failed-approaches memory (anti-repetition).** Add an optional `failedApproaches[]` array on entities and concepts:
+   ```ts
+   failedApproaches?: { summary: string; reason: string; recordedAt: string; commit?: string }[];
+   ```
+   This is the missing half of "compounding architectural memory": today we record what *is*, not what was tried and rejected. Whenever an `update` synthesis includes a `replaces:` clause (LLM-emitted free text in the description, e.g. *"replaces the cookie-session approach which broke under SameSite=Strict"*), the writer extracts and persists it as a failed-approach record. The CURRENT CONTEXT for future ingests includes the failed-approaches block for every touched entity, so the LLM (and the human reading the page) sees *"we already tried X, here's why it didn't stick"* before re-proposing it.
 
 **Architecture & System Design**
-- **Core Components**: Extend `src/llm/schema.ts` (constraints field), `src/knowledge/writer.ts` (constraint validation + staleness propagation), `src/mcp/server.ts` (`save_synthesis` rejection contract), `src/llm/prompts.ts` (inject constraints into CURRENT CONTEXT).
-- **Design Pattern**: The constraints field is a tiny declarative rule engine. Blast-radius is a reverse-graph traversal over `state.json`.
+- **Core Components**: Extend `src/llm/schema.ts` (constraints + relationships + failedApproaches fields), `src/knowledge/writer.ts` (constraint validation + staleness propagation over typed edges + failed-approaches persistence), `src/mcp/server.ts` (`save_synthesis` rejection contract), `src/llm/prompts.ts` (inject constraints, typed-edge guidance, and failed-approaches into CURRENT CONTEXT).
+- **Design Pattern**: The constraints field is a tiny declarative rule engine. Blast-radius is a reverse-graph traversal over `state.json`. Typed edges are a thin upgrade — a discriminated union, not a new store. Failed approaches are an append-only sub-log per entity.
 - **Key Considerations**:
   - Constraint **violation detection** is hybrid: the LLM produces structured "edges introduced" output (imports added, callers added) and the writer checks those against declared rules. We do not run an AST parser ourselves — that's brittle across languages. The LLM is the AST.
   - Staleness is informational, not blocking. A stale entity is still readable; it just carries a flag until re-synthesized.
   - Constraints are **opt-in per entity**. Most entities will have none. They exist to encode hard architectural lines (module boundaries, secret-handling rules, layering invariants).
+  - **Typed-edge migration is one-way and silent.** First load after upgrade lifts every legacy `links[]` entry into `relationships[]` with `kind: "depends_on"`. The rendered `index.md` keeps the flat `[[WikiLink]]` projection so Obsidian and human readers see no churn.
+  - **Failed approaches are a memory aid, not a veto.** The LLM may still re-propose a past failure; the goal is that it does so deliberately, with the prior reason in front of it. Cap at the most recent 10 per entity to keep the CURRENT CONTEXT bounded.
 
 **Definition of Ready (DoR)**
 - Phases 1–5 are stable. Schema is owned end-to-end by `src/llm/schema.ts`.
 - We have at least one real-world repo with a clear architectural boundary to test against (e.g., a games-hub project where each game must not import another).
 
 **Definition of Done (DoD)**
-- `constraints` field accepted by the schema, persisted in `state.json`, rendered in `index.md`.
+- `constraints`, `relationships`, and `failedApproaches` fields accepted by the schema, persisted in `state.json`, rendered in `index.md` (flat `[[WikiLink]]` projection preserved).
 - `save_synthesis` rejects (with a structured error) syntheses that introduce a forbidden import/caller edge against a declared constraint.
-- `update` actions that mutate an entity's description propagate `staleSince` to every entity linking inbound.
+- `update` actions that mutate an entity's description propagate `staleSince` to every entity with a `depends_on` or `called_by` edge pointing inbound.
+- Legacy `links[]` arrays auto-migrate to typed `relationships[]` on first load, with no manual user step.
+- Failed-approach records appear in CURRENT CONTEXT for any touched entity, capped at 10 most recent per entity.
 - `cortex status` reports stale-entity count and a `cortex audit stale` command lists them.
-- Tests cover: constraint persistence, violation rejection, stale propagation across a 2-hop graph.
+- Tests cover: constraint persistence, violation rejection, stale propagation across a 2-hop typed graph, legacy-links migration, failed-approach capture + replay in CURRENT CONTEXT.
 
 **Pros & Cons**
-- ✅ **Pros**: Moves Cortex from "passive memory" to "active guardrail" — the stated north star. Blast-radius surfaces the hidden cost of an architectural change *before* it ships. Constraint enforcement gives teams a hard line, not a soft warning.
-- ❌ **Cons**: LLM-driven edge detection has false-negative risk (the model may miss an import). Mitigated by treating constraints as defense-in-depth, not the only line of defense. Staleness can be noisy on large refactors — needs a "mark all reconciled" escape hatch.
+- ✅ **Pros**: Moves Cortex from "passive memory" to "active guardrail" — the stated north star. Typed edges make blast-radius honest, not just a flat fan-out count. Failed-approaches close the "compounding memory" loop in the negative direction — the project stops re-litigating settled architectural decisions. Constraint enforcement gives teams a hard line, not a soft warning.
+- ❌ **Cons**: LLM-driven edge detection has false-negative risk (the model may miss an import). Mitigated by treating constraints as defense-in-depth, not the only line of defense. Staleness can be noisy on large refactors — needs a "mark all reconciled" escape hatch. Failed-approaches risk turning into a graveyard of obsolete context if not capped; the 10-record cap and the LLM's discretion to *deliberately* re-propose are the safeguards.
 
 ---
 
@@ -274,34 +293,45 @@ Right now, `log.md` is a wall of every architectural change ever made. Useful, b
 Add a structured query layer over `log.md` + `state.json`. The log already contains the data — timestamp, summary, impacted entities (as `[[WikiLinks]]`), warnings — but only as free-text markdown. Phase 7 adds:
 
 1. **Structured log emission alongside markdown.** Every `saveSynthesis()` also appends a JSON line to `.knowledge/log.jsonl` with `{ timestamp, commit?, summary, entities: [], concepts: [], warnings: [] }`. Markdown stays as the human-readable surface; JSONL is the queryable one.
-2. **CLI query commands.**
+2. **Evidence anchoring on citations.** Extend the `sourceFile` field per entity into a richer optional `evidence` block:
+   ```ts
+   evidence?: { sourceFile: string; lineRange?: [number, number]; commit?: string }[];
+   ```
+   The Librarian is prompted to anchor each entity to one or more `(file, line-range, commit-at-synthesis)` triples. This separates **claim** (the synthesized description) from **evidence** (the lines that justify it), and lets `cortex audit` answer *"is this claim still backed by code that exists?"* by checking whether the cited range still resolves at HEAD. A claim whose evidence range has been deleted or shifted is auto-flagged as **drift-evidence-lost** in the audit output. Existing `sourceFile`-only records stay valid — `evidence` is purely additive.
+3. **CLI query commands.**
    - `cortex log --entity <name>` — every log entry that touched a given entity.
    - `cortex log --since <commit|date>` — entries since a given point.
    - `cortex log --warnings` — only entries that emitted warnings.
    - `cortex audit stale` — list entities flagged stale by Phase 6.
-3. **MCP audit tool.** `audit_entity(name)` and `audit_since(commit)` expose the same surface to IDE agents, so the AI can ask "what changed in `[[AuthModule]]` over the last sprint?" without grepping `log.md`.
+   - `cortex audit evidence` — list entities whose cited line-ranges no longer resolve at HEAD.
+   - `cortex lint` — graph-integrity checks over `state.json`: orphaned entities (no inbound or outbound relationships), disconnected sub-graphs ("knowledge silos" — clusters of nodes that should plausibly be linked but aren't, detected by simple connected-component analysis), and entities whose `sourceFile` no longer exists. Output is grouped by severity; exit code is nonzero when blocking issues are found so `cortex lint` can run in CI alongside Phase 12.
+4. **MCP audit tool.** `audit_entity(name)`, `audit_since(commit)`, and `audit_evidence()` expose the same surface to IDE agents, so the AI can ask "what changed in `[[AuthModule]]` over the last sprint?" or "which entity descriptions are no longer backed by code?" without grepping `log.md`.
 
 **Architecture & System Design**
-- **Core Components**: `src/knowledge/writer.ts` (dual-emit log entries), new `src/knowledge/audit.ts` (query layer), new `src/cli/log.ts` (CLI command), additions to `src/mcp/server.ts`.
-- **Design Pattern**: Event-sourced query over an append-only log. JSONL is the canonical event stream; markdown is the projection for humans.
+- **Core Components**: `src/knowledge/writer.ts` (dual-emit log entries + evidence persistence), new `src/knowledge/audit.ts` (query layer + evidence-resolution check), new `src/knowledge/lint.ts` (graph-integrity checks), new `src/cli/log.ts` and `src/cli/lint.ts` (CLI commands), additions to `src/mcp/server.ts`.
+- **Design Pattern**: Event-sourced query over an append-only log. JSONL is the canonical event stream; markdown is the projection for humans. The linter is a pure read-only function over `state.json` — no mutation, no synthesis required.
 - **Key Considerations**:
   - JSONL append is atomic on POSIX; on Windows, use a write-and-rename strategy.
   - Backfill: on first run after upgrade, parse existing `log.md` into `log.jsonl` best-effort. Stamp pre-existing entries with `migrated: true` and an estimated timestamp.
   - The query surface stays read-only — no mutation of historical entries.
+  - Evidence resolution at audit time uses the current file's line content + a tiny edit-distance match, not strict line-number equality — small edits above the cited range shouldn't trigger false drift.
+  - Silo detection is **advisory**, not blocking. Orphaned nodes are sometimes legitimate (a top-level entry point, a freshly-added module not yet linked). The linter ranks rather than rejects: severity is a function of node age, inbound-edge count, and whether the node sits in its own connected component.
 
 **Definition of Ready (DoR)**
 - Phase 6 (or at least its schema additions) is stable, so `staleSince` and constraint-violation events are part of the log shape.
 
 **Definition of Done (DoD)**
 - `log.jsonl` is written alongside `log.md` on every synthesis.
-- The four CLI subcommands above work against a real `.knowledge/`.
-- `audit_entity` and `audit_since` are registered MCP tools.
+- The CLI subcommands above (`cortex log --entity / --since / --warnings`, `cortex audit stale / evidence`, `cortex lint`) work against a real `.knowledge/`.
+- `audit_entity`, `audit_since`, and `audit_evidence` are registered MCP tools.
+- `evidence` field accepted by the schema; evidence-loss surfaces in `cortex audit evidence` and in `cortex status`.
+- `cortex lint` flags orphans, disconnected silos, and missing source files with exit code 1 on blocking issues.
 - Backfill migration runs cleanly on a pre-Phase-7 `.knowledge/` directory.
-- Tests cover: dual-emit, query-by-entity, since-filter, warnings-only filter.
+- Tests cover: dual-emit, query-by-entity, since-filter, warnings-only filter, evidence-drift detection, silo detection on a synthetic 3-component graph.
 
 **Pros & Cons**
-- ✅ **Pros**: Turns the architectural log from a reading artifact into a debugging tool. "When did this drift first appear?" becomes one command. Closes the loop with Phase 6 — once you flag drift, you also need to find it later.
-- ❌ **Cons**: Adds a parallel storage format. JSONL and `log.md` must stay in sync; divergence would be confusing. Mitigated by writing both from the same code path.
+- ✅ **Pros**: Turns the architectural log from a reading artifact into a debugging tool. "When did this drift first appear?" becomes one command. Evidence anchoring closes the gap between "Cortex claims X" and "the code still does X." Silo detection catches the slow-growing problem of disconnected knowledge clusters before they fragment the graph. Closes the loop with Phase 6 — once you flag drift, you also need to find it later.
+- ❌ **Cons**: Adds a parallel storage format. JSONL and `log.md` must stay in sync; divergence would be confusing. Mitigated by writing both from the same code path. Evidence anchoring puts more burden on the Librarian prompt (it must pick line ranges, not just file names); mitigated by treating `lineRange` as optional and `commit` as auto-stamped at synthesis time.
 
 ---
 
@@ -386,14 +416,17 @@ A new synthesis *output mode* — no schema changes, no new data, just a differe
 - **CLI**: `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` produces `.knowledge/onboarding.md` — a curated, ordered reading path through entities and concepts, with rationale per stop and estimated reading time.
 - **MCP prompt**: a new `onboard` prompt that an IDE agent can invoke to produce the same output without re-running synthesis. The agent reads the existing index, applies the pedagogical ordering prompt, returns markdown.
 - **Audience tuning**: `junior` emphasizes concrete entities (modules, files) and explains terms; `senior` skips to invariants and cross-cutting concepts; `domain-expert` focuses on what's *unusual* about this codebase relative to standard patterns.
+- **Parent-summary concepts (hierarchical bird's-eye view).** Onboarding's first stop on any non-trivial repo should be a *module-level* summary, not an entity. Phase 10 elevates this from emergent behavior to an explicit schema notion: when a directory contains ≥5 synthesized entities, the Librarian emits a **parent-summary concept** keyed by directory path (e.g. concept `src/auth/`) with `relationships[]` of `kind: "parent_of"` pointing at each child entity. The result is a two-layer browse: pick a parent summary to get the module's purpose in ~3 sentences, then drill into one of its children. `read_knowledge_index` renders parent summaries first, followed by their child clusters. This is a "summary of summaries" — no new data, just a stricter Librarian instruction to emit one synthesized stop per directory cluster.
+- **Category-scoped search (`cortex find`).** A small CLI utility that ships with Phase 10 because the onboarding flow demands it: `cortex find --type entity|concept|parent "<query>"` returns matching names plus a one-line preview, scoped to a single node category. Implementation is a literal substring + token match over `state.json` (no embeddings, no FTS index) — the knowledge base stays small enough that scanning it linearly is sub-millisecond. `cortex find` complements `cortex read` (browse) by giving a "I know roughly what I want" lookup path.
 
 **Architecture & System Design**
-- **Core Components**: new `src/knowledge/onboarding.ts` (centrality scoring + ordering), new `src/cli/onboard.ts`, new MCP prompt registration in `src/mcp/server.ts`, new system prompt in `src/llm/prompts.ts` (the "Tour Guide" persona).
-- **Design Pattern**: Output mode, not new data. The same `state.json` powers ingest, audit, graph, impact, and now onboarding.
+- **Core Components**: new `src/knowledge/onboarding.ts` (centrality scoring + ordering), new `src/cli/onboard.ts`, new `src/cli/find.ts` (category-scoped search), new MCP prompt registration in `src/mcp/server.ts`, new system prompt in `src/llm/prompts.ts` (the "Tour Guide" persona, plus a parent-summary emission directive).
+- **Design Pattern**: Output mode, not new data. The same `state.json` powers ingest, audit, graph, impact, and now onboarding. Parent summaries are concepts with a `parent_of` relationship — not a separate node type.
 - **Key Considerations**:
-  - Centrality scoring: PageRank over the directed link graph, with a damping factor of 0.85 (standard). High-centrality entities are read first because everything else points at them.
-  - Concept ordering: concepts before the entities that embody them, so the reader has the abstraction before the implementation.
+  - Centrality scoring: PageRank over the directed typed-edge graph (Phase 6), restricted to `depends_on` / `called_by` / `parent_of` edges so `contradicts` cycles don't skew the ranking. Damping factor 0.85 (standard). High-centrality entities are read first because everything else points at them.
+  - Concept ordering: parent-summary concepts first, then cross-cutting concepts, then entities — so the reader gets the module map, then the abstractions, then the implementations.
   - Estimated reading time: ~150 words/min, plus a flat 30s per `[[WikiLink]]` follow.
+  - `cortex find` matches against entity/concept names, descriptions, and source paths; case-insensitive substring + whitespace-tokenized OR. No fancy ranking — exact-name matches come first, then description hits.
 
 **Definition of Ready (DoR)**
 - Knowledge base has at least ~20 entities (smaller bases don't need onboarding — just read the index).
@@ -403,7 +436,9 @@ A new synthesis *output mode* — no schema changes, no new data, just a differe
 - `cortex onboard` produces `.knowledge/onboarding.md` with a clear reading order, rationale per stop, and time estimate.
 - Audience and depth flags produce materially different outputs (verified on a test corpus).
 - The MCP `onboard` prompt produces equivalent output via an IDE agent.
-- Tests cover: empty base (graceful failure with hint), single-entity base (degenerate but valid output), centrality ranking correctness on a known graph.
+- Directories with ≥5 entities get an auto-emitted parent-summary concept on the next ingest; `read_knowledge_index` renders them at the top of the index.
+- `cortex find --type entity|concept|parent "<query>"` returns ranked matches with a one-line preview.
+- Tests cover: empty base (graceful failure with hint), single-entity base (degenerate but valid output), centrality ranking correctness on a known graph, parent-summary auto-emission threshold, `cortex find` exact-name vs description-hit ordering.
 
 **Pros & Cons**
 - ✅ **Pros**: Transforms `.knowledge/` from a reference into a teaching artifact. Onboarding is one of the highest-leverage uses of synthesized architectural memory — it's exactly where the "compounding knowledge" pays back for humans, not just AIs.
@@ -493,6 +528,53 @@ Two integration points:
 
 ---
 
+## 💸 Phase 13: Token Economics & Context Packs — ⏳ Planned
+
+**Layman's Terms**
+Cortex is already cheap because it sends diffs, not whole files. Phase 13 turns "cheap" into "predictable." You can export a token-perfect knowledge bundle for any other tool, see what a sync would cost *before* you run it, and the MCP server stops repeating itself when an agent asks the same question twice in a row.
+
+**Technical Terms**
+Three small, self-contained surfaces over the existing knowledge — no new data, just smarter exporting and serving.
+
+1. **Context Packs (`cortex context build`).** Emit a token-bounded, audience-targeted bundle of the knowledge base as a single artifact, designed to be pasted into any other agent (a one-shot Claude call, ChatGPT, a co-worker's IDE that doesn't have MCP installed). Flags:
+   - `--budget 8000` — hard token cap (estimated via `tiktoken` for OpenAI-family models, falls back to a 4-char-per-token heuristic for others).
+   - `--scope <entity-or-concept>` — narrow to a subgraph (reuses Phase 8's graph traversal).
+   - `--depth N` — link-hop traversal depth from the scope root.
+   - `--format markdown|json` — markdown for humans/IDEs, JSON for programmatic consumers.
+   The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
+
+2. **Response compression in MCP outputs (sqz-style reference pointers).** Wrap MCP tool responses (`read_knowledge_index`, `read_entity`, `read_concept`, `get_pending_changes`) with a per-session content-addressed cache. On the first response that contains a given large block (e.g., a 4KB entity description), the full text is emitted. On any subsequent response in the same session that would repeat the same block, the body is replaced with a `§ref:<hash>§` token plus a small legend the agent can resolve client-side via a new `resolve_refs(refs[])` tool. Sessions are scoped to a single MCP connection; eviction is LRU on a small fixed budget (256KB by default). Backward-compatible: clients that don't call `resolve_refs` simply see the placeholder and ignore it.
+
+3. **Pre-flight cost simulation (`cortex test-cost`).** Compute the diff that the next sync would synthesize (delegates to `getPendingDiff()`), plus the CURRENT CONTEXT block that would be injected, and report estimated input/output token counts per configured provider's pricing (read from a small static table shipped with Cortex). Flags:
+   - `--budget <usd>` — exit nonzero if the estimated spend exceeds the budget, suitable for CI guard.
+   - `--mode auto|manual` — auto reports the per-file estimate; manual reports the batched estimate.
+   No LLM calls are made. The estimate is deterministic from the diff size + index size + Librarian prompt size.
+
+**Architecture & System Design**
+- **Core Components**: new `src/knowledge/packer.ts` (context-pack builder, shared with Phase 8's graph traversal), new `src/cli/context.ts`, new `src/cli/test-cost.ts`, new `src/mcp/compression.ts` (session cache + reference resolution), additions to `src/mcp/server.ts` (new `resolve_refs` tool, response wrappers).
+- **Design Pattern**: Each surface is a pure read-side projection over `state.json`. None mutate the canonical store, none require synthesis, none introduce a new persistent file. Cost simulation is offline; context packing is single-shot; response compression is in-memory and per-session.
+- **Key Considerations**:
+  - Token estimation is **provider-aware** but not provider-accurate to the byte. The static pricing table is a "good enough" estimate; the goal is to catch order-of-magnitude surprises, not bill to the cent. Document the heuristic explicitly so users don't treat the number as exact.
+  - Reference compression must be **transparent and opt-in for the client**. Agents that don't know about `§ref:§` placeholders must still get a functional (if slightly larger) response. The compression layer maintains a "this client called `resolve_refs`" bit per session and only compresses for compression-aware clients.
+  - Context packs are **stateless artifacts** — once exported, they have no link back to Cortex. Cite the source commit and `state.json` revision in the bundle header so a reader knows when the snapshot was taken.
+
+**Definition of Ready (DoR)**
+- Phase 8 has factored graph traversal into `src/knowledge/graph.ts` — the context packer reuses it.
+- Phase 10's centrality scoring is implemented — context packs use it to rank inclusion order.
+
+**Definition of Done (DoD)**
+- `cortex context build --budget 8000 --scope <entity>` produces a self-contained markdown bundle within the budget, with elided links footnoted.
+- `cortex test-cost` reports an estimated token + dollar cost for the next sync without making any LLM calls.
+- `cortex test-cost --budget 0.05` exits nonzero when the estimate exceeds the budget.
+- Session-scoped reference compression in the MCP server reduces repeated-block bytes on the second-and-later response within a session; `resolve_refs(refs[])` returns the original content for cited hashes.
+- Tests cover: pack budget honored on a known-size graph, pack self-containment (no dangling links inside the bundle), cost estimate determinism, compression round-trip via `resolve_refs`.
+
+**Pros & Cons**
+- ✅ **Pros**: Makes Cortex's "compounding context" exportable — a knowledge base that can leave the project root and travel with you. Pre-flight cost simulation closes the last surprise vector for users on paid APIs. Response compression amortizes the per-tool-call token cost across an agent's session, which is exactly where heavy MCP usage today bleeds tokens.
+- ❌ **Cons**: Each surface is small but they accrue surface area. Mitigated by keeping them strictly read-side projections — none touch the canonical writer. Token-cost estimation is necessarily approximate; document the heuristic and refuse to over-promise. Reference compression adds complexity to the MCP server that only benefits high-volume sessions — the default budget is intentionally conservative so low-volume sessions pay no overhead.
+
+---
+
 ## 🚫 Explicitly out of scope
 
 **Bi-directional source injection** (writing Cortex-generated comments back into `src/`) was proposed and **rejected**. It violates the read-only-source invariant declared in [CORTEX.md §2](CORTEX.md), creates watcher feedback loops, pollutes git history with machine-authored noise, and produces merge conflicts with developer comments. Cortex's authority over `.knowledge/` and its non-authority over `src/` is a load-bearing boundary, not an accident.
@@ -508,6 +590,16 @@ Two integration points:
 **In-house AST parsing for constraint checks.** Considered as part of Phase 6. Rejected in favor of treating the LLM as the AST: it already produces structured edges, it handles every language uniformly, and rolling our own AST parsers (TypeScript + Python + Go + Rust + ...) is a permanent maintenance tax for marginal accuracy gain.
 
 **Auto-generated README from `.knowledge/`.** Proposed as a public-facing artifact. Rejected: synthesis biases (LLM's view of importance, ordering, terminology) would leak into the project's outward-facing identity. Phase 10's onboarding output is the right surface — opt-in, audience-targeted, and lives in `.knowledge/`, not at the repo root.
+
+**Symmetric encryption of entities (Nexidion-style "private details / public summaries").** Proposed as a way to keep architectural secrets out of the synthesized index. Rejected: it directly conflicts with the plain-markdown, Obsidian-browseable principle that makes `.knowledge/` adoptable. The source code itself is unencrypted in `src/` — encrypting its synthesized description is theatre. Teams with real secrets-in-architecture concerns should keep those modules out of the watched paths via `.gitignore`-style exclusions, not via a parallel key-management surface.
+
+**Chat-turn decision extraction (Origin-style inline synthesis from conversation).** Proposed as a way to capture decisions made during AI-pair coding. Rejected: `log.md` (Phase 3) and `log.jsonl` (Phase 7) already capture every architectural decision *that touches code*. Decisions made in chat that don't touch code are by definition not architectural changes — they're conversation. Cortex's authority boundary is the codebase, not the chat transcript.
+
+**Import-graph pre-caching (TokenZip-style predictive documentation).** Proposed as a way to pre-synthesize docs for files the agent is likely to touch next. Rejected: it inverts Cortex's diff-on-save model into speculative work, most of which will never be consumed. The token cost compounds for hypothetical future reads while delivering no certainty. Phase 13's response compression solves the real version of this problem (repeated reads in one session) without paying for predictions.
+
+**Parallel rationale log (`rationale.json` / "thought stream").** Proposed as a way to record *why* the Librarian made each synthesis decision. Rejected: `log.jsonl` (Phase 7) already carries the structured event stream with `summary`, `entities`, `warnings`, and (post-Phase-6) `failedApproaches`. A second parallel log invites divergence between the two stores and adds no information that the existing log can't carry.
+
+**Review-gated falsifiable claims (AKBP-style human-in-the-loop synthesis).** Proposed as a way to require explicit user approval before knowledge updates persist. Rejected: it conflicts with the autonomous-synthesis premise that makes Cortex valuable in the first place — the watcher's whole point is that knowledge stays current without manual gating. Users who want a review gate already have one: `manual` mode (Phase 3) batches synthesis until the user types `cortex sync`. The Phase 7 audit surface (`cortex log --since`, `audit_entity`) provides retrospective review without blocking the writer path.
 
 ---
 
