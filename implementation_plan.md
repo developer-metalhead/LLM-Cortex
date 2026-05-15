@@ -182,6 +182,8 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 - ✅ **Pros**: Zero marginal token cost for users on existing IDE plans. Same output schema as the daemon, so consumers don't care which route produced the knowledge.
 - ❌ **Cons**: Synthesis quality is now coupled to whichever model the IDE happens to use. Requires the user to remember to run `npm run build` before `cortex setup`.
 
+**Planned enhancement — auto-context injection via PreToolUse hook.** Today the IDE agent must explicitly call `read_knowledge_index` before answering an architectural question. A shipped hook recipe under `.claude/hooks/` (and equivalents for Cursor/Windsurf where supported) wraps the IDE's Read/Grep tool calls so the rich knowledge index is loaded into the agent's context *before* it touches source. Implementation is a small JSON config + a one-line shell wrapper that pipes `cortex read` into the tool's input context. No core code change — pure recipe. This is the lowest-effort path to *"the AI already knows your codebase"* without building a native IDE extension per editor (rejected — see out-of-scope).
+
 ---
 
 ## ⚙️ Phase 5: CLI Polish & Daemonization (The Operations) — ✅ Done
@@ -220,6 +222,8 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 - ✅ Starter tests — `npm test` runs `tests/*.test.ts` (schema + writer delete behavior).
 
 **Planned follow-up (small):** `cortex status --next` emits a single state-aware recommendation derived from `state.json` and `.last_sync_commit` (e.g. *"N files changed since last sync — run `cortex sync`"*, *"3 entities are stale after the [[AuthMiddleware]] update — run `/ingest_cortex`"*, *"knowledge base is empty — run `/ingest`"*). One line, no flags beyond `--next`. Purely additive; reads existing state.
+
+**Planned follow-up — `cortex init --magic`.** A one-command setup path that subsumes the entire interactive wizard: detects the IDE in the current workspace (via the presence of `.claude/`, `.cursor/`, `.vscode/`, `.windsurf/`, `.antigravity/`), runs `npm run build` if `dist/` is missing, registers Cortex with every detected IDE, scaffolds `.knowledge/`, writes `.gitignore` entries, and prints a single "ready" line. The existing `cortex init` interactive mode stays as the explicit path; `--magic` is for "I trust the defaults, set it all up." Zero new core code — it's a composition of `init` + `setup all` + a detector. The user's time-to-first-ingest drops from ~5 commands to 1.
 
 ---
 
@@ -304,11 +308,16 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
    - `cortex log --warnings` — only entries that emitted warnings.
    - `cortex audit stale` — list entities flagged stale by Phase 6.
    - `cortex audit evidence` — list entities whose cited line-ranges no longer resolve at HEAD.
-   - `cortex lint` — graph-integrity checks over `state.json`: orphaned entities (no inbound or outbound relationships), disconnected sub-graphs ("knowledge silos" — clusters of nodes that should plausibly be linked but aren't, detected by simple connected-component analysis), and entities whose `sourceFile` no longer exists. Output is grouped by severity; exit code is nonzero when blocking issues are found so `cortex lint` can run in CI alongside Phase 12.
-4. **MCP audit tool.** `audit_entity(name)`, `audit_since(commit)`, and `audit_evidence()` expose the same surface to IDE agents, so the AI can ask "what changed in `[[AuthModule]]` over the last sprint?" or "which entity descriptions are no longer backed by code?" without grepping `log.md`.
+   - `cortex evolution <entity> [--since <commit|date>] [--format markdown|json]` — reconstruct an entity's history from `log.jsonl`. Reads as a semantic changelog: *"created in commit abc123 with description X; updated in commit def456 — auth strategy switched from cookies to JWT; staleSince flagged in commit ghi789 after [[SessionStore]] was refactored."* Answers questions like *"how did authentication evolve over the last six months?"* without leaving the knowledge layer. Optional `cortex evolution --replay --at <commit>` reconstructs the rendered `index.md` as it stood at that commit (replay over the append-only log). No new data — projection over the existing `log.jsonl`.
+   - `cortex lint` — graph-integrity checks over `state.json`. Three families of checks:
+     - **Topology**: orphaned entities (no inbound or outbound relationships), disconnected sub-graphs ("knowledge silos" — clusters of nodes that should plausibly be linked but aren't, detected by simple connected-component analysis), and entities whose `sourceFile` no longer exists.
+     - **Anti-patterns**: cycles in `depends_on` edges (architectural circular dependency), "god module" candidates (entities with fan-out above a configurable threshold and minimal cohesion in their description), and contradiction-heavy entities (more inbound `contradicts` edges than `supports` edges — a signal that the system is fighting itself).
+     - **Duplicates**: entity pairs whose names, descriptions, or `sourceFile` paths overlap above a similarity threshold (literal substring + token Jaccard, no embeddings). Surface candidate merges; never auto-merge — humans decide.
+     Output is grouped by severity; exit code is nonzero when blocking issues are found so `cortex lint` can run in CI alongside Phase 12.
+4. **MCP audit tool.** `audit_entity(name)`, `audit_since(commit)`, `audit_evidence()`, and `evolution_entity(name)` expose the same surface to IDE agents, so the AI can ask *"what changed in `[[AuthModule]]` over the last sprint?"*, *"which entity descriptions are no longer backed by code?"*, or *"how did the auth strategy evolve?"* without grepping `log.md`.
 
 **Architecture & System Design**
-- **Core Components**: `src/knowledge/writer.ts` (dual-emit log entries + evidence persistence), new `src/knowledge/audit.ts` (query layer + evidence-resolution check), new `src/knowledge/lint.ts` (graph-integrity checks), new `src/cli/log.ts` and `src/cli/lint.ts` (CLI commands), additions to `src/mcp/server.ts`.
+- **Core Components**: `src/knowledge/writer.ts` (dual-emit log entries + evidence persistence), new `src/knowledge/audit.ts` (query layer + evidence-resolution check), new `src/knowledge/lint.ts` (graph-integrity + anti-pattern + duplicate checks), new `src/knowledge/evolution.ts` (log replay + per-entity timeline reconstruction), new `src/cli/log.ts`, `src/cli/lint.ts`, and `src/cli/evolution.ts` (CLI commands), additions to `src/mcp/server.ts`.
 - **Design Pattern**: Event-sourced query over an append-only log. JSONL is the canonical event stream; markdown is the projection for humans. The linter is a pure read-only function over `state.json` — no mutation, no synthesis required.
 - **Key Considerations**:
   - JSONL append is atomic on POSIX; on Windows, use a write-and-rename strategy.
@@ -323,9 +332,10 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
 **Definition of Done (DoD)**
 - `log.jsonl` is written alongside `log.md` on every synthesis.
 - The CLI subcommands above (`cortex log --entity / --since / --warnings`, `cortex audit stale / evidence`, `cortex lint`) work against a real `.knowledge/`.
-- `audit_entity`, `audit_since`, and `audit_evidence` are registered MCP tools.
+- `audit_entity`, `audit_since`, `audit_evidence`, and `evolution_entity` are registered MCP tools.
 - `evidence` field accepted by the schema; evidence-loss surfaces in `cortex audit evidence` and in `cortex status`.
-- `cortex lint` flags orphans, disconnected silos, and missing source files with exit code 1 on blocking issues.
+- `cortex lint` flags orphans, disconnected silos, missing source files, `depends_on` cycles, god-module candidates, contradiction-heavy entities, and duplicate-candidate pairs — with exit code 1 on blocking issues.
+- `cortex evolution <entity>` reconstructs a per-entity timeline from `log.jsonl`; `--replay --at <commit>` reproduces the rendered `index.md` as it stood at that commit.
 - Backfill migration runs cleanly on a pre-Phase-7 `.knowledge/` directory.
 - Tests cover: dual-emit, query-by-entity, since-filter, warnings-only filter, evidence-drift detection, silo detection on a synthetic 3-component graph.
 
@@ -600,6 +610,28 @@ Three small, self-contained surfaces over the existing knowledge — no new data
 **Parallel rationale log (`rationale.json` / "thought stream").** Proposed as a way to record *why* the Librarian made each synthesis decision. Rejected: `log.jsonl` (Phase 7) already carries the structured event stream with `summary`, `entities`, `warnings`, and (post-Phase-6) `failedApproaches`. A second parallel log invites divergence between the two stores and adds no information that the existing log can't carry.
 
 **Review-gated falsifiable claims (AKBP-style human-in-the-loop synthesis).** Proposed as a way to require explicit user approval before knowledge updates persist. Rejected: it conflicts with the autonomous-synthesis premise that makes Cortex valuable in the first place — the watcher's whole point is that knowledge stays current without manual gating. Users who want a review gate already have one: `manual` mode (Phase 3) batches synthesis until the user types `cortex sync`. The Phase 7 audit surface (`cortex log --since`, `audit_entity`) provides retrospective review without blocking the writer path.
+
+**Runtime awareness layer — CI failures, deployment events, incident correlation.** Proposed as a way to attach operational signals to architectural entities ("which deploy broke `[[PaymentService]]`?"). Rejected: it expands Cortex from architectural memory into observability, where Sentry / Datadog / GitHub Actions / PagerDuty already win. The integrations cost (auth, webhooks, polling, schema-per-provider) is permanent maintenance for a use case adjacent to — not core to — the product. Teams that want this can pipe their incident URLs into entity descriptions manually; the wikilink graph carries them.
+
+**CRDT / immutable timestamped facts with per-entity UUIDs.** Proposed as a way to make `.knowledge/` safe under concurrent Git merges. Rejected: the actual mergeability problem is already mostly solved — each entity is its own file, each concept is its own file, `log.md` is append-only, and `index.md` is regenerated from `state.json`. The only common conflict surface is `state.json` itself; if real-world teams hit it, the right fix is to make `state.json` regeneratable from the per-entity files (already true since v0.3.x's migration logic) and treat conflicts as "rerun ingest." UUIDs everywhere and event-sourced merge logic is a 10× complexity tax for a 1.1× usability gain.
+
+**Native VS Code / Cursor extensions and `cortex://` URI schemes.** Proposed as a way to provide an "always-on" in-editor UX. Rejected: the MCP surface already provides everything an extension would — read tools, save tools, slash commands. Building a per-IDE native extension multiplies maintenance across editors (and breaks every time the IDE's extension API changes) for marginal UX gain over the PreToolUse hook recipe in Phase 4.5.
+
+**First-class Obsidian plugin.** Proposed for graph view + review queue + status bar inside Obsidian. Rejected: Obsidian already renders `.knowledge/` as a navigable graph out of the box because Cortex emits standard `[[WikiLinks]]`. A custom plugin would add minimal value over the default rendering. If a community member wants to build one, the schema is stable and public — it can ship downstream.
+
+**LLM-emitted numerical confidence scores per entity.** Proposed as a quick visual signal of how much to trust a synthesized claim. Rejected: model-emitted confidence is uncalibrated theater. The observable trust signals Cortex already produces — `evidence` (does the cited code still resolve?), `staleSince` (has a depended-on entity changed?), `lastRefined` (how old is this claim?) — derive from facts, not LLM intuition. If a user wants a single-number readout, surface it as a derived trust-signal projection in `cortex status`, not as a stored field.
+
+**Self-maintenance auto-rewrites — auto-prune stale, auto-merge duplicates, auto-correct contradictions.** Proposed as a way to keep the knowledge base healthy over time without user effort. Rejected: Cortex never silently rewrites synthesized content. The right pattern is *surface, don't act*: `cortex lint` (Phase 7) flags duplicates, orphans, anti-patterns, and stale entities; the human (or the LLM via `/ingest`) decides what to do about each. Autonomous rewrites of an architectural source-of-truth invert the trust direction and the read-only-source invariant in spirit, even if not in letter.
+
+**"Remember this" — auto-extracting decisions from chat turns.** Proposed as a way to capture insights mentioned in chat without the user typing a command. Rejected (twice — first as Origin-style chat extraction, now again as "auto-save insight"): Cortex's authority is over the codebase, not the chat transcript. A decision worth remembering is one that touches code; if it doesn't touch code, it's conversation, and the conversation tooling (Claude Code's own memory) is the right home for it.
+
+**Vector / hybrid storage (LanceDB / Chroma / Voyage-code-3).** Reaffirmed rejection. The rich index + drill-down pattern works because typical `.knowledge/` directories are <200 entities and <50KB of text — fully loadable into the LLM's context every call. Hybrid storage solves a problem that does not yet exist in the field; the day a real-world deployment crosses ~200 entities with measured retrieval latency, this gets re-opened.
+
+**AST parsing (Tree-sitter / TypeScript Compiler API / Babel).** Reaffirmed rejection. The LLM is the AST: it produces structured "edges introduced" output uniformly across every language. Rolling per-language AST parsers (TypeScript + Python + Go + Rust + Java + ...) is a permanent maintenance tax for a marginal accuracy gain over LLM-extracted relationships.
+
+**Encrypted cloud team sharing.** Reaffirmed rejection. Local-first means local-first; teams that want shared knowledge commit `.knowledge/` to Git today, which is good enough until a real shared-edit use case emerges. End-to-end encryption + key management + sync semantics is a product-shaped problem, not a feature.
+
+**Plugin marketplace / custom synthesis prompts.** Reaffirmed rejection. The opinionated `LIBRARIAN_SYSTEM_PROMPT` is opinionated for a reason; one-off prompt overrides fragment synthesis quality across projects.
 
 ---
 

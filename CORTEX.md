@@ -78,7 +78,9 @@ Today this policy is **advisory**: warnings are logged, not enforced. [Phase 6 o
 3. **Blast-radius staleness** — `action: update` on an entity propagates a `staleSince` timestamp along inbound `depends_on` / `called_by` edges, making the cost of a change observable without manual auditing.
 4. **Failed-approaches memory** — past architectural dead-ends persist in `failedApproaches[]` and are replayed into CURRENT CONTEXT, so the Librarian doesn't silently re-propose a pattern the project already rejected.
 
-[Phase 7](implementation_plan.md) further upgrades each entity's citation from a single `sourceFile` to an `evidence[]` block with line ranges and commit anchors, enabling `cortex audit evidence` to flag claims whose backing code has since been deleted or rewritten.
+[Phase 7](implementation_plan.md) further upgrades each entity's citation from a single `sourceFile` to an `evidence[]` block with line ranges and commit anchors, enabling `cortex audit evidence` to flag claims whose backing code has since been deleted or rewritten. The same phase adds `cortex evolution <entity>` for replaying `log.jsonl` into a per-entity semantic timeline, and extends `cortex lint` with anti-pattern (cycles, god modules, contradiction-heavy nodes) and duplicate-candidate detection — all *surface, never auto-act*: humans (or the next `/ingest`) decide.
+
+**Trust is observable, not declared.** Cortex deliberately omits LLM-emitted confidence scores. The trust signals are derived from facts: does the cited `evidence` still resolve at HEAD, has the entity been stamped `staleSince` by an upstream change, how old is `lastRefined`. A `cortex status` projection composes these into a single readout when one is needed; nothing is persisted as a model-authored number.
 
 ## 7. The Read / Navigate Flow
 Cortex is designed so downstream AIs **read the knowledge**, not re-derive it from source. The MCP surface for consumers:
