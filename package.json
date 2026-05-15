@@ -5,7 +5,7 @@
   "description": "The Autonomous Brain for your codebase — compiled architectural knowledge for AI-assisted development.",
   "main": "dist/index.js",
   "bin": {
-    "cortex": "./bin/cortex.js"
+    "cortex": "bin/cortex.js"
   },
   "files": [
     "dist",
