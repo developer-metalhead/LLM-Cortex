@@ -26,6 +26,7 @@
   "engines": {
     "node": ">=20"
   },
+  "preferGlobal": true,
   "keywords": [
     "cortex",
     "knowledge-base",

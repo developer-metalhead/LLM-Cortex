@@ -161,7 +161,7 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 **Architecture & System Design**
 - **Core Components**: [src/cli/setup.ts](src/cli/setup.ts), [src/cli/init.ts](src/cli/init.ts), [.claude/commands/](.claude/commands/).
 - **Design Pattern**: Strategy — the daemon and the IDE are two interchangeable executors of the Librarian role against one shared schema.
-- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity`.
+- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity` (Antigravity writes the **global** config by default — see Post-Launch Fix #2).
 - **Slash commands** shipped for Claude Code: `/ingest_cortex`, `/cortex_status`, `/read_knowledge`.
 - **Antigravity workflows** shipped under `.agents/workflows/`: `ingest`, `read`, `status`, `explore`.
 
@@ -238,12 +238,12 @@ To elevate Project Cortex from a prototype to a **Viable Product**, the followin
 
 ---
 
-## 🩹 Post-Launch Fixes (v0.3.2)
+## 🩹 Post-Launch Fixes (v0.3.3)
 
-Bugs discovered after first public release and corrected before v0.3.2.
+Three classes of issues surfaced after the first public release. v0.3.3 addresses the **root causes**, not just symptoms.
 
 | # | Issue | Root Cause | Fix |
 |---|---|---|---|
-| 1 | **STDOUT pollution — `invalid character 'â'`** | `pino-pretty` was writing colored output to STDOUT, corrupting the MCP STDIO stream which IDEs expect to contain only JSON. | `destination: 2` added to the `pino-pretty` transport in `src/core/logger.ts`, routing all pretty logs to STDERR. |
-| 2 | **Antigravity config not detected** | `cortex setup antigravity` wrote to `.antigravity/mcp.json` without the `$typeName` field required by Cascade plugin loaders; the correct filename is `mcp_config.json`. | `src/cli/setup.ts` antigravity target updated: path changed to `mcp_config.json`, entry now includes `$typeName: "exa.cascade_plugins_pb.CascadePluginCommandTemplate"` and `env: { DOTENV_CONFIG_QUIET: "1" }`. |
-| 3 | **Bootstrap ingestion captures cosmetic noise** | On first run with an empty index, `get_pending_changes` returns only the most recent git diff (e.g. the Cortex install commit), giving the Librarian too little context to synthesize a meaningful architecture picture. | Both `.claude/commands/ingest_cortex.md` and `.agents/workflows/ingest.md` now include a bootstrap check: if the knowledge index is empty, perform a full `src/` directory scan rather than relying on the diff alone. |
+| 1 | **STDOUT pollution — `invalid character 'â'`** | `dotenv@17` (the version this project depends on) prints a "tip" message to STDOUT on every `config()` call. The MCP STDIO transport requires STDOUT to contain only JSON-RPC frames, so the tip line breaks every IDE that parses the stream. | Added `quiet: true` to both `dotenv.config()` calls in [src/core/env.ts](src/core/env.ts). `pino-pretty` was also routed to STDERR (`destination: 2`) in [src/core/logger.ts](src/core/logger.ts) as defense-in-depth. |
+| 2 | **Antigravity setup not portable across projects** | Antigravity prioritizes the global `~/.gemini/antigravity/mcp_config.json` over per-project `.antigravity/mcp_config.json`, so the previous per-project setup was silently ignored. Even when local won, every new project required a fresh setup, and entries with hardcoded `node_modules` paths broke on project switches. | [src/cli/setup.ts](src/cli/setup.ts) antigravity target now defaults to writing the **global** config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`, `env: { DOTENV_CONFIG_QUIET: "1" }`). `findProjectRoot()` resolves the active project from CWD at runtime — one global entry serves every project. A `--local` flag on `cortex setup` writes the per-project file instead. Pre-flight check verifies `cortex` is on PATH; aborts with an install hint if not. |
+| 3 | **Bootstrap ingestion documents Project Cortex itself** | Prompt-level guidance ("if index is empty, scan src/") was too weak — `get_pending_changes` still returned a git diff in the user prompt, and LLMs follow what's in front of them. The first diff is invariably "the user installed Cortex," so the first synthesis described Cortex's footprint instead of the user's app. | Tool-level enforcement: `get_pending_changes` now calls `KnowledgeManager.isEmpty()` and branches. On empty: returns `mode: "bootstrap"` with a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) and `BOOTSTRAP_PROMPT_TEMPLATE` — **the git diff is intentionally absent from the payload**. The file list excludes the Cortex/IDE footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, `.cursor/`, `.vscode/`, etc.), test files (`tests/`, `*.test.*`, `*.spec.*`), and `node_modules`-class noise; includes `docs/`. Capped at 500 entries with a footer. Both ingest prompt files now branch on the `mode` field. |

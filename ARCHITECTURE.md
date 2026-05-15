@@ -23,7 +23,7 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
   * [src/cli/index.ts](src/cli/index.ts) — `commander` setup for `init`, `watch`, `setup`.
   * [src/cli/init.ts](src/cli/init.ts) — Interactive wizard that picks between the API-keys route and the IDE route, scaffolds `.knowledge/`, writes `.env`, and updates `.gitignore`.
   * [src/cli/watch.ts](src/cli/watch.ts) — Boots the file watcher, the Knowledge Manager, and an embedded MCP server. Owns the per-file (auto) and batched (manual) sync flows.
-  * [src/cli/setup.ts](src/cli/setup.ts) — Writes the Cortex MCP entry into supported IDE config files (Claude Code, Cursor, VS Code, Windsurf, Claude Desktop, Antigravity). The Antigravity target writes `.antigravity/mcp_config.json` with `$typeName` metadata required by Cascade loaders.
+  * [src/cli/setup.ts](src/cli/setup.ts) — Writes the Cortex MCP entry into supported IDE config files (Claude Code, Cursor, VS Code, Windsurf, Claude Desktop, Antigravity). The Antigravity target writes the **global** `~/.gemini/antigravity/mcp_config.json` by default (Windows: `%USERPROFILE%\.gemini\antigravity\mcp_config.json`), with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`) — one entry serves every project the user opens in Antigravity. A `--local` flag falls back to per-project `.antigravity/mcp_config.json`. Pre-flight check verifies `cortex` is on PATH; aborts the target with a clear error if not.
   * [src/cli/read.ts](src/cli/read.ts) — `cortex read` command. Prints the full rich knowledge index to stdout. Accepts `--entity <name>` and `--concept <name>` flags to drill into a specific page.
 
 ### B. The File Watcher (`src/core/watcher.ts`)
@@ -58,7 +58,7 @@ Both modes share the same Knowledge Manager, schema, and storage layout. The dae
 * **Responsibility**: Bridge between Cortex's synthesized knowledge and active coding agents via the Model Context Protocol.
 * **Tools exposed**:
   * `get_cortex_status` — init state + last-sync commit.
-  * `get_pending_changes` — bundles the diff since last sync, the **rich** knowledge index (descriptions + links + source paths) as `CURRENT CONTEXT` for the Librarian, and the output schema. This is the IDE route's synthesis prompt-pack.
+  * `get_pending_changes` — **branches on `knowledge.isEmpty()`**: when the knowledge base is empty (first run), returns a `mode: "bootstrap"` payload — a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) plus `BOOTSTRAP_PROMPT_TEMPLATE`, with the git diff **deliberately excluded** because it usually reflects the Cortex install itself. When the base is non-empty, returns the regular `mode: "incremental"` payload — the diff since last sync plus the rich knowledge index as `CURRENT CONTEXT`. The consuming AI reads `mode` to decide its workflow.
   * `save_synthesis` — Zod-validates the synthesis JSON (including the new optional `sourceFile` field), writes it to `.knowledge/`, advances `.last_sync_commit`.
   * `read_knowledge_index` — returns the rich `index.md`. Call this first; it's the project's architectural memory.
   * `read_entity(name)` — returns the full markdown page for a named entity. Downstream AIs use this to follow `[[WikiLinks]]` from the index without opening source files.
@@ -145,8 +145,9 @@ project-cortex/
 │   ├── core/
 │   │   ├── watcher.ts           # chokidar + .gitignore + debounce
 │   │   ├── diff.ts              # per-file diff + since-last-sync diff
-│   │   ├── env.ts               # ~/.cortexrc + project .env loader
-│   │   └── logger.ts            # pino factory for daemon (stdout + cortex.log)
+│   │   ├── scan.ts              # bootstrap source-file listing (git ls-files + filters)
+│   │   ├── env.ts               # ~/.cortexrc + project .env loader (with dotenv quiet)
+│   │   └── logger.ts            # pino factory for daemon (STDERR + cortex.log)
 │   ├── llm/
 │   │   ├── client.ts            # generateObject + mock mode
 │   │   ├── prompts.ts           # Librarian system + extraction templates
@@ -193,10 +194,10 @@ The Zod source of truth for what gets written lives in [src/llm/schema.ts](src/l
 
 Phases 1–5 of the [implementation plan](implementation_plan.md) are implemented in code: CLI (`init`, `watch`, `status`, `config`, `setup`, `mcp`), git-aware diffs, multi-provider LLM synthesis with bounded retries, `.knowledge/` writer (including entity deletes), MCP tools + prompts, embedded MCP in `cortex watch` with post-save queue clearing, lockfile (`.knowledge/cortex.lock`), `pino` logging to STDERR and `cortex.log`, global `~/.cortexrc` plus project `.env` loading, and a starter `npm test` suite under `tests/`.
 
-Post-launch fixes applied (v0.3.2):
-- **STDOUT pollution**: `pino-pretty` transport routed to STDERR (`destination: 2`) so the MCP STDIO stream is never corrupted.
-- **Antigravity config**: `cortex setup antigravity` now writes `.antigravity/mcp_config.json` (not `mcp.json`) with `$typeName: "exa.cascade_plugins_pb.CascadePluginCommandTemplate"` required by Cascade loaders.
-- **Bootstrap ingestion**: Both the Claude Code slash command and Antigravity workflow now detect an empty knowledge index on first run and perform a full `src/` directory scan instead of relying solely on the git diff.
+Post-launch fixes applied (v0.3.3):
+- **STDOUT pollution — root cause**: `dotenv@17` prints a tip log to STDOUT on every `config()` call, corrupting the MCP STDIO stream that IDEs parse as JSON. Fixed by adding `quiet: true` to both `dotenv.config()` calls in [src/core/env.ts](src/core/env.ts). The `pino-pretty → STDERR` change remains as defense-in-depth in [src/core/logger.ts](src/core/logger.ts).
+- **Antigravity portability**: Antigravity loads MCP servers from the global `~/.gemini/antigravity/mcp_config.json` with priority over per-project files, so per-project entries were silently ignored — and entries with hardcoded paths broke when switching projects. `cortex setup antigravity` now defaults to writing the global config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`). At runtime, `findProjectRoot()` resolves the active project from CWD. One global entry serves every project. A `--local` flag retains the per-project mode for testing. A pre-flight check verifies `cortex` is on PATH and aborts cleanly with an install hint if not.
+- **Bootstrap ingestion — tool-level enforcement**: The previous prompt-level guidance ("scan src/ if the index is empty") was too weak because the tool still returned a git diff in the user prompt, and LLMs follow what's in front of them. Now `get_pending_changes` itself branches on `knowledge.isEmpty()`: on first run it returns `mode: "bootstrap"` with a curated source-file list (from [src/core/scan.ts](src/core/scan.ts)) and an explicit "ignore the install commit" warning, with **no diff in the payload**. The file list excludes Project Cortex's own footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, etc.), tests, and `node_modules`-class noise; includes `docs/`.
 
 **Still optional / incremental:**
 

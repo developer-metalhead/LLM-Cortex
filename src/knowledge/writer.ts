@@ -52,6 +52,19 @@ export class KnowledgeManager {
     }
   }
 
+  // True when the knowledge base has nothing synthesized yet. The MCP server
+  // uses this to trigger bootstrap mode in get_pending_changes — first ingest
+  // must synthesize from a full source scan, not a recent git diff (which is
+  // usually just the installation of Cortex itself).
+  async isEmpty(): Promise<boolean> {
+    if (!(await this.exists())) return true;
+    const state = await this.readState();
+    return (
+      Object.keys(state.entities).length === 0 &&
+      Object.keys(state.concepts).length === 0
+    );
+  }
+
   // Returns the rich index — names + descriptions + links + source. This is
   // what the Librarian sees as CURRENT CONTEXT during ingest, and what
   // downstream AIs get when they call read_knowledge_index.

@@ -87,9 +87,13 @@ program
     `IDEs to configure: ${getAvailableTargets().join(", ")}, or "all"`,
     ["all"]
   )
-  .action(async (targets: string[]) => {
+  .option(
+    "--local",
+    "For Antigravity: write the per-project config (.antigravity/mcp_config.json) instead of the global ~/.gemini/antigravity/mcp_config.json. Other IDEs ignore this flag."
+  )
+  .action(async (targets: string[], options: { local?: boolean }) => {
     console.log("Registering Project Cortex MCP server...\n");
-    await setupIDE(projectRoot, targets);
+    await setupIDE(projectRoot, targets, { local: !!options.local });
     console.log("\nDone. Restart your IDE to activate the MCP connection.");
   });
 

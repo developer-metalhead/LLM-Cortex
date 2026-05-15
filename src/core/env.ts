@@ -10,10 +10,12 @@ import dotenv from "dotenv";
 export function loadCortexEnv(projectRoot: string): void {
   const homeRc = path.join(os.homedir(), ".cortexrc");
   if (fs.existsSync(homeRc)) {
-    dotenv.config({ path: homeRc, override: false } as any);
+    // quiet: true suppresses dotenv@17's tip log, which would otherwise
+    // pollute STDOUT and break MCP STDIO clients (they parse stdout as JSON).
+    dotenv.config({ path: homeRc, override: false, quiet: true } as any);
   }
   const envPath = path.join(projectRoot, ".env");
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true } as any);
+    dotenv.config({ path: envPath, override: true, quiet: true } as any);
   }
 }

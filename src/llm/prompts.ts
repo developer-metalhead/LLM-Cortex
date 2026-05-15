@@ -172,3 +172,37 @@ Re-read the CURRENT CONTEXT. Does anything in the new diff contradict, violate, 
 **Step 6 — Output JSON only.**
 Match the schema exactly. No prose before or after. No markdown fences.
 `;
+
+export const BOOTSTRAP_PROMPT_TEMPLATE = (fileList: string) => `
+You are performing a **BOOTSTRAP synthesis**. The knowledge base is empty — this is the very first ingest for this project.
+
+================================================================
+### CRITICAL: IGNORE RECENT GIT HISTORY
+================================================================
+The most recent commits in this repo likely contain the installation of **Project Cortex itself** — new \`.knowledge/\`, \`.claude/\`, \`.antigravity/\`, \`.cursor/\`, or \`.vscode/\` directories, plus configuration files. **DO NOT** synthesize any of that. Project Cortex is the tool, not the codebase you are documenting.
+
+Your job is to document the **user's application** that this repository contains.
+
+================================================================
+### SOURCE FILES TO SYNTHESIZE
+================================================================
+Below is the list of source files in this project that you should base your synthesis on. Use your own filesystem tools (Read, Glob, Grep) to inspect them. Do NOT ask for a git diff — there is no relevant diff for a bootstrap synthesis.
+
+${fileList}
+
+================================================================
+### YOUR TASK
+================================================================
+1. **Read the listed files** with your filesystem tools. Start with entry points (e.g. \`src/index.*\`, \`src/main.*\`, \`src/cli/*\`, \`app.*\`), then drill into the modules they import.
+2. **Identify the application's architecture**: entry points, core modules, services, data flows, abstractions, external integrations.
+3. **Emit every meaningful module/service/class as an entity** with \`action: "create"\`. Populate \`sourceFile\` with the repo-relative path.
+4. **Identify cross-cutting concepts** (architectural patterns, strategies, invariants) and emit them as concepts.
+5. **Wiki-link aggressively** — every entity description should reference related entities/concepts via \`[[WikiLinks]]\`.
+6. **Warnings** should be empty (\`[]\`) unless you spot real contradictions inside the user's own code — not "this looks like it just installed Cortex."
+7. **Summary** should describe what the application does in 1–2 sentences. Do not mention Project Cortex.
+
+================================================================
+### OUTPUT FORMAT
+================================================================
+Respond in JSON matching the schema exactly. No prose outside the JSON. No markdown code fences.
+`;
