@@ -8,7 +8,7 @@ interface IDETarget {
   writeConfig: (serverPath: string, configPath: string) => Promise<void>;
 }
 
-function getMCPEntry() {
+function getMCPEntry(projectRoot: string) {
   const nodePath = process.execPath;
   const scriptPath = fileURLToPath(import.meta.url);
   // The entry point is index.js in the same directory (dist/cli/)
@@ -16,7 +16,8 @@ function getMCPEntry() {
 
   return {
     command: nodePath,
-    args: [entryPath, "mcp"],
+    args: [entryPath, "mcp", "--project-root", projectRoot],
+    cwd: projectRoot,
   };
 }
 
@@ -40,11 +41,11 @@ function getIDETargets(projectRoot: string): IDETarget[] {
   return [
     {
       name: "claude-code",
-      configPath: path.join(home, ".claude", "settings.json"),
+      configPath: path.join(projectRoot, ".claude", "settings.json"),
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry();
+        config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
         await writeJsonFile(configPath, config);
       },
     },
@@ -54,7 +55,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry();
+        config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
         await writeJsonFile(configPath, config);
       },
     },
@@ -67,7 +68,8 @@ function getIDETargets(projectRoot: string): IDETarget[] {
         config.servers["project-cortex"] = {
           type: "stdio",
           command: "cortex",
-          args: ["mcp"],
+          args: ["mcp", "--project-root", projectRoot],
+          cwd: projectRoot,
         };
         await writeJsonFile(configPath, config);
       },
@@ -83,7 +85,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry();
+        config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
         await writeJsonFile(configPath, config);
       },
     },
@@ -97,7 +99,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry();
+        config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
         await writeJsonFile(configPath, config);
       },
     },
@@ -107,7 +109,7 @@ function getIDETargets(projectRoot: string): IDETarget[] {
       writeConfig: async (sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
-        config.mcpServers["project-cortex"] = getMCPEntry();
+        config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
         await writeJsonFile(configPath, config);
       },
     },
@@ -118,15 +120,6 @@ export async function setupIDE(
   projectRoot: string,
   targets: string[]
 ): Promise<void> {
-  const cliEntry = path.join(projectRoot, "dist", "cli", "index.js");
-
-  try {
-    await fs.access(cliEntry);
-  } catch {
-    console.error(`Error: CLI not built. Run "npm run build" first.`);
-    process.exit(1);
-  }
-
   const allTargets = getIDETargets(projectRoot);
   const validNames = allTargets.map((t) => t.name);
 
@@ -144,7 +137,7 @@ export async function setupIDE(
     }
 
     try {
-      await target.writeConfig(cliEntry, target.configPath);
+      await target.writeConfig("", target.configPath);
       console.error(`  [ok] ${target.name} → ${target.configPath}`);
     } catch (err: any) {
       console.error(`  [fail] ${target.name}: ${err.message}`);

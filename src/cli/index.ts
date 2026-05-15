@@ -105,8 +105,13 @@ program
 program
   .command("mcp")
   .description("Start the Cortex MCP server (STDIO mode)")
-  .action(async () => {
-    const server = new CortexMCPServer(projectRoot);
+  .option("--project-root <path>", "Explicit project root (overrides auto-detection)")
+  .action(async (options) => {
+    const root = options.projectRoot
+      ? path.resolve(options.projectRoot)
+      : projectRoot;
+    loadCortexEnv(root);
+    const server = new CortexMCPServer(root);
     await server.start();
   });
 

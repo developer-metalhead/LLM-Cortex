@@ -33,11 +33,12 @@ export async function getFileDiff(targetDir: string, filePath: string): Promise<
 export async function getPendingDiff(projectRoot: string, lastSyncCommit: string | null): Promise<string> {
   try {
     if (!lastSyncCommit || lastSyncCommit === "no-commits") {
-      // No prior sync — diff everything introduced in all commits
+      // No prior sync — snapshot the full current state of all tracked files.
+      // Using the empty-tree hash works for clones (shallow or full), midway
+      // installs, and single-commit repos — avoids replaying irrelevant history.
+      const emptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
       try {
-        const { stdout: root } = await execAsync("git rev-list --max-parents=0 HEAD", { cwd: projectRoot });
-        const firstCommit = root.trim();
-        const { stdout } = await execAsync(`git diff ${firstCommit}..HEAD`, { cwd: projectRoot });
+        const { stdout } = await execAsync(`git diff ${emptyTree} HEAD`, { cwd: projectRoot });
         if (stdout.trim()) return stdout;
       } catch {
         // No commits yet — fall through to staged/unstaged
