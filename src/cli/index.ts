@@ -5,9 +5,9 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { setupIDE, getAvailableTargets } from "./setup.js";
-import { runInit } from "./init.js";
+import { runInit, runInitMagic } from "./init.js";
 import { runWatch } from "./watch.js";
-import { runStatus } from "./status.js";
+import { runStatus, runStatusNext } from "./status.js";
 import { runConfig } from "./config.js";
 import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
@@ -51,8 +51,13 @@ program
 program
   .command("init")
   .description("Initialize Cortex in this project (interactive setup)")
-  .action(async () => {
-    await runInit(projectRoot);
+  .option("--magic", "Non-interactive setup: auto-detect IDEs, scaffold .knowledge/, register all, done")
+  .action(async (options) => {
+    if (options.magic) {
+      await runInitMagic(projectRoot);
+    } else {
+      await runInit(projectRoot);
+    }
   });
 
 program
@@ -65,8 +70,13 @@ program
 program
   .command("status")
   .description("Check the health and configuration of Project Cortex")
-  .action(async () => {
-    await runStatus(projectRoot);
+  .option("--next", "Print a single recommended next action based on current state")
+  .action(async (options) => {
+    if (options.next) {
+      await runStatusNext(projectRoot);
+    } else {
+      await runStatus(projectRoot);
+    }
   });
 
 program

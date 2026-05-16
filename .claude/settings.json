@@ -10,5 +10,18 @@
       ],
       "cwd": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\LLM-Cortex"
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/inject-knowledge.js"
+          }
+        ]
+      }
+    ]
   }
 }

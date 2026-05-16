@@ -62,13 +62,11 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## 🔲 Remaining small items — before Phase 6
+## ✅ Phase 4.5 / 5 follow-ups — now complete
 
-These are planned follow-ups from Phases 4.5 and 5 that are **not yet implemented**:
-
-- [ ] **PreToolUse hook recipe** (Phase 4.5 planned enhancement) — `.claude/hooks/` config that auto-injects `read_knowledge_index` output into context before any Read/Grep tool call. Pure JSON config + one-line shell wrapper. `.claude/hooks/` directory does not exist yet.
-- [ ] **`cortex status --next`** (Phase 5 follow-up) — single state-aware recommendation derived from `state.json` + `.last_sync_commit`. e.g. *"N files changed since last sync — run `cortex sync`"*. No `--next` flag on `runStatus` yet.
-- [ ] **`cortex init --magic`** (Phase 5 follow-up) — one-command setup: auto-detect IDE (`.claude/`, `.cursor/`, `.vscode/`, `.windsurf/`, `.antigravity/`), run `npm run build` if `dist/` missing, register all IDEs, scaffold `.knowledge/`, write `.gitignore` entries. No `--magic` flag on `runInit` yet.
+- [x] **PreToolUse hook recipe** — `.claude/hooks/inject-knowledge.js` (cross-platform Node.js, PPID session key). `cortex setup claude-code` now writes the script into `.claude/hooks/` and registers the `PreToolUse` matcher in `.claude/settings.json` automatically.
+- [x] **`cortex status --next`** — `src/cli/status.ts:runStatusNext`. Checks KB state → empty → never synced → git diff count vs `.last_sync_commit`. Emits one line. Wired as `cortex status --next`.
+- [x] **`cortex init --magic`** — `src/cli/init.ts:runInitMagic`. Detects IDE marker dirs, scaffolds `.knowledge/`, appends `.gitignore` entries, checks for built `dist/`, calls `setupIDE` for all detected IDEs. Wired as `cortex init --magic`.
 
 ---
 

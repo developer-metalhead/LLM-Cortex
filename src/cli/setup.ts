@@ -14,9 +14,9 @@ interface IDETarget {
 }
 
 export interface SetupOptions {
-  // When true, the antigravity target writes to the per-project
-  // .antigravity/mcp_config.json instead of the global Antigravity config.
-  // Other targets ignore this flag (they only have one config location).
+  // When true, the antigravity target writes to the project-scoped
+  // .antigravity/mcp_config.json instead of the global ~/.gemini/antigravity/mcp_config.json.
+  // Other targets ignore this flag.
   local?: boolean;
 }
 
@@ -73,34 +73,104 @@ async function isCortexOnPath(): Promise<boolean> {
 }
 
 const home = process.env.HOME || process.env.USERPROFILE || "";
+const appData = process.env.APPDATA || path.join(home, "Library", "Application Support");
+const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
 
-// Resolves the global Antigravity MCP config path for the current platform.
-// Antigravity (a Google IDE) reads from ~/.gemini/antigravity/mcp_config.json
-// on macOS/Linux and %USERPROFILE%\.gemini\antigravity\mcp_config.json on Windows.
-function getAntigravityGlobalConfigPath(): string {
+// Inline fallback for the hook script — used when the package-level template
+// isn't accessible (e.g. running from a global npm install without the .claude/ dir).
+const HOOK_SCRIPT_INLINE = `#!/usr/bin/env node
+// Cortex PreToolUse hook — auto-inject the knowledge index before Read/Grep.
+// Fires once per agent session (keyed on parent PID) then stays silent.
+import { execSync } from "child_process";
+import { existsSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+const sessionMarker = join(tmpdir(), \`cortex_injected_\${process.ppid}\`);
+if (existsSync(sessionMarker)) process.exit(0);
+try {
+  const index = execSync("cortex read", { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
+  if (!index || index === "No existing knowledge found.") process.exit(0);
+  writeFileSync(sessionMarker, "");
+  process.stdout.write(\`## [Cortex] Architectural knowledge index (auto-injected)\\n\\n\${index}\\n\`);
+} catch { process.exit(0); }
+`;
+
+// Antigravity (Google's AI IDE) stores MCP config in ~/.gemini/antigravity/mcp_config.json.
+// When --local is passed, the project-scoped .antigravity/mcp_config.json is used instead.
+function getAntigravityConfigPath(local: boolean, projectRoot: string): string {
+  if (local) return path.join(projectRoot, ".antigravity", "mcp_config.json");
   return path.join(home, ".gemini", "antigravity", "mcp_config.json");
 }
 
+// Zed: ~/.config/zed/settings.json on macOS+Linux (Zed follows XDG on all platforms),
+// %APPDATA%\Zed\settings.json on Windows.
+// MCP servers live under the "context_servers" key (not "mcpServers").
+function getZedConfigPath(): string {
+  if (process.platform === "win32") return path.join(appData, "Zed", "settings.json");
+  return path.join(xdgConfig, "zed", "settings.json");
+}
+
+// Cline VS Code extension (saoudrizwan.claude-dev) stores MCP config in VS Code's
+// globalStorage directory, which lives under the user data folder for Code.
+function getClineConfigPath(): string {
+  const codeUser =
+    process.platform === "darwin"
+      ? path.join(home, "Library", "Application Support", "Code", "User")
+      : process.platform === "win32"
+        ? path.join(appData, "Code", "User")
+        : path.join(xdgConfig, "Code", "User");
+  return path.join(codeUser, "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json");
+}
+
 function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarget[] {
-  const antigravityConfigPath = options.local
-    ? path.join(projectRoot, ".antigravity", "mcp_config.json")
-    : getAntigravityGlobalConfigPath();
+  const antigravityConfigPath = getAntigravityConfigPath(!!options.local, projectRoot);
 
   return [
     {
       name: "claude-code",
       configPath: path.join(projectRoot, ".claude", "settings.json"),
-      writeConfig: async (sPath, configPath) => {
+      writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
+
+        // MCP server entry
         config.mcpServers = config.mcpServers || {};
         config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
+
+        // PreToolUse hook — injects knowledge index before Read/Grep
+        config.hooks = config.hooks || {};
+        config.hooks.PreToolUse = config.hooks.PreToolUse || [];
+        const hookMatcher = "Read|Grep";
+        const alreadyRegistered = config.hooks.PreToolUse.some(
+          (h: any) => h.matcher === hookMatcher
+        );
+        if (!alreadyRegistered) {
+          config.hooks.PreToolUse.push({
+            matcher: hookMatcher,
+            hooks: [{ type: "command", command: "node .claude/hooks/inject-knowledge.js" }],
+          });
+        }
+
         await writeJsonFile(configPath, config);
+
+        // Write the hook script into the project
+        const hookDir = path.join(projectRoot, ".claude", "hooks");
+        const hookScript = path.join(hookDir, "inject-knowledge.js");
+        const hookSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "inject-knowledge.js");
+        try {
+          await fs.mkdir(hookDir, { recursive: true });
+          const scriptContent = await fs.readFile(hookSource, "utf-8");
+          await fs.writeFile(hookScript, scriptContent, "utf-8");
+        } catch {
+          // If the template isn't present (e.g. running from npm install), write inline
+          await fs.mkdir(hookDir, { recursive: true });
+          await fs.writeFile(hookScript, HOOK_SCRIPT_INLINE, "utf-8");
+        }
       },
     },
     {
       name: "cursor",
       configPath: path.join(projectRoot, ".cursor", "mcp.json"),
-      writeConfig: async (sPath, configPath) => {
+      writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
         config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
@@ -110,7 +180,7 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
     {
       name: "vscode",
       configPath: path.join(projectRoot, ".vscode", "mcp.json"),
-      writeConfig: async (sPath, configPath) => {
+      writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.servers = config.servers || {};
         config.servers["project-cortex"] = {
@@ -130,7 +200,7 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         "windsurf",
         "mcp_config.json"
       ),
-      writeConfig: async (sPath, configPath) => {
+      writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
         config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
@@ -144,7 +214,7 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         "Claude",
         "claude_desktop_config.json"
       ),
-      writeConfig: async (sPath, configPath) => {
+      writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
         config.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
@@ -157,16 +227,68 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
       preflight: async () => {
         if (await isCortexOnPath()) return null;
         return (
-          "the 'cortex' binary is not on your PATH. The Antigravity entry calls\n" +
+          "the 'cortex' binary is not on your PATH. The Gemini CLI entry calls\n" +
           "         it directly, so the MCP server will fail to launch without a global install.\n" +
           "         Fix: npm install -g projectcortex"
         );
       },
-      writeConfig: async (sPath, configPath) => {
+      writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
         config.mcpServers["project-cortex"] = getPortableMCPEntry();
         await writeJsonFile(configPath, config);
+      },
+    },
+    {
+      name: "zed",
+      configPath: getZedConfigPath(),
+      writeConfig: async (_sPath, configPath) => {
+        const config = await readJsonSafe(configPath);
+        config.context_servers = config.context_servers || {};
+        // Zed format: command is a top-level string, args is a top-level array
+        config.context_servers["project-cortex"] = {
+          command: "cortex",
+          args: ["mcp"],
+        };
+        await writeJsonFile(configPath, config);
+      },
+    },
+    {
+      name: "cline",
+      configPath: getClineConfigPath(),
+      preflight: async () => {
+        if (await isCortexOnPath()) return null;
+        return (
+          "the 'cortex' binary is not on your PATH. The Cline entry calls\n" +
+          "         it directly, so the MCP server will fail to launch without a global install.\n" +
+          "         Fix: npm install -g projectcortex"
+        );
+      },
+      writeConfig: async (_sPath, configPath) => {
+        const config = await readJsonSafe(configPath);
+        config.mcpServers = config.mcpServers || {};
+        config.mcpServers["project-cortex"] = getPortableMCPEntry();
+        await writeJsonFile(configPath, config);
+      },
+    },
+    {
+      name: "continue",
+      configPath: path.join(projectRoot, ".continue", "mcpServers", "project-cortex.yaml"),
+      writeConfig: async (_sPath, configPath) => {
+        await fs.mkdir(path.dirname(configPath), { recursive: true });
+        // Continue.dev workspace MCP file format — schema: v1 is required
+        const yaml = [
+          "name: project-cortex",
+          "version: 0.0.1",
+          "schema: v1",
+          "mcpServers:",
+          "  - name: project-cortex",
+          "    command: cortex",
+          "    args:",
+          "      - mcp",
+          "",
+        ].join("\n");
+        await fs.writeFile(configPath, yaml, "utf-8");
       },
     },
   ];
@@ -218,5 +340,8 @@ export function getAvailableTargets(): string[] {
     "windsurf",
     "claude-desktop",
     "antigravity",
+    "zed",
+    "cline",
+    "continue",
   ];
 }

@@ -50,8 +50,6 @@ Cortex is not a general document summarizer. Its Librarian prompt is tuned for s
 
 ---
 
----
-
 ## Installation
 
 Cortex is a CLI tool — **install it globally**, not as a project dependency:
@@ -80,7 +78,21 @@ npm install -g projectcortex@latest
 
 ## Setup
 
-Run the interactive setup wizard in your project root:
+### Quick start — one command
+
+Skip the wizard entirely with one command:
+
+```bash
+cortex init --magic
+```
+
+Cortex checks global IDE installation indicators to detect every IDE installed on your machine — regardless of whether the IDE has touched this project yet. It then scaffolds `.knowledge/`, adds `.env` and `cortex.log` to `.gitignore`, and registers Cortex as an MCP server in all detected IDEs in one shot. Restart your IDE when it finishes.
+
+Detects: **Claude Code** (`~/.claude/`), **Cursor** (`%APPDATA%\Cursor` / `~/.config/Cursor`), **VS Code** (`~/.vscode/`), **Windsurf** (`~/.codeium/windsurf/`), **Antigravity** (`~/.gemini/antigravity/`), **Claude Desktop** (`%APPDATA%\Claude`), **Zed** (`~/.config/zed/`), **Cline** (VS Code extension), **Continue** (`~/.continue/`).
+
+### Interactive setup
+
+For a guided walkthrough or a fresh machine with no IDE directories yet:
 
 ```bash
 cortex init
@@ -144,28 +156,47 @@ CORTEX_MODEL=qwen2.5          # or llama3, mistral, phi4, deepseek-r1, gemma3, e
 
 Then start the daemon:
 
-## 🚀 Usage
-
-### 1. Initialize a Project
-Run this in any new repository to set up the `.knowledge` base:
-```bash
-cortex init
-```
-
-### 2. Configure your IDE (Portable & Robust Setup)
-To use Cortex within your IDE (Claude Code, Cursor, Antigravity, etc.), run:
-```bash
-cortex setup all
-```
-**Why this is better:**
-- **Zero Configuration**: Automatically finds your `node` path and script location.
-- **Repo-Aware**: Because it uses the IDE's current working directory (and has smart parent-folder climbing), **Cortex automatically switches its knowledge base** whenever you open a different project. No hardcoded paths required.
-
-### 3. Background Ingestion (API Route)
-If you are using an API key (OpenAI/Anthropic) instead of an IDE, start the daemon:
 ```bash
 cortex watch
 ```
+
+---
+
+### Route 2: IDE Integration (MCP)
+
+For developers with a Claude Code, Cursor, Windsurf, Zed, Cline, or Continue subscription — or any IDE that supports MCP.
+
+Your IDE already has a powerful AI. Instead of paying for a separate API key, Cortex plugs into your IDE as an MCP server and lets your IDE's AI do the synthesis — at no extra cost.
+
+Register Cortex in your IDE(s):
+
+```bash
+# All supported IDEs at once
+cortex setup all
+
+# Or pick specific ones
+cortex setup claude-code cursor
+```
+
+Supported targets:
+
+| Target | Config written | Scope |
+|---|---|---|
+| `claude-code` | `.claude/settings.json` + hook script | per-project |
+| `cursor` | `.cursor/mcp.json` | per-project |
+| `vscode` | `.vscode/mcp.json` | per-project (Copilot Agent mode) |
+| `windsurf` | `~/.codeium/windsurf/mcp_config.json` | global |
+| `claude-desktop` | `%APPDATA%\Claude\claude_desktop_config.json` | global |
+| `antigravity` | `~/.gemini/antigravity/mcp_config.json` | global (use `--local` for per-project) |
+| `zed` | `~/.config/zed/settings.json` (macOS/Linux) or `%APPDATA%\Zed\settings.json` (Windows) | global |
+| `cline` | VS Code globalStorage `saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | global |
+| `continue` | `.continue/mcpServers/project-cortex.yaml` | per-project |
+
+**Why this is better than hardcoded paths:**
+- **Zero Configuration** — Cortex automatically finds your `node` path and script location; no manual path editing.
+- **Repo-Aware** — the MCP server uses the IDE's current working directory and `findProjectRoot()` to climb to the nearest `.knowledge/` or `.git/`. Switch projects and Cortex switches with you — no re-running setup.
+
+**Restart your IDE** after running setup.
 
 ---
 
@@ -175,28 +206,57 @@ There are two layers of commands. **CLI commands** manage the daemon and setup �
 
 ### CLI commands (terminal)
 
-These are always `cortex <command>` in a regular terminal, regardless of which route you use.
-
 | Command | When you use it |
 |---------|----------------|
-| `cortex init` | Once, when setting up a new project. Creates `.knowledge/`, configures your provider. |
-| `cortex setup [target]` | Once per IDE. Registers Cortex as an MCP server so your IDE can talk to it. |
+| `cortex init` | Once, when setting up a new project. Interactive wizard: creates `.knowledge/`, configures your provider. |
+| `cortex init --magic` | Same as above but fully automatic: detects IDEs, scaffolds `.knowledge/`, registers all, done. |
+| `cortex setup [target]` | Register Cortex as an MCP server in specific IDEs. Targets: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity`, `zed`, `cline`, `continue`, or `all`. |
 | `cortex watch` | **Route 1 only.** Starts the background daemon. Leave it running — it synthesizes on every file save automatically. |
 | `cortex read` | Print the full knowledge index to the terminal — what Cortex knows about your codebase. |
 | `cortex read --entity <name>` | Print the full page for a specific entity (e.g. `cortex read --entity AuthMiddleware`). |
 | `cortex read --concept <name>` | Print the full page for a specific concept. |
-| `cortex config` | When you want to change your LLM provider, model, or ingestion mode. |
-| `cortex status` | Check the last sync commit, project root, and whether the knowledge base is initialized. |
+| `cortex config` | Change your LLM provider, model, or ingestion mode without re-running `cortex init`. |
+| `cortex status` | Full status report: last sync commit, provider config, daemon lock state, log path. |
+| `cortex status --next` | One-line recommendation: tells you exactly what to do next based on current state (e.g. *"18 files changed since last sync — run `/ingest_cortex`"*). |
 | `cortex mcp` | Internal — IDEs call this automatically. You don't run it manually. |
 
 ### Knowledge commands (inside your IDE — Route 2 / MCP)
 
-These run inside Claude Code, Cursor, or any connected IDE. They let you and your AI interact with the knowledge base during coding.
+#### In Claude Code — slash commands
 
+| Command | What it does |
+|---|---|
+| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. On first run with an empty index, switches to **bootstrap mode** — scans source files directly, diff excluded, so the first synthesis describes your app, not the Cortex install. |
+| `/read_knowledge` | **See what the AI knows.** Prints the full rich knowledge index — every entity and concept with its description, source file, and links. |
+| `/cortex_status` | **Check sync state.** Shows the last-sync commit SHA and whether the knowledge base is initialized. |
 
+#### In Claude Code — MCP prompts
 
+Cortex also exposes these as native MCP prompts (accessible via the IDE's prompt picker):
 
-### In Antigravity
+| Prompt | What it does |
+|---|---|
+| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. Auto-switches to bootstrap mode when the index is empty. |
+| `read` | Reads the rich index and instructs the AI to use it (not re-scan source). |
+| `explore` | Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth. |
+| `status` | Checks Cortex initialization and last sync. |
+
+#### Auto-context injection (Claude Code PreToolUse hook)
+
+When you run `cortex setup claude-code` (or `cortex init --magic`), Cortex writes a lightweight hook that fires automatically before any `Read` or `Grep` tool call in Claude Code:
+
+```
+.claude/hooks/inject-knowledge.js   ← the hook script
+.claude/settings.json               ← registers the PreToolUse matcher
+```
+
+**What it does:** The first time the AI touches a source file in a session, the hook runs `cortex read` and injects the full knowledge index into the agent's context before the tool executes. Subsequent tool calls in the same session are silent — the hook uses the parent process PID as a session key so it fires once, not on every read.
+
+**Effect:** The AI already knows your architecture before it opens a single file. It navigates via `[[WikiLinks]]` and `read_entity` instead of re-deriving answers from raw source. No manual `/read_knowledge` call needed.
+
+The hook exits 0 silently if `cortex` is not on PATH, the knowledge base is empty, or anything else goes wrong — it never blocks a tool call.
+
+#### In Antigravity
 
 > **Requires a global install** — `npm install -g projectcortex`. The Antigravity entry calls the `cortex` binary directly so one config works across every project.
 
@@ -208,46 +268,37 @@ If you specifically want a per-project entry, pass `--local`:
 cortex setup antigravity --local   # writes .antigravity/mcp_config.json instead
 ```
 
+**Auto-context injection via `GEMINI.md`:** After every ingest, Cortex writes the knowledge index to `GEMINI.md` in your project root. Antigravity reads this file automatically at session start — the same way Claude Code reads `CLAUDE.md`. This means Antigravity already knows your architecture before you type the first message, with no hook or manual prompt needed. Commit `GEMINI.md` to your repo so teammates benefit too.
+
 Type **`/`** in the chat bar to see these **Local Workflows**:
--   **`/ingest`** — Synthesizes pending code changes into the brain. On first run (empty knowledge base), the MCP tool automatically switches to **bootstrap mode** — it scans the user's source files directly and ignores the git diff (which would otherwise just describe the Cortex install itself).
--   **`/read`** — Opens the interlinked architectural knowledge index.
--   **`/status`** — Checks the health and sync state of the brain.
--   **`/explore`** — Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth.
-
-
-
-#### In Claude Code — slash commands
-
-| Command | What it does |
-|---|---|
-| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. On first run with an empty index, the MCP tool returns a `mode: "bootstrap"` payload — a curated source-file list with the diff intentionally excluded — so the first synthesis describes the user's app, not the Cortex install. |
-| `/read_knowledge` | **See what the AI knows.** Prints the full rich knowledge index — every entity and concept with its description, source file, and links. |
-| `/cortex_status` | **Check sync state.** Shows the last-sync commit SHA and whether the knowledge base is initialized. |
-
-#### In Claude Code — MCP prompts
-
-Cortex also exposes these as native MCP prompts (accessible via the IDE's prompt picker):
-
-| Prompt | What it does |
-|---|---|
-| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. Auto-switches to bootstrap mode (full source scan, diff excluded) when the index is empty. |
-| `read` | Reads the rich index and instructs the AI to use it (not re-scan source). |
-| `explore` | Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth. |
-| `status` | Checks Cortex initialization and last sync. |
+- **`/ingest`** — Synthesizes pending code changes into the brain.
+- **`/read`** — Opens the interlinked architectural knowledge index.
+- **`/status`** — Checks the health and sync state of the brain.
+- **`/explore`** — Reads the index and navigates links to answer architectural questions in depth.
 
 #### In Cursor / Windsurf
 
 Use `@project-cortex` in Agent mode. The MCP tools (`get_pending_changes`, `read_knowledge_index`, `read_entity`, `read_concept`, `save_synthesis`) are available to the agent directly.
 
-### Route 1 (daemon) — how to trigger each action
+#### In Zed
 
-If you're using `cortex watch` with an API key instead of an IDE, here's how the same operations work:
+Run `cortex setup zed` once. Cortex registers under Zed's `context_servers` key in your global settings file. Open the **assistant panel** — `project-cortex` will appear as a context server. Use `@project-cortex` to attach it to a conversation, then ask it to ingest or read the knowledge index.
+
+#### In Cline (VS Code extension)
+
+Run `cortex setup cline` once. Cortex is added to Cline's global MCP config (`cline_mcp_settings.json` in VS Code globalStorage). Open the **Cline sidebar → MCP Servers tab** to verify the connection. In chat, Cline's agent can call the Cortex MCP tools directly — ask it to run an ingest or read the knowledge index.
+
+#### In Continue (VS Code / JetBrains extension)
+
+Run `cortex setup continue` once per project. Cortex writes `.continue/mcpServers/project-cortex.yaml` to the project root — Continue picks it up automatically in agent mode. Use `@project-cortex` in the Continue chat panel to call the MCP tools.
+
+### Route 1 (daemon) — how to trigger each action
 
 | Action | How to do it |
 |---|---|
 | **Ingest** | Automatic — the daemon synthesizes on every file save. In `manual` mode, type `cortex sync` in the terminal where the daemon is running to flush queued changes. |
 | **Read knowledge** | `cortex read` — prints the full index to the terminal. `cortex read --entity <name>` to drill into one entity. |
-| **Check status** | `cortex status` in any terminal. |
+| **Check status** | `cortex status` — full report. `cortex status --next` — one recommended action. |
 
 ---
 
@@ -291,32 +342,8 @@ You do **not** re-run `cortex setup antigravity` for new projects. Setup only wr
 ### TL;DR
 
 - Install `cortex` globally once.
-- Run `cortex setup antigravity` once (writes the global config).
+- Run `cortex setup all` once (or `cortex init --magic`). Global targets (Antigravity, Cline, Zed, Windsurf, Claude Desktop) write a portable entry that works across every project automatically.
 - For every new project: open it, run `/ingest`. Done.
-
----
-
-### Route 2: IDE Integration (MCP)
-
-For developers with a Claude Code, Cursor, or Windsurf subscription.
-
-Your IDE already has a powerful AI. Instead of paying for a separate API key, Cortex plugs into your IDE as an MCP server and lets your IDE's AI do the synthesis — at no extra cost.
-
-Register Cortex in your IDE(s):
-
-```bash
-# All supported IDEs at once
-cortex setup all
-
-# Or pick specific ones
-cortex setup claude-code cursor
-```
-
-Supported: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity` (writes the global Antigravity config by default — use `--local` to override).
-
-**Restart your IDE** after running setup.
-
-Once connected, the full command reference is in the [Command Reference](#️-command-reference) section above.
 
 ---
 
@@ -332,15 +359,21 @@ Both routes produce the same output in your project root:
 ├── entities/            # Per-file/module knowledge pages (deep-read via read_entity)
 ├── concepts/            # Abstract architectural patterns (deep-read via read_concept)
 └── .last_sync_commit    # Git SHA marking the last synthesized commit
+
+GEMINI.md                # Auto-generated — Antigravity loads this at session start (see below)
 ```
 
 All plain Markdown (plus one JSON state file). Open `.knowledge/` in [Obsidian](https://obsidian.md) for a visual graph of your architecture.
 
 The `.last_sync_commit` file lets Cortex compute precise git diffs between syncs, so each synthesis only processes work the Librarian hasn't already seen.
 
+**`GEMINI.md`** is written to the project root after every `save_synthesis` call. It contains the same rich knowledge index that lives in `.knowledge/index.md`. Antigravity (and the Gemini CLI) reads `GEMINI.md` automatically at the start of every session — the same role `CLAUDE.md` plays for Claude Code. This gives Antigravity instant architectural context without any hook mechanism or manual prompt.
+
+**Commit `GEMINI.md` to your repo.** It is safe Markdown, benefits all team members using Antigravity or the Gemini CLI, and is updated automatically after each ingest — there is no maintenance burden.
+
 ### The index is self-sufficient
 
-`index.md` now includes full descriptions, source file paths, and outbound links for every entity and concept — not just names. This means any AI that reads it can immediately answer architectural questions without re-scanning source code.
+`index.md` includes full descriptions, source file paths, and outbound links for every entity and concept — not just names. This means any AI that reads it can immediately answer architectural questions without re-scanning source code.
 
 ---
 
@@ -354,7 +387,7 @@ When connected via MCP, your IDE's agent has access to these tools:
 | `get_pending_changes` | Returns either an **incremental** payload (git diff since last sync + current knowledge index) or a **bootstrap** payload (curated source-file list, no diff) when the knowledge base is empty. The `mode` field tells the consumer which path was taken. |
 | `save_synthesis` | Accepts the synthesized JSON result, validates it with Zod, and writes it to `.knowledge/` |
 | `read_knowledge_index` | Returns the rich `index.md` — names, descriptions, source paths, and links. **Call this first** before reading any source files |
-| `read_entity` | Returns the full synthesized page for one entity (e.g. `AuthMiddleware`). Follow [[WikiLinks]] from the index with this |
+| `read_entity` | Returns the full synthesized page for one entity (e.g. `AuthMiddleware`). Follow `[[WikiLinks]]` from the index with this |
 | `read_concept` | Returns the full synthesized page for one concept (e.g. `Authentication Strategy`). Same as above for concepts |
 
 The synthesis JSON returned to `save_synthesis` must match this shape:
@@ -374,17 +407,9 @@ The synthesis JSON returned to `save_synthesis` must match this shape:
 }
 ```
 
-In Claude Code, the included slash commands wire these tools together:
-
-| Command | What it does |
-|---|---|
-| `/ingest_cortex` | Synthesizes all pending git changes into the knowledge base |
-| `/cortex_status` | Shows init status, last-sync commit, and project root |
-| `/read_knowledge` | Prints the full rich knowledge index — what the AI currently knows |
-
 ### How the AI uses the knowledge
 
-After an ingest, the AI's knowledge about your codebase lives in `.knowledge/`. Here's the read hierarchy:
+After an ingest, the AI's knowledge about your codebase lives in `.knowledge/`. The read hierarchy:
 
 1. **`/read_knowledge`** (or `read_knowledge_index`) — the fast skim. Every entity and concept with its description, source file, and links in one view.
 2. **`read_entity <name>`** — drill into one entity's full synthesized page when you need more depth.
@@ -403,10 +428,10 @@ The AI is instructed to navigate the knowledge graph (following `[[WikiLinks]]` 
    ```bash
    cortex read
    ```
-   You should see entities and concepts with full descriptions. If you see `_No entities yet._`, the daemon hasn't synced yet — check `cortex status` for the last sync commit.
+   You should see entities and concepts with full descriptions. If you see `_No entities yet._`, the daemon hasn't synced yet — check `cortex status` for the last sync commit or run `cortex status --next` for a one-line action.
 
 2. **Check what context the daemon sends to the LLM:**
-   When `cortex watch` processes a file change, it calls `getKnowledgeSummary()` which now returns the rich index (descriptions + links + source paths), not just names. This is the "prior knowledge" the LLM sees before synthesizing a new diff. You can verify what it would see by running `cortex read` — that's the exact string the daemon passes as context.
+   When `cortex watch` processes a file change, it calls `getKnowledgeSummary()` which returns the rich index (descriptions + links + source paths), not just names. This is the "prior knowledge" the LLM sees before synthesizing a new diff. You can verify exactly what it would see by running `cortex read` — that's the exact string the daemon passes as context.
 
 3. **Check a specific entity is up to date:**
    ```bash
