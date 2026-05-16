@@ -240,7 +240,14 @@ export class KnowledgeManager {
         ? entity.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")
         : "_(none)_";
 
-      const content = `# Entity: ${entity.name}\n\n${sourceLine}> ${entity.description}\n\n### Relations\n- **Action:** ${entity.action}\n- **Links:** ${linksLine}\n\n---\n*Last Refined: ${timestamp}*\n`;
+      // Layered descriptions (with `## Role` / `## Interface` / etc. headings)
+      // render as-is. Legacy plain descriptions keep the blockquote wrapper for
+      // backward-compatible rendering.
+      const body = isLayeredDescription(entity.description)
+        ? entity.description.trim()
+        : `> ${entity.description}`;
+
+      const content = `# Entity: ${entity.name}\n\n${sourceLine}${body}\n\n### Relations\n- **Action:** ${entity.action}\n- **Links:** ${linksLine}\n\n---\n*Last Refined: ${timestamp}*\n`;
       await fs.writeFile(entityPath, content);
     }
 
@@ -293,7 +300,8 @@ export class KnowledgeManager {
         const links = e.links.length
           ? `\n_Links:_ ${e.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")}`
           : "";
-        content += `### [[${name}]]${source}\n${e.description}${links}\n\n`;
+        const indexSummary = extractRoleSection(e.description);
+        content += `### [[${name}]]${source}\n${indexSummary}${links}\n\n`;
       }
     }
 
@@ -341,4 +349,28 @@ function extractSourceCitation(body: string): string | undefined {
 function extractLastRefined(body: string): string | null {
   const match = body.match(/\*Last Refined:\s*([^*\n]+)\*/);
   return match ? match[1].trim() : null;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Layered description helpers
+//
+// The Librarian emits each entity's `description` as a multi-section markdown
+// document (## Role / ## Interface / ## Behavior / ## Wiring). The full body
+// goes onto the entity's drill-down page; the index renders only the Role
+// section to keep the high-level map shallow.
+// ──────────────────────────────────────────────────────────────────────
+
+const SECTION_HEADING_RE = /^##\s+(Role|Interface|Behavior|Wiring)\s*$/m;
+
+function isLayeredDescription(description: string): boolean {
+  return SECTION_HEADING_RE.test(description);
+}
+
+// Extract just the `## Role` section content. Falls back to the full description
+// when no section markers are present (backward compatibility with legacy
+// flat descriptions).
+function extractRoleSection(description: string): string {
+  if (!isLayeredDescription(description)) return description.trim();
+  const match = description.match(/##\s+Role\s*\n([\s\S]*?)(?=\n##\s+\w|\s*$)/);
+  return match ? match[1].trim() : description.trim();
 }

@@ -94,6 +94,10 @@ export class CortexMCPServer {
           name: "explore",
           description: "Navigate the knowledge base (index → drill into specific entities/concepts).",
         },
+        {
+          name: "before_change",
+          description: "Pre-flight check before implementing, modifying, or fixing code. Forces a knowledge-first workflow so you don't break dependents or duplicate existing patterns.",
+        },
       ],
     }));
 
@@ -160,6 +164,34 @@ export class CortexMCPServer {
                   "3. Follow links transitively when answering architectural questions — the knowledge base is the source of truth.",
                   "4. Do NOT re-derive architecture from raw source files unless the index is empty or visibly stale; prefer the synthesized knowledge.",
                 ].join(" "),
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "before_change") {
+        return {
+          description: "Knowledge-first pre-flight check before implementing, modifying, or fixing code.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: [
+                  "Before you touch any source file, run the Cortex pre-flight check:",
+                  "",
+                  "1. Call read_knowledge_index. Treat its output as ground truth about what already exists.",
+                  "2. Identify the entity (or absence) that matches the task:",
+                  "   - Implementing something new → search the index for similar entities. If one exists, prefer extending it over creating a parallel implementation.",
+                  "   - Modifying or fixing something → find the entity by name or sourceFile.",
+                  "3. For the target entity, call read_entity and read its Wiring section. Every [[WikiLink]] in Wiring is a downstream consumer that may break if you change the entity's behavior or shape.",
+                  "4. For any concept the entity Implements, call read_concept. The concept describes the invariant the entity is supposed to uphold — violate it and you introduce drift.",
+                  "5. Only NOW open source files. By this point you know: what exists, what depends on it, and what rules apply.",
+                  "",
+                  "Output before writing code: a one-paragraph plan stating (a) which entities you will touch, (b) which dependents could be affected, (c) which invariants apply. Then proceed.",
+                  "",
+                  "If the knowledge base is empty or the relevant entity is missing, say so explicitly and recommend running /ingest first.",
+                ].join("\n"),
               },
             },
           ],
@@ -234,13 +266,13 @@ export class CortexMCPServer {
         {
           name: "read_knowledge_index",
           description:
-            "Reads the current synthesized knowledge index — names, descriptions, links, and source citations for every entity and concept. Call this FIRST before diving into source code; it is the project's architectural memory.",
+            "Reads the project's architectural memory — entities, concepts, source paths, and their relationships. **Call this BEFORE writing new code** (to find reusable patterns and avoid duplicate implementations), **before modifying existing code** (to see what depends on it — breaking a dependent you didn't know about is the #1 way to introduce regressions), **before fixing a bug** (to understand the invariants you might violate), and **before explaining code** (the synthesized description is denser than re-reading source). Use Grep/Read on raw source only AFTER you've established what already exists here. Skipping this step on a non-trivial codebase task means re-deriving knowledge that's already been synthesized — wasted tokens and missed context.",
           inputSchema: { type: "object", properties: {} },
         },
         {
           name: "read_entity",
           description:
-            "Reads the full synthesized page for a single entity (by name, as shown in the index — e.g. 'AuthMiddleware'). Use this to drill into a [[WikiLink]] you saw in the index instead of re-deriving from source.",
+            "Reads the full layered page (Role / Interface / Behavior / Wiring) for a single entity by name — e.g. 'AuthMiddleware'. **Use this when:** you saw a `[[WikiLink]]` in the index and need its details, you're about to modify an entity (read its Wiring section to see what depends on it), or you're implementing something that interacts with an existing entity (read its Interface section instead of inferring the shape from source). One read of this page typically replaces 200–500 lines of source-file scanning.",
           inputSchema: {
             type: "object",
             required: ["name"],
@@ -252,7 +284,7 @@ export class CortexMCPServer {
         {
           name: "read_concept",
           description:
-            "Reads the full synthesized page for a single concept (an abstract pattern, e.g. 'Authentication Strategy'). Use this to follow a [[WikiLink]] from the index.",
+            "Reads the full synthesized page for a single concept — an abstract pattern, strategy, or invariant that spans multiple entities (e.g. 'Authentication Strategy', 'Event Sourcing'). **Use this when:** you're about to introduce or modify a pattern (read the concept first to see how it's already implemented and which entities embody it), or a `[[WikiLink]]` in the index points to a concept rather than a concrete entity. Reading the concept tells you the *why* before you change the *what*.",
           inputSchema: {
             type: "object",
             required: ["name"],
@@ -377,13 +409,35 @@ export class CortexMCPServer {
         await this.knowledge.saveSynthesis(parsed.data);
         await this.knowledge.updateLastSyncCommit(this.projectRoot);
 
-        // Write knowledge index to GEMINI.md so Antigravity auto-loads
-        // it at the start of every session (same role as CLAUDE.md for Claude Code).
+        // Write the knowledge index plus operating rules to GEMINI.md.
+        // Antigravity IDE (v1.20.3+) and the Gemini CLI both auto-load this
+        // file at session start — same role CLAUDE.md plays for Claude Code.
+        // The operating rules section instructs the AI to use Cortex MCP tools
+        // before any code-change task (implement/fix/refactor/etc).
         try {
           const index = await this.knowledge.getKnowledgeSummary();
           if (index && index !== "No existing knowledge found.") {
             const geminiMd = path.join(this.projectRoot, "GEMINI.md");
-            const content = `<!-- Auto-generated by Project Cortex on every synthesis. Do not edit manually. -->\n\n${index}\n`;
+            const operatingRules = [
+              "# Operating Rules — Project Cortex",
+              "",
+              "This project uses Project Cortex (`project-cortex` MCP server). For any task that **changes code** — implement, fix, refactor, modify, add, build, create, update, migrate, rewrite, rename, move, delete — you MUST run this pre-flight before opening any source file:",
+              "",
+              "1. Call `read_knowledge_index` (project-cortex MCP) to see what already exists.",
+              "2. Find the relevant entity in the index below.",
+              "3. Call `read_entity` for it; read the `## Wiring` section to identify every downstream consumer (each `[[WikiLink]]` is something that may break).",
+              "4. For related concepts the entity Implements, call `read_concept` to learn the invariants.",
+              "5. State a one-paragraph plan: which entities you'll touch, which dependents could be affected, which invariants apply.",
+              "6. ONLY THEN open source files and write code.",
+              "",
+              "Skipping this risks duplicating implementations, breaking unknown dependents, and violating documented invariants. If the knowledge base is empty for the task, say so and recommend `/ingest` first.",
+              "",
+              "For purely conceptual questions (*what is X*, *how does Y work*), reading the index below is usually sufficient — skip the deep entity reads.",
+              "",
+              "---",
+              "",
+            ].join("\n");
+            const content = `<!-- Auto-generated by Project Cortex on every synthesis. Do not edit manually. -->\n\n${operatingRules}\n${index}\n`;
             await fs.writeFile(geminiMd, content, "utf-8");
           }
         } catch {

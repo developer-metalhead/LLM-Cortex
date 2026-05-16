@@ -76,22 +76,141 @@ const home = process.env.HOME || process.env.USERPROFILE || "";
 const appData = process.env.APPDATA || path.join(home, "Library", "Application Support");
 const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
 
-// Inline fallback for the hook script — used when the package-level template
-// isn't accessible (e.g. running from a global npm install without the .claude/ dir).
+// Inline fallback for the PreToolUse hook script — used when the package-level
+// template isn't accessible (e.g. running from a global npm install without
+// the .claude/ dir). Mirrors .claude/hooks/inject-knowledge.js in this repo.
 const HOOK_SCRIPT_INLINE = `#!/usr/bin/env node
-// Cortex PreToolUse hook — auto-inject the knowledge index before Read/Grep.
-// Fires once per agent session (keyed on parent PID) then stays silent.
+// Cortex PreToolUse hook — auto-inject knowledge before Read/Grep and stash
+// a token-savings estimate for the Stop hook. Fires once per agent session.
 import { execSync } from "child_process";
 import { existsSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 const sessionMarker = join(tmpdir(), \`cortex_injected_\${process.ppid}\`);
+const savingsMarker = join(tmpdir(), \`cortex_pending_savings_\${process.ppid}\`);
 if (existsSync(sessionMarker)) process.exit(0);
+function fmt(n) { return n >= 1000 ? \`\${(n / 1000).toFixed(1)}k\` : \`\${n}\`; }
 try {
   const index = execSync("cortex read", { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
   if (!index || index === "No existing knowledge found.") process.exit(0);
+  let savings = null;
+  try {
+    const files = execSync("git ls-files", { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] })
+      .split("\\n")
+      .filter((f) => {
+        const t = f.trim();
+        return t && !t.startsWith(".knowledge") && !t.startsWith(".claude") && !t.startsWith(".agents")
+          && !t.startsWith(".antigravity") && !t.startsWith(".cursor") && !t.startsWith(".vscode")
+          && !t.startsWith(".windsurf") && !t.startsWith(".codeium") && !t.startsWith("node_modules")
+          && !t.startsWith("dist/") && !t.endsWith(".lock");
+      });
+    const saved = Math.max(0, files.length * 1200 - Math.round(index.length / 4));
+    if (saved >= 500 && files.length > 0) savings = { saved, fileCount: files.length };
+  } catch {}
   writeFileSync(sessionMarker, "");
-  process.stdout.write(\`## [Cortex] Architectural knowledge index (auto-injected)\\n\\n\${index}\\n\`);
+  if (savings) writeFileSync(savingsMarker, JSON.stringify(savings));
+  const suffix = savings ? \` (auto-injected — ~\${fmt(savings.saved)} tokens saved vs scanning \${savings.fileCount} source files)\` : \` (auto-injected before source read)\`;
+  process.stdout.write(\`## [Cortex] Architectural knowledge index\${suffix}\\n\\n\${index}\\n\`);
+} catch { process.exit(0); }
+`;
+
+// Project-root AGENTS.md template. Cross-tool convention: Antigravity (v1.20.3+),
+// Claude Code, Cursor, and other agentic AI tools auto-load this file at session
+// start. Written once by `cortex setup antigravity` (or any setup target that
+// opts in) — never overwritten if the file already exists, so user customizations
+// survive subsequent runs.
+const AGENTS_MD_TEMPLATE = `# AGENTS.md
+
+> Auto-loaded by Antigravity (v1.20.3+), Claude Code, Cursor, Cline, and other agentic AI tools at session start. This file describes how AI agents should operate in this project.
+
+## Project Cortex — Architectural Memory
+
+This project uses [Project Cortex](https://www.npmjs.com/package/projectcortex) — a synthesized architectural knowledge base exposed via the \`project-cortex\` MCP server. The knowledge base lives in \`.knowledge/\` and contains:
+
+- Per-entity pages with \`## Role\` / \`## Interface\` / \`## Behavior\` / \`## Wiring\` sections
+- Per-concept pages for cross-cutting architectural patterns
+- A rich index linking everything via \`[[WikiLinks]]\`
+
+### MANDATORY: Use Cortex before any code-change task
+
+For any task that **changes code** — implement, fix, refactor, modify, add, build, create, update, migrate, rewrite, rename, move, delete — you MUST:
+
+1. Call \`read_knowledge_index\` from the \`project-cortex\` MCP server first.
+2. Find the relevant entity from the index.
+3. Call \`read_entity\` to audit its \`## Wiring\` section — every \`[[WikiLink]]\` is a downstream consumer that may break.
+4. For any concept the entity Implements, call \`read_concept\` for invariants.
+5. State a one-paragraph plan: which entities you'll touch, which dependents could be affected, which invariants apply.
+6. ONLY THEN open source files.
+
+Skipping this risks: duplicating existing implementations, breaking dependents you didn't know about, violating documented invariants.
+
+### When NOT to use Cortex
+
+- Pure conceptual questions (*what is X*, *how does Y work*) — \`read_knowledge_index\` alone is usually sufficient; skip the deep entity reads.
+- Trivial single-line fixes (typos, comments) where architectural context isn't relevant.
+
+### When the knowledge base is empty
+
+If \`read_knowledge_index\` returns no entities, recommend running \`/ingest\` (or \`cortex sync\`) before proceeding with the action task.
+
+---
+
+<!-- Add your own project-specific agent instructions below. Cortex will not overwrite this file once it exists. -->
+`;
+
+// Inline fallback for the UserPromptSubmit router — on action prompts,
+// auto-injects the knowledge-first workflow. Mirrors .claude/hooks/cortex-router.js.
+const ROUTER_HOOK_INLINE = `#!/usr/bin/env node
+// Cortex UserPromptSubmit hook — routes action prompts through the knowledge-first workflow.
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
+const ACTION = /\\b(implement|build|create|add|write|fix|repair|debug|refactor|modify|change|update|migrate|rewrite|extract|introduce|replace|delete|remove|rename|move|restructure|reorganize|optimize)\\b/i;
+try {
+  const raw = readFileSync(0, "utf8");
+  let prompt = "";
+  try { const p = JSON.parse(raw); prompt = (p.prompt || p.user_message || "").trim(); }
+  catch { prompt = raw.trim(); }
+  if (!prompt || prompt.length < 5) process.exit(0);
+  if (!ACTION.test(prompt)) process.exit(0);
+  const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  if (!existsSync(join(cwd, ".knowledge"))) process.exit(0);
+  process.stdout.write([
+    "",
+    "[Cortex auto-router] This prompt looks like an action task (implement / modify / fix / refactor).",
+    "Before opening any source file, follow the knowledge-first workflow:",
+    "",
+    "1. Call \`read_knowledge_index\` (project-cortex MCP) to see what already exists.",
+    "2. Find the entity that matches the task (search by name or sourceFile).",
+    "3. Call \`read_entity\` on it. Read the \`## Wiring\` section — every \`[[WikiLink]]\` there is a downstream consumer.",
+    "4. For any concept the entity Implements, call \`read_concept\` for invariants.",
+    "5. State a one-paragraph plan: which entities you'll touch, which dependents could be affected, which invariants apply.",
+    "6. ONLY THEN open source files and write code.",
+    "",
+    "Skipping this risks duplicating implementations, breaking unknown dependents, violating invariants. If the knowledge base is empty for this task, recommend \`/ingest_cortex\` first.",
+    "",
+  ].join("\\n"));
+} catch { process.exit(0); }
+`;
+
+// Inline fallback for the Stop hook script — appends the savings footer once
+// per session after the agent's response. Mirrors .claude/hooks/cortex-savings-footer.js.
+const STOP_HOOK_INLINE = `#!/usr/bin/env node
+// Cortex Stop hook — appends a one-line token-savings footer after the
+// agent's response. Reads the savings stashed by inject-knowledge.js, prints,
+// deletes its marker so the footer shows once per session.
+import { existsSync, readFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+const savingsMarker = join(tmpdir(), \`cortex_pending_savings_\${process.ppid}\`);
+if (!existsSync(savingsMarker)) process.exit(0);
+try {
+  const content = readFileSync(savingsMarker, "utf8").trim();
+  unlinkSync(savingsMarker);
+  if (!content) process.exit(0);
+  const { saved, fileCount } = JSON.parse(content);
+  if (typeof saved !== "number" || saved < 500) process.exit(0);
+  const f = saved >= 1000 ? \`~\${(saved / 1000).toFixed(1)}k\` : \`~\${saved}\`;
+  process.stdout.write(\`\\n---\\n*Cortex: \${f} tokens saved this session — used synthesized knowledge instead of scanning \${fileCount} source files.*\\n\`);
 } catch { process.exit(0); }
 `;
 
@@ -150,20 +269,63 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
           });
         }
 
+        // Stop hook — appends a token-savings footer after the agent's response.
+        config.hooks.Stop = config.hooks.Stop || [];
+        const stopCommand = "node .claude/hooks/cortex-savings-footer.js";
+        const stopAlreadyRegistered = config.hooks.Stop.some(
+          (h: any) => Array.isArray(h.hooks) && h.hooks.some((c: any) => c?.command === stopCommand)
+        );
+        if (!stopAlreadyRegistered) {
+          config.hooks.Stop.push({
+            hooks: [{ type: "command", command: stopCommand }],
+          });
+        }
+
+        // UserPromptSubmit hook — routes action prompts through the knowledge-first workflow.
+        config.hooks.UserPromptSubmit = config.hooks.UserPromptSubmit || [];
+        const routerCommand = "node .claude/hooks/cortex-router.js";
+        const routerAlreadyRegistered = config.hooks.UserPromptSubmit.some(
+          (h: any) => Array.isArray(h.hooks) && h.hooks.some((c: any) => c?.command === routerCommand)
+        );
+        if (!routerAlreadyRegistered) {
+          config.hooks.UserPromptSubmit.push({
+            hooks: [{ type: "command", command: routerCommand }],
+          });
+        }
+
         await writeJsonFile(configPath, config);
 
-        // Write the hook script into the project
+        // Write the hook scripts into the project. Prefer the package-level
+        // templates; fall back to inline scripts when running from a global
+        // npm install without the .claude/ dir alongside the build artifact.
         const hookDir = path.join(projectRoot, ".claude", "hooks");
-        const hookScript = path.join(hookDir, "inject-knowledge.js");
-        const hookSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "inject-knowledge.js");
+        await fs.mkdir(hookDir, { recursive: true });
+
+        const injectScript = path.join(hookDir, "inject-knowledge.js");
+        const injectSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "inject-knowledge.js");
         try {
-          await fs.mkdir(hookDir, { recursive: true });
-          const scriptContent = await fs.readFile(hookSource, "utf-8");
-          await fs.writeFile(hookScript, scriptContent, "utf-8");
+          const scriptContent = await fs.readFile(injectSource, "utf-8");
+          await fs.writeFile(injectScript, scriptContent, "utf-8");
         } catch {
-          // If the template isn't present (e.g. running from npm install), write inline
-          await fs.mkdir(hookDir, { recursive: true });
-          await fs.writeFile(hookScript, HOOK_SCRIPT_INLINE, "utf-8");
+          await fs.writeFile(injectScript, HOOK_SCRIPT_INLINE, "utf-8");
+        }
+
+        const stopScript = path.join(hookDir, "cortex-savings-footer.js");
+        const stopSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "cortex-savings-footer.js");
+        try {
+          const scriptContent = await fs.readFile(stopSource, "utf-8");
+          await fs.writeFile(stopScript, scriptContent, "utf-8");
+        } catch {
+          await fs.writeFile(stopScript, STOP_HOOK_INLINE, "utf-8");
+        }
+
+        const routerScript = path.join(hookDir, "cortex-router.js");
+        const routerSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "cortex-router.js");
+        try {
+          const scriptContent = await fs.readFile(routerSource, "utf-8");
+          await fs.writeFile(routerScript, scriptContent, "utf-8");
+        } catch {
+          await fs.writeFile(routerScript, ROUTER_HOOK_INLINE, "utf-8");
         }
       },
     },
@@ -237,6 +399,35 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         config.mcpServers = config.mcpServers || {};
         config.mcpServers["project-cortex"] = getPortableMCPEntry();
         await writeJsonFile(configPath, config);
+
+        // Workspace Skill — Antigravity v1.20.x semantic-matches the SKILL.md
+        // description against user prompts and auto-loads the body on hit.
+        // Closest analog to Claude Code's UserPromptSubmit hook.
+        const skillDir = path.join(projectRoot, ".agent", "skills", "cortex");
+        const skillFile = path.join(skillDir, "SKILL.md");
+        const skillSource = path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "..", "..", ".agent", "skills", "cortex", "SKILL.md",
+        );
+        try {
+          await fs.mkdir(skillDir, { recursive: true });
+          const skillBody = await fs.readFile(skillSource, "utf-8");
+          await fs.writeFile(skillFile, skillBody, "utf-8");
+        } catch {
+          // Skill template not bundled — non-fatal, the slash command + GEMINI.md
+          // still provide the routing path.
+        }
+
+        // AGENTS.md — cross-tool always-on instructions. Auto-loaded by
+        // Antigravity v1.20.3+, Claude Code, Cursor, Cline, etc. Written ONCE
+        // and never overwritten so user edits survive.
+        const agentsMd = path.join(projectRoot, "AGENTS.md");
+        try {
+          await fs.access(agentsMd);
+          // File exists — do not overwrite.
+        } catch {
+          await fs.writeFile(agentsMd, AGENTS_MD_TEMPLATE, "utf-8");
+        }
       },
     },
     {

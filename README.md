@@ -229,6 +229,7 @@ There are two layers of commands. **CLI commands** manage the daemon and setup �
 | `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. On first run with an empty index, switches to **bootstrap mode** — scans source files directly, diff excluded, so the first synthesis describes your app, not the Cortex install. |
 | `/read_knowledge` | **See what the AI knows.** Prints the full rich knowledge index — every entity and concept with its description, source file, and links. |
 | `/cortex_status` | **Check sync state.** Shows the last-sync commit SHA and whether the knowledge base is initialized. |
+| `/before_change_cortex` | **Pre-flight check before implementing, modifying, refactoring, or fixing code.** Forces a knowledge-first workflow: read the index → find the relevant entity → read its Wiring section to see downstream dependents → read related concepts for invariants → THEN open source. Use this on action prompts where the AI would otherwise jump straight to Grep/Read and miss architectural context. |
 
 #### In Claude Code — MCP prompts
 
@@ -239,6 +240,7 @@ Cortex also exposes these as native MCP prompts (accessible via the IDE's prompt
 | `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. Auto-switches to bootstrap mode when the index is empty. |
 | `read` | Reads the rich index and instructs the AI to use it (not re-scan source). |
 | `explore` | Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth. |
+| `before_change` | **Knowledge-first pre-flight for action tasks** (implement / modify / refactor / fix). Forces the AI to: read the index, find the target entity, audit its Wiring section for downstream dependents, check related concepts for invariants, then state a one-paragraph plan before opening source. Closes the gap where action prompts bypass Cortex and go straight to Grep/Read. |
 | `status` | Checks Cortex initialization and last sync. |
 
 #### Auto-context injection (Claude Code PreToolUse hook)
@@ -256,6 +258,48 @@ When you run `cortex setup claude-code` (or `cortex init --magic`), Cortex write
 
 The hook exits 0 silently if `cortex` is not on PATH, the knowledge base is empty, or anything else goes wrong — it never blocks a tool call.
 
+#### Auto-routing action prompts to Cortex (Claude Code UserPromptSubmit hook)
+
+`cortex setup claude-code` also installs a `UserPromptSubmit` hook at `.claude/hooks/cortex-router.js`. It fires the moment you hit enter, **before the AI sees your prompt**. When the prompt contains action keywords (`implement`, `fix`, `refactor`, `modify`, `add`, `build`, `create`, `update`, `migrate`, `rename`, `move`, etc.) AND the project has a `.knowledge/` directory, the hook auto-injects the knowledge-first workflow as context:
+
+```
+[Cortex auto-router] This prompt looks like an action task (implement / modify / fix / refactor).
+Before opening any source file, follow the knowledge-first workflow:
+
+1. Call read_knowledge_index (project-cortex MCP) to see what already exists.
+2. Find the entity that matches the task...
+3. Call read_entity. Read the ## Wiring section — every [[WikiLink]] there is a downstream consumer...
+4. For any concept the entity Implements, call read_concept for invariants.
+5. State a one-paragraph plan...
+6. ONLY THEN open source files and write code.
+```
+
+**What this fixes:** Without the router, the AI's instinct on *"implement this feature"* or *"fix this bug"* is to jump straight to `Grep`/`Read` on source — bypassing Cortex even when the architectural context would prevent breaking a downstream dependent. The router makes Cortex-first the default for action prompts, **without** you having to mention Cortex or type a slash command.
+
+**When it stays silent:**
+- Non-action prompts (`"what does X do?"`, `"explain auth"`) — no injection
+- No `.knowledge/` directory present — early exit
+- Empty or trivial prompts — early exit
+- Any failure (`cortex` not on PATH, malformed input) — silent exit 0
+
+The router is Claude Code-specific because `UserPromptSubmit` is a Claude Code hook event. Other IDEs reach the same outcome through the `/before_change` slash command (manual but reliable) and the sharpened MCP tool descriptions.
+
+#### Token-savings footer after every response (Claude Code Stop hook)
+
+`cortex setup claude-code` also installs a `Stop` hook at `.claude/hooks/cortex-savings-footer.js`. When the PreToolUse hook fires it stashes a token-savings estimate (source-file count × ~1200 tokens/file − index size); after the agent's response, the Stop hook prints the estimate as a single-line footer:
+
+```
+---
+*Cortex: ~12.4k tokens saved this session — used synthesized knowledge instead of scanning 47 source files.*
+```
+
+Fires **once per session** (the marker is deleted after the first print), so the footer doesn't repeat on every follow-up turn. Stays silent when the knowledge base is empty or `cortex` isn't on PATH.
+
+**Footer placement by route:**
+- **Via MCP tools** (`read_knowledge_index`, `read_entity`, `read_concept`) — savings line is part of the tool response itself; appears inline in the tool-call result display
+- **Via the hook** (no MCP tools called, just `code this feature` / `explain this code`) — savings line appears as a footer after the agent's response, via the Stop hook
+- **Other IDEs (Antigravity, Cursor, etc.)** — only the MCP-tool path is available; the hook-driven footer is Claude Code-specific because the Stop hook mechanism is Claude Code-specific
+
 #### In Antigravity
 
 > **Requires a global install** — `npm install -g projectcortex`. The Antigravity entry calls the `cortex` binary directly so one config works across every project.
@@ -268,13 +312,25 @@ If you specifically want a per-project entry, pass `--local`:
 cortex setup antigravity --local   # writes .antigravity/mcp_config.json instead
 ```
 
-**Auto-context injection via `GEMINI.md`:** After every ingest, Cortex writes the knowledge index to `GEMINI.md` in your project root. Antigravity reads this file automatically at session start — the same way Claude Code reads `CLAUDE.md`. This means Antigravity already knows your architecture before you type the first message, with no hook or manual prompt needed. Commit `GEMINI.md` to your repo so teammates benefit too.
+**Auto-context injection via `GEMINI.md`:** After every ingest, Cortex writes the knowledge index plus **operating rules** to `GEMINI.md` in your project root. Antigravity (v1.20.3+) and the Gemini CLI both auto-load this file at session start — same role Claude Code's `CLAUDE.md` plays. The operating-rules section explicitly instructs the AI: *"For any code-change task — implement, fix, refactor, modify, add, build, create, update — you MUST call `read_knowledge_index` from project-cortex first."* Commit `GEMINI.md` so teammates benefit too.
+
+**Skill-based auto-routing on action prompts.** `cortex setup antigravity` also writes a workspace Skill at `.agent/skills/cortex/SKILL.md`. Antigravity's Skills system semantic-matches the SKILL's `description` field against the user's prompt — when a user types something like *"let's implement this feature"* or *"fix the bug in auth.ts"*, Antigravity auto-loads the Skill body, which routes the AI through the knowledge-first workflow (call `read_knowledge_index`, audit Wiring, plan, then write code). This is the closest analog to Claude Code's `UserPromptSubmit` hook — not a deterministic hook, but agent-triggered without requiring a slash command.
+
+**Cross-tool `AGENTS.md`.** Setup also writes (once, never overwrites) an `AGENTS.md` at the project root with the same operating rules. This file is auto-loaded by Antigravity (v1.20.3+), Claude Code, Cursor, Cline, and other agentic AI tools — so the same instructions apply across every tool a teammate might open the project with.
+
+**Stacking effect.** Three reinforcing layers tell the AI to call Cortex on action prompts:
+1. Skill semantic-match (Antigravity's auto-router)
+2. `GEMINI.md` operating rules (auto-loaded every session)
+3. `AGENTS.md` operating rules (cross-tool, auto-loaded every session)
+
+Plus the existing `/before_change` slash command and the sharpened MCP tool descriptions. Combined call-rate on action prompts in Antigravity: approximately 70-80% (vs. Claude Code's ~95% with the `UserPromptSubmit` hook). Not deterministic — Antigravity offers no true prompt-interception hook — but the best mechanism the IDE allows.
 
 Type **`/`** in the chat bar to see these **Local Workflows**:
 - **`/ingest`** — Synthesizes pending code changes into the brain.
 - **`/read`** — Opens the interlinked architectural knowledge index.
 - **`/status`** — Checks the health and sync state of the brain.
 - **`/explore`** — Reads the index and navigates links to answer architectural questions in depth.
+- **`/before_change`** — Knowledge-first pre-flight for action tasks (implement / modify / refactor / fix). Forces the AI to audit dependents and invariants before touching source — closes the gap where action prompts bypass Cortex entirely.
 
 #### In Cursor / Windsurf
 
@@ -374,6 +430,43 @@ The `.last_sync_commit` file lets Cortex compute precise git diffs between syncs
 ### The index is self-sufficient
 
 `index.md` includes full descriptions, source file paths, and outbound links for every entity and concept — not just names. This means any AI that reads it can immediately answer architectural questions without re-scanning source code.
+
+### Layered entity pages — shallow index, deep drill-down
+
+Each entity's description is a **multi-section markdown document**. The index renders only the `## Role` section (keeping the high-level map fast and lightweight); the full page — with implementation depth — is loaded on demand via `read_entity`.
+
+```markdown
+# Entity: AchievementsOverlay
+
+**Source:** `src/components/AchievementsOverlay.tsx`
+
+## Role
+Player progression showcase UI. Bridges raw stats to the trophy room.
+
+## Interface
+Props: { gameId: string, onClose: () => void }
+Reads from ProgressionContext (XP, AP, unlocked medals).
+
+## Behavior
+- 5-slot FIFO pinning — adding a 6th pin evicts the oldest
+- Hidden achievements obfuscate title/description as "???" until unlocked
+- Diamond tier triggers GlimmerParticle on unlock
+
+## Wiring
+Depends on: [[ProgressionEngine]], [[GameRegistry]], [[SoundContext]]
+Used by: [[ProfileScreen]]
+```
+
+| Section | When | Render target |
+|---|---|---|
+| **Role** | Always, 1–3 sentences | `index.md` + drill-down |
+| **Interface** | When entity has a public API (props, schema, endpoints) | Drill-down only |
+| **Behavior** | When invariants / rules are non-obvious | Drill-down only |
+| **Wiring** | Always, the `[[WikiLink]]` graph | Drill-down only |
+
+**Domain-aware synthesis.** The Librarian adjusts depth focus by file type — UI components get prop/interaction/animation detail, backend services get request-response/idempotency detail, libraries get API-surface/edge-case detail. The format stays uniform; the content fits the domain.
+
+**Performance impact.** Index reads (`/read`, `read_knowledge_index`, the PreToolUse hook injection) stay the same size as before — only the Role section flows into the index. The depth lives in the per-entity page, loaded only when `read_entity` is called. Reads stay fast; *ingest* gets slightly more expensive because entity pages are longer.
 
 ---
 
