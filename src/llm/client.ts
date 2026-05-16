@@ -71,7 +71,7 @@ export async function synthesizeChanges(diff: string, context: string): Promise<
           name: "ProjectCore.ts",
           action: "update",
           description: "Simulated architectural update.",
-          links: ["[[CortexLogic]]"]
+          relationships: [{ target: "CortexLogic", kind: "depends_on" }]
         }
       ],
       concepts: [

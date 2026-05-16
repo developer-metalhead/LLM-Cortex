@@ -34,10 +34,16 @@ export async function runStatus(projectRoot: string): Promise<void> {
   const exists = await km.exists();
 
   let lastSync = "Never";
-  try {
-    lastSync = fs.readFileSync(path.join(projectRoot, ".knowledge", ".last_sync_commit"), "utf-8").trim();
-  } catch {
-    // ignore
+  let staleCount = 0;
+  if (exists) {
+    try {
+      lastSync = fs.readFileSync(path.join(projectRoot, ".knowledge", ".last_sync_commit"), "utf-8").trim();
+      const statePath = path.join(projectRoot, ".knowledge", "state.json");
+      const state = JSON.parse(fs.readFileSync(statePath, "utf-8"));
+      staleCount = Object.values(state.entities || {}).filter((e: any) => e.staleSince).length;
+    } catch {
+      // ignore
+    }
   }
 
   const lockLine = describeLock(projectRoot);
@@ -56,6 +62,7 @@ export async function runStatus(projectRoot: string): Promise<void> {
   Location:  ${path.join(projectRoot, ".knowledge")}
   Status:    ${exists ? "Initialized" : "Not Initialized"}
   Last Sync: ${lastSync}
+  Stale Entities: ${staleCount}
 
   [Daemon]
   ${lockLine}

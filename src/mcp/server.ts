@@ -12,7 +12,7 @@ import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { KnowledgeManager } from "../knowledge/writer.js";
-import { SynthesisSchema } from "../llm/schema.js";
+import { SynthesisSchema, SaveConceptSchema } from "../llm/schema.js";
 import {
   LIBRARIAN_SYSTEM_PROMPT,
   EXTRACTION_PROMPT_TEMPLATE,
@@ -281,12 +281,43 @@ export class CortexMCPServer {
                     type: "array",
                     items: {
                       type: "object",
-                      required: ["name", "action", "description", "links"],
+                      required: ["name", "action", "description", "relationships"],
                       properties: {
                         name: { type: "string" },
                         action: { type: "string", enum: ["create", "update", "delete"] },
                         description: { type: "string" },
-                        links: { type: "array", items: { type: "string" } },
+                        relationships: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            required: ["target", "kind"],
+                            properties: {
+                              target: { type: "string" },
+                              kind: { type: "string", enum: ["depends_on", "called_by", "supports", "contradicts", "derived_from", "parent_of"] },
+                            },
+                          },
+                        },
+                        constraints: {
+                          type: "object",
+                          properties: {
+                            mustNotImport: { type: "array", items: { type: "string" } },
+                            mustNotBeCalledBy: { type: "array", items: { type: "string" } },
+                            contract: { type: "string" },
+                          },
+                        },
+                        failedApproaches: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            required: ["summary", "reason", "recordedAt"],
+                            properties: {
+                              summary: { type: "string" },
+                              reason: { type: "string" },
+                              recordedAt: { type: "string" },
+                              commit: { type: "string" },
+                            },
+                          },
+                        },
                         sourceFile: {
                           type: "string",
                           description: "Repo-relative path to the file this entity describes (e.g. src/auth/middleware.ts). Optional but strongly preferred.",
@@ -302,10 +333,64 @@ export class CortexMCPServer {
                       properties: {
                         name: { type: "string" },
                         description: { type: "string" },
+                        failedApproaches: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            required: ["summary", "reason", "recordedAt"],
+                            properties: {
+                              summary: { type: "string" },
+                              reason: { type: "string" },
+                              recordedAt: { type: "string" },
+                              commit: { type: "string" },
+                            },
+                          },
+                        },
                       },
                     },
                   },
                   warnings: { type: "array", items: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
+        {
+          name: "save_concept",
+          description: "Saves a single architectural concept directly to the knowledge base without doing a full synthesis.",
+          inputSchema: {
+            type: "object",
+            required: ["concept"],
+            properties: {
+              concept: {
+                type: "object",
+                required: ["name", "description"],
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
+                  relationships: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      required: ["target", "kind"],
+                      properties: {
+                        target: { type: "string" },
+                        kind: { type: "string" },
+                      },
+                    },
+                  },
+                  failedApproaches: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      required: ["summary", "reason", "recordedAt"],
+                      properties: {
+                        summary: { type: "string" },
+                        reason: { type: "string" },
+                        recordedAt: { type: "string" },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -385,8 +470,8 @@ export class CortexMCPServer {
                   userPrompt: prompt,
                   outputSchema: {
                     summary: "string — 1-2 sentence description of what this application does",
-                    entities: "array of { name, action: 'create', description, links: string[], sourceFile: string (repo-relative path) }",
-                    concepts: "array of { name, description }",
+                    entities: "array of { name, action: 'create', description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
+                    concepts: "array of { name, description, failedApproaches? }",
                     warnings: "array of strings (usually empty on bootstrap)",
                   },
                   instructions:
@@ -425,8 +510,8 @@ export class CortexMCPServer {
                 userPrompt: prompt,
                 outputSchema: {
                   summary: "string — 1-2 sentence high-level summary",
-                  entities: "array of { name, action: create|update|delete, description, links: string[], sourceFile?: string (repo-relative path, strongly preferred) }",
-                  concepts: "array of { name, description }",
+                  entities: "array of { name, action: create|update|delete, description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
+                  concepts: "array of { name, description, failedApproaches? }",
                   warnings: "array of strings",
                 },
                 instructions:
@@ -453,9 +538,24 @@ export class CortexMCPServer {
           };
         }
 
-        await this.knowledge.init();
-        await this.knowledge.saveSynthesis(parsed.data);
-        await this.knowledge.updateLastSyncCommit(this.projectRoot);
+        try {
+          await this.knowledge.init();
+          await this.knowledge.saveSynthesis(parsed.data);
+          await this.knowledge.updateLastSyncCommit(this.projectRoot);
+        } catch (error: any) {
+          if (error.message?.startsWith("Constraint Violation:")) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Synthesis rejected due to architectural constraint violation:\n${error.message}\n\nPlease revise your synthesis to adhere to the invariants.`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          throw error;
+        }
 
         // Write the knowledge index plus operating rules to GEMINI.md.
         // Antigravity IDE (v1.20.3+) and the Gemini CLI both auto-load this
@@ -505,6 +605,30 @@ export class CortexMCPServer {
             {
               type: "text",
               text: `Knowledge base updated. Saved ${parsed.data.entities.length} entities, ${parsed.data.concepts.length} concepts.`,
+            },
+          ],
+        };
+      }
+
+      if (name === "save_concept") {
+        const rawConcept = (args as any)?.concept;
+        const parsed = SaveConceptSchema.safeParse(rawConcept);
+
+        if (!parsed.success) {
+          return {
+            content: [{ type: "text", text: `Invalid concept format: ${parsed.error.message}` }],
+            isError: true,
+          };
+        }
+
+        await this.knowledge.init();
+        await this.knowledge.saveConcept(parsed.data);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Concept '${parsed.data.name}' saved to knowledge base.`,
             },
           ],
         };

@@ -12,7 +12,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 4 | MCP Server Integration | ✅ Done |
 | 4.5 | Dual-Route IDE Integration | ✅ Done (added beyond original plan) |
 | 5 | CLI Polish & Daemonization | ✅ Done |
-| 6 | Active Guardrail — Constraints & Blast-Radius Analysis | ⏳ Planned |
+| 6 | Active Guardrail — Constraints & Blast-Radius Analysis | 🚧 In progress |
 | 7 | Audit & Traceability Tools | ⏳ Planned |
 | 8 | Visual & Browseable Knowledge Graph | ⏳ Planned |
 | 9 | Refactoring Impact Preview | ⏳ Planned |
@@ -275,7 +275,53 @@ All four extensions are ~25 lines of prompt change combined; no writer change re
 
 ---
 
-## 🚧 Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — ⏳ Planned
+## 🚧 Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — 🚧 In progress
+
+### Phase 6 Execution Plan
+
+#### User Review Required
+Please review the proposed implementation for Phase 6 constraints and relationships. 
+
+#### Open Questions
+1. **save_concept behavior**: Should `save_concept` internally just call the existing `saveSynthesis` method with a mock summary, or should we create a dedicated `saveConcept` method in `KnowledgeManager` that appends to `log.md` specifically for concepts?
+2. **Constraint Enforcement**: The design suggests that constraint violation detection is done by checking the LLM's structured "edges introduced". If the LLM says `A` has `depends_on` `B`, we will check if `B` has a `mustNotBeCalledBy` constraint that matches `A`. Is this strict relationship matching the intended approach?
+
+#### Proposed Changes
+
+##### 1. Schema Extensions (`src/llm/schema.ts`)
+- Modify `SynthesisSchema.entities` to replace `links: z.array(z.string())` with `relationships: z.array(z.object({ target: z.string(), kind: z.enum(["depends_on", "called_by", "supports", "contradicts", "derived_from", "parent_of"]) }))`.
+- Add `constraints: z.object({ mustNotImport: z.array(z.string()).optional(), mustNotBeCalledBy: z.array(z.string()).optional(), contract: z.string().optional() }).optional()` to entities.
+- Add `failedApproaches: z.array(z.object({ summary: z.string(), reason: z.string(), recordedAt: z.string(), commit: z.string().optional() })).max(10).optional()` to entities and concepts.
+- Define `SaveConceptSchema` for the new MCP tool.
+
+##### 2. Knowledge Manager (`src/knowledge/writer.ts`)
+- Update `EntityRecord` and `ConceptRecord` types to include new fields, plus `staleSince?: string` on `EntityRecord`.
+- Implement **Auto-migration**: In `readState()`, auto-migrate legacy `links` array to `relationships` with `kind: "depends_on"`.
+- Implement **Constraint Validation**: Before saving the state in `saveSynthesis`, validate the new relationships against the existing constraints in the knowledge base. Throw a structured error if a violation occurs.
+- Implement **Staleness Propagation**: When an entity's description or relationships change, find all entities with inbound `depends_on` or `called_by` relationships pointing to it, and mark them with `staleSince = timestamp`.
+- Implement **saveConcept**: Create a dedicated method to handle saving a single concept directly.
+
+##### 3. MCP Server (`src/mcp/server.ts`)
+- Update the `save_synthesis` schema in `ListToolsRequestSchema`.
+- Catch constraint violation errors from `KnowledgeManager` and return them as `isError: true` so the LLM knows to correct the synthesis.
+- Add the new `save_concept` tool.
+
+##### 4. Prompts (`src/llm/prompts.ts`)
+- Update `LIBRARIAN_SYSTEM_PROMPT` to output `relationships` instead of `links`.
+- Update `EXTRACTION_PROMPT_TEMPLATE` to inject the `constraints` and `failedApproaches` of existing entities into the `CURRENT CONTEXT` so the LLM is aware of them.
+- Add instructions to extract `failedApproaches` from `replaces:` clauses.
+
+##### 5. CLI Extensions (`src/cli/status.ts`, `src/cli/index.ts`, `src/cli/audit.ts`, `src/cli/export.ts`)
+- `cortex status`: Sum and display the count of entities with `staleSince` set.
+- `cortex audit stale`: Create a new command to list the names of stale entities.
+- `cortex export --spec`: Create a new command to template `state.json` into an `ARCH_SPEC.md` file.
+
+##### 6. Testing (`tests/phase6.test.ts`)
+- Add tests for: legacy-links migration, constraint persistence, constraint violation rejection, stale propagation (blast-radius), failedApproach capture, and `save_concept`.
+
+#### Verification Plan
+- **Automated Tests**: Run `npm test` after adding `phase6.test.ts`.
+- **Manual Verification**: Run `cortex mcp` locally with an LLM and attempt to ingest a change that violates a manual constraint to verify it throws the structured error correctly.
 
 **Layman's Terms**
 Today, Cortex *remembers* your architecture and tells the AI when it forgets. The next step is to *enforce* it: declare rules like "the Connect 4 module must not import from Chess," and have Cortex reject any synthesis that violates them. Plus, when a foundational module changes shape, automatically flag every entity that depends on it as "potentially broken."

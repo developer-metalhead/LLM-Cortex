@@ -2,23 +2,27 @@ import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { Synthesis } from "../llm/schema.js";
+import { Synthesis, SaveConcept, Relationship, FailedApproach, Constraints } from "../llm/schema.js";
 
 const execAsync = promisify(exec);
 
 const LAST_SYNC_FILE = ".last_sync_commit";
 const STATE_FILE = "state.json";
-const STATE_VERSION = 1;
+const STATE_VERSION = 2;
 
 type EntityRecord = {
   description: string;
-  links: string[];
+  relationships: Relationship[];
+  constraints?: Constraints;
+  failedApproaches?: FailedApproach[];
   sourceFile?: string;
   lastRefined: string;
+  staleSince?: string;
 };
 
 type ConceptRecord = {
   description: string;
+  failedApproaches?: FailedApproach[];
   lastRefined: string;
 };
 
@@ -146,10 +150,24 @@ export class KnowledgeManager {
     const statePath = path.join(this.knowledgeDir, STATE_FILE);
     try {
       const raw = await fs.readFile(statePath, "utf8");
-      const parsed = JSON.parse(raw) as KnowledgeState;
-      if (!parsed.entities) parsed.entities = {};
-      if (!parsed.concepts) parsed.concepts = {};
-      return parsed;
+      const parsed = JSON.parse(raw) as any;
+      
+      const state: KnowledgeState = {
+        version: STATE_VERSION,
+        entities: parsed.entities || {},
+        concepts: parsed.concepts || {},
+      };
+
+      // Auto-migrate legacy links to relationships
+      for (const [name, entity] of Object.entries(state.entities)) {
+        if ((entity as any).links) {
+          entity.relationships = ((entity as any).links as string[]).map((t: string) => ({ target: t, kind: "depends_on" }));
+          delete (entity as any).links;
+        }
+        if (!entity.relationships) entity.relationships = [];
+      }
+
+      return state;
     } catch {
       return emptyState();
     }
@@ -174,7 +192,7 @@ export class KnowledgeManager {
         const body = await fs.readFile(path.join(entitiesDir, file), "utf8").catch(() => "");
         state.entities[name] = {
           description: extractBlockquote(body) ?? "(description not recovered during migration)",
-          links: extractLinks(body),
+          relationships: extractLinks(body).map((t: string) => ({ target: t, kind: "depends_on" })),
           sourceFile: extractSourceCitation(body),
           lastRefined: extractLastRefined(body) ?? new Date().toISOString(),
         };
@@ -208,10 +226,27 @@ export class KnowledgeManager {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
+    // 1. Constraint Validation
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete") continue;
+      for (const rel of entity.relationships) {
+        const targetEntity = state.entities[rel.target];
+        if (!targetEntity) continue;
+        
+        if (targetEntity.constraints?.mustNotBeCalledBy?.includes(entity.name)) {
+          throw new Error(`Constraint Violation: Entity '${rel.target}' must not be called by '${entity.name}'.`);
+        }
+        if (entity.constraints?.mustNotImport?.includes(rel.target)) {
+          throw new Error(`Constraint Violation: Entity '${entity.name}' must not import '${rel.target}'.`);
+        }
+      }
+    }
+
     const logPath = path.join(this.knowledgeDir, "log.md");
     const logEntry = `\n## [${timestamp}]\n**Summary:** ${synthesis.summary}\n**Impacted:** ${synthesis.entities.map((e) => `[[${e.name}]]`).join(", ")}\n**Warnings:** ${synthesis.warnings.join("; ") || "None"}\n---\n`;
     await fs.appendFile(logPath, logEntry);
 
+    // 2. Staleness Propagation & Writing
     for (const entity of synthesis.entities) {
       const safeName = safeFilename(entity.name);
       const entityPath = path.join(this.knowledgeDir, "entities", `${safeName}.md`);
@@ -220,34 +255,49 @@ export class KnowledgeManager {
         delete state.entities[entity.name];
         try {
           await fs.unlink(entityPath);
-        } catch {
-          // already absent
-        }
+        } catch {}
         continue;
+      }
+
+      const existing = state.entities[entity.name];
+      if (existing && entity.action === "update") {
+        for (const [otherName, otherEntity] of Object.entries(state.entities)) {
+          if (otherEntity.relationships.some(r => r.target === entity.name && ["depends_on", "called_by"].includes(r.kind))) {
+            otherEntity.staleSince = timestamp;
+          }
+        }
       }
 
       state.entities[entity.name] = {
         description: entity.description,
-        links: entity.links,
+        relationships: entity.relationships,
+        constraints: entity.constraints,
+        failedApproaches: entity.failedApproaches,
         sourceFile: entity.sourceFile,
         lastRefined: timestamp,
       };
 
-      const sourceLine = entity.sourceFile
-        ? `**Source:** \`${entity.sourceFile}\`\n\n`
-        : "";
-      const linksLine = entity.links.length
-        ? entity.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")
+      const sourceLine = entity.sourceFile ? `**Source:** \`${entity.sourceFile}\`\n\n` : "";
+      const relsLine = entity.relationships.length
+        ? entity.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
         : "_(none)_";
+      const staleLine = state.entities[entity.name].staleSince ? `\n> [!WARNING]\n> **Stale Since:** ${state.entities[entity.name].staleSince}\n` : "";
+      
+      let constraintsLine = "";
+      if (entity.constraints) {
+        constraintsLine = "\n### Constraints\n";
+        if (entity.constraints.mustNotImport?.length) constraintsLine += `- **Must Not Import:** ${entity.constraints.mustNotImport.join(", ")}\n`;
+        if (entity.constraints.mustNotBeCalledBy?.length) constraintsLine += `- **Must Not Be Called By:** ${entity.constraints.mustNotBeCalledBy.join(", ")}\n`;
+        if (entity.constraints.contract) constraintsLine += `- **Contract:** ${entity.constraints.contract}\n`;
+      }
 
-      // Layered descriptions (with `## Role` / `## Interface` / etc. headings)
-      // render as-is. Legacy plain descriptions keep the blockquote wrapper for
-      // backward-compatible rendering.
-      const body = isLayeredDescription(entity.description)
-        ? entity.description.trim()
-        : `> ${entity.description}`;
+      let failedApproachesLine = "";
+      if (entity.failedApproaches?.length) {
+        failedApproachesLine = "\n### Failed Approaches\n" + entity.failedApproaches.map(fa => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+      }
 
-      const content = `# Entity: ${entity.name}\n\n${sourceLine}${body}\n\n### Relations\n- **Action:** ${entity.action}\n- **Links:** ${linksLine}\n\n---\n*Last Refined: ${timestamp}*\n`;
+      const body = isLayeredDescription(entity.description) ? entity.description.trim() : `> ${entity.description}`;
+      const content = `# Entity: ${entity.name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
       await fs.writeFile(entityPath, content);
     }
 
@@ -257,12 +307,51 @@ export class KnowledgeManager {
 
       state.concepts[concept.name] = {
         description: concept.description,
+        failedApproaches: concept.failedApproaches,
         lastRefined: timestamp,
       };
 
-      const content = `# Concept: ${concept.name}\n\n${concept.description}\n\n---\n*Last Refined: ${timestamp}*\n`;
+      let failedApproachesLine = "";
+      if (concept.failedApproaches?.length) {
+        failedApproachesLine = "\n### Failed Approaches\n" + concept.failedApproaches.map(fa => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+      }
+
+      const content = `# Concept: ${concept.name}\n\n${concept.description}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
       await fs.writeFile(conceptPath, content);
     }
+
+    await this.writeState(state);
+    await this.updateIndex();
+  }
+
+  async saveConcept(concept: SaveConcept) {
+    const timestamp = new Date().toISOString();
+    const state = await this.readState();
+
+    const logPath = path.join(this.knowledgeDir, "log.md");
+    const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** None\n---\n`;
+    await fs.appendFile(logPath, logEntry);
+
+    const safeName = safeFilename(concept.name);
+    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
+
+    state.concepts[concept.name] = {
+      description: concept.description,
+      failedApproaches: concept.failedApproaches,
+      lastRefined: timestamp,
+    };
+
+    const relsLine = concept.relationships?.length
+      ? concept.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
+      : "_(none)_";
+
+    let failedApproachesLine = "";
+    if (concept.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + concept.failedApproaches.map(fa => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+    }
+
+    const content = `# Concept: ${concept.name}\n\n${concept.description}\n\n### Relationships\n${relsLine}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
+    await fs.writeFile(conceptPath, content);
 
     await this.writeState(state);
     await this.updateIndex();
@@ -297,11 +386,12 @@ export class KnowledgeManager {
       for (const name of entityNames) {
         const e = state.entities[name];
         const source = e.sourceFile ? ` — \`${e.sourceFile}\`` : "";
-        const links = e.links.length
-          ? `\n_Links:_ ${e.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")}`
+        const rels = e.relationships.length
+          ? `\n_Relationships:_ ${e.relationships.map((r) => `[[${r.target}]]`).join(", ")}`
           : "";
+        const stale = e.staleSince ? ` **[STALE]**` : "";
         const indexSummary = extractRoleSection(e.description);
-        content += `### [[${name}]]${source}\n${indexSummary}${links}\n\n`;
+        content += `### [[${name}]]${source}${stale}\n${indexSummary}${rels}\n\n`;
       }
     }
 
