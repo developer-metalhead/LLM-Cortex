@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "project-cortex": {
+      "command": "cortex",
+      "args": [
+        "mcp"
+      ],
+      "env": {
+        "DOTENV_CONFIG_QUIET": "1"
+      }
+    }
+  }
+}

@@ -2,6 +2,12 @@
 
 > **The Autonomous Brain for your Codebase.**
 
+> ⚠️ **Install globally** — this is a CLI tool, not a library. The npm registry's default `npm i projectcortex` will install it locally and the `cortex` command won't be on your PATH. Use this instead:
+>
+> ```bash
+> npm install -g projectcortex
+> ```
+
 Project Cortex is an active knowledge engine that eliminates "context amnesia" in AI development. While traditional AI agents rediscover your codebase from scratch on every query, Cortex runs in the background — continuously compiling your source code into a persistent, synthesized knowledge base that any AI agent can query instantly.
 
 ## The Problem
@@ -48,8 +54,26 @@ Cortex is not a general document summarizer. Its Librarian prompt is tuned for s
 
 ## Installation
 
+Cortex is a CLI tool — **install it globally**, not as a project dependency:
+
 ```bash
 npm install -g projectcortex
+```
+
+> ⚠️ The `-g` flag is required. A local install (`npm install projectcortex`) will not put the `cortex` binary on your PATH, and IDE integrations (Antigravity in particular) will fail to launch the MCP server.
+
+Verify the install:
+
+```bash
+cortex --version
+```
+
+If you see a version number, you're ready. If you see "command not found", the install wasn't global — re-run with `-g`.
+
+**Updating:**
+
+```bash
+npm install -g projectcortex@latest
 ```
 
 ---
@@ -173,8 +197,19 @@ These run inside Claude Code, Cursor, or any connected IDE. They let you and you
 
 
 ### In Antigravity
+
+> **Requires a global install** — `npm install -g projectcortex`. The Antigravity entry calls the `cortex` binary directly so one config works across every project.
+
+Run `cortex setup antigravity` (or `cortex setup all`) once. By default this writes to the **global** Antigravity config (`~/.gemini/antigravity/mcp_config.json` on macOS/Linux, `%USERPROFILE%\.gemini\antigravity\mcp_config.json` on Windows) because Antigravity prioritizes the global config over per-project files. The entry is intentionally project-agnostic — `findProjectRoot()` resolves the active workspace at runtime, so switching projects "just works" without re-running setup.
+
+If you specifically want a per-project entry, pass `--local`:
+
+```bash
+cortex setup antigravity --local   # writes .antigravity/mcp_config.json instead
+```
+
 Type **`/`** in the chat bar to see these **Local Workflows**:
--   **`/ingest`** — Synthesizes all recent code changes into the brain.
+-   **`/ingest`** — Synthesizes pending code changes into the brain. On first run (empty knowledge base), the MCP tool automatically switches to **bootstrap mode** — it scans the user's source files directly and ignores the git diff (which would otherwise just describe the Cortex install itself).
 -   **`/read`** — Opens the interlinked architectural knowledge index.
 -   **`/status`** — Checks the health and sync state of the brain.
 -   **`/explore`** — Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth.
@@ -185,7 +220,7 @@ Type **`/`** in the chat bar to see these **Local Workflows**:
 
 | Command | What it does |
 |---|---|
-| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. |
+| `/ingest_cortex` | **Synthesize pending changes.** Computes the git diff since last sync, runs the Librarian, writes the result to `.knowledge/`. On first run with an empty index, the MCP tool returns a `mode: "bootstrap"` payload — a curated source-file list with the diff intentionally excluded — so the first synthesis describes the user's app, not the Cortex install. |
 | `/read_knowledge` | **See what the AI knows.** Prints the full rich knowledge index — every entity and concept with its description, source file, and links. |
 | `/cortex_status` | **Check sync state.** Shows the last-sync commit SHA and whether the knowledge base is initialized. |
 
@@ -195,7 +230,7 @@ Cortex also exposes these as native MCP prompts (accessible via the IDE's prompt
 
 | Prompt | What it does |
 |---|---|
-| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. |
+| `ingest` | Same as `/ingest_cortex` — synthesizes pending changes. Auto-switches to bootstrap mode (full source scan, diff excluded) when the index is empty. |
 | `read` | Reads the rich index and instructs the AI to use it (not re-scan source). |
 | `explore` | Reads the index and then navigates links via `read_entity`/`read_concept` to answer architectural questions in depth. |
 | `status` | Checks Cortex initialization and last sync. |
@@ -217,11 +252,47 @@ If you're using `cortex watch` with an API key instead of an IDE, here's how the
 ---
 
 ## 📂 Multi-Project Usage
-Project Cortex is designed to be installed once and used everywhere. Unlike global MCPs (like Figma) which pull from a central cloud, Cortex is **Repo-Aware**:
 
-1. **Install once**: `npm install -g projectcortex` (or `npm link` from a clone).
-2. **Context-aware**: When you open your IDE, it launches `cortex mcp`.
-3. **Automatic Switching**: The `cortex` binary detects your current project root via the IDE's working directory. It will automatically read the `.knowledge` folder of whichever project you are currently working on.
+Project Cortex is designed to be **installed once, used everywhere**. Unlike global MCPs (like Figma) which pull from a central cloud, Cortex is **Repo-Aware** — one install, one config, every project.
+
+### How it works
+
+When you run `cortex setup antigravity` (or any IDE target), the config that's written is **project-agnostic**. For Antigravity specifically, the global config at `~/.gemini/antigravity/mcp_config.json` (Windows: `%USERPROFILE%\.gemini\antigravity\mcp_config.json`) contains only this:
+
+```json
+{
+  "mcpServers": {
+    "project-cortex": {
+      "command": "cortex",
+      "args": ["mcp"],
+      "env": { "DOTENV_CONFIG_QUIET": "1" }
+    }
+  }
+}
+```
+
+No project paths. Nothing hardcoded. The magic happens at runtime: every time your IDE opens a workspace, it spawns a fresh `cortex mcp` process with the workspace folder as its working directory. Cortex's `findProjectRoot()` climbs up from CWD looking for `.knowledge/` or `.git/` markers — whatever it finds *is* the active project.
+
+### Working on a brand-new project
+
+1. **Open the project in your IDE.** That's it — the MCP server starts automatically because the global config is already in place from your first install.
+2. **Type `/ingest`** (or `/ingest_cortex` in Claude Code) in chat. **Bootstrap mode** kicks in: Cortex detects the empty knowledge base, scans the project's source files, ignores the git diff (which would otherwise just describe the install), and synthesizes the application's architecture. The first `save_synthesis` call creates `.knowledge/` for you — no `cortex init` required.
+
+You do **not** re-run `cortex setup antigravity` for new projects. Setup only writes the global config, which is already there.
+
+### Switching between projects
+
+| Scenario | What happens |
+|---|---|
+| Close IDE, open a different project | Old `cortex mcp` process dies. New project opens → fresh `cortex mcp` spawned with the new CWD → correct `.knowledge/` loaded. **Works automatically.** |
+| Open two projects in side-by-side IDE windows | Each window spawns its own `cortex mcp` process with its own CWD. They never collide. **Works automatically.** |
+| Switch workspace inside one window without restarting | Depends on the IDE. Most kill and respawn MCP servers on workspace switch — should work. Worst case: restart the window. |
+
+### TL;DR
+
+- Install `cortex` globally once.
+- Run `cortex setup antigravity` once (writes the global config).
+- For every new project: open it, run `/ingest`. Done.
 
 ---
 
@@ -241,7 +312,7 @@ cortex setup all
 cortex setup claude-code cursor
 ```
 
-Supported: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`
+Supported: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity` (writes the global Antigravity config by default — use `--local` to override).
 
 **Restart your IDE** after running setup.
 
@@ -280,7 +351,7 @@ When connected via MCP, your IDE's agent has access to these tools:
 | Tool | What it does |
 |---|---|
 | `get_cortex_status` | Check if Cortex is initialized and when it last synced |
-| `get_pending_changes` | Returns the git diff since last sync, the full rich knowledge index (as context for the Librarian), and the synthesis prompt |
+| `get_pending_changes` | Returns either an **incremental** payload (git diff since last sync + current knowledge index) or a **bootstrap** payload (curated source-file list, no diff) when the knowledge base is empty. The `mode` field tells the consumer which path was taken. |
 | `save_synthesis` | Accepts the synthesized JSON result, validates it with Zod, and writes it to `.knowledge/` |
 | `read_knowledge_index` | Returns the rich `index.md` — names, descriptions, source paths, and links. **Call this first** before reading any source files |
 | `read_entity` | Returns the full synthesized page for one entity (e.g. `AuthMiddleware`). Follow [[WikiLinks]] from the index with this |
@@ -389,7 +460,7 @@ pm2 startup
 
 Alternatively, you can run it inside a **tmux** or **screen** session.
 
-While `cortex watch` is running, logs are written to **`cortex.log`** in the project root (JSON lines) as well as pretty-printed to the terminal.
+While `cortex watch` is running, logs are written to **`cortex.log`** in the project root (JSON lines) as well as pretty-printed to the terminal via STDERR — STDOUT is kept clean for the MCP stdio transport.
 
 ---
 

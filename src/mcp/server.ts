@@ -9,8 +9,13 @@ import {
 import path from "path";
 import { KnowledgeManager } from "../knowledge/writer.js";
 import { SynthesisSchema } from "../llm/schema.js";
-import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from "../llm/prompts.js";
+import {
+  LIBRARIAN_SYSTEM_PROMPT,
+  EXTRACTION_PROMPT_TEMPLATE,
+  BOOTSTRAP_PROMPT_TEMPLATE,
+} from "../llm/prompts.js";
 import { getPendingDiff } from "../core/diff.js";
+import { listSourceFiles, renderFileList } from "../core/scan.js";
 import { loadCortexEnv } from "../core/env.js";
 
 export class CortexMCPServer {
@@ -246,6 +251,44 @@ export class CortexMCPServer {
       }
 
       if (name === "get_pending_changes") {
+        // BOOTSTRAP PATH: when the knowledge base is empty, never send a diff —
+        // the most recent commits are usually just the installation of Cortex
+        // itself (.knowledge/, .antigravity/, etc.), which would poison the
+        // first synthesis. Instead, hand the AI a curated source-file list and
+        // tell it to scan the user's actual code with its own tools.
+        if (await this.knowledge.isEmpty()) {
+          const fileList = await listSourceFiles(this.projectRoot);
+          const rendered = renderFileList(fileList);
+          const prompt = BOOTSTRAP_PROMPT_TEMPLATE(rendered);
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  mode: "bootstrap",
+                  systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
+                  userPrompt: prompt,
+                  outputSchema: {
+                    summary: "string — 1-2 sentence description of what this application does",
+                    entities: "array of { name, action: 'create', description, links: string[], sourceFile: string (repo-relative path) }",
+                    concepts: "array of { name, description }",
+                    warnings: "array of strings (usually empty on bootstrap)",
+                  },
+                  instructions:
+                    "Bootstrap mode — the knowledge base is empty. Use your filesystem tools (Read, Glob, Grep) to inspect the files listed in userPrompt and synthesize the application's full architecture. The git diff has been intentionally excluded because it usually reflects the installation of Project Cortex itself, not the user's code. Emit every documented file as action: 'create'. Then call save_synthesis with the result.",
+                  fileListMeta: {
+                    totalFound: fileList.totalFound,
+                    truncated: fileList.truncated,
+                    source: fileList.source,
+                  },
+                }, null, 2),
+              },
+            ],
+          };
+        }
+
+        // INCREMENTAL PATH: knowledge exists — diff against the last sync.
         const lastSync = await this.knowledge.getLastSyncCommit();
         const diff = await getPendingDiff(this.projectRoot, lastSync);
         const knowledgeContext = await this.knowledge.getKnowledgeSummary();
@@ -263,6 +306,7 @@ export class CortexMCPServer {
             {
               type: "text",
               text: JSON.stringify({
+                mode: "incremental",
                 systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
                 userPrompt: prompt,
                 outputSchema: {
