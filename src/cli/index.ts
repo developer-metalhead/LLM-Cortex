@@ -121,11 +121,13 @@ program
   .description("Start the Cortex MCP server (STDIO mode)")
   .option("--project-root <path>", "Explicit project root (overrides auto-detection)")
   .action(async (options) => {
-    const root = options.projectRoot
-      ? path.resolve(options.projectRoot)
-      : projectRoot;
+    const explicit = !!options.projectRoot;
+    const root = explicit ? path.resolve(options.projectRoot) : projectRoot;
     loadCortexEnv(root);
-    const server = new CortexMCPServer(root);
+    // When the CLI was launched without --project-root (the portable-entry
+    // case for Antigravity etc.), pass explicit=false so the server queries
+    // the client for workspace roots after the MCP handshake.
+    const server = new CortexMCPServer(root, undefined, explicit);
     await server.start();
   });
 

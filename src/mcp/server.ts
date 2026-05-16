@@ -5,9 +5,12 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListRootsResultSchema,
+  RootsListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "path";
 import fs from "fs/promises";
+import { fileURLToPath } from "url";
 import { KnowledgeManager } from "../knowledge/writer.js";
 import { SynthesisSchema } from "../llm/schema.js";
 import {
@@ -26,12 +29,24 @@ export class CortexMCPServer {
   private knowledge: KnowledgeManager;
   private onAfterKnowledgeSave?: () => Promise<void>;
   private _sourceStats: { tokens: number; fileCount: number } | null = null;
+  // When true, an explicit `--project-root` was passed on the CLI — respect it
+  // and skip MCP roots discovery. When false, the project root is best-effort
+  // from CWD and we should ask the MCP client for its real workspace via
+  // `roots/list` (the only deterministic mechanism in IDEs like Antigravity
+  // that launch MCP servers from their own install directory, not the user's
+  // workspace).
+  private projectRootExplicit: boolean;
 
-  constructor(projectRoot: string, onAfterKnowledgeSave?: () => Promise<void>) {
+  constructor(
+    projectRoot: string,
+    onAfterKnowledgeSave?: () => Promise<void>,
+    projectRootExplicit: boolean = false,
+  ) {
     this.projectRoot = projectRoot;
     this.knowledgeDir = path.join(projectRoot, ".knowledge");
     this.knowledge = new KnowledgeManager(projectRoot);
     this.onAfterKnowledgeSave = onAfterKnowledgeSave;
+    this.projectRootExplicit = projectRootExplicit;
 
     this.server = new Server(
       { name: "project-cortex", version: "1.0.0" },
@@ -40,6 +55,39 @@ export class CortexMCPServer {
 
     this.setupHandlers();
     this.setupPromptHandlers();
+  }
+
+  // Re-point the server at a new workspace root. Called after MCP roots
+  // discovery resolves to a different directory than the CWD default, or when
+  // the client sends a `notifications/roots/list_changed`. Re-creates the
+  // KnowledgeManager and invalidates the cached source-stats so subsequent
+  // tool calls reflect the new project.
+  private setProjectRoot(newRoot: string): void {
+    const resolved = path.resolve(newRoot);
+    if (resolved === this.projectRoot) return;
+    this.projectRoot = resolved;
+    this.knowledgeDir = path.join(resolved, ".knowledge");
+    this.knowledge = new KnowledgeManager(resolved);
+    this._sourceStats = null;
+    console.error(`[Cortex] Project root resolved via MCP roots: ${resolved}`);
+  }
+
+  // Ask the MCP client for its workspace roots and adopt the first file:// one.
+  // Antigravity advertises the `roots` capability — this is the only way to
+  // know the user's workspace when the IDE doesn't launch us from there.
+  private async refreshProjectRootFromClient(): Promise<void> {
+    try {
+      const result = await this.server.request(
+        { method: "roots/list", params: {} },
+        ListRootsResultSchema,
+      );
+      const firstFileRoot = result.roots?.find((r) => r.uri.startsWith("file://"));
+      if (firstFileRoot) {
+        this.setProjectRoot(fileURLToPath(firstFileRoot.uri));
+      }
+    } catch {
+      // Client doesn't support roots, or no roots available — keep CWD default.
+    }
   }
 
   private async getSourceStats(): Promise<{ tokens: number; fileCount: number }> {
@@ -520,6 +568,27 @@ export class CortexMCPServer {
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
+
+    // After the MCP initialize handshake completes, ask the client for its
+    // workspace roots. Antigravity (and other IDE clients that advertise the
+    // `roots` capability) responds with the active workspace folder as a
+    // file:// URI. This is the only deterministic way for the server to learn
+    // the workspace when the IDE launches us from a non-workspace directory
+    // (Antigravity launches from its own install dir).
+    //
+    // Skip discovery if --project-root was passed explicitly on the CLI — the
+    // user's choice wins.
+    if (!this.projectRootExplicit) {
+      await this.refreshProjectRootFromClient();
+
+      // Re-query on workspace change so an IDE workspace-switch surfaces here.
+      this.server.setNotificationHandler(
+        RootsListChangedNotificationSchema,
+        async () => {
+          await this.refreshProjectRootFromClient();
+        },
+      );
+    }
   }
 }
 
