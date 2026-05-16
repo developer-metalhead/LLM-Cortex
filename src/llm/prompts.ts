@@ -110,24 +110,40 @@ The shape other code uses to talk to this entity. Be specific:
 
 Skip when the entity has no externally-observable interface (e.g. a private internal helper).
 
+### \`## Lifecycle\` *(when the entity owns setup or teardown obligations)*
+Emit when the entity acquires resources it must release: UI mount/unmount, service init/shutdown, open sockets, timers, event listeners, file handles, database connections. Format as short paired lines:
+- \`Setup: …\` — what is acquired and when
+- \`Teardown: …\` — what must be released and the trigger
+
+This section exists specifically so AI edits don't drop the cleanup half of a paired resource — the most common resource-leak pattern. Skip for stateless utilities and pure functions.
+
 ### \`## Behavior\` *(when invariants, business rules, or edge cases are non-obvious)*
-The rules a reader would miss by glancing at the code. Examples that earn a Behavior section:
-- "5-slot FIFO pinning — adding a 6th evicts the oldest"
-- "Idempotent — replays return cached result for 24h"
-- "Retries 3× with exponential backoff before falling back to local cache"
-- "Hidden achievements obfuscate title/description as '???' until unlocked"
-- "Triggers GlimmerParticle animation on diamond-tier unlock"
+The rules a reader would miss by glancing at the code. Includes:
+- Business invariants: "5-slot FIFO pinning — adding a 6th evicts the oldest"
+- Idempotency / retry: "Retries 3× with exponential backoff before falling back to local cache"
+- Hidden states: "Hidden achievements obfuscate title/description as '???' until unlocked"
+- **Purity signal** *(when relevant)*: one prose line — *"Pure — no side effects"*, *"Stateful — mutates [[SomeSingleton]]"*, or *"Impure — performs I/O via [[SomeModule]]"*. This is a soft signal, not a binary tag — only include when the purity characteristic is non-obvious or architecturally significant.
+- **Guard-clause preconditions** *(when a guard encodes a non-obvious invariant)*: surface as a bullet when a guard enforces auth-required, init-must-complete-first, feature-flag-gated, or deferred-state conditions. Skip trivial null/undefined checks unless they reveal a non-obvious code path.
 
 Skip when behavior is unsurprising — don't pad with restatements of the code.
+
+### \`## Verification\` *(when the entity has a non-trivial verification path)*
+Emit when confirming correct behavior requires steps a reader wouldn't immediately know. Cover:
+- **Automated**: link to the test file via \`[[*.test.*]]\` or \`[[*.spec.*]]\` — don't quote test code here
+- **Manual repro**: one-line console/CLI/curl command that exercises the happy path
+- **Success condition**: what "working" looks like (output, side-effect, UI state)
+- **Edge cases worth probing**: inputs or states that are easy to miss in manual testing
+
+Skip for trivially verifiable entities (pure functions with obvious outputs, simple config readers).
 
 ### \`## Wiring\` *(always)*
 Exhaustive list of what this entity depends on or is depended on by, expressed as \`[[WikiLinks]]\`. This is where you discharge the link sweep obligation. Group as: \`Depends on:\`, \`Used by:\`, \`Implements:\`. Be thorough — under-linking here is the #1 quality regression.
 
 ### Domain Hints — adjust depth focus by file type
-- **UI components** (\`*.tsx\`, \`*.jsx\`, \`*.vue\`, \`*.svelte\`): emphasize Interface (props), Behavior (interactions, animations, accessibility, hidden states), Wiring (contexts, hooks, registries)
-- **Backend services / API handlers**: emphasize Interface (request/response shapes), Behavior (side effects, idempotency, transaction boundaries, error modes), Wiring (DB tables, queues, external APIs)
-- **Libraries / utilities**: emphasize Interface (public API), Behavior (invariants, edge cases, performance characteristics), Wiring (consumers)
-- **Infrastructure / config**: brief Role + Wiring usually suffices; Interface only if a schema is enforced
+- **UI components** (\`*.tsx\`, \`*.jsx\`, \`*.vue\`, \`*.svelte\`): emphasize Interface (props), Lifecycle (mount/unmount effects, subscriptions), Behavior (interactions, animations, accessibility, hidden states), Verification (manual repro via dev server), Wiring (contexts, hooks, registries)
+- **Backend services / API handlers**: emphasize Interface (request/response shapes), Lifecycle (connection/listener init/teardown), Behavior (side effects, idempotency, transaction boundaries, error modes), Verification (curl/CLI repro + success condition), Wiring (DB tables, queues, external APIs)
+- **Libraries / utilities**: emphasize Interface (public API), Behavior (invariants, edge cases, purity signal, performance characteristics), Verification (test file link), Wiring (consumers)
+- **Infrastructure / config**: brief Role + Wiring usually suffices; Lifecycle if it owns a long-lived resource; Interface only if a schema is enforced
 
 ### What NOT to index (noise filter)
 - Specific CSS hex codes, exact pixel values, every \`console.log\`
@@ -200,10 +216,10 @@ Stop here.
 **Step 2 — Extract Entities (layered descriptions).**
 For each meaningfully changed file/module/class/endpoint:
 - Decide the \`action\`: \`create\` (new), \`update\` (modified), or \`delete\` (removed).
-- Write the \`description\` as a **layered markdown document** with sections \`## Role\` (always), \`## Interface\` (when applicable), \`## Behavior\` (when non-obvious), \`## Wiring\` (always). See OUTPUT QUALITY BAR in the system prompt for what each section contains.
+- Write the \`description\` as a **layered markdown document** with sections \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions where relevant), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). See OUTPUT QUALITY BAR in the system prompt for what each section contains.
 - Apply the **domain hints** by file type (UI / backend / library / infra) — focus depth where it matters for that kind of code.
 - Set the \`sourceFile\` field to the repo-relative path that backs the entity (e.g. \`src/auth/middleware.ts\`).
-- **Link sweep**: before finalizing, scan imports and contexts in the source file; populate \`links\` with **every** \`[[WikiLink]]\` you reference anywhere in the description (Role + Interface + Behavior + Wiring). Under-linking is a quality regression.
+- **Link sweep**: before finalizing, scan imports and contexts in the source file; populate \`links\` with **every** \`[[WikiLink]]\` you reference anywhere in the description (Role + Interface + Lifecycle + Behavior + Verification + Wiring). Under-linking is a quality regression.
 - Reuse names from the CURRENT CONTEXT where applicable. Do not duplicate.
 
 **Step 3 — Extract Concepts.**
@@ -246,7 +262,7 @@ ${fileList}
 1. **Read the listed files** with your filesystem tools. Start with entry points (e.g. \`src/index.*\`, \`src/main.*\`, \`src/cli/*\`, \`app.*\`), then drill into the modules they import.
 2. **Identify the application's architecture**: entry points, core modules, services, data flows, abstractions, external integrations.
 3. **Emit every meaningful module/service/class as an entity** with \`action: "create"\`. Populate \`sourceFile\` with the repo-relative path.
-4. **Write each entity description as a layered markdown document** with \`## Role\` (always), \`## Interface\` (when applicable), \`## Behavior\` (when non-obvious), \`## Wiring\` (always). Apply the domain hints (UI / backend / library / infra) from the OUTPUT QUALITY BAR section.
+4. **Write each entity description as a layered markdown document** with \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). Apply the domain hints (UI / backend / library / infra) from the OUTPUT QUALITY BAR section.
 5. **Identify cross-cutting concepts** (architectural patterns, strategies, invariants) and emit them as concepts.
 6. **Wiki-link aggressively** — populate \`links\` with every \`[[WikiLink]]\` referenced anywhere in any section. Run the link sweep: imports, contexts, patterns, reverse deps.
 7. **Warnings** should be empty (\`[]\`) unless you spot real contradictions inside the user's own code — not "this looks like it just installed Cortex."

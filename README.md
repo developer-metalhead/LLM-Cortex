@@ -447,26 +447,46 @@ Player progression showcase UI. Bridges raw stats to the trophy room.
 Props: { gameId: string, onClose: () => void }
 Reads from ProgressionContext (XP, AP, unlocked medals).
 
+## Lifecycle
+Setup: subscribes to ProgressionContext on mount; registers GlimmerParticle animation handler
+Teardown: unsubscribes both on unmount — must be paired or the particle handler leaks across sessions
+
 ## Behavior
+- Stateful — mutates local pin list via [[ProgressionEngine]]
 - 5-slot FIFO pinning — adding a 6th pin evicts the oldest
 - Hidden achievements obfuscate title/description as "???" until unlocked
 - Diamond tier triggers GlimmerParticle on unlock
+- Guard: component exits early if ProgressionContext is not yet initialized — renders null without throwing
+
+## Verification
+- Automated: [[AchievementsOverlay.test.tsx]]
+- Manual: open any game session, navigate to Profile → Achievements; unlock a diamond-tier achievement to confirm GlimmerParticle fires
+- Success condition: particle animation plays and achievement transitions from "???" to its real title
+- Edge case: test with exactly 6 pinned achievements to confirm FIFO eviction
 
 ## Wiring
 Depends on: [[ProgressionEngine]], [[GameRegistry]], [[SoundContext]]
 Used by: [[ProfileScreen]]
 ```
 
-| Section | When | Render target |
+| Section | When emitted | Render target |
 |---|---|---|
 | **Role** | Always, 1–3 sentences | `index.md` + drill-down |
 | **Interface** | When entity has a public API (props, schema, endpoints) | Drill-down only |
-| **Behavior** | When invariants / rules are non-obvious | Drill-down only |
+| **Lifecycle** | When entity owns setup/teardown obligations (listeners, sockets, timers, connections) | Drill-down only |
+| **Behavior** | When invariants, rules, purity, or guard-clause preconditions are non-obvious | Drill-down only |
+| **Verification** | When confirming correct behavior requires non-obvious steps | Drill-down only |
 | **Wiring** | Always, the `[[WikiLink]]` graph | Drill-down only |
 
-**Domain-aware synthesis.** The Librarian adjusts depth focus by file type — UI components get prop/interaction/animation detail, backend services get request-response/idempotency detail, libraries get API-surface/edge-case detail. The format stays uniform; the content fits the domain.
+**What `## Lifecycle` prevents.** The most common resource-leak pattern in AI-assisted edits is dropping the teardown half of a paired resource. When the Librarian sees a component subscribe to a context, open a socket, or register a listener, it emits a paired `Setup:` / `Teardown:` block. Future agents reading the entity page before editing see the obligation explicitly — not buried in code.
 
-**Performance impact.** Index reads (`/read`, `read_knowledge_index`, the PreToolUse hook injection) stay the same size as before — only the Role section flows into the index. The depth lives in the per-entity page, loaded only when `read_entity` is called. Reads stay fast; *ingest* gets slightly more expensive because entity pages are longer.
+**What `## Verification` adds.** For entities that are non-trivial to test manually (complex UI states, background services, multi-step flows), the Librarian emits a one-line repro command and a success condition. This travels with the entity page so any agent debugging or modifying the entity knows exactly how to confirm their change worked.
+
+**Purity and guard-clause signals in `## Behavior`.** Two soft signals added to the existing Behavior section: a one-line purity annotation (*"Pure — no side effects"* / *"Stateful — mutates [[X]]"* / *"Impure — performs I/O via [[Y]]"*) when architecturally significant, and guard-clause preconditions when a guard encodes a non-obvious invariant (auth-required, init-must-complete, feature-flag-gated). Trivial null checks are skipped.
+
+**Domain-aware synthesis.** The Librarian adjusts depth focus by file type — UI components get Lifecycle (mount/unmount effects) and Verification (dev-server repro), backend services get Lifecycle (connection teardown) and Verification (curl one-liner), libraries get purity signal and test-file link. The format stays uniform; the content fits the domain.
+
+**Performance impact.** Index reads (`/read`, `read_knowledge_index`, the PreToolUse hook injection) stay the same size as before — only the Role section flows into the index. All new sections live in the per-entity drill-down page, loaded only when `read_entity` is called. Reads stay fast; *ingest* gets slightly more expensive because entity pages are longer.
 
 ---
 

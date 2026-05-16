@@ -360,7 +360,7 @@ function extractLastRefined(body: string): string | null {
 // section to keep the high-level map shallow.
 // ──────────────────────────────────────────────────────────────────────
 
-const SECTION_HEADING_RE = /^##\s+(Role|Interface|Behavior|Wiring)\s*$/m;
+const SECTION_HEADING_RE = /^##\s+(Role|Interface|Lifecycle|Behavior|Verification|Wiring)\s*$/m;
 
 function isLayeredDescription(description: string): boolean {
   return SECTION_HEADING_RE.test(description);
