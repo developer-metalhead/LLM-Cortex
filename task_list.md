@@ -70,6 +70,18 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
+## ⏳ Planned — Layered entity page extensions (small prompt tweaks, pre-Phase 6)
+
+- [ ] **`## Lifecycle` section** — optional section emitted when an entity has setup/teardown obligations (UI mount/unmount, service init/shutdown, sockets/timers/listeners/file-handle ownership). Format: short `Setup: …` / `Teardown: …` lines. Surfaces paired-resource patterns so AI edits don't drop the cleanup half (the most common resource-leak cause).
+- [ ] **`## Verification` section** — optional section emitted when an entity has a non-trivial verification path. Bullets cover: automated (link to `[[*.test.*]]`), manual repro (one-line console/CLI command), success condition, edge cases worth probing. Longer quoted test code defers to Phase 7's bounded `evidence.content`.
+- [ ] **Purity hint inside `## Behavior`** — prose line when relevant: *"Pure — no side effects"*, *"Stateful — mutates [[GlobalSingleton]]"*, *"Impure — performs I/O via [[FileSystem]]"*. Not a separate field or binary tag (LLM-inferred purity is too unreliable); a soft prose signal in `## Behavior` is enough.
+- [ ] **Guard-clause invariants in `## Behavior`** — when a guard encodes a non-obvious precondition (auth required, init complete, feature flag, deferred state), surface it as a Behavior bullet. Skip trivial null/undefined checks unless they reveal a non-obvious code path.
+- [ ] Combined size: ~25 lines of prompt change in [src/llm/prompts.ts](src/llm/prompts.ts); no writer change, no schema change. Ships independently of Phase 6.
+
+**Explicitly NOT added** (evaluated, rejected): stored test-snippet blobs in entity pages (drift risk, two sources of truth), `Used By (Verification Required)` regression-anchor lists (already covered by Phase 6 staleness + Phase 9 `cortex impact`).
+
+---
+
 ## ⏳ Planned — Phases 6–13
 
 ### Phase 6 — Active Guardrail: Constraints & Blast-Radius Analysis

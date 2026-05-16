@@ -251,6 +251,28 @@ Finalize the `commander` implementation. Add commands for `status` (showing curr
 
 **Planned follow-up — `cortex init --magic`.** A one-command setup path that subsumes the entire interactive wizard: detects the IDE in the current workspace (via the presence of `.claude/`, `.cursor/`, `.vscode/`, `.windsurf/`, `.antigravity/`), runs `npm run build` if `dist/` is missing, registers Cortex with every detected IDE, scaffolds `.knowledge/`, writes `.gitignore` entries, and prints a single "ready" line. The existing `cortex init` interactive mode stays as the explicit path; `--magic` is for "I trust the defaults, set it all up." Zero new core code — it's a composition of `init` + `setup all` + a detector. The user's time-to-first-ingest drops from ~5 commands to 1.
 
+**Planned follow-up — Layered entity page extensions (`## Lifecycle`, `## Verification`, inline purity hint, guard-clause invariants).** Small prompt-level extensions to the already-shipped layered entity format. No schema change, no new tools — just additions to the Librarian's `OUTPUT QUALITY BAR` instructions in [src/llm/prompts.ts](src/llm/prompts.ts).
+
+1. **Optional `## Lifecycle` section.** Emit when an entity has setup/teardown obligations the caller must respect: UI components with mount/unmount work, services with init/shutdown, anything that owns sockets, timers, event listeners, file handles, or background tasks. Format: short `Setup: …` / `Teardown: …` (or `Init:` / `Cleanup:`) lines. The goal is to surface paired-resource patterns so an AI modifying the entity doesn't drop the cleanup half — the most common cause of resource leaks. Skip the section when lifecycle is trivial (pure functions, stateless utilities).
+
+2. **Optional `## Verification` section.** Emit when an entity has a non-trivial way to verify it works. Format: short bullets covering some combination of:
+   - **Automated**: link to the test file (e.g. `[[GamesLocator.test.js]]`)
+   - **Manual repro**: a one-line console/CLI command (e.g. `window.testRadar()`, `curl -X POST /foo`, `pnpm run check:auth`)
+   - **Success condition**: what "working" looks like (e.g. *"3 dots appear on the radar within 3s"*)
+   - **Edge cases worth probing**: non-obvious states the entity must handle (null user, offline mode, expired token)
+
+   Captures verification metadata that has no other home in the current format. Bounded by the same "include only when materially clarifying" rule as `## Behavior` — skip when the entity is trivially verified by reading the code. For longer-form quoted test code, defer to Phase 7's `evidence.content` block (≤10 lines per snippet, ≤500 chars per entity).
+
+3. **Purity / side-effect hint inside `## Behavior`.** Add a prose line when relevant: *"Pure — no side effects"*, *"Stateful — mutates [[GlobalSingleton]]"*, *"Impure — performs I/O via [[FileSystem]]"*. **Not a separate field, not a binary tag** — LLM-inferred purity is too unreliable for a strict tag, but a prose hint flagged in `## Behavior` is a useful soft signal when an entity is about to be called from a context where its effects matter (e.g. don't call an impure helper from a React render). Skip when purity is unsurprising.
+
+4. **Guard-clause invariants surfaced in `## Behavior`.** When a guard clause (e.g. `if (!user) return;`, `if (!initialized) throw;`, `if (!flagEnabled) return null;`) encodes a non-obvious precondition — auth required, init complete, feature flag, deferred state, escape-hatch for un-mounted components — surface it as an invariant bullet in `## Behavior`. Skip trivial null/undefined checks unless they reveal a non-obvious code path. Goal: an AI about to modify the entity sees the preconditions it must continue to uphold; an AI calling the entity sees the states it can encounter.
+
+All four extensions are ~25 lines of prompt change combined; no writer change required (the rendered entity page just gets two more optional section types, the index render is unaffected because the index reads `## Role` only). Ships independently of Phase 6 — could land before, alongside, or as part of the same commit.
+
+**What this deliberately does NOT add** (proposed by users / other-AI consultations, evaluated and rejected):
+- **Stored test-snippet blobs** (full `TEST_SUITE = {…}` JavaScript objects in entity pages) — creates a second source of truth that drifts from real test files; LLM-authored test code is unreliable. The short manual-repro lines under `## Verification` cover the genuinely useful subset; Phase 7's `evidence.content` covers longer quoted snippets when they materially clarify.
+- **"Regression Anchors" / `Used By (Verification Required)` lists** — already covered by Phase 6's blast-radius `staleSince` propagation and Phase 9's `cortex impact <entity>` hop-ranked inbound report. No parallel mechanism needed.
+
 ---
 
 ## 🚧 Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — ⏳ Planned
