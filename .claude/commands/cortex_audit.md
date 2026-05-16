@@ -1,0 +1,1 @@
+List all entities that are currently marked as "stale" due to blast-radius propagation by running the CLI command: `npx tsx src/cli/index.ts audit stale`. Explain that these entities require review because their dependencies have changed.

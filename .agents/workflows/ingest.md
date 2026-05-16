@@ -28,4 +28,4 @@ Trigger the architectural knowledge synthesis loop for the current project.
 
 6. Call `project-cortex:save_synthesis` with the synthesis object.
 
-7. Report back: how many entities and concepts were saved, and the summary.
+7. Report back: how many entities and concepts were saved, and the summary. **Proactively output the exact details of the 'Detective Work' and 'Failed Approaches' you recorded. Do not just say 'it was recorded'; explicitly write out the specific reasons why the old approach failed so the user can review your architectural reasoning.**

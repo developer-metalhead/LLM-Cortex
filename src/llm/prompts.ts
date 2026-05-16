@@ -70,7 +70,7 @@ Warnings should be specific and actionable: name the contradicting files, quote 
 
 ### 6. Enforce Constraints & Remember Failures
 - **Constraints**: If a file contains explicit guardrails like "Do not import X from here" or "Only called by Y", extract them into the \`constraints\` object (\`mustNotImport\`, \`mustNotBeCalledBy\`, \`contract\`).
-- **Failed Approaches**: If a PR description or code comment says "Reverts X because of Y", "replaces:", or "Replacing X with Z because it was too slow", extract that into the \`failedApproaches\` array. Do not let the team make the same mistake twice.
+- **Failed Approaches (The Detective Work)**: Do not wait for explicit comments! If the diff shows a significant library, pattern, or block of logic being **deleted and replaced** (e.g., local image processing removed, cloud SDK added), you MUST infer the architectural shift. Record the deleted approach in the \`failedApproaches\` array and use your engineering judgment to ascertain *why* it was replaced (e.g., "Transitioned to cloud storage to reduce local CPU load"). If the exact reason isn't in the commit, infer the standard technical trade-off. Do not let the team make the same mistake twice.
 
 ### 7. Compound, Don't Duplicate
 The \`### CURRENT CONTEXT\` section contains **full descriptions** of every existing entity and concept — not just their names. Read those descriptions before deciding what to emit:
@@ -217,29 +217,34 @@ If cosmetic → return:
 - \`warnings\`: []
 Stop here.
 
-**Step 2 — Extract Entities (layered descriptions).**
+**Step 2 — The Detective Work (Failed Approaches).**
+Scan the diff for DELETIONS of significant logic, libraries, or patterns. If something was replaced, infer the technical reason *why* (e.g., scalability, performance, decoupling) and ensure it gets recorded as a \`failedApproach\` in the relevant entity or concept. Do not just record what was added; record what was abandoned and why.
+
+**Step 3 — Extract Entities (layered descriptions).**
 For each meaningfully changed file/module/class/endpoint:
 - Decide the \`action\`: \`create\` (new), \`update\` (modified), or \`delete\` (removed).
 - Write the \`description\` as a **layered markdown document** with sections \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions where relevant), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). See OUTPUT QUALITY BAR in the system prompt for what each section contains.
 - Apply the **domain hints** by file type (UI / backend / library / infra) — focus depth where it matters for that kind of code.
 - Set the \`sourceFile\` field to the repo-relative path that backs the entity (e.g. \`src/auth/middleware.ts\`).
 - **Relationship sweep**: before finalizing, scan imports and contexts in the source file; populate \`relationships\` with **every** connected entity and assign the correct \`kind\`. Under-linking is a quality regression.
+- **Auto-link Concepts**: Map this entity to existing Concepts from the CURRENT CONTEXT if it clearly fits an established pattern (e.g., automatically linking a new route to the \`REST API\` concept).
 - Reuse names from the CURRENT CONTEXT where applicable. Do not duplicate.
 
-**Step 3 — Extract Concepts.**
+**Step 4 — Extract Concepts.**
 Ask: did this change introduce, change, or reinforce an abstract pattern that spans multiple entities? (Auth strategy, data access pattern, error handling policy, etc.)
+- **Implicit Pattern Detection**: Look for structural clues (e.g., new \`adapters/\` or \`queues/\` directories, or repeated naming conventions like \`*Strategy.ts\`). If you detect a structural pattern, extract it as a Concept even if the developer didn't explicitly mention it.
 - Only add a concept if a real cross-cutting pattern is visible. Do not invent concepts for the sake of completeness.
 - Concept descriptions should explain *what problem the pattern solves here* and reference 2+ entities via \`[[WikiLinks]]\`.
 
-**Step 4 — Detect Drift.**
+**Step 5 — Detect Drift.**
 Re-read the CURRENT CONTEXT. Does anything in the new diff contradict, violate, or silently replace an existing pattern or invariant?
 - If yes → add a specific, actionable entry to \`warnings\`. Quote the old expectation. Name the new contradicting file. Suggest what needs resolving.
 - If no → \`warnings: []\`. Do not invent warnings.
 
-**Step 5 — Write the Summary.**
+**Step 6 — Write the Summary.**
 1–2 sentences. The architectural tl;dr of this change. What shifted? What now connects to what? If nothing architectural shifted, say so.
 
-**Step 6 — Output JSON only.**
+**Step 7 — Output JSON only.**
 Match the schema exactly. No prose before or after. No markdown fences.
 `;
 

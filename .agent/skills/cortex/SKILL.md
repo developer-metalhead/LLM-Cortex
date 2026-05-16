@@ -33,7 +33,11 @@ Do NOT apply when:
    - (a) Which entities you will touch
    - (b) Which dependents could be affected
    - (c) Which invariants apply
-6. **Only NOW open source files** and write code.
+6. **Open source files** and write code.
+7. **Reflex Sync**: Immediately after finishing code changes, you MUST run the `/ingest` workflow (or the `ingest_cortex` command) to synchronize the new architectural state. This is not optional—it ensures your "Second Brain" always reflects your latest actions.
+In your final message to the user, you must provide:
+- A standard summary of the feature/code changes you just implemented.
+- The exact details of the 'Detective Work' and 'Failed Approaches' you recorded. Do not just say 'it was recorded'; write out the specific reasons why the old approach failed so the user can review your architectural reasoning.
 
 ## When the knowledge base is empty or missing
 

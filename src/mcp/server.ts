@@ -77,16 +77,21 @@ export class CortexMCPServer {
   // know the user's workspace when the IDE doesn't launch us from there.
   private async refreshProjectRootFromClient(): Promise<void> {
     try {
+      console.error("[Cortex] Requesting roots from client...");
       const result = await this.server.request(
         { method: "roots/list", params: {} },
         ListRootsResultSchema,
       );
+      console.error(`[Cortex] Received ${result.roots?.length || 0} roots from client.`);
       const firstFileRoot = result.roots?.find((r) => r.uri.startsWith("file://"));
       if (firstFileRoot) {
+        console.error(`[Cortex] Found file root: ${firstFileRoot.uri}`);
         this.setProjectRoot(fileURLToPath(firstFileRoot.uri));
+      } else {
+        console.error("[Cortex] No file-based roots found in client response.");
       }
-    } catch {
-      // Client doesn't support roots, or no roots available — keep CWD default.
+    } catch (err: any) {
+      console.error(`[Cortex] Failed to refresh roots: ${err.message}`);
     }
   }
 
@@ -426,6 +431,27 @@ export class CortexMCPServer {
             },
           },
         },
+        {
+          name: "set_project_root",
+          description: "Manually re-point the Cortex server to a specific project root. **Use this ONLY when:** get_cortex_status reports a mismatched path (e.g., the IDE's installation folder instead of your project). This re-initializes the Knowledge Manager and fixes path-based tool failures.",
+          inputSchema: {
+            type: "object",
+            required: ["path"],
+            properties: {
+              path: { type: "string", description: "Absolute path to the project root (e.g. C:/Users/name/Desktop/Project)." },
+            },
+          },
+        },
+        {
+          name: "audit",
+          description: "Perform an architectural audit to find stale entities and blast-radius victims.",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "export",
+          description: "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
+          inputSchema: { type: "object", properties: {} },
+        },
       ],
     }));
 
@@ -435,6 +461,7 @@ export class CortexMCPServer {
       if (name === "get_cortex_status") {
         const knowledgeExists = await this.knowledge.exists();
         const lastSync = await this.knowledge.getLastSyncCommit();
+        const staleCount = await this.knowledge.getStaleCount();
         return {
           content: [
             {
@@ -443,7 +470,34 @@ export class CortexMCPServer {
                 status: knowledgeExists ? "initialized" : "not initialized",
                 lastSyncCommit: lastSync || "never synced",
                 projectRoot: this.projectRoot,
+                staleCount: staleCount
               }, null, 2),
+            },
+          ],
+        };
+      }
+
+      if (name === "audit") {
+        const entities = await this.knowledge.getStaleEntities();
+        return {
+          content: [
+            {
+              type: "text",
+              text: entities.length > 0
+                ? `Found ${entities.length} stale entities:\n\n${entities.map(e => `- ${e.name} (Stale since: ${e.staleSince})`).join("\n")}`
+                : "✅ No stale entities found. Architecture is fully synchronized.",
+            },
+          ],
+        };
+      }
+
+      if (name === "export") {
+        const outputPath = await this.knowledge.exportSpec();
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ Architectural Specification exported to: ${outputPath}`,
             },
           ],
         };
@@ -683,6 +737,25 @@ export class CortexMCPServer {
           };
         }
         return { content: await this.withSavings(body) };
+      }
+
+      if (name === "set_project_root") {
+        const newPath = (args as any)?.path;
+        if (typeof newPath !== "string" || !newPath.trim()) {
+          return {
+            content: [{ type: "text", text: "set_project_root requires a 'path' argument." }],
+            isError: true,
+          };
+        }
+        this.setProjectRoot(newPath);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Project root manually updated to: ${newPath}. Knowledge Manager re-initialized.`,
+            },
+          ],
+        };
       }
 
       throw new Error(`Unknown tool: ${name}`);
