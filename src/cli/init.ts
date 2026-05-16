@@ -1,7 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
 import readline from "readline";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { loadCortexEnv } from "../core/env.js";
+
+const execAsync = promisify(exec);
 
 function ask(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => rl.question(question, resolve));
@@ -122,7 +126,7 @@ export async function runInit(projectRoot: string): Promise<void> {
   } else {
     // IDE route
     console.log("\n  IDE route selected.\n");
-    console.log("  Available targets: claude-code, cursor, vscode, windsurf, claude-desktop, antigravity\n");
+    console.log("  Available targets: claude-code, cursor, vscode, windsurf, claude-desktop, antigravity, zed, cline, continue\n");
 
     const input = await ask(rl, '  Which IDEs to configure? (comma-separated, or "all"): ');
     const targets = input.trim() === "all"
@@ -133,20 +137,170 @@ export async function runInit(projectRoot: string): Promise<void> {
     await setupIDE(projectRoot, targets);
 
     console.log("\n  Done. Restart your IDE to activate the MCP connection.");
-    
-    if (targets.includes("antigravity") || targets.includes("all")) {
-      console.log("  For Antigravity: Ask me 'What tools do you have from project-cortex?' to verify.");
-    }
-    
-    if (targets.includes("claude-code") || targets.includes("all")) {
-      console.log("  For Claude Code: Use /ingest_cortex to synthesize.");
-    }
 
-    if (targets.includes("cursor") || targets.includes("all")) {
-      console.log("  For Cursor: Use @project-cortex to synthesize.");
+    const tips: Record<string, string> = {
+      "claude-code": "Use /ingest_cortex to synthesize.",
+      "cursor": "Use @project-cortex to synthesize.",
+      "antigravity": "Ask 'What tools do you have from project-cortex?' to verify.",
+      "zed": "Open the assistant panel — project-cortex will appear as a context server.",
+      "cline": "Open Cline → MCP Servers tab to verify project-cortex is connected.",
+      "continue": "Use @project-cortex in the Continue chat to verify.",
+    };
+    const relevant = targets.includes("all") ? Object.keys(tips) : targets.filter((t) => tips[t]);
+    for (const t of relevant) {
+      console.log(`  For ${t}: ${tips[t]}`);
     }
     console.log("");
   }
 
   rl.close();
+}
+
+export async function runInitMagic(projectRoot: string): Promise<void> {
+  console.log("\n  Project Cortex — Magic Setup\n");
+
+  // 1. Detect installed IDEs via global installation indicators.
+  //    Using global paths (not per-project dirs) so --magic works even on a fresh
+  //    project where no IDE has touched the folder yet.
+  //    Each IDE gets a list of candidate paths; the first that exists wins.
+  const home = process.env.HOME || process.env.USERPROFILE || "";
+  // Windows: %APPDATA% = C:\Users\<user>\AppData\Roaming
+  // macOS:   ~/Library/Application Support
+  // Linux:   falls back to XDG below
+  const appData = process.env.APPDATA || path.join(home, "Library", "Application Support");
+  // XDG config base: $XDG_CONFIG_HOME or ~/.config (Linux standard; Zed also uses this on macOS)
+  const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
+
+  const globalChecks: Array<[string, string[]]> = [
+    // claude-code: ~/.claude.json (user-level global settings) or ~/.claude/ dir at home level
+    ["claude-code", [
+      path.join(home, ".claude.json"),
+      path.join(home, ".claude"),
+    ]],
+    // cursor:
+    //   Windows → %APPDATA%\Cursor\User\settings.json (parent: %APPDATA%\Cursor)
+    //   macOS   → ~/Library/Application Support/Cursor
+    //   Linux   → ~/.config/Cursor  (XDG standard; NOT ~/.cursor)
+    ["cursor", [
+      path.join(appData, "Cursor"),       // Windows + macOS
+      path.join(xdgConfig, "Cursor"),     // Linux
+    ]],
+    // vscode: ~/.vscode/ exists on all platforms (extensions dir); user data also in appData/Code
+    ["vscode", [
+      path.join(home, ".vscode"),
+      path.join(appData, "Code"),
+      path.join(xdgConfig, "Code"),       // Linux fallback
+    ]],
+    // windsurf: global config dir (same path setup.ts writes to)
+    ["windsurf", [path.join(home, ".codeium", "windsurf")]],
+    // antigravity: ~/.gemini/antigravity/ is created on first Antigravity launch
+    ["antigravity", [
+      path.join(home, ".gemini", "antigravity"),
+    ]],
+    // claude-desktop: %APPDATA%\Claude on Windows, ~/Library/Application Support/Claude on macOS
+    ["claude-desktop", [path.join(appData, "Claude")]],
+    // zed: ~/.config/zed/ on macOS+Linux (Zed follows XDG on all platforms), %APPDATA%\Zed\ on Windows
+    ["zed", [
+      path.join(xdgConfig, "zed"),
+      path.join(appData, "Zed"),
+    ]],
+    // cline: VS Code extension saoudrizwan.claude-dev — detected via its globalStorage directory
+    ["cline", [
+      path.join(appData, "Code", "User", "globalStorage", "saoudrizwan.claude-dev"),
+      path.join(xdgConfig, "Code", "User", "globalStorage", "saoudrizwan.claude-dev"),
+    ]],
+    // continue.dev: creates ~/.continue/ on first launch across all platforms
+    ["continue", [path.join(home, ".continue")]],
+  ];
+
+  const detected: string[] = [];
+  for (const [ide, candidates] of globalChecks) {
+    for (const candidate of candidates) {
+      try {
+        await fs.access(candidate);
+        detected.push(ide);
+        break;
+      } catch {
+        // candidate not present, try next
+      }
+    }
+  }
+
+  if (detected.length === 0) {
+    console.log("  No IDEs detected on this machine.");
+    console.log("  Checked: ~/.claude.json, ~/.cursor, ~/.vscode, ~/.codeium/windsurf, ~/.gemini/antigravity, and platform AppData.");
+    console.log("  Run `cortex init` for the interactive setup instead.\n");
+    return;
+  }
+  console.log(`  Detected IDEs (${detected.length}):`);
+  for (const ide of detected) {
+    console.log(`    • ${ide}`);
+  }
+  console.log("");
+
+  // 2. Scaffold .knowledge/
+  const knowledgeDir = path.join(projectRoot, ".knowledge");
+  await fs.mkdir(path.join(knowledgeDir, "entities"), { recursive: true });
+  await fs.mkdir(path.join(knowledgeDir, "concepts"), { recursive: true });
+  const indexPath = path.join(knowledgeDir, "index.md");
+  try {
+    await fs.access(indexPath);
+  } catch {
+    await fs.writeFile(
+      indexPath,
+      "# Project Cortex Knowledge Index\n\nThis index is automatically managed by Project Cortex.\n\n## Concepts\n\n## Entities\n",
+      "utf8"
+    );
+  }
+  console.log("  Scaffolded .knowledge/");
+
+  // 3. Write .gitignore entries
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  try {
+    const existing = await fs.readFile(gitignorePath, "utf8");
+    const toAppend = [".env", "cortex.log"].filter((e) => !existing.includes(e));
+    if (toAppend.length > 0) {
+      await fs.appendFile(gitignorePath, `\n${toAppend.join("\n")}\n`);
+      console.log(`  Added to .gitignore: ${toAppend.join(", ")}`);
+    }
+  } catch {
+    // no .gitignore — fine
+  }
+
+  // 4. Build if dist/cli/index.js is missing (dev-mode only; global installs are pre-built)
+  const { fileURLToPath } = await import("url");
+  const cliEntry = path.join(path.dirname(fileURLToPath(import.meta.url)), "index.js");
+  try {
+    await fs.access(cliEntry);
+  } catch {
+    console.log("\n  dist/ not found — running npm run build...");
+    try {
+      await execAsync("npm run build", { cwd: projectRoot });
+      console.log("  Build complete.");
+    } catch (err: any) {
+      console.error(`\n  Build failed: ${err.message}`);
+      console.error("  Fix the build error and re-run `cortex init --magic`.\n");
+      return;
+    }
+  }
+
+  // 5. Register MCP server with all detected IDEs
+  console.log("\n  Registering MCP server...");
+  const { setupIDE } = await import("./setup.js");
+  await setupIDE(projectRoot, detected);
+
+  // 6. Done
+  const tips: Record<string, string> = {
+    "claude-code": "use /ingest_cortex to synthesize",
+    "cursor": "use @project-cortex to synthesize",
+    "antigravity": "ask 'What tools do you have from project-cortex?' to verify",
+    "zed": "open the assistant panel — project-cortex appears as a context server",
+    "cline": "open Cline → MCP Servers tab to verify project-cortex is connected",
+    "continue": "use @project-cortex in the Continue chat to verify",
+  };
+  console.log("\n  Done. Restart your IDE, then:");
+  for (const ide of detected) {
+    if (tips[ide]) console.log(`  • ${ide}: ${tips[ide]}`);
+  }
+  console.log("");
 }

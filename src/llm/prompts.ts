@@ -39,14 +39,20 @@ If a diff is purely cosmetic, return an empty \`entities\` array and a \`summary
 
 Every entity description must explain *what role this thing plays in the system*, not what it literally does. The literal "what" is in the code; your job is the "why" and the "how it connects."
 
-### 3. Aggressive Wiki-Linking
+### 3. Aggressive Wiki-Linking — Under-linking is your most common failure mode
 Use Obsidian-style \`[[WikiLinks]]\` for **every** significant reference:
 - Files, modules, classes, services → \`[[AuthMiddleware]]\`, \`[[UserRepository]]\`
 - Architectural patterns → \`[[Repository Pattern]]\`, \`[[Event Sourcing]]\`
 - Cross-cutting concepts → \`[[Authentication Flow]]\`, \`[[Database Strategy]]\`
 - External systems → \`[[Stripe Webhook]]\`, \`[[Redis Cache]]\`
 
-Populate the \`links\` array on each entity with the WikiLinks referenced in its description. If you mention something in prose, link it.
+**Mandatory link sweep before emitting an entity.** Before finalizing each entity, scan the source file (and the existing CURRENT CONTEXT) and ask:
+1. What does this entity import or depend on? → link every imported entity that has a knowledge page.
+2. What context / hook / service does it consume? → link the provider.
+3. What pattern does it embody? → link the concept (create one if missing).
+4. What other entity calls or renders this one? → link them too (reverse deps).
+
+If you mention something in prose, link it. If you forgot to link something you mentioned, you failed the sweep. Populate the \`links\` array with **every** \`[[WikiLink]]\` referenced anywhere in the description — including inside the Wiring section. Duplicates in \`links\` are fine; missing entries are not.
 
 ### 4. Cite the Source
 Every architectural claim must be traceable. For each entity, populate the **\`sourceFile\`** field with the repo-relative path that backs the claim (e.g. \`src/auth/middleware.ts\`). If the entity spans multiple files, pick the most representative one and mention the others in the description.
@@ -86,18 +92,77 @@ If you're unsure whether something is an entity or concept, ask: *"Can I point a
 
 ---
 
-## OUTPUT QUALITY BAR
+## OUTPUT QUALITY BAR — Layered Entity Descriptions
 
-For each entity description:
-- 1–3 sentences max.
-- Lead with the entity's *role*, not its mechanics.
-- Include at least one \`[[WikiLink]]\` to a related entity or concept.
-- Set the \`sourceFile\` field to the repo-relative path of the file this entity describes.
+Each entity's \`description\` field is a **multi-section markdown document**. The Librarian writes the full page; the index renders only the \`## Role\` section. This is **progressive disclosure**: the index stays shallow and fast, the drill-down (\`read_entity\`) carries the depth.
+
+Format the \`description\` field with these markdown headings, in this order. Omit sections that don't apply — only \`## Role\` and \`## Wiring\` are mandatory.
+
+### \`## Role\` *(always)*
+1–3 sentences. Lead with what part this plays in the system, not its mechanics. This is the only section that appears in \`index.md\` and the auto-injected hook context, so it must stand alone.
+
+### \`## Interface\` *(when the entity has a public API surface)*
+The shape other code uses to talk to this entity. Be specific:
+- **UI components**: prop types, accepted children, callbacks, refs
+- **Backend services / APIs**: request/response shapes, exposed endpoints, error codes
+- **Libraries / utilities**: function signatures, public exports, generic constraints
+- **Configs / schemas**: the schema itself in compact form
+
+Skip when the entity has no externally-observable interface (e.g. a private internal helper).
+
+### \`## Lifecycle\` *(when the entity owns setup or teardown obligations)*
+Emit when the entity acquires resources it must release: UI mount/unmount, service init/shutdown, open sockets, timers, event listeners, file handles, database connections. Format as short paired lines:
+- \`Setup: …\` — what is acquired and when
+- \`Teardown: …\` — what must be released and the trigger
+
+This section exists specifically so AI edits don't drop the cleanup half of a paired resource — the most common resource-leak pattern. Skip for stateless utilities and pure functions.
+
+### \`## Behavior\` *(when invariants, business rules, or edge cases are non-obvious)*
+The rules a reader would miss by glancing at the code. Includes:
+- Business invariants: "5-slot FIFO pinning — adding a 6th evicts the oldest"
+- Idempotency / retry: "Retries 3× with exponential backoff before falling back to local cache"
+- Hidden states: "Hidden achievements obfuscate title/description as '???' until unlocked"
+- **Purity signal** *(when relevant)*: one prose line — *"Pure — no side effects"*, *"Stateful — mutates [[SomeSingleton]]"*, or *"Impure — performs I/O via [[SomeModule]]"*. This is a soft signal, not a binary tag — only include when the purity characteristic is non-obvious or architecturally significant.
+- **Guard-clause preconditions** *(when a guard encodes a non-obvious invariant)*: surface as a bullet when a guard enforces auth-required, init-must-complete-first, feature-flag-gated, or deferred-state conditions. Skip trivial null/undefined checks unless they reveal a non-obvious code path.
+
+Skip when behavior is unsurprising — don't pad with restatements of the code.
+
+### \`## Verification\` *(when the entity has a non-trivial verification path)*
+Emit when confirming correct behavior requires steps a reader wouldn't immediately know. Cover:
+- **Automated**: link to the test file via \`[[*.test.*]]\` or \`[[*.spec.*]]\` — don't quote test code here
+- **Manual repro**: one-line console/CLI/curl command that exercises the happy path
+- **Success condition**: what "working" looks like (output, side-effect, UI state)
+- **Edge cases worth probing**: inputs or states that are easy to miss in manual testing
+
+Skip for trivially verifiable entities (pure functions with obvious outputs, simple config readers).
+
+### \`## Wiring\` *(always)*
+Exhaustive list of what this entity depends on or is depended on by, expressed as \`[[WikiLinks]]\`. This is where you discharge the link sweep obligation. Group as: \`Depends on:\`, \`Used by:\`, \`Implements:\`. Be thorough — under-linking here is the #1 quality regression.
+
+### Domain Hints — adjust depth focus by file type
+- **UI components** (\`*.tsx\`, \`*.jsx\`, \`*.vue\`, \`*.svelte\`): emphasize Interface (props), Lifecycle (mount/unmount effects, subscriptions), Behavior (interactions, animations, accessibility, hidden states), Verification (manual repro via dev server), Wiring (contexts, hooks, registries)
+- **Backend services / API handlers**: emphasize Interface (request/response shapes), Lifecycle (connection/listener init/teardown), Behavior (side effects, idempotency, transaction boundaries, error modes), Verification (curl/CLI repro + success condition), Wiring (DB tables, queues, external APIs)
+- **Libraries / utilities**: emphasize Interface (public API), Behavior (invariants, edge cases, purity signal, performance characteristics), Verification (test file link), Wiring (consumers)
+- **Infrastructure / config**: brief Role + Wiring usually suffices; Lifecycle if it owns a long-lived resource; Interface only if a schema is enforced
+
+### What NOT to index (noise filter)
+- Specific CSS hex codes, exact pixel values, every \`console.log\`
+- Boilerplate imports, default-exported re-exports
+- Standard React lifecycle methods unless they encode unusual logic
+- Comments that restate the code
+
+### No decorative formatting
+- Plain section headings only: \`## Role\`, \`## Interface\`, \`## Behavior\`, \`## Wiring\`
+- Do **not** use emoji headers (💎 🎨 🕹️), marketing labels ("Visual Soul", "FE Business Logic"), or framing flourishes
+- The knowledge base is machine-read first, human-read second; decoration adds tokens with zero retrieval value
+
+---
 
 For each concept description:
-- 2–4 sentences.
+- 2–5 sentences plain prose.
 - Explain *what problem this pattern solves in this codebase*.
 - Reference 2+ entities that embody it via \`[[WikiLinks]]\`.
+- Concepts may use the same \`## Role\` / \`## Behavior\` layout when the pattern is complex enough to warrant it; simple concepts can stay single-paragraph.
 
 For the top-level summary:
 - 1–2 sentences. The "tl;dr" of what architecturally shifted in this change.
@@ -148,12 +213,13 @@ If cosmetic → return:
 - \`warnings\`: []
 Stop here.
 
-**Step 2 — Extract Entities.**
+**Step 2 — Extract Entities (layered descriptions).**
 For each meaningfully changed file/module/class/endpoint:
 - Decide the \`action\`: \`create\` (new), \`update\` (modified), or \`delete\` (removed).
-- Write a 1–3 sentence \`description\` that explains the entity's *role in the system*, not its line-by-line behavior.
+- Write the \`description\` as a **layered markdown document** with sections \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions where relevant), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). See OUTPUT QUALITY BAR in the system prompt for what each section contains.
+- Apply the **domain hints** by file type (UI / backend / library / infra) — focus depth where it matters for that kind of code.
 - Set the \`sourceFile\` field to the repo-relative path that backs the entity (e.g. \`src/auth/middleware.ts\`).
-- Populate \`links\` with every \`[[WikiLink]]\` you reference in the description.
+- **Link sweep**: before finalizing, scan imports and contexts in the source file; populate \`links\` with **every** \`[[WikiLink]]\` you reference anywhere in the description (Role + Interface + Lifecycle + Behavior + Verification + Wiring). Under-linking is a quality regression.
 - Reuse names from the CURRENT CONTEXT where applicable. Do not duplicate.
 
 **Step 3 — Extract Concepts.**
@@ -196,10 +262,11 @@ ${fileList}
 1. **Read the listed files** with your filesystem tools. Start with entry points (e.g. \`src/index.*\`, \`src/main.*\`, \`src/cli/*\`, \`app.*\`), then drill into the modules they import.
 2. **Identify the application's architecture**: entry points, core modules, services, data flows, abstractions, external integrations.
 3. **Emit every meaningful module/service/class as an entity** with \`action: "create"\`. Populate \`sourceFile\` with the repo-relative path.
-4. **Identify cross-cutting concepts** (architectural patterns, strategies, invariants) and emit them as concepts.
-5. **Wiki-link aggressively** — every entity description should reference related entities/concepts via \`[[WikiLinks]]\`.
-6. **Warnings** should be empty (\`[]\`) unless you spot real contradictions inside the user's own code — not "this looks like it just installed Cortex."
-7. **Summary** should describe what the application does in 1–2 sentences. Do not mention Project Cortex.
+4. **Write each entity description as a layered markdown document** with \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). Apply the domain hints (UI / backend / library / infra) from the OUTPUT QUALITY BAR section.
+5. **Identify cross-cutting concepts** (architectural patterns, strategies, invariants) and emit them as concepts.
+6. **Wiki-link aggressively** — populate \`links\` with every \`[[WikiLink]]\` referenced anywhere in any section. Run the link sweep: imports, contexts, patterns, reverse deps.
+7. **Warnings** should be empty (\`[]\`) unless you spot real contradictions inside the user's own code — not "this looks like it just installed Cortex."
+8. **Summary** should describe what the application does in 1–2 sentences. Do not mention Project Cortex.
 
 ================================================================
 ### OUTPUT FORMAT

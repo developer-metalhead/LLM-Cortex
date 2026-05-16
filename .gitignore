@@ -36,3 +36,5 @@ yarn-error.log*
 .agents/bus/
 .agents/persistence/
 !*/.gitkeep
+
+cortex.log

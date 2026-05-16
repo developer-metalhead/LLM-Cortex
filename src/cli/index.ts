@@ -5,9 +5,9 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { setupIDE, getAvailableTargets } from "./setup.js";
-import { runInit } from "./init.js";
+import { runInit, runInitMagic } from "./init.js";
 import { runWatch } from "./watch.js";
-import { runStatus } from "./status.js";
+import { runStatus, runStatusNext } from "./status.js";
 import { runConfig } from "./config.js";
 import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
@@ -51,8 +51,13 @@ program
 program
   .command("init")
   .description("Initialize Cortex in this project (interactive setup)")
-  .action(async () => {
-    await runInit(projectRoot);
+  .option("--magic", "Non-interactive setup: auto-detect IDEs, scaffold .knowledge/, register all, done")
+  .action(async (options) => {
+    if (options.magic) {
+      await runInitMagic(projectRoot);
+    } else {
+      await runInit(projectRoot);
+    }
   });
 
 program
@@ -65,8 +70,13 @@ program
 program
   .command("status")
   .description("Check the health and configuration of Project Cortex")
-  .action(async () => {
-    await runStatus(projectRoot);
+  .option("--next", "Print a single recommended next action based on current state")
+  .action(async (options) => {
+    if (options.next) {
+      await runStatusNext(projectRoot);
+    } else {
+      await runStatus(projectRoot);
+    }
   });
 
 program
@@ -111,11 +121,13 @@ program
   .description("Start the Cortex MCP server (STDIO mode)")
   .option("--project-root <path>", "Explicit project root (overrides auto-detection)")
   .action(async (options) => {
-    const root = options.projectRoot
-      ? path.resolve(options.projectRoot)
-      : projectRoot;
+    const explicit = !!options.projectRoot;
+    const root = explicit ? path.resolve(options.projectRoot) : projectRoot;
     loadCortexEnv(root);
-    const server = new CortexMCPServer(root);
+    // When the CLI was launched without --project-root (the portable-entry
+    // case for Antigravity etc.), pass explicit=false so the server queries
+    // the client for workspace roots after the MCP handshake.
+    const server = new CortexMCPServer(root, undefined, explicit);
     await server.start();
   });
 

@@ -62,13 +62,23 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## 🔲 Remaining small items — before Phase 6
+## ✅ Phase 4.5 / 5 follow-ups — now complete
 
-These are planned follow-ups from Phases 4.5 and 5 that are **not yet implemented**:
+- [x] **PreToolUse hook recipe** — `.claude/hooks/inject-knowledge.js` (cross-platform Node.js, PPID session key). `cortex setup claude-code` now writes the script into `.claude/hooks/` and registers the `PreToolUse` matcher in `.claude/settings.json` automatically.
+- [x] **`cortex status --next`** — `src/cli/status.ts:runStatusNext`. Checks KB state → empty → never synced → git diff count vs `.last_sync_commit`. Emits one line. Wired as `cortex status --next`.
+- [x] **`cortex init --magic`** — `src/cli/init.ts:runInitMagic`. Detects IDE marker dirs, scaffolds `.knowledge/`, appends `.gitignore` entries, checks for built `dist/`, calls `setupIDE` for all detected IDEs. Wired as `cortex init --magic`.
 
-- [ ] **PreToolUse hook recipe** (Phase 4.5 planned enhancement) — `.claude/hooks/` config that auto-injects `read_knowledge_index` output into context before any Read/Grep tool call. Pure JSON config + one-line shell wrapper. `.claude/hooks/` directory does not exist yet.
-- [ ] **`cortex status --next`** (Phase 5 follow-up) — single state-aware recommendation derived from `state.json` + `.last_sync_commit`. e.g. *"N files changed since last sync — run `cortex sync`"*. No `--next` flag on `runStatus` yet.
-- [ ] **`cortex init --magic`** (Phase 5 follow-up) — one-command setup: auto-detect IDE (`.claude/`, `.cursor/`, `.vscode/`, `.windsurf/`, `.antigravity/`), run `npm run build` if `dist/` missing, register all IDEs, scaffold `.knowledge/`, write `.gitignore` entries. No `--magic` flag on `runInit` yet.
+---
+
+## ⏳ Planned — Layered entity page extensions (small prompt tweaks, pre-Phase 6)
+
+- [ ] **`## Lifecycle` section** — optional section emitted when an entity has setup/teardown obligations (UI mount/unmount, service init/shutdown, sockets/timers/listeners/file-handle ownership). Format: short `Setup: …` / `Teardown: …` lines. Surfaces paired-resource patterns so AI edits don't drop the cleanup half (the most common resource-leak cause).
+- [ ] **`## Verification` section** — optional section emitted when an entity has a non-trivial verification path. Bullets cover: automated (link to `[[*.test.*]]`), manual repro (one-line console/CLI command), success condition, edge cases worth probing. Longer quoted test code defers to Phase 7's bounded `evidence.content`.
+- [ ] **Purity hint inside `## Behavior`** — prose line when relevant: *"Pure — no side effects"*, *"Stateful — mutates [[GlobalSingleton]]"*, *"Impure — performs I/O via [[FileSystem]]"*. Not a separate field or binary tag (LLM-inferred purity is too unreliable); a soft prose signal in `## Behavior` is enough.
+- [ ] **Guard-clause invariants in `## Behavior`** — when a guard encodes a non-obvious precondition (auth required, init complete, feature flag, deferred state), surface it as a Behavior bullet. Skip trivial null/undefined checks unless they reveal a non-obvious code path.
+- [ ] Combined size: ~25 lines of prompt change in [src/llm/prompts.ts](src/llm/prompts.ts); no writer change, no schema change. Ships independently of Phase 6.
+
+**Explicitly NOT added** (evaluated, rejected): stored test-snippet blobs in entity pages (drift risk, two sources of truth), `Used By (Verification Required)` regression-anchor lists (already covered by Phase 6 staleness + Phase 9 `cortex impact`).
 
 ---
 
@@ -83,6 +93,7 @@ These are planned follow-ups from Phases 4.5 and 5 that are **not yet implemente
 - [ ] `failedApproaches[]` on entities/concepts — extracted from `replaces:` clauses, capped at 10, replayed into CURRENT CONTEXT
 - [ ] `save_concept` MCP tool — explicit query-result persistence: `{ name, description, links? }` → creates/updates concept page + log append + index regeneration
 - [ ] `cortex status` reports stale-entity count; `cortex audit stale` lists them
+- [ ] `cortex export --spec` — renders `state.json` as a human-readable `ARCH_SPEC.md` in the project root (entities + concepts + constraints as declarative rules). Minor CLI addition (`src/cli/export.ts`).
 - [ ] Schema extension in `src/llm/schema.ts` + writer + MCP + prompts
 - [ ] Tests: constraint persistence, violation rejection, stale propagation (2-hop), legacy-links migration, failedApproach capture+replay, `save_concept` create vs. update
 

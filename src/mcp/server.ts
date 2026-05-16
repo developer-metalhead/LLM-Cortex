@@ -5,8 +5,12 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListRootsResultSchema,
+  RootsListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "path";
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
 import { KnowledgeManager } from "../knowledge/writer.js";
 import { SynthesisSchema } from "../llm/schema.js";
 import {
@@ -23,14 +27,26 @@ export class CortexMCPServer {
   private knowledgeDir: string;
   private projectRoot: string;
   private knowledge: KnowledgeManager;
-  // Optional: e.g. embedded in `cortex watch` to clear manual diff queue after IDE-driven save
   private onAfterKnowledgeSave?: () => Promise<void>;
+  private _sourceStats: { tokens: number; fileCount: number } | null = null;
+  // When true, an explicit `--project-root` was passed on the CLI — respect it
+  // and skip MCP roots discovery. When false, the project root is best-effort
+  // from CWD and we should ask the MCP client for its real workspace via
+  // `roots/list` (the only deterministic mechanism in IDEs like Antigravity
+  // that launch MCP servers from their own install directory, not the user's
+  // workspace).
+  private projectRootExplicit: boolean;
 
-  constructor(projectRoot: string, onAfterKnowledgeSave?: () => Promise<void>) {
+  constructor(
+    projectRoot: string,
+    onAfterKnowledgeSave?: () => Promise<void>,
+    projectRootExplicit: boolean = false,
+  ) {
     this.projectRoot = projectRoot;
     this.knowledgeDir = path.join(projectRoot, ".knowledge");
     this.knowledge = new KnowledgeManager(projectRoot);
     this.onAfterKnowledgeSave = onAfterKnowledgeSave;
+    this.projectRootExplicit = projectRootExplicit;
 
     this.server = new Server(
       { name: "project-cortex", version: "1.0.0" },
@@ -39,6 +55,72 @@ export class CortexMCPServer {
 
     this.setupHandlers();
     this.setupPromptHandlers();
+  }
+
+  // Re-point the server at a new workspace root. Called after MCP roots
+  // discovery resolves to a different directory than the CWD default, or when
+  // the client sends a `notifications/roots/list_changed`. Re-creates the
+  // KnowledgeManager and invalidates the cached source-stats so subsequent
+  // tool calls reflect the new project.
+  private setProjectRoot(newRoot: string): void {
+    const resolved = path.resolve(newRoot);
+    if (resolved === this.projectRoot) return;
+    this.projectRoot = resolved;
+    this.knowledgeDir = path.join(resolved, ".knowledge");
+    this.knowledge = new KnowledgeManager(resolved);
+    this._sourceStats = null;
+    console.error(`[Cortex] Project root resolved via MCP roots: ${resolved}`);
+  }
+
+  // Ask the MCP client for its workspace roots and adopt the first file:// one.
+  // Antigravity advertises the `roots` capability — this is the only way to
+  // know the user's workspace when the IDE doesn't launch us from there.
+  private async refreshProjectRootFromClient(): Promise<void> {
+    try {
+      const result = await this.server.request(
+        { method: "roots/list", params: {} },
+        ListRootsResultSchema,
+      );
+      const firstFileRoot = result.roots?.find((r) => r.uri.startsWith("file://"));
+      if (firstFileRoot) {
+        this.setProjectRoot(fileURLToPath(firstFileRoot.uri));
+      }
+    } catch {
+      // Client doesn't support roots, or no roots available — keep CWD default.
+    }
+  }
+
+  private async getSourceStats(): Promise<{ tokens: number; fileCount: number }> {
+    if (this._sourceStats) return this._sourceStats;
+    const fileList = await listSourceFiles(this.projectRoot);
+    let totalBytes = 0;
+    await Promise.all(
+      fileList.files.map(async (relPath) => {
+        try {
+          const stat = await fs.stat(path.join(this.projectRoot, relPath));
+          totalBytes += stat.size;
+        } catch { /* skip */ }
+      })
+    );
+    this._sourceStats = {
+      tokens: Math.round(totalBytes / 4),
+      fileCount: fileList.totalFound,
+    };
+    return this._sourceStats;
+  }
+
+  private async withSavings(text: string): Promise<Array<{ type: "text"; text: string }>> {
+    try {
+      const { tokens: sourceTokens, fileCount } = await this.getSourceStats();
+      const responseTokens = Math.round(text.length / 4);
+      const saved = Math.max(0, sourceTokens - responseTokens);
+      if (saved < 500) return [{ type: "text", text }];
+      const savedFmt = saved >= 1000 ? `~${(saved / 1000).toFixed(1)}k` : `~${saved}`;
+      const footer = `\n\n---\n*Cortex saved ${savedFmt} tokens — synthesized knowledge instead of scanning ${fileCount} source files*`;
+      return [{ type: "text", text: text + footer }];
+    } catch {
+      return [{ type: "text", text }];
+    }
   }
 
   private setupPromptHandlers() {
@@ -59,6 +141,10 @@ export class CortexMCPServer {
         {
           name: "explore",
           description: "Navigate the knowledge base (index → drill into specific entities/concepts).",
+        },
+        {
+          name: "before_change",
+          description: "Pre-flight check before implementing, modifying, or fixing code. Forces a knowledge-first workflow so you don't break dependents or duplicate existing patterns.",
         },
       ],
     }));
@@ -126,6 +212,34 @@ export class CortexMCPServer {
                   "3. Follow links transitively when answering architectural questions — the knowledge base is the source of truth.",
                   "4. Do NOT re-derive architecture from raw source files unless the index is empty or visibly stale; prefer the synthesized knowledge.",
                 ].join(" "),
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "before_change") {
+        return {
+          description: "Knowledge-first pre-flight check before implementing, modifying, or fixing code.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: [
+                  "Before you touch any source file, run the Cortex pre-flight check:",
+                  "",
+                  "1. Call read_knowledge_index. Treat its output as ground truth about what already exists.",
+                  "2. Identify the entity (or absence) that matches the task:",
+                  "   - Implementing something new → search the index for similar entities. If one exists, prefer extending it over creating a parallel implementation.",
+                  "   - Modifying or fixing something → find the entity by name or sourceFile.",
+                  "3. For the target entity, call read_entity and read its Wiring section. Every [[WikiLink]] in Wiring is a downstream consumer that may break if you change the entity's behavior or shape.",
+                  "4. For any concept the entity Implements, call read_concept. The concept describes the invariant the entity is supposed to uphold — violate it and you introduce drift.",
+                  "5. Only NOW open source files. By this point you know: what exists, what depends on it, and what rules apply.",
+                  "",
+                  "Output before writing code: a one-paragraph plan stating (a) which entities you will touch, (b) which dependents could be affected, (c) which invariants apply. Then proceed.",
+                  "",
+                  "If the knowledge base is empty or the relevant entity is missing, say so explicitly and recommend running /ingest first.",
+                ].join("\n"),
               },
             },
           ],
@@ -200,13 +314,13 @@ export class CortexMCPServer {
         {
           name: "read_knowledge_index",
           description:
-            "Reads the current synthesized knowledge index — names, descriptions, links, and source citations for every entity and concept. Call this FIRST before diving into source code; it is the project's architectural memory.",
+            "Reads the project's architectural memory — entities, concepts, source paths, and their relationships. **Call this BEFORE writing new code** (to find reusable patterns and avoid duplicate implementations), **before modifying existing code** (to see what depends on it — breaking a dependent you didn't know about is the #1 way to introduce regressions), **before fixing a bug** (to understand the invariants you might violate), and **before explaining code** (the synthesized description is denser than re-reading source). Use Grep/Read on raw source only AFTER you've established what already exists here. Skipping this step on a non-trivial codebase task means re-deriving knowledge that's already been synthesized — wasted tokens and missed context.",
           inputSchema: { type: "object", properties: {} },
         },
         {
           name: "read_entity",
           description:
-            "Reads the full synthesized page for a single entity (by name, as shown in the index — e.g. 'AuthMiddleware'). Use this to drill into a [[WikiLink]] you saw in the index instead of re-deriving from source.",
+            "Reads the full layered page (Role / Interface / Behavior / Wiring) for a single entity by name — e.g. 'AuthMiddleware'. **Use this when:** you saw a `[[WikiLink]]` in the index and need its details, you're about to modify an entity (read its Wiring section to see what depends on it), or you're implementing something that interacts with an existing entity (read its Interface section instead of inferring the shape from source). One read of this page typically replaces 200–500 lines of source-file scanning.",
           inputSchema: {
             type: "object",
             required: ["name"],
@@ -218,7 +332,7 @@ export class CortexMCPServer {
         {
           name: "read_concept",
           description:
-            "Reads the full synthesized page for a single concept (an abstract pattern, e.g. 'Authentication Strategy'). Use this to follow a [[WikiLink]] from the index.",
+            "Reads the full synthesized page for a single concept — an abstract pattern, strategy, or invariant that spans multiple entities (e.g. 'Authentication Strategy', 'Event Sourcing'). **Use this when:** you're about to introduce or modify a pattern (read the concept first to see how it's already implemented and which entities embody it), or a `[[WikiLink]]` in the index points to a concept rather than a concrete entity. Reading the concept tells you the *why* before you change the *what*.",
           inputSchema: {
             type: "object",
             required: ["name"],
@@ -343,6 +457,41 @@ export class CortexMCPServer {
         await this.knowledge.saveSynthesis(parsed.data);
         await this.knowledge.updateLastSyncCommit(this.projectRoot);
 
+        // Write the knowledge index plus operating rules to GEMINI.md.
+        // Antigravity IDE (v1.20.3+) and the Gemini CLI both auto-load this
+        // file at session start — same role CLAUDE.md plays for Claude Code.
+        // The operating rules section instructs the AI to use Cortex MCP tools
+        // before any code-change task (implement/fix/refactor/etc).
+        try {
+          const index = await this.knowledge.getKnowledgeSummary();
+          if (index && index !== "No existing knowledge found.") {
+            const geminiMd = path.join(this.projectRoot, "GEMINI.md");
+            const operatingRules = [
+              "# Operating Rules — Project Cortex",
+              "",
+              "This project uses Project Cortex (`project-cortex` MCP server). For any task that **changes code** — implement, fix, refactor, modify, add, build, create, update, migrate, rewrite, rename, move, delete — you MUST run this pre-flight before opening any source file:",
+              "",
+              "1. Call `read_knowledge_index` (project-cortex MCP) to see what already exists.",
+              "2. Find the relevant entity in the index below.",
+              "3. Call `read_entity` for it; read the `## Wiring` section to identify every downstream consumer (each `[[WikiLink]]` is something that may break).",
+              "4. For related concepts the entity Implements, call `read_concept` to learn the invariants.",
+              "5. State a one-paragraph plan: which entities you'll touch, which dependents could be affected, which invariants apply.",
+              "6. ONLY THEN open source files and write code.",
+              "",
+              "Skipping this risks duplicating implementations, breaking unknown dependents, and violating documented invariants. If the knowledge base is empty for the task, say so and recommend `/ingest` first.",
+              "",
+              "For purely conceptual questions (*what is X*, *how does Y work*), reading the index below is usually sufficient — skip the deep entity reads.",
+              "",
+              "---",
+              "",
+            ].join("\n");
+            const content = `<!-- Auto-generated by Project Cortex on every synthesis. Do not edit manually. -->\n\n${operatingRules}\n${index}\n`;
+            await fs.writeFile(geminiMd, content, "utf-8");
+          }
+        } catch {
+          // non-fatal — knowledge was saved, GEMINI.md update is best-effort
+        }
+
         if (this.onAfterKnowledgeSave) {
           try {
             await this.onAfterKnowledgeSave();
@@ -363,7 +512,7 @@ export class CortexMCPServer {
 
       if (name === "read_knowledge_index") {
         const content = await this.knowledge.getKnowledgeSummary();
-        return { content: [{ type: "text", text: content }] };
+        return { content: await this.withSavings(content) };
       }
 
       if (name === "read_entity") {
@@ -386,7 +535,7 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: [{ type: "text", text: body }] };
+        return { content: await this.withSavings(body) };
       }
 
       if (name === "read_concept") {
@@ -409,7 +558,7 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: [{ type: "text", text: body }] };
+        return { content: await this.withSavings(body) };
       }
 
       throw new Error(`Unknown tool: ${name}`);
@@ -419,6 +568,27 @@ export class CortexMCPServer {
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
+
+    // After the MCP initialize handshake completes, ask the client for its
+    // workspace roots. Antigravity (and other IDE clients that advertise the
+    // `roots` capability) responds with the active workspace folder as a
+    // file:// URI. This is the only deterministic way for the server to learn
+    // the workspace when the IDE launches us from a non-workspace directory
+    // (Antigravity launches from its own install dir).
+    //
+    // Skip discovery if --project-root was passed explicitly on the CLI — the
+    // user's choice wins.
+    if (!this.projectRootExplicit) {
+      await this.refreshProjectRootFromClient();
+
+      // Re-query on workspace change so an IDE workspace-switch surfaces here.
+      this.server.setNotificationHandler(
+        RootsListChangedNotificationSchema,
+        async () => {
+          await this.refreshProjectRootFromClient();
+        },
+      );
+    }
   }
 }
 

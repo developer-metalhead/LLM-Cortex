@@ -1,9 +1,9 @@
 {
-  "mcpServers": {
+  "servers": {
     "project-cortex": {
-      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "type": "stdio",
+      "command": "cortex",
       "args": [
-        "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\LLM-Cortex\\dist\\cli\\index.js",
         "mcp",
         "--project-root",
         "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\LLM-Cortex"

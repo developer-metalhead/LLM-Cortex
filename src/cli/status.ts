@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 import dotenv from "dotenv";
 import { KnowledgeManager } from "../knowledge/writer.js";
 
@@ -44,7 +45,7 @@ export async function runStatus(projectRoot: string): Promise<void> {
   const logHint = fs.existsSync(logPath) ? `Daemon log: ${logPath}` : "Daemon log: (none yet — created when you run `cortex watch`)";
 
   console.log(`
-  Project Cortex — Status
+  Project Cortex — Status  (tip: \`cortex status --next\` for a single recommended action)
 
   [Config]
   Provider:  ${env.CORTEX_PROVIDER || "not set"}
@@ -60,4 +61,45 @@ export async function runStatus(projectRoot: string): Promise<void> {
   ${lockLine}
   ${logHint}
   `);
+}
+
+export async function runStatusNext(projectRoot: string): Promise<void> {
+  const km = new KnowledgeManager(projectRoot);
+
+  if (!(await km.exists())) {
+    console.log("Knowledge base not initialized — run `cortex init`");
+    return;
+  }
+
+  if (await km.isEmpty()) {
+    console.log("Knowledge base is empty — run `/ingest_cortex` (IDE route) or `cortex watch` then `cortex sync` (daemon route)");
+    return;
+  }
+
+  const lastSync = await km.getLastSyncCommit();
+  if (!lastSync || lastSync === "never synced" || lastSync === "no-commits") {
+    console.log("Never synced — run `/ingest_cortex` to build initial knowledge");
+    return;
+  }
+
+  try {
+    const out = execSync(`git diff --name-only ${lastSync}..HEAD`, {
+      cwd: projectRoot,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim();
+
+    const changed = out
+      .split("\n")
+      .filter((f) => f && !f.startsWith(".knowledge/") && !f.startsWith("node_modules/"))
+      .length;
+
+    if (changed === 0) {
+      console.log("Knowledge base is up to date — nothing to sync");
+    } else {
+      console.log(`${changed} file${changed === 1 ? "" : "s"} changed since last sync — run \`/ingest_cortex\` or \`cortex sync\``);
+    }
+  } catch {
+    console.log("Could not determine pending changes — run `git status` to check");
+  }
 }
