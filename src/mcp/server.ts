@@ -24,8 +24,8 @@ export class CortexMCPServer {
   private knowledgeDir: string;
   private projectRoot: string;
   private knowledge: KnowledgeManager;
-  // Optional: e.g. embedded in `cortex watch` to clear manual diff queue after IDE-driven save
   private onAfterKnowledgeSave?: () => Promise<void>;
+  private _sourceStats: { tokens: number; fileCount: number } | null = null;
 
   constructor(projectRoot: string, onAfterKnowledgeSave?: () => Promise<void>) {
     this.projectRoot = projectRoot;
@@ -40,6 +40,39 @@ export class CortexMCPServer {
 
     this.setupHandlers();
     this.setupPromptHandlers();
+  }
+
+  private async getSourceStats(): Promise<{ tokens: number; fileCount: number }> {
+    if (this._sourceStats) return this._sourceStats;
+    const fileList = await listSourceFiles(this.projectRoot);
+    let totalBytes = 0;
+    await Promise.all(
+      fileList.files.map(async (relPath) => {
+        try {
+          const stat = await fs.stat(path.join(this.projectRoot, relPath));
+          totalBytes += stat.size;
+        } catch { /* skip */ }
+      })
+    );
+    this._sourceStats = {
+      tokens: Math.round(totalBytes / 4),
+      fileCount: fileList.totalFound,
+    };
+    return this._sourceStats;
+  }
+
+  private async withSavings(text: string): Promise<Array<{ type: "text"; text: string }>> {
+    try {
+      const { tokens: sourceTokens, fileCount } = await this.getSourceStats();
+      const responseTokens = Math.round(text.length / 4);
+      const saved = Math.max(0, sourceTokens - responseTokens);
+      if (saved < 500) return [{ type: "text", text }];
+      const savedFmt = saved >= 1000 ? `~${(saved / 1000).toFixed(1)}k` : `~${saved}`;
+      const footer = `\n\n---\n*Cortex saved ${savedFmt} tokens — synthesized knowledge instead of scanning ${fileCount} source files*`;
+      return [{ type: "text", text: text + footer }];
+    } catch {
+      return [{ type: "text", text }];
+    }
   }
 
   private setupPromptHandlers() {
@@ -377,7 +410,7 @@ export class CortexMCPServer {
 
       if (name === "read_knowledge_index") {
         const content = await this.knowledge.getKnowledgeSummary();
-        return { content: [{ type: "text", text: content }] };
+        return { content: await this.withSavings(content) };
       }
 
       if (name === "read_entity") {
@@ -400,7 +433,7 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: [{ type: "text", text: body }] };
+        return { content: await this.withSavings(body) };
       }
 
       if (name === "read_concept") {
@@ -423,7 +456,7 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: [{ type: "text", text: body }] };
+        return { content: await this.withSavings(body) };
       }
 
       throw new Error(`Unknown tool: ${name}`);

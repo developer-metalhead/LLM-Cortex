@@ -169,7 +169,7 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 **Architecture & System Design**
 - **Core Components**: [src/cli/setup.ts](src/cli/setup.ts), [src/cli/init.ts](src/cli/init.ts), [.claude/commands/](.claude/commands/).
 - **Design Pattern**: Strategy — the daemon and the IDE are two interchangeable executors of the Librarian role against one shared schema.
-- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity` (Antigravity writes the **global** config by default — see Post-Launch Fix #2).
+- **Supported IDEs**: `claude-code`, `cursor`, `vscode`, `windsurf`, `claude-desktop`, `antigravity`, `zed`, `cline`, `continue` — 9 targets total. Antigravity, Cline, Zed, Windsurf, and Claude Desktop write a **global** project-agnostic entry (`command: "cortex", args: ["mcp"]`); per-project targets (claude-code, cursor, vscode, continue) write full node paths. See Post-Launch Fix #2 for Antigravity specifics.
 - **Slash commands** shipped for Claude Code: `/ingest_cortex`, `/cortex_status`, `/read_knowledge`.
 - **Antigravity workflows** shipped under `.agents/workflows/`: `ingest`, `read`, `status`, `explore`.
 
@@ -182,7 +182,11 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 - ✅ **Pros**: Zero marginal token cost for users on existing IDE plans. Same output schema as the daemon, so consumers don't care which route produced the knowledge.
 - ❌ **Cons**: Synthesis quality is now coupled to whichever model the IDE happens to use. Requires the user to remember to run `npm run build` before `cortex setup`.
 
-**Planned enhancement — auto-context injection via PreToolUse hook.** Today the IDE agent must explicitly call `read_knowledge_index` before answering an architectural question. A shipped hook recipe under `.claude/hooks/` (and equivalents for Cursor/Windsurf where supported) wraps the IDE's Read/Grep tool calls so the rich knowledge index is loaded into the agent's context *before* it touches source. Implementation is a small JSON config + a one-line shell wrapper that pipes `cortex read` into the tool's input context. No core code change — pure recipe. This is the lowest-effort path to *"the AI already knows your codebase"* without building a native IDE extension per editor (rejected — see out-of-scope).
+**✅ Shipped — auto-context injection via PreToolUse hook (Claude Code).** `cortex setup claude-code` now writes `.claude/hooks/inject-knowledge.js` and registers a `PreToolUse` matcher in `.claude/settings.json`. The hook fires once per agent session (keyed on `process.ppid`) before any `Read` or `Grep` call, runs `cortex read`, and injects the full knowledge index into context before the tool executes. Silent on failure — never blocks a tool call.
+
+**✅ Shipped — GEMINI.md auto-generation (Gemini CLI).** After every `save_synthesis`, the MCP server writes the knowledge index to `GEMINI.md` in the project root. The Gemini CLI reads this file at session start automatically (same role as `CLAUDE.md` for Claude Code). Note: this applies to the Gemini CLI terminal tool, not the Antigravity IDE extension.
+
+**✅ Shipped — token savings telemetry in MCP read responses.** `read_knowledge_index`, `read_entity`, and `read_concept` now append a savings footer to each response: `~X.Xk tokens saved — synthesized knowledge instead of scanning N source files`. Computed by comparing response char count against actual source file byte totals (via `fs.stat` on all source files, cached per server lifetime). Threshold: only shown when savings exceed 500 tokens. Silent on any error — never affects the response payload.
 
 ---
 
@@ -259,7 +263,9 @@ Four related additions, all sharing one schema/migration:
    ```
    This is the missing half of "compounding architectural memory": today we record what *is*, not what was tried and rejected. Whenever an `update` synthesis includes a `replaces:` clause (LLM-emitted free text in the description, e.g. *"replaces the cookie-session approach which broke under SameSite=Strict"*), the writer extracts and persists it as a failed-approach record. The CURRENT CONTEXT for future ingests includes the failed-approaches block for every touched entity, so the LLM (and the human reading the page) sees *"we already tried X, here's why it didn't stick"* before re-proposing it.
 
-5. **On-demand concept persistence (`save_concept` MCP tool).** A new MCP tool alongside `save_synthesis` that lets an IDE agent explicitly persist an architectural insight discovered during a query — without needing to trigger a file-save-based ingest cycle. When a developer asks an architectural question (e.g., "how does auth flow into the session store?") and the agent synthesizes a novel answer — a comparison, a discovered coupling, an analysis — that answer evaporates into chat history under the current design. `save_concept` gives the agent a path to file it:
+5. **`cortex export --spec` (minor CLI addition).** Renders `state.json` as a human-readable `ARCH_SPEC.md` in the project root — entities, concepts, and (Phase 6) constraints formatted as declarative architectural rules. The output is a snapshot: what the knowledge base says your architecture *is* and *must not do*. Useful for onboarding, architecture reviews, or as a starting point for writing explicit rules. Implementation: a single `src/cli/export.ts` command that reads `state.json` and templates it into markdown; no LLM call, no synthesis, no schema change.
+
+6. **On-demand concept persistence (`save_concept` MCP tool).** A new MCP tool alongside `save_synthesis` that lets an IDE agent explicitly persist an architectural insight discovered during a query — without needing to trigger a file-save-based ingest cycle. When a developer asks an architectural question (e.g., "how does auth flow into the session store?") and the agent synthesizes a novel answer — a comparison, a discovered coupling, an analysis — that answer evaporates into chat history under the current design. `save_concept` gives the agent a path to file it:
    ```ts
    // MCP tool signature
    save_concept({ name: string; description: string; links?: string[] })
@@ -287,8 +293,9 @@ Four related additions, all sharing one schema/migration:
 - Legacy `links[]` arrays auto-migrate to typed `relationships[]` on first load, with no manual user step.
 - Failed-approach records appear in CURRENT CONTEXT for any touched entity, capped at 10 most recent per entity.
 - `cortex status` reports stale-entity count and a `cortex audit stale` command lists them.
+- `cortex export --spec` produces a valid `ARCH_SPEC.md` from `state.json` (entities + concepts + constraints as human-readable rules).
 - `save_concept` MCP tool is registered; calling it with `{ name, description, links? }` creates or updates a concept page, appends to `log.md` / `log.jsonl`, and regenerates `index.md` — identical write path as `save_synthesis`, no diff or LLM call required.
-- Tests cover: constraint persistence, violation rejection, stale propagation across a 2-hop typed graph, legacy-links migration, failed-approach capture + replay in CURRENT CONTEXT, `save_concept` create vs. update behavior, `save_concept` log emission.
+- Tests cover: constraint persistence, violation rejection, stale propagation across a 2-hop typed graph, legacy-links migration, failed-approach capture + replay in CURRENT CONTEXT, `save_concept` create vs. update behavior, `save_concept` log emission, `cortex export --spec` output shape.
 
 **Pros & Cons**
 - ✅ **Pros**: Moves Cortex from "passive memory" to "active guardrail" — the stated north star. Typed edges make blast-radius honest, not just a flat fan-out count. Failed-approaches close the "compounding memory" loop in the negative direction — the project stops re-litigating settled architectural decisions. Constraint enforcement gives teams a hard line, not a soft warning. `save_concept` closes the query-result persistence gap: good architectural answers now outlive the conversation that produced them.

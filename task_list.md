@@ -81,6 +81,7 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [ ] `failedApproaches[]` on entities/concepts — extracted from `replaces:` clauses, capped at 10, replayed into CURRENT CONTEXT
 - [ ] `save_concept` MCP tool — explicit query-result persistence: `{ name, description, links? }` → creates/updates concept page + log append + index regeneration
 - [ ] `cortex status` reports stale-entity count; `cortex audit stale` lists them
+- [ ] `cortex export --spec` — renders `state.json` as a human-readable `ARCH_SPEC.md` in the project root (entities + concepts + constraints as declarative rules). Minor CLI addition (`src/cli/export.ts`).
 - [ ] Schema extension in `src/llm/schema.ts` + writer + MCP + prompts
 - [ ] Tests: constraint persistence, violation rejection, stale propagation (2-hop), legacy-links migration, failedApproach capture+replay, `save_concept` create vs. update
 

@@ -386,9 +386,18 @@ When connected via MCP, your IDE's agent has access to these tools:
 | `get_cortex_status` | Check if Cortex is initialized and when it last synced |
 | `get_pending_changes` | Returns either an **incremental** payload (git diff since last sync + current knowledge index) or a **bootstrap** payload (curated source-file list, no diff) when the knowledge base is empty. The `mode` field tells the consumer which path was taken. |
 | `save_synthesis` | Accepts the synthesized JSON result, validates it with Zod, and writes it to `.knowledge/` |
-| `read_knowledge_index` | Returns the rich `index.md` — names, descriptions, source paths, and links. **Call this first** before reading any source files |
-| `read_entity` | Returns the full synthesized page for one entity (e.g. `AuthMiddleware`). Follow `[[WikiLinks]]` from the index with this |
-| `read_concept` | Returns the full synthesized page for one concept (e.g. `Authentication Strategy`). Same as above for concepts |
+| `read_knowledge_index` | Returns the rich `index.md` — names, descriptions, source paths, and links. **Call this first** before reading any source files. Includes a token savings footer (see below) |
+| `read_entity` | Returns the full synthesized page for one entity (e.g. `AuthMiddleware`). Follow `[[WikiLinks]]` from the index with this. Includes a token savings footer |
+| `read_concept` | Returns the full synthesized page for one concept (e.g. `Authentication Strategy`). Same as above for concepts. Includes a token savings footer |
+
+**Token savings footer:** Every `read_knowledge_index`, `read_entity`, and `read_concept` response ends with a line like:
+
+```
+---
+*Cortex saved ~12.4k tokens — synthesized knowledge instead of scanning 47 source files*
+```
+
+Cortex measures the actual byte size of your source files (via `fs.stat`, cached per session) and compares it against the response size. The number is the tokens the AI *didn't* spend re-deriving what the knowledge base already knows. Only shown when savings exceed 500 tokens.
 
 The synthesis JSON returned to `save_synthesis` must match this shape:
 
