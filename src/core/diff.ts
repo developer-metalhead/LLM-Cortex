@@ -38,24 +38,24 @@ export async function getPendingDiff(projectRoot: string, lastSyncCommit: string
       // installs, and single-commit repos — avoids replaying irrelevant history.
       const emptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
       try {
-        const { stdout } = await execAsync(`git diff ${emptyTree} HEAD`, { cwd: projectRoot });
+        const { stdout } = await execAsync(`git diff -w --ignore-blank-lines ${emptyTree} HEAD`, { cwd: projectRoot });
         if (stdout.trim()) return stdout;
       } catch {
         // No commits yet — fall through to staged/unstaged
       }
 
-      const { stdout: fallback } = await execAsync("git diff HEAD", { cwd: projectRoot });
+      const { stdout: fallback } = await execAsync("git diff -w --ignore-blank-lines HEAD", { cwd: projectRoot });
       return fallback;
     }
 
     // Changes committed since last sync
     const { stdout: committed } = await execAsync(
-      `git diff ${lastSyncCommit}..HEAD`,
+      `git diff -w --ignore-blank-lines ${lastSyncCommit}..HEAD`,
       { cwd: projectRoot }
     );
 
     // Uncommitted changes on top
-    const { stdout: uncommitted } = await execAsync("git diff HEAD", { cwd: projectRoot });
+    const { stdout: uncommitted } = await execAsync("git diff -w --ignore-blank-lines HEAD", { cwd: projectRoot });
 
     return [committed, uncommitted].filter(Boolean).join("\n");
   } catch (err: any) {

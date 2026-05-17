@@ -29,10 +29,10 @@ Do NOT apply when:
    - **Modifying or fixing something** → find the entity by name or by `sourceFile`.
 3. Call `read_entity` on the target. Read its `## Wiring` section carefully — every `[[WikiLink]]` listed there is a downstream consumer that may break if you change the entity's behavior or shape.
 4. For any concept the entity Implements, call `read_concept` to learn the invariants the entity is supposed to uphold.
-5. State a **one-paragraph plan** before writing code, covering:
+5. **Pre-Flight Check**: BEFORE opening any source files or writing code, you MUST send a message to the user that starts with "Pre-Flight Check:". In this message, explicitly state:
    - (a) Which entities you will touch
-   - (b) Which dependents could be affected
-   - (c) Which invariants apply
+   - (b) Which dependents could be affected (from the `Wiring` section)
+   - (c) Which invariants you must respect (from the `Concepts` section)
 6. **Open source files** and write code.
 7. **Reflex Sync**: Immediately after finishing code changes, you MUST run the `/ingest` workflow (or the `ingest_cortex` command) to synchronize the new architectural state. This is not optional—it ensures your "Second Brain" always reflects your latest actions.
 In your final message to the user, you must provide:

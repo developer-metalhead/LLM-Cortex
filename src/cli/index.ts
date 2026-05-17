@@ -14,6 +14,7 @@ import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
 import { runAuditStale } from "./audit.js";
 import { runExportSpec } from "./export.js";
+import { runHookInstall } from "./hook.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -155,6 +156,13 @@ program
     } else {
       console.log("Usage: cortex export --spec");
     }
+  });
+
+program
+  .command("hook")
+  .description("Install Git pre-commit hook to remind about architectural sync")
+  .action(async () => {
+    await runHookInstall(projectRoot);
   });
 
 program.parse();

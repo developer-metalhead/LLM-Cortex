@@ -15,6 +15,9 @@ Run this before touching any source file when the task is to **implement**, **mo
 4. For any concept the entity Implements, call `project-cortex:read_concept`. The concept describes the invariant the entity is supposed to uphold — violate it and you introduce architectural drift.
 5. **Only NOW open source files.** By this point you know: what exists, what depends on it, and what rules apply.
 
-Before writing code, state a one-paragraph plan covering: (a) which entities you will touch, (b) which dependents could be affected, (c) which invariants apply. Then proceed.
+Before writing any code, you MUST output a chat message to the user that starts exactly with "Pre-Flight Check:". In this message, explicitly state:
+- (a) Which entities you will touch
+- (b) Which dependents could be affected based on the `Wiring` section
+- (c) Which invariants you must respect based on the `Concepts` section
 
 If the knowledge base is empty or the relevant entity is missing, say so explicitly and recommend running `/ingest` first.
