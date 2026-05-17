@@ -26,6 +26,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 17 | Active Disambiguation via Self-Consistency | ⏳ Planned (research-grade) |
 | 18 | Architectural Embeddings (Typed-Graph + Text Hybrid) | ⏳ Planned (research-grade) |
 | 19 | Librarian Distillation | ⏳ Planned (research-grade) |
+| 20 | Intelligent Architectural Advisor | ⏳ Planned |
 
 ---
 
@@ -963,6 +964,37 @@ A self-supervised distillation pipeline grounded in real production synthesis pa
 **Pros & Cons**
 - ✅ **Pros**: Reduces Cortex's per-synthesis cost by an order of magnitude on the long tail of routine diffs. Genuinely novel research surface — distilling a Librarian from real production synthesis pairs, filtered by self-consistency, is unstudied territory. Closes the loop on Cortex's "compounding knowledge" claim — the knowledge base does not just describe the codebase, it *trains the system that describes the codebase*. The (codebase → Librarian → distilled Librarian) feedback path is itself the paper.
 - ❌ **Cons**: Real ML infrastructure — training pipeline, model serving — is a step change in operational complexity. Mitigated by delegating training to external tools (`unsloth`, `axolotl`) rather than rolling our own and by making every step explicit. Quality is bounded by training-data quality, which is bounded by the frontier teacher's prior accuracy — distillation cannot exceed the teacher. Per-user fine-tuned models mean each install has a different Librarian, complicating reproducibility — accepted because the trade is real cost reduction and the `modelHash` metadata makes the boundary auditable.
+
+---
+
+## 💡 Phase 20: Intelligent Architectural Advisor — ⏳ Planned
+
+**Layman's Terms**
+Cortex shouldn't just document what you built—it should help you build it better. Phase 20 introduces an opt-in advisory layer where Cortex can review your codebase and suggest architectural improvements (like modernizing your auth, caching data, or fixing anti-patterns) without changing your code automatically.
+
+**Technical Terms**
+Implement an opt-in, non-mutating architectural review engine (`cortex suggest` / `cortex review`). Cortex will analyze the current architectural state (`state.json`) against a heuristic pattern library of common modernizations and known anti-patterns. Suggestions are strictly advisory and saved to a dedicated `.knowledge/suggestions/` directory to prevent polluting the canonical `entities/` store. 
+
+**Architecture & System Design**
+- **Core Components**: `src/advisor/engine.ts`, `src/advisor/heuristics.ts`, `src/cli/suggest.ts`.
+- **Design Pattern**: Rule-based heuristic evaluation augmented by LLM synthesis for context-aware recommendations.
+- **Key Considerations**: 
+  - **Trust Boundary**: Must be strictly opt-in via a CLI command. Cortex never automatically generates suggestions during the standard `cortex watch` or `sync` lifecycle to avoid noise.
+  - **Isolation**: Suggestions live in `.knowledge/suggestions/*.md` to keep the primary entity graph pure and canonical.
+
+**Definition of Ready (DoR)**
+- Phase 6 (Guardrails) is fully shipped and stable, providing the underlying contradiction and invariant detection mechanics.
+- A baseline heuristic library (e.g., Redis session caching, JWT standard practices) is defined.
+
+**Definition of Done (DoD)**
+- `cortex suggest` CLI command is implemented and generates markdown suggestions in `.knowledge/suggestions/`.
+- The MCP server exposes a `get_suggestions` tool for IDEs to surface these recommendations.
+- The advisory engine successfully identifies at least three common architectural anti-patterns in a test repository.
+- Tests cover: Opt-in boundary enforcement, isolated storage of suggestions, and basic heuristic matching.
+
+**Pros & Cons**
+- ✅ **Pros**: Moves Cortex up the value chain from passive memory to active architectural partner. Highly valuable for onboarding or refactoring legacy codebases.
+- ❌ **Cons**: Generates potential noise if the heuristics are too aggressive. Requires maintaining an up-to-date pattern library.
 
 ---
 
