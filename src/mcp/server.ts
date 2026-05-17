@@ -151,6 +151,14 @@ export class CortexMCPServer {
           name: "before_change",
           description: "Pre-flight check before implementing, modifying, or fixing code. Forces a knowledge-first workflow so you don't break dependents or duplicate existing patterns.",
         },
+        {
+          name: "audit",
+          description: "Find stale entities — knowledge whose dependencies have shifted since it was last synthesized.",
+        },
+        {
+          name: "export",
+          description: "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
+        },
       ],
     }));
 
@@ -216,6 +224,43 @@ export class CortexMCPServer {
                   "2. For any [[WikiLink]] you want to expand, call read_entity(name) or read_concept(name).",
                   "3. Follow links transitively when answering architectural questions — the knowledge base is the source of truth.",
                   "4. Do NOT re-derive architecture from raw source files unless the index is empty or visibly stale; prefer the synthesized knowledge.",
+                ].join(" "),
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "audit") {
+        return {
+          description: "Find stale entities and their blast-radius dependents.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: [
+                  "Call the project-cortex:audit tool.",
+                  "Each entity returned is stale because a dependency (via depends_on or called_by) was updated after this entity's last refine — that is the blast radius of recent changes.",
+                  "Present the list, then for each stale entity, call read_entity to inspect its prior state and check whether the change in its dependency invalidates documented behavior or invariants.",
+                  "Recommend running /ingest to heal the stale entities. Do not silently auto-heal — surface the drift first so the user sees it.",
+                ].join(" "),
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "export") {
+        return {
+          description: "Generate ARCH_SPEC.md from the synthesized knowledge base.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: [
+                  "Call the project-cortex:export tool.",
+                  "Report the output path of the generated ARCH_SPEC.md.",
+                  "Briefly explain that the file contains the full dependency graph, architectural constraints, historical failed approaches, and conceptual patterns from the synthesized knowledge base — suitable for review, handoff, or onboarding.",
                 ].join(" "),
               },
             },
