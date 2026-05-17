@@ -581,6 +581,112 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
 
 ---
 
+## 🏅 Phase 7.5: Knowledge Quality & Enterprise Governance Foundation — ⏳ Planned
+
+**Layman's Terms**
+Right now, Cortex treats all knowledge as equally trustworthy — a brand-new entity synthesized by the AI and a 6-month-old entity manually reviewed by a senior engineer look exactly the same. Phase 7.5 changes that. Every entity gets a visible quality signal derived entirely from observable facts: how old it is, whether its evidence still points to real code, whether it has open contradictions, and whether a human ever signed off on it. Separately, a new `cortex.constraints.yaml` file lets teams declare org-wide architectural rules ("the payment domain must never import from the legacy domain") that apply across every entity and every ingest — no longer just per-entity annotations in state.json. Together these two features make Cortex trustworthy enough to enforce as a team standard, not just use as a personal tool.
+
+**Why this is pre-Phase 8, not a Phase 6 or 7 change**
+Phase 6 guardrails and Phase 7 audit tools are both fully shipped; reopening them risks regressions. Phase 7.5 is an additive layer over the finished Phase 6 + 7 infrastructure. It produces data (quality scores, org-constraint results) that every downstream phase — 8 (visual graph), 9 (impact preview), 10 (onboarding), 12 (CI gate), 13 (context packs) — can consume. Building it before Phase 8 means all subsequent phases get quality awareness for free rather than each having to re-derive it independently.
+
+**Technical Terms**
+
+##### 1. Knowledge Quality Scoring
+
+A deterministic `quality_score` (0.0–1.0) derived from observable facts stored in `state.json`. Never an LLM-emitted number — only facts:
+
+```
+quality_score = mean(
+  evidence_freshness_score,    // 1.0 if no drift, 0.0 if source-missing
+  contradiction_score,         // 1.0 if 0 open contradictions, decays by count
+  staleness_score,             // 1.0 if not stale, 0.0 if staleSince set
+  age_score,                   // 1.0 if <30 days old, decays to 0.3 after 180 days
+  human_review_score,          // 1.0 if human_reviewed=true, 0.7 otherwise
+)
+```
+
+- Added as a computed field in `updateIndex()` — not persisted in `state.json` (always re-derived so it's never stale itself).
+- Rendered on the index: `### [[AuthService]] — `src/auth.ts` ▸ quality: 94%`.
+- New optional `human_reviewed` and `reviewed_by` fields on `EntityRecord`. Set via `cortex review accept <entity>` (see Phase 23 for the full review workflow; Phase 7.5 just adds the fields and the score).
+- `cortex audit quality` CLI command: lists all entities ranked by quality score ascending. The bottom decile is flagged for attention. Exit code 1 if any entity < 0.5 (configurable threshold via `CORTEX_QUALITY_GATE`).
+- MCP tool `get_entity_quality` returns the score breakdown for a named entity. `get_cortex_status` gains a `lowQualityCount` field alongside `staleCount` and `evidenceDriftCount`.
+
+##### 2. Org-Wide Custom Constraint Language
+
+Today's constraints live per-entity inside `state.json`. An org-wide rule that no entity in the `payment` domain may import from the `legacy` domain requires annotating every payment entity individually. Phase 7.5 introduces `cortex.constraints.yaml` at the project root:
+
+```yaml
+version: 1
+constraints:
+  - id: no-payment-legacy
+    description: "Payment domain must never import Legacy domain"
+    rule:
+      sourcePattern: "src/payment/**"
+      mustNotImport: "src/legacy/**"
+    severity: error        # error | warning
+
+  - id: auth-evidence-required
+    description: "All entities under src/auth/ must have at least one evidence entry"
+    rule:
+      sourcePattern: "src/auth/**"
+      requiresEvidence: true
+    severity: warning
+
+  - id: public-api-needs-contract
+    description: "Any entity tagged 'public-api' must declare a contract constraint"
+    rule:
+      tag: "public-api"
+      requiresConstraint: "contract"
+    severity: error
+```
+
+- Evaluated at synthesis time (same moment as per-entity constraints in Phase 6) by a new `OrgConstraintEvaluator` that runs after `save_synthesis`'s existing constraint block.
+- `cortex lint` reports org-constraint violations as a separate `org_constraint` rule category.
+- `cortex setup` includes the constraint file in the generated `.gitignore` exclusion list (teams commit the constraint file; it's not gitignored by default).
+- Cross-workspace constraints in Phase 11 (monorepo) extend this same format with a `workspace` scope field.
+
+##### 3. Quality-Aware Downstream Hooks
+
+Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream phase can call without recomputing:
+
+- **Phase 8 (Visual Graph)**: Node fill color derived from quality score (green ≥ 0.8, amber 0.5–0.8, red < 0.5).
+- **Phase 9 (Impact Preview)**: Impact report annotates each entity in the blast radius with its quality score — low-quality dependents carry higher uncertainty.
+- **Phase 10 (Onboarding)**: Centrality × quality determines reading-path order. A high-centrality but low-quality entity is demoted with a caveat.
+- **Phase 12 (CI Integration)**: New optional `--quality-gate <threshold>` flag on the GitHub Action. PRs that drop the mean quality score below the threshold fail CI.
+- **Phase 13 (Context Packs)**: Quality × centrality determines inclusion order, not just centrality alone.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/knowledge/quality.ts` (score computation — pure function over `EntityRecord`, no I/O), new `src/knowledge/org-constraints.ts` (YAML loader + evaluator), new `src/cli/review.ts` (accept/reject workflow stub — full review in Phase 23), additions to `src/cli/audit.ts` (`cortex audit quality`), additions to `src/mcp/server.ts` (`get_entity_quality`), modifications to `src/knowledge/writer.ts` (`updateIndex` calls `QualityEvaluator`).
+- **Design Pattern**: Score is a projection, never persisted. `human_reviewed` and `reviewed_by` ARE persisted in `state.json` as facts, not scores. Org constraints live in `cortex.constraints.yaml`, not in `state.json` — separating org policy from project knowledge cleanly.
+- **Key Considerations**:
+  - Quality score must be **deterministic and fast** — it's called on every `updateIndex()`, which runs after every synthesis. Pure function, no I/O, no LLM calls.
+  - The `age_score` decay curve (30 days → 1.0, 180 days → 0.3) is configurable via `CORTEX_QUALITY_AGE_DECAY_DAYS`. Default is calibrated for active codebases; slow-moving infrastructure codebases should tune it up.
+  - Org constraints are evaluated **after** per-entity constraints, using the same violation-throwing mechanism. This keeps the call path consistent — the Librarian sees the same structured error regardless of which constraint type fired.
+  - The `requiresEvidence` rule type is intentionally the only cross-entity aggregate rule. Per-entity rules (mustNotImport, mustNotBeCalledBy) remain in `state.json`. Mixing them would blur the boundary between "what this entity declared" and "what the org decreed."
+
+**Definition of Ready (DoR)**
+
+- Phase 7 (Audit + Evidence) is stable — quality scoring depends on `evidence` fields and `staleSince`, both from Phase 6/7.
+
+**Definition of Done (DoD)**
+
+- `quality_score` (0–1) computed and displayed on `index.md` for every entity.
+- `cortex audit quality` lists entities below threshold, exits nonzero if any below `CORTEX_QUALITY_GATE`.
+- `get_entity_quality` MCP tool returns score + breakdown per entity.
+- `get_cortex_status` includes `lowQualityCount`.
+- `cortex.constraints.yaml` loaded and evaluated at synthesis time; violations throw the same structured error as Phase 6 per-entity constraints.
+- `cortex lint` includes `org_constraint` as a reportable rule.
+- `human_reviewed` / `reviewed_by` fields accepted in `EntityRecord` and persisted in `state.json`.
+- Tests cover: score computation for each dimension, decay curves, org-constraint evaluation (error + warning severity), `requiresEvidence` rule, quality output in `updateIndex`.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Makes Cortex trustworthy as a team standard, not just a personal tool. Quality score collapses five separate signals (freshness, staleness, contradictions, age, human review) into one number that can gate CI, color graphs, weight context packs, and focus attention — without requiring LLM intuition. Org constraints close the gap between "every entity can declare its own rules" and "the team can declare rules that span all entities."
+- ❌ **Cons**: Quality score introduces a number that developers will debate. Mitigated by keeping the formula documented, deterministic, and configurable so teams can tune weights. Org constraint YAML adds a new file to manage; mitigated by keeping the schema minimal and providing clear validation errors with fix hints.
+
+---
+
 ## 🎨 Phase 8: Visual & Browseable Knowledge Graph — ⏳ Planned
 
 **Layman's Terms**
@@ -604,14 +710,16 @@ Two complementary surfaces over the existing `state.json` graph — no new data,
 **Definition of Ready (DoR)**
 
 - Phase 6's `staleSince` and constraint metadata are stable (so the UI can render them).
+- Phase 7.5's `QualityEvaluator` is available — graph node coloring derives from the quality score.
 
 **Definition of Done (DoD)**
 
 - `cortex graph --scope <entity> --depth 2` produces valid Mermaid output usable in a GitHub PR.
 - `cortex serve` opens a browseable graph viewer; clicking a node shows its full markdown page.
 - Stale entities and warnings are visually distinct.
+- **Phase 7.5 strengthening:** Node fill color derived from quality score (green ≥ 0.8, amber 0.5–0.8, red < 0.5); hovering a node shows the quality breakdown tooltip.
 - Viewer runs offline with no external requests (verified by network-tab inspection).
-- Tests cover: Mermaid emission for empty/single-node/multi-edge graphs, server lifecycle, static-asset bundling.
+- Tests cover: Mermaid emission for empty/single-node/multi-edge graphs, server lifecycle, static-asset bundling, quality-color assignment on a synthetic graph with known scores.
 
 **Pros & Cons**
 
@@ -643,6 +751,7 @@ The inverse of Phase 6's blast-radius propagation. Where Phase 6 reacts to an `a
 **Definition of Ready (DoR)**
 
 - Phase 8 has factored graph traversal into `src/knowledge/graph.ts`. Phase 9 shares the same builder.
+- Phase 7.5's `QualityEvaluator` is available — impact reliability annotations derive from it.
 
 **Definition of Done (DoD)**
 
@@ -650,7 +759,8 @@ The inverse of Phase 6's blast-radius propagation. Where Phase 6 reacts to an `a
 - `cortex deps <entity>` returns outbound dependencies.
 - `impact_analysis` MCP tool is registered and returns identical data to the CLI.
 - Hypothetical-delete mode produces a markdown report linkable to a PR description.
-- Tests cover: hop ranking, hypothetical mode, empty-dependency case, cyclic-link safety.
+- **Phase 7.5 strengthening:** Each entity in the impact report is annotated with its quality score. Entities with quality < 0.5 display a `⚠ low-quality` badge — the blast-radius prediction is less reliable for poorly-evidenced entities.
+- Tests cover: hop ranking, hypothetical mode, empty-dependency case, cyclic-link safety, quality annotation on impact report.
 
 **Pros & Cons**
 
@@ -687,6 +797,7 @@ A new synthesis _output mode_ — no schema changes, no new data, just a differe
 
 - Knowledge base has at least ~20 entities (smaller bases don't need onboarding — just read the index).
 - `state.json` link graph is well-populated (depends on Phase 6's link-injection quality).
+- Phase 7.5's `QualityEvaluator` is available — quality-weighted reading path requires it.
 
 **Definition of Done (DoD)**
 
@@ -695,7 +806,8 @@ A new synthesis _output mode_ — no schema changes, no new data, just a differe
 - The MCP `onboard` prompt produces equivalent output via an IDE agent.
 - Directories with ≥5 entities get an auto-emitted parent-summary concept on the next ingest; `read_knowledge_index` renders them at the top of the index.
 - `cortex find --type entity|concept|parent "<query>"` returns ranked matches with a one-line preview.
-- Tests cover: empty base (graceful failure with hint), single-entity base (degenerate but valid output), centrality ranking correctness on a known graph, parent-summary auto-emission threshold, `cortex find` exact-name vs description-hit ordering.
+- **Phase 7.5 strengthening:** Reading path ordering uses `centrality × quality_score` not centrality alone. High-centrality but low-quality entities (quality < 0.5) are demoted in the path and annotated with a caveat: _"This entity is central but has low confidence — verify before treating as authoritative."_
+- Tests cover: empty base (graceful failure with hint), single-entity base (degenerate but valid output), centrality ranking correctness on a known graph, parent-summary auto-emission threshold, `cortex find` exact-name vs description-hit ordering, quality-demotion of a high-centrality low-quality entity.
 
 **Pros & Cons**
 
@@ -729,6 +841,7 @@ Cortex becomes monorepo-aware. The CLI gains a workspace concept; `cortex init` 
 **Definition of Ready (DoR)**
 
 - Phases 6–7 are stable. Federation should not be invented before single-repo behavior is rock-solid.
+- Phase 7.5's org-constraint YAML format is stable — cross-workspace constraints extend it with a `workspace` scope field.
 
 **Definition of Done (DoD)**
 
@@ -736,7 +849,8 @@ Cortex becomes monorepo-aware. The CLI gains a workspace concept; `cortex init` 
 - File changes route to the correct workspace's `.knowledge/` automatically.
 - Cross-workspace `[[ws:Entity]]` links resolve in `read_entity` and the federated index.
 - Cross-workspace constraints (Phase 6) reject violating syntheses.
-- Tests cover: workspace resolution, cross-workspace link rendering, bootstrap-per-workspace, constraint propagation.
+- **Phase 7.5 strengthening:** `cortex.constraints.yaml` supports a `workspace` scope field, enabling org-wide rules scoped per workspace pair — e.g. `sourceWorkspace: frontend` + `mustNotImport: backend/internal/**`. The federated index renders per-workspace quality scores so a team lead can see which workspace's knowledge is freshest.
+- Tests cover: workspace resolution, cross-workspace link rendering, bootstrap-per-workspace, constraint propagation, workspace-scoped org constraint evaluation.
 
 **Pros & Cons**
 
@@ -778,6 +892,7 @@ Two integration points:
 
 - Phase 6 (constraints) is stable; without it, the CI surface has nothing to block on.
 - Phase 7 (`log.jsonl`) is stable; the PR comment renders structured diffs from it.
+- Phase 7.5 quality scoring is stable; CI quality gate depends on it.
 
 **Definition of Done (DoD)**
 
@@ -785,7 +900,8 @@ Two integration points:
 - `cortex sync --dry-run` produces a structured report without writing.
 - GitHub Action published, documented, and exercised on a real repo.
 - Sticky PR comment renders correctly with synthesis diff + warnings + constraint violations.
-- Tests cover: hook install/uninstall idempotency, dry-run output shape, CI integration smoke test.
+- **Phase 7.5 strengthening:** GitHub Action gains an optional `quality-gate` input (0.0–1.0 threshold). When set, the action computes the mean quality score across all entities touched by the PR and fails CI if the score drops below the threshold. PR comment includes a "Quality delta" row: `⬆ +0.02 (from 0.81 → 0.83)` or `⬇ -0.05 (from 0.76 → 0.71) — below threshold 0.75 ❌`. Org-constraint violations from Phase 7.5's `cortex.constraints.yaml` surface as a separate CI failure category.
+- Tests cover: hook install/uninstall idempotency, dry-run output shape, CI integration smoke test, quality-gate threshold pass/fail, org-constraint CI reporting.
 
 **Pros & Cons**
 
@@ -1159,13 +1275,250 @@ Implement an opt-in, non-mutating architectural review engine (`cortex suggest` 
 
 ---
 
+## 🌐 Phase 21: Polyrepo Federation — ⏳ Planned
+
+**Layman's Terms**
+Most enterprises don't use one giant monorepo — they have dozens or hundreds of separate Git repositories, each owned by a different team. Today Cortex only covers one repo at a time. Phase 21 makes entities from one repo visible to another. If your payment service depends on something in the auth service's repo, Cortex can now track that cross-repo dependency, flag when it drifts, and enforce constraints across team boundaries — all without anyone needing to copy-paste architecture docs.
+
+**How this differs from Phase 11 (Monorepo Federation)**
+Phase 11 covers multiple workspaces inside a single Git repository (same disk, same CI, same team). Phase 21 covers entirely separate repositories (different Git remotes, different teams, different CI pipelines, network transport required). Phase 11 uses a shared file system; Phase 21 requires a push protocol over the network and a central registry that each repo's CI can write to.
+
+**Technical Terms**
+Each repo publishes a signed knowledge export (a subset of its `state.json` — public entities only) to a central **Cortex Registry** after each merge. Consuming repos subscribe to upstream registry entries and materialize read-only "foreign" entities in their local `.knowledge/`. Cross-repo `[[repo:Entity]]` links resolve against these materialized entities. Constraints can span repos: a `cortex.constraints.yaml` rule in `payment-service` can declare `mustNotImport: auth-service/InternalTokenStore`.
+
+- **Registry model**: Cortex Registry is a lightweight REST service (self-hostable Docker image; also offered as a managed tier) that accepts POST of a signed knowledge export (`cortex publish`) and serves GET of any repo's public entity index. Exports are content-addressed and append-only (no mutation of published history).
+- **Public/private surface**: each entity in `state.json` gains an optional `visibility: "public" | "private"` field (default `private`). Only `public` entities are included in the published export. Teams explicitly curate what their service contract exposes.
+- **Materialization**: `cortex pull [--registry <url>] [--upstream <repo-name>]` fetches the latest export from an upstream repo and writes read-only entity stubs to `.knowledge/foreign/<repo-name>/`. Stubs render in the local index with a `🔗 foreign` badge and are excluded from synthesis targets (never overwritten by the local Librarian).
+- **Cross-repo constraints**: Phase 7.5's `cortex.constraints.yaml` gains a `sourceRepo` / `targetRepo` scope field. Cross-repo constraints are evaluated at synthesis time against the materialized foreign entities.
+- **Staleness propagation**: when a foreign entity stub is updated (the upstream published a new export), local entities with `depends_on` edges to it are stamped `staleSince` — the same blast-radius mechanic from Phase 6, now spanning repos.
+- **CI integration**: the Phase 12 GitHub Action gains a `cortex publish` step that fires after a successful merge and pushes the public entity index to the registry. `cortex pull` fires at the start of each CI run to freshen foreign stubs.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/registry/` (client for push/pull/subscribe, content-addressed storage, signing), new `src/knowledge/foreign.ts` (stub materialization + staleness bridge), `cortex publish` and `cortex pull` CLI commands, additions to Phase 12 GitHub Action.
+- **Design Pattern**: Federated, not centralized. Each repo owns and controls its own entities; the registry is a coordination bus, not an authority. A repo can leave the registry at any time without corrupting its own knowledge. Foreign stubs are derivatives — they can always be re-pulled.
+- **Key Considerations**:
+  - Entity visibility (`public` / `private`) must be declared deliberately — no default-public behavior. Undeclared entities are private.
+  - The registry must be self-hostable with zero cloud dependency (Docker + SQLite is enough). Managed tier is optional.
+  - Signing (HMAC with repo API key) prevents a rogue registry from injecting foreign entities. The consuming repo's `cortex pull` verifies the signature before materializing.
+  - Do NOT attempt cross-repo constraint evaluation at synthesis time for large orgs — fan-out is quadratic. Evaluate only the constraints declared in the local `cortex.constraints.yaml` against the pre-materialized stubs (no live network call during synthesis).
+
+**Definition of Ready (DoR)**
+
+- Phase 11 (Monorepo Federation) is shipped — cross-workspace link resolution sets the pattern.
+- Phase 7.5 (Org Constraints) is shipped — the YAML format is extended, not redesigned.
+- Phase 12 (CI Integration) is shipped — `cortex publish` hooks into the same Action.
+
+**Definition of Done (DoD)**
+
+- `cortex publish --registry <url>` signs and uploads the public entity index after a merge.
+- `cortex pull --upstream <repo>` materializes foreign entity stubs in `.knowledge/foreign/<repo>/`.
+- Cross-repo `[[repo:Entity]]` links resolve in `read_entity` and the federated index.
+- Cross-repo constraints in `cortex.constraints.yaml` (with `sourceRepo`/`targetRepo` fields) are evaluated at synthesis time against local stubs.
+- Stale-propagation fires on foreign-entity update (upstream published a new export).
+- Registry self-hostable with Docker + SQLite; zero mandatory cloud dependency.
+- Tests cover: publish/pull round-trip, stub materialization, cross-repo constraint evaluation, staleness propagation from foreign entity update, visibility filtering (private entities not in export).
+
+**Pros & Cons**
+
+- ✅ **Pros**: The single biggest enterprise unlock. "Which team's service does my service depend on, and is that contract still honored?" is an unanswered question in every polyrepo org. Cortex answers it automatically. Cross-repo staleness propagation is uniquely valuable — no other tool alerts you that a service you depend on quietly changed its contract.
+- ❌ **Cons**: Introduces operational surface (running a registry, managing API keys per repo, CI steps). Mitigated by keeping the registry minimal (self-hostable, no database beyond SQLite) and the CI steps optional (teams can publish/pull manually). Visibility curation is a new responsibility for each team — entities are private by default so the failure mode is "nothing published" not "everything leaked."
+
+---
+
+## 🖥️ Phase 22: Central Knowledge Server — ⏳ Planned
+
+**Layman's Terms**
+Phase 21 lets repos share entity definitions. Phase 22 gives every developer and every AI in the org a single URL they can query to understand the full architectural picture — without having to be on any specific machine or have any repo checked out. A CTO can open a dashboard and see: "We have 847 entities across 23 repos. 12 are stale. 3 have open contradictions. Mean quality score: 0.81." An AI assistant in any IDE gets the same information by calling a REST endpoint. This is Cortex as organizational infrastructure, not a dev tool.
+
+**Technical Terms**
+Extend the Phase 21 registry into a full **Central Knowledge Server** — a self-hostable service that aggregates all repo exports into a unified, queryable graph and exposes it via a REST API and an MCP-over-HTTP endpoint.
+
+- **Unified graph**: the server builds and maintains a cross-repo graph by merging all published entity indexes. Cross-repo `[[repo:Entity]]` edges become first-class graph edges (not link stubs). The graph is queryable by entity name, source file pattern, repo, quality score, relationship kind, constraint violations.
+- **REST API** (versioned, token-authenticated):
+  - `GET /v1/entities` — paginated list with filter params
+  - `GET /v1/entities/:repo/:name` — full entity record
+  - `GET /v1/graph?from=:entity&depth=N` — subgraph traversal
+  - `GET /v1/quality?repo=:repo` — quality summary per repo
+  - `GET /v1/constraints/violations` — org-wide constraint violations
+  - `POST /v1/publish` — repo push endpoint (signed, same as Phase 21)
+- **MCP-over-HTTP endpoint**: the server exposes the same MCP tools (`read_entity`, `read_knowledge_index`, `impact_analysis`, `log_query`) over HTTP with Bearer token auth. IDE agents in any repo can connect to the org-wide server instead of (or alongside) their local Cortex instance. This is the "Cortex for the org" surface.
+- **CTO Dashboard**: a simple read-only web UI at `/dashboard` showing: entity count per repo, stale count, quality score distribution, open contradictions, constraint violations, and a unified graph visualization (Phase 8's Mermaid renderer, extended to the org-wide graph). No login-gated secrets — API token controls access.
+- **Role-based access**: `VIEWER` (read all public entities) / `PUBLISHER` (can POST /publish) / `ADMIN` (can see private entities, manage tokens). Private entities from Phase 21 are only visible to `ADMIN` tokens from the owning repo.
+- **Self-hostable first**: Docker Compose ships with the server, SQLite (or Postgres for >100 repos), and the dashboard. No Cortex Cloud dependency required.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/server/` package (REST API, MCP-over-HTTP adapter, SQLite graph store, dashboard static assets), new `src/cli/server.ts` (`cortex server start/stop/status`), registry client extended to POST to the central server's `/publish` endpoint.
+- **Design Pattern**: Event-sourced from publish events. The central server replays all published exports to build the unified graph; it is rebuildable from scratch from the publish log. Writes only happen via `POST /publish` (from repo CI); the read surface is entirely query-based.
+- **Key Considerations**:
+  - Do NOT build authentication from scratch — use JWT with HMAC signing (same mechanism as Phase 21 publish signing). Tokens are issued by `cortex server token create`.
+  - The MCP-over-HTTP endpoint must be backward-compatible with all existing MCP tool definitions from Phases 4–7. No new tool schemas required; existing tools work against the org-wide graph transparently.
+  - Dashboard assets must be bundled locally — no CDN, consistent with Phase 8's local-first principle. The server package ships with bundled static files.
+  - For large orgs (>100 repos), SQLite is replaced by Postgres. The data model is identical — just swap the adapter.
+
+**Definition of Ready (DoR)**
+
+- Phase 21 (Polyrepo Federation) is shipped — the publish/pull protocol is stable.
+- Phase 8 (Visual Graph) is shipped — the Mermaid renderer is reused for the dashboard.
+- Phase 9 (Impact Preview) is shipped — `impact_analysis` MCP tool is reused over HTTP.
+
+**Definition of Done (DoD)**
+
+- `cortex server start` launches the central server (REST + MCP-over-HTTP + dashboard).
+- `POST /v1/publish` accepts and stores repo exports; unified graph is rebuilt incrementally.
+- `GET /v1/entities`, `/graph`, `/quality`, `/constraints/violations` return correct data across all published repos.
+- MCP-over-HTTP endpoint responds to `read_entity`, `read_knowledge_index`, `impact_analysis`, `log_query` with org-wide scope.
+- Dashboard renders entity count, quality scores, stale count, and org-wide graph per repo.
+- Role-based access enforced: VIEWER cannot see private entities, PUBLISHER cannot access admin endpoints.
+- Self-hosted via Docker Compose; zero mandatory cloud dependency.
+- Tests cover: publish round-trip, unified graph query, cross-repo edge resolution, MCP-over-HTTP tool dispatch, role-based access enforcement, dashboard static asset serving.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Makes Cortex visible to leadership, not just developers. A CTO dashboard with mean quality score per team is a governance artifact, not a debug tool. MCP-over-HTTP means any AI in the org gets org-wide architectural context without needing a local Cortex install — the knowledge travels with the URL.
+- ❌ **Cons**: Significant operational surface (server to run, tokens to manage, dashboard to maintain). Mitigated by Docker Compose and SQLite defaults — "zero to running" should be under 10 minutes. The unified graph is only as good as teams' publishing discipline — if a repo doesn't publish, it's invisible.
+
+---
+
+## 👥 Phase 23: Human-in-the-Loop Review — ⏳ Planned
+
+**Layman's Terms**
+Today, everything Cortex knows was written by an AI. That's fine for a personal tool, but enterprises need a way to say "this entity's description has been verified by a senior engineer." Phase 23 adds a lightweight review queue: newly synthesized entities go into a "pending review" state, a senior dev reviews them (accepts, edits, or rejects), and accepted entities get a `human_reviewed` badge. Rejected entities generate a `failedApproach` entry so the AI doesn't repeat the same mistake. The review workflow is opt-in — teams that don't configure it get today's behavior unchanged.
+
+**Why this is Phase 23 and not a feature of Phase 6/7**
+A prior proposal ("Review-gated falsifiable claims") was rejected because it conflicted with the autonomous-synthesis premise — requiring a review gate before persistence blocks the watcher. Phase 23 is scoped differently: review is **post-persistence, opt-in, and non-blocking**. The AI writes knowledge as today; the review queue surfaces it for optional human sign-off. The `human_reviewed` field introduced in Phase 7.5 is the storage foundation; Phase 23 is the workflow on top of it.
+
+**Technical Terms**
+
+- **Review queue**: a new `state.json` field `pendingReview: string[]` — entity names synthesized since the last review pass. Populated by `save_synthesis` when `CORTEX_REVIEW_MODE=enabled` is set; ignored when unset (backward-compatible).
+- **CLI workflow**:
+  - `cortex review list` — shows all pending entities with their synthesized descriptions.
+  - `cortex review accept <entity> [--reviewer <name>]` — sets `human_reviewed: true`, `reviewed_by: <name>`, removes from queue.
+  - `cortex review edit <entity>` — opens the entity in `$EDITOR` for inline correction, then accepts.
+  - `cortex review reject <entity> --reason "<text>"` — removes from queue, appends a `failedApproach` entry with the rejection reason so the Librarian avoids the same synthesis next time.
+  - `cortex review skip <entity>` — removes from queue without accepting or rejecting (e.g., "I'll come back to this").
+- **MCP prompt**: a new `review` slash command in the IDE — shows the review queue and lets the AI assist by reading `read_entity` and drafting a suggested correction, then the human accepts or edits.
+- **Quality impact**: accepted entities gain `human_review_score: 1.0` in Phase 7.5's quality formula; rejected entities have their description invalidated (description retained but `invalidated: true` flag set — the Librarian must re-synthesize on next ingest).
+- **CI integration**: Phase 12 GitHub Action gains an optional `require-review-for: [entity-pattern]` input. PRs that synthesize entities matching the pattern without `human_reviewed: true` post a warning comment (not a failure — human review is never a hard gate, consistent with the surface-don't-act principle).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/cli/review.ts`, modifications to `src/knowledge/writer.ts` (populate `pendingReview` when `CORTEX_REVIEW_MODE=enabled`), new MCP prompt registration, additions to Phase 12 GitHub Action.
+- **Design Pattern**: Post-persistence, opt-in, non-blocking. The review workflow is an advisory layer over the canonical writer — it never delays or blocks a synthesis call. Rejections surface as `failedApproach` entries so the AI learns from human corrections without requiring a separate training loop.
+- **Key Considerations**:
+  - `CORTEX_REVIEW_MODE` is `disabled` by default. Setting it to `enabled` is a deliberate team decision, not an automatic behavior.
+  - `cortex review edit` must open the entity in `$EDITOR` and parse the result back into `EntityRecord`. Validation against `SynthesisSchema` runs before writing.
+  - The CI warning for unreviewed entities is a comment, not a failure. Hard-blocking human review defeats the purpose — the team should be able to ship with unreviewed entities and catch up in the review queue.
+
+**Definition of Ready (DoR)**
+
+- Phase 7.5's `human_reviewed` / `reviewed_by` fields are in `state.json` and quality scoring.
+- Phase 12 (CI Integration) is shipped for the optional warning comment.
+
+**Definition of Done (DoD)**
+
+- `CORTEX_REVIEW_MODE=enabled` populates `pendingReview[]` in `state.json` on each synthesis.
+- `cortex review list / accept / edit / reject / skip` work against the review queue.
+- `cortex review edit` opens `$EDITOR`, validates changes against schema, writes back.
+- Rejected entities gain a `failedApproach` entry automatically.
+- Accepted entities gain `human_reviewed: true` and propagate quality score improvement.
+- MCP `review` prompt surfaces the review queue and suggests corrections via `read_entity`.
+- CI warning comment for unreviewed entities matching configured patterns.
+- Tests cover: queue population on synthesis, accept/reject state transitions, edit round-trip validation, `failedApproach` injection on reject, quality score update on accept.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Closes the enterprise trust gap. "Can I rely on this architectural doc?" has a clear answer: yes if `human_reviewed: true`, treat with caution otherwise. The rejection-to-failedApproach pipeline turns human corrections into Librarian training data — the AI gets better from human feedback without a separate fine-tuning loop.
+- ❌ **Cons**: Review queues accumulate if teams don't tend them. Mitigated by surfacing queue depth in `cortex status` and `cortex audit quality`. `$EDITOR`-based editing is a UX step backward from the IDE; mitigated by the MCP `review` prompt which lets the AI draft the correction in-IDE.
+
+---
+
+## 📋 Phase 24: Compliance Constraint Templates — ⏳ Planned
+
+**Layman's Terms**
+Regulated industries (healthcare, payments, financial services) have strict rules about how code must be structured: patient data can't touch certain services, payment processing can't share state with user sessions, all public endpoints must be authenticated. Today you'd have to translate those regulations into Cortex constraints by hand. Phase 24 ships pre-built compliance packs for common regulations — import a pack, run `cortex lint`, and get a report that maps your architectural violations directly to the regulatory requirement they break. The report is formatted for compliance teams, not just developers.
+
+**Technical Terms**
+A library of pre-built `cortex.constraints.yaml` packs for common regulatory frameworks, distributed as versioned npm packages (`@cortex/compliance-hipaa`, `@cortex/compliance-pci-dss`, `@cortex/compliance-soc2`). Each pack declares constraints using Phase 7.5's org-constraint DSL, extended with a `regulatory_ref` field that cites the specific clause of the regulation that the constraint enforces.
+
+```yaml
+# @cortex/compliance-pci-dss v1.0.0
+version: 1
+compliance:
+  framework: PCI-DSS
+  version: "4.0"
+constraints:
+  - id: pci-req-3-4-no-pan-in-logs
+    regulatory_ref: "PCI-DSS v4.0 Req 3.4"
+    description: "PAN data must not be written to log entities"
+    rule:
+      sourcePattern: "src/payment/**"
+      mustNotImport: ["src/logging/**", "src/audit/**"]
+    severity: error
+
+  - id: pci-req-6-2-code-review-required
+    regulatory_ref: "PCI-DSS v4.0 Req 6.2"
+    description: "All payment entities must be human-reviewed"
+    rule:
+      sourcePattern: "src/payment/**"
+      requiresField: "human_reviewed"
+    severity: error
+
+  - id: pci-req-7-1-least-privilege
+    regulatory_ref: "PCI-DSS v4.0 Req 7.1"
+    description: "Payment entities must declare access contracts"
+    rule:
+      sourcePattern: "src/payment/**"
+      requiresConstraint: "contract"
+    severity: warning
+```
+
+- **Installation**: `cortex compliance add pci-dss` — downloads the pack, merges it into `cortex.constraints.yaml` under a `[pci-dss]` namespace, leaves custom constraints untouched.
+- **Compliance report**: `cortex compliance report --framework pci-dss [--format markdown|json|pdf]` — runs `cortex lint` filtered to the pack's constraints and produces a report grouped by regulatory clause, not by entity. Each clause section shows: requirement text, Cortex rule, entities that pass, entities that violate. Exportable as a PDF for auditors.
+- **Evidence attachment**: Compliance reports can be attached to Phase 7's evidence log — `cortex compliance report --attach` appends a JSONL entry with `{ type: "compliance-report", framework, runAt, violations: [...] }`, creating a durable audit trail of when checks ran and what they found.
+- **Custom packs**: teams can write their own packs in the same format and share them via npm. The pack format is just a superset of `cortex.constraints.yaml` — no new schema concepts.
+- **Human-review integration**: the `requiresField: "human_reviewed"` rule type delegates to Phase 23's review status. A payment entity that hasn't been reviewed fails the PCI constraint. This makes Phase 23 adoption non-negotiable in regulated environments — the regulation enforces it, not Cortex.
+
+**Architecture & System Design**
+
+- **Core Components**: new `@cortex/compliance-*` npm packages (data only — constraint YAML + regulatory text), new `src/cli/compliance.ts` (`cortex compliance add / report / list`), extensions to `src/knowledge/org-constraints.ts` (parse `regulatory_ref` field, generate grouped report), new `src/knowledge/compliance-report.ts` (report renderer for markdown/JSON/PDF via `pdfkit`).
+- **Design Pattern**: Compliance packs are pure data (YAML) distributed via npm. The evaluation engine is Phase 7.5's org-constraint evaluator — no new evaluation logic. The report renderer is new output surface only.
+- **Key Considerations**:
+  - Compliance frameworks evolve (PCI-DSS 4.0 → 4.1 etc.). Pack versioning is strict semver; `cortex compliance add pci-dss@4.0` pins a specific framework version. Breaking changes in framework interpretation require a major version bump.
+  - The PDF report must be auditor-readable without any Cortex-specific knowledge. Every violation must cite: the regulatory clause, the human-readable requirement text, the entity that violates it, and the `sourceFile`. No jargon.
+  - `requiresField: "human_reviewed"` is the only cross-phase dependency. If Phase 23 is not installed, the constraint evaluates to a warning with a hint: "Install Phase 23 review workflow to populate `human_reviewed`."
+
+**Definition of Ready (DoR)**
+
+- Phase 7.5 (Org Constraints) is shipped — the constraint DSL is stable and extended with `regulatory_ref`.
+- Phase 23 (Human-in-the-Loop Review) is shipped — `human_reviewed` field is populated.
+- Phase 12 (CI Integration) is shipped — compliance report can be attached to the PR comment.
+
+**Definition of Done (DoD)**
+
+- `cortex compliance add pci-dss` installs the PCI-DSS 4.0 pack and merges constraints into `cortex.constraints.yaml`.
+- `cortex compliance report --framework pci-dss` produces a clause-grouped violation report.
+- Report exports to markdown, JSON, and PDF; PDF is readable without Cortex context.
+- `--attach` flag appends a JSONL compliance-report event to `log.jsonl`.
+- At least three packs published: HIPAA, PCI-DSS, SOC2.
+- Custom packs installable via `cortex compliance add <npm-package>`.
+- Tests cover: pack installation, constraint merging (custom + compliance packs coexist), report grouping by regulatory clause, `requiresField: human_reviewed` evaluation with and without Phase 23, PDF rendering smoke test.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Turns Cortex from a developer productivity tool into a compliance evidence platform. A SOC2 auditor asks "show me your access controls in the payment domain" — `cortex compliance report --framework soc2 --format pdf` is the answer. The `--attach` flag creates a durable, timestamped record of compliance checks in `log.jsonl` — exactly the kind of audit trail SOC2 Type II requires. This is the feature that justifies a $50K–$200K enterprise contract.
+- ❌ **Cons**: Regulatory frameworks change faster than software. Pack maintenance is a permanent commitment — incorrect regulatory citations are worse than no citations. Mitigated by clear versioning and explicit "regulatory text as of this date" headers in the PDF. The `pdfkit` dependency adds ~1MB to the package; mitigated by making PDF generation an optional peer dependency (`cortex compliance report --format pdf` prompts to install `pdfkit` if absent).
+
+---
+
 ## 🚫 Explicitly out of scope
 
 **Bi-directional source injection** (writing Cortex-generated comments back into `src/`) was proposed and **rejected**. It violates the read-only-source invariant declared in [CORTEX.md §2](CORTEX.md), creates watcher feedback loops, pollutes git history with machine-authored noise, and produces merge conflicts with developer comments. Cortex's authority over `.knowledge/` and its non-authority over `src/` is a load-bearing boundary, not an accident.
 
 **Roadmap-to-entity phase tagging** was proposed as part of a traceability matrix and **partially rejected**. The generic half (querying `log.md` by entity/time/warnings) is adopted as Phase 7. The project-specific half (annotating `ROADMAP.md` phases with entity links) is rejected — Cortex is meant to work on every codebase, and most codebases don't have a `ROADMAP.md` with phase headings.
 
-**Cortex Cloud / shared remote knowledge base.** Proposed as a way to sync `.knowledge/` across team members. Rejected for now: violates the local-first principle that makes Cortex easy to adopt, and introduces hard problems (sync semantics, conflict resolution, auth, billing) without a clear product story. Teams that want shared knowledge can commit `.knowledge/` to git today; that's good enough until a real shared-edit use case emerges.
+**Cortex Cloud / shared remote knowledge base (raw sync).** Raw file-sync of `.knowledge/` across team members is still rejected — it introduces merge conflicts on `state.json` and requires CRDT machinery that doesn't fit Cortex's append-only model. The real version of this feature is implemented as Phase 21 (Polyrepo Federation) + Phase 22 (Central Knowledge Server): a push/pull protocol where each repo publishes a signed export and a central registry aggregates them. That is a structured protocol, not a file sync.
 
 **Semantic vector search over entity descriptions.** Proposed for finding related entities. Rejected: the LLM does this naturally by reading the rich index, and the index is small enough (typically <50KB) that loading the whole thing is cheap. Re-evaluate if a real-world `.knowledge/` exceeds ~200 entities and lookup latency becomes a measured problem.
 
