@@ -1,1 +1,1 @@
-Generate a comprehensive ARCH_SPEC.md from the knowledge base by running: `npx tsx src/cli/index.ts export --spec`. Inform the user when the specification file has been created.
+Call the `export` tool from the `project-cortex` MCP server. Report the output path of the generated `ARCH_SPEC.md` to the user and explain that it contains the full dependency graph, architectural constraints, historical failed approaches, and conceptual patterns from the synthesized knowledge base.

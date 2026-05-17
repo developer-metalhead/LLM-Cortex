@@ -1,1 +1,1 @@
-List all entities that are currently marked as "stale" due to blast-radius propagation by running the CLI command: `npx tsx src/cli/index.ts audit stale`. Explain that these entities require review because their dependencies have changed.
+Call the `audit` tool from the `project-cortex` MCP server. Present the list of stale entities to the user, then explain that each one is stale because a dependency (via `depends_on` or `called_by`) was updated after the entity's last refine — this is the blast radius of recent changes. Suggest running `/ingest_cortex` to refresh them.
