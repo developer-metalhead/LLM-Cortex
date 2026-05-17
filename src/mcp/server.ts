@@ -21,6 +21,9 @@ import {
 import { getPendingDiff } from "../core/diff.js";
 import { listSourceFiles, renderFileList } from "../core/scan.js";
 import { loadCortexEnv } from "../core/env.js";
+import { AuditManager } from "../knowledge/audit.js";
+import { LintManager } from "../knowledge/lint.js";
+import { EvolutionManager } from "../knowledge/evolution.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -595,6 +598,39 @@ export class CortexMCPServer {
             },
           },
         },
+        {
+          name: "log_query",
+          description: "Query the architectural log JSONL for timeline and events.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              entity: { type: "string" },
+              since: { type: "string" },
+              warningsOnly: { type: "boolean" }
+            }
+          }
+        },
+        {
+          name: "audit_evidence",
+          description: "Check for evidence drift (missing source files or mismatched snippet contents) in the knowledge base.",
+          inputSchema: { type: "object", properties: {} }
+        },
+        {
+          name: "lint",
+          description: "Perform structural integrity checks on the architectural graph (orphans, silos, cycles, god_modules).",
+          inputSchema: { type: "object", properties: {} }
+        },
+        {
+          name: "evolution_entity",
+          description: "Reconstruct timeline for a given entity.",
+          inputSchema: {
+            type: "object",
+            required: ["entity"],
+            properties: {
+              entity: { type: "string" }
+            }
+          }
+        },
       ],
     }));
 
@@ -637,6 +673,39 @@ export class CortexMCPServer {
             },
           ],
         };
+      }
+
+      if (name === "log_query") {
+        const am = new AuditManager(this.projectRoot);
+        const entries = await am.queryLog(args as any || {});
+        return { content: [{ type: "text", text: JSON.stringify(entries, null, 2) }] };
+      }
+
+      if (name === "audit_evidence") {
+        const am = new AuditManager(this.projectRoot);
+        const issues = await am.auditEvidence();
+        if (issues.length === 0) return { content: [{ type: "text", text: "✅ No evidence drift detected." }] };
+        return { content: [{ type: "text", text: `Found ${issues.length} evidence issues:\n` + issues.map(i => `- ${i.entity}: ${i.issue} (Source: ${i.sourceFile})`).join("\n") }] };
+      }
+
+      if (name === "lint") {
+        const lm = new LintManager(this.projectRoot);
+        const results = await lm.lint();
+        if (results.length === 0) return { content: [{ type: "text", text: "✅ No graph integrity issues detected." }] };
+        return { content: [{ type: "text", text: `Found ${results.length} lint issues:\n` + results.map(r => `[${r.severity.toUpperCase()}] ${r.rule}: ${r.entity ? `[${r.entity}] ` : ''}${r.message}`).join("\n") }] };
+      }
+
+      if (name === "evolution_entity") {
+        const entityName = (args as any)?.entity;
+        if (typeof entityName !== "string" || !entityName.trim()) {
+          return {
+            content: [{ type: "text", text: "evolution_entity requires a 'entity' string argument." }],
+            isError: true,
+          };
+        }
+        const em = new EvolutionManager(this.projectRoot);
+        const entries = await em.getEvolution(entityName);
+        return { content: [{ type: "text", text: JSON.stringify(entries, null, 2) }] };
       }
 
       if (name === "export") {

@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { Synthesis, SaveConcept, Relationship, FailedApproach, Constraints } from "../llm/schema.js";
+import { Synthesis, SaveConcept, Relationship, FailedApproach, Constraints, Evidence } from "../llm/schema.js";
 
 const execAsync = promisify(exec);
 
@@ -22,6 +22,7 @@ type EntityRecord = {
   constraints?: Constraints;
   failedApproaches?: FailedApproach[];
   sourceFile?: string;
+  evidence?: Evidence[];
   lastRefined: string;
   staleSince?: string;
 };
@@ -40,6 +41,38 @@ type KnowledgeState = {
 
 function safeFilename(name: string): string {
   return name.replace(/[/\\:*?"<>|]/g, "_");
+}
+
+// Conservative best-effort secret scrubbing for evidence snippets. Safety net,
+// not a security boundary — Cortex still warns and lists the file so the
+// developer can audit. Patterns derived from common leak shapes (quoted &
+// unquoted assignments, Authorization headers, AWS-style env keys, JWT
+// triplets, long hex/base64 blobs preceded by a secret-ish identifier).
+const SECRET_PATTERNS: RegExp[] = [
+  // Quoted assignment: api_key: "...", secret = '...'
+  /(api[_-]?key|secret|password|passwd|pwd|bearer|token|auth)\s*[:=]\s*['"][^'"\n]+['"]/gi,
+  // Unquoted env-style: AWS_SECRET_ACCESS_KEY=AKIA..., TOKEN=abc
+  /\b([A-Z][A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|PWD))\s*=\s*[^\s'";]+/g,
+  // Authorization header: Authorization: Bearer xxx
+  /Authorization\s*:\s*(Bearer|Basic|Token)\s+[^\s'"]+/gi,
+  // JWT triplet (3 base64url segments separated by '.')
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
+  // Common provider prefixes (OpenAI, GitHub, Slack, AWS, Stripe)
+  /\b(sk|pk|rk|xoxb|xoxp|xoxa|ghp|gho|ghs|github_pat|AKIA|ASIA|AIza)[_-]?[A-Za-z0-9]{16,}\b/g,
+  // PEM headers
+  /-----BEGIN (?:RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY-----[\s\S]*?-----END [^-]+-----/g,
+];
+
+export function redactSecrets(content: string): { redacted: string; didRedact: boolean } {
+  let out = content;
+  let didRedact = false;
+  for (const re of SECRET_PATTERNS) {
+    if (re.test(out)) {
+      didRedact = true;
+      out = out.replace(re, "// [redacted by Cortex]");
+    }
+  }
+  return { redacted: out, didRedact };
 }
 
 function emptyState(): KnowledgeState {
@@ -193,9 +226,55 @@ export class KnowledgeManager {
       await this.writeState(migrated);
     }
 
+    // JSONL log backfill
+    const logMdPath = path.join(this.knowledgeDir, "log.md");
+    const logJsonlPath = path.join(this.knowledgeDir, "log.jsonl");
+    try {
+      await fs.access(logMdPath);
+      try {
+        await fs.access(logJsonlPath);
+      } catch {
+        // log.md exists, log.jsonl doesn't -> backfill
+        const mdContent = await fs.readFile(logMdPath, "utf8");
+        const jsonlEntries = this.parseLegacyLogToJSONL(mdContent);
+        if (jsonlEntries.length > 0) {
+          await fs.writeFile(logJsonlPath, jsonlEntries.map(e => JSON.stringify(e)).join("\n") + "\n", "utf8");
+        }
+      }
+    } catch {
+      // no log.md, fine
+    }
+
     // Always (re)render the index so the format on disk matches the current
     // renderer — including when state.json was just migrated.
     await this.updateIndex();
+  }
+
+  private parseLegacyLogToJSONL(mdContent: string): any[] {
+    const entries = [];
+    const blocks = mdContent.split("---\n").filter(b => b.trim());
+    for (const block of blocks) {
+      const match = block.match(/## \[([^\]]+)\]\n\*\*Summary:\*\* ([^\n]*)\n\*\*Impacted:\*\* ([^\n]*)\n\*\*Warnings:\*\* ([^\n]*)/);
+      if (match) {
+        const timestamp = match[1];
+        const summary = match[2];
+        const impactedStr = match[3];
+        const warningsStr = match[4];
+        
+        const entities = Array.from(impactedStr.matchAll(/\[\[([^\]]+)\]\]/g)).map(m => m[1]);
+        const warnings = warningsStr === "None" ? [] : warningsStr.split("; ");
+        
+        entries.push({
+          timestamp,
+          summary,
+          entities,
+          concepts: [],
+          warnings,
+          migrated: true
+        });
+      }
+    }
+    return entries;
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -282,6 +361,35 @@ export class KnowledgeManager {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
+    // Evidence validation & redaction
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete" || !entity.evidence) continue;
+
+      if (entity.evidence.length > 2) {
+        throw new Error(`Evidence Limit Exceeded: Entity '${entity.name}' has more than 2 evidence entries.`);
+      }
+
+      let totalContentChars = 0;
+      for (const ev of entity.evidence) {
+        if (!ev.content) continue;
+        const lines = ev.content.split("\n");
+        if (lines.length > 10) {
+          throw new Error(`Evidence Limit Exceeded: Content snippet in '${entity.name}' exceeds 10 lines.`);
+        }
+
+        const { redacted, didRedact } = redactSecrets(ev.content);
+        if (didRedact) {
+          ev.content = redacted;
+          synthesis.warnings.push(`Secret redacted from evidence in entity '${entity.name}' (source: ${ev.sourceFile})`);
+        }
+        totalContentChars += (ev.content ?? "").length;
+      }
+
+      if (totalContentChars > 500) {
+        throw new Error(`Evidence Limit Exceeded: Total evidence content chars for '${entity.name}' exceed 500 (was ${totalContentChars}).`);
+      }
+    }
+
     // Build the post-synthesis "merged" state preview. Two reasons this is done
     // before any write:
     //   1) constraint validation must see in-batch additions (e.g. the same
@@ -318,6 +426,7 @@ export class KnowledgeManager {
         constraints: entity.constraints ?? existing?.constraints,
         failedApproaches: mergedFailedApproaches,
         sourceFile: entity.sourceFile ?? existing?.sourceFile,
+        evidence: entity.evidence ?? existing?.evidence,
         lastRefined: timestamp,
         staleSince: existing?.staleSince, // recomputed below
       };
@@ -406,12 +515,29 @@ export class KnowledgeManager {
       await this.renderConceptFile(concept.name, state.concepts[concept.name]);
     }
 
+    // Write state.json FIRST — it's the canonical store. If a subsequent log
+    // append fails, we can rebuild the log from state; the reverse is not true.
+    await this.writeState(state);
+    await this.updateIndex();
+
     const logPath = path.join(this.knowledgeDir, "log.md");
     const logEntry = `\n## [${timestamp}]\n**Summary:** ${synthesis.summary}\n**Impacted:** ${synthesis.entities.map((e) => `[[${e.name}]]`).join(", ")}\n**Warnings:** ${synthesis.warnings.join("; ") || "None"}\n---\n`;
     await fs.appendFile(logPath, logEntry);
 
-    await this.writeState(state);
-    await this.updateIndex();
+    const logJsonlPath = path.join(this.knowledgeDir, "log.jsonl");
+    const jsonlEntry = {
+      timestamp,
+      summary: synthesis.summary,
+      entities: synthesis.entities.map((e) => e.name),
+      concepts: synthesis.concepts.map((c) => c.name),
+      warnings: synthesis.warnings,
+      // State snapshot enables `cortex evolution --replay --at <commit|date>`
+      // to reconstruct the index as it stood at any prior save. Bounded by
+      // total entity/concept count — for typical projects this is a few KB
+      // per entry. Pre-snapshot entries are handled by the replay fallback.
+      state: { entities: state.entities, concepts: state.concepts },
+    };
+    await fs.appendFile(logJsonlPath, JSON.stringify(jsonlEntry) + "\n", "utf8");
   }
 
   private async renderEntityFile(name: string, record: EntityRecord): Promise<void> {
@@ -439,8 +565,21 @@ export class KnowledgeManager {
       failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
     }
 
+    let evidenceLine = "";
+    if (record.evidence?.length) {
+      const parts: string[] = [];
+      for (const ev of record.evidence) {
+        let evStr = `- **${ev.sourceFile}**`;
+        if (ev.lineRange) evStr += ` (lines ${ev.lineRange[0]}-${ev.lineRange[1]})`;
+        if (ev.commit) evStr += ` @ commit \`${ev.commit}\``;
+        if (ev.content) evStr += `\n  \`\`\`\n  ${ev.content.replace(/\n/g, "\n  ")}\n  \`\`\``;
+        parts.push(evStr);
+      }
+      evidenceLine = "\n### Evidence\n" + parts.join("\n") + "\n";
+    }
+
     const body = isLayeredDescription(record.description) ? record.description.trim() : `> ${record.description}`;
-    const content = `# Entity: ${name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    const content = `# Entity: ${name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}${evidenceLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
     await fs.writeFile(entityPath, content);
   }
 
@@ -485,12 +624,23 @@ export class KnowledgeManager {
     const content = `# Concept: ${concept.name}\n\n${record.description}\n\n### Relationships\n${relsLine}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
     await fs.writeFile(conceptPath, content);
 
+    await this.writeState(state);
+    await this.updateIndex();
+
     const logPath = path.join(this.knowledgeDir, "log.md");
     const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** None\n---\n`;
     await fs.appendFile(logPath, logEntry);
 
-    await this.writeState(state);
-    await this.updateIndex();
+    const logJsonlPath = path.join(this.knowledgeDir, "log.jsonl");
+    const jsonlEntry = {
+      timestamp,
+      summary: `Saved concept '${concept.name}' directly.`,
+      entities: [],
+      concepts: [concept.name],
+      warnings: [],
+      state: { entities: state.entities, concepts: state.concepts },
+    };
+    await fs.appendFile(logJsonlPath, JSON.stringify(jsonlEntry) + "\n", "utf8");
   }
 
   // ──────────────────────────────────────────────────────────────────────

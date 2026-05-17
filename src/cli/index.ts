@@ -12,9 +12,12 @@ import { runConfig } from "./config.js";
 import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
-import { runAuditStale } from "./audit.js";
+import { runAuditStale, runAuditEvidence } from "./audit.js";
 import { runExportSpec } from "./export.js";
 import { runHookInstall } from "./hook.js";
+import { runLog } from "./log.js";
+import { runLint } from "./lint.js";
+import { runEvolution } from "./evolution.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -137,13 +140,53 @@ program
 program
   .command("audit")
   .description("Audit the knowledge base")
-  .argument("<type>", "Type of audit to perform (currently supports: 'stale')")
+  .argument("<type>", "Type of audit to perform (currently supports: 'stale', 'evidence')")
   .action(async (type) => {
+    let code = 0;
     if (type === "stale") {
-      await runAuditStale(projectRoot);
+      code = await runAuditStale(projectRoot);
+    } else if (type === "evidence") {
+      code = await runAuditEvidence(projectRoot);
     } else {
-      console.log(`Unknown audit type: ${type}. Supported: 'stale'`);
+      console.log(`Unknown audit type: ${type}. Supported: 'stale', 'evidence'`);
+      code = 2;
     }
+    process.exitCode = code;
+  });
+
+program
+  .command("log")
+  .description("Query the architectural log")
+  .option("-e, --entity <name>", "Filter by entity")
+  .option("-s, --since <date|commit>", "Filter since date or git commit hash")
+  .option("-w, --warnings-only", "Only show entries with warnings")
+  .action(async (options) => {
+    await runLog(projectRoot, options);
+  });
+
+program
+  .command("lint")
+  .description("Run graph integrity checks")
+  .action(async () => {
+    const code = await runLint(projectRoot);
+    process.exitCode = code;
+  });
+
+program
+  .command("evolution")
+  .description("Reconstruct timeline for an entity, or replay the index at a past point")
+  .argument("[entity]", "Entity name (omit when using --replay)")
+  .option("-s, --since <date|commit>", "Filter timeline entries newer than the given date or commit")
+  .option("-f, --format <format>", "Output format: markdown (default) or json", "markdown")
+  .option("--replay", "Reconstruct the rendered index.md as it stood at a past point")
+  .option("--at <date|commit>", "(with --replay) the point in history to replay to")
+  .action(async (entity, options) => {
+    await runEvolution(projectRoot, entity, {
+      since: options.since,
+      format: options.format,
+      replay: !!options.replay,
+      at: options.at,
+    });
   });
 
 program

@@ -178,9 +178,11 @@
   },
   "active": "c472f69de2c28a1d",
   "lastOpenFiles": [
-    "ARCH_SPEC.md",
     "tests/phase6.test.ts",
-    "dist/cli/hook.js",
-    "src/cli/hook.ts"
+    "src/cli/hook.ts",
+    "src/cli/export.ts",
+    "src/cli/audit.ts",
+    "ARCH_SPEC.md",
+    "dist/cli/hook.js"
   ]
 }
