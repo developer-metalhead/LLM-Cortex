@@ -27,6 +27,15 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 18    | Architectural Embeddings (Typed-Graph + Text Hybrid)   | ⏳ Planned (research-grade)          |
 | 19    | Librarian Distillation                                 | ⏳ Planned (research-grade)          |
 | 20    | Intelligent Architectural Advisor                      | ⏳ Planned                           |
+| 20.1  | Architecture Simulation & What-If Analysis             | ⏳ Planned                           |
+| 20.2  | Bug Hotspot Prediction                                 | ⏳ Planned (research-grade)          |
+| 20.3  | Design Pattern Suggestion                              | ⏳ Planned                           |
+| 20.4  | Evolutionary Architecture Fitness Functions            | ⏳ Planned                           |
+| 20.5  | Architecture Documentation Generation                  | ⏳ Planned                           |
+| 21    | Polyrepo Federation                                    | ⏳ Planned                           |
+| 22    | Central Knowledge Server                               | ⏳ Planned                           |
+| 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
+| 24    | Compliance Constraint Templates                        | ⏳ Planned                           |
 
 ---
 
@@ -952,6 +961,7 @@ Three small, self-contained surfaces over the existing knowledge — no new data
 - `cortex test-cost` reports an estimated token + dollar cost for the next sync without making any LLM calls.
 - `cortex test-cost --budget 0.05` exits nonzero when the estimate exceeds the budget.
 - Session-scoped reference compression in the MCP server reduces repeated-block bytes on the second-and-later response within a session; `resolve_refs(refs[])` returns the original content for cited hashes.
+- **Phase 7.5 Integration:** Context pack bundle header annotates each entity with its current quality score; entities are ordered by quality × centrality (not centrality alone) so the most-trusted, most-central knowledge fills the token budget first. Entities with quality < 0.4 are footnoted as "low confidence — not yet evidence-anchored or human-reviewed."
 - Tests cover: pack budget honored on a known-size graph, pack self-containment (no dangling links inside the bundle), cost estimate determinism, compression round-trip via `resolve_refs`.
 
 **Pros & Cons**
@@ -998,6 +1008,7 @@ Introduce a deterministic clustering step that runs _before_ the LLM synthesis c
 - Diffs at or above the threshold are split, synthesised per cluster, merged, and written as a single log entry with `clustered: true`.
 - `cortex log` renders clustered entries with a `[clustered: N groups]` annotation.
 - `CORTEX_CLUSTER_THRESHOLD=0` disables clustering entirely (escape hatch for users who prefer single-shot always).
+- **Phase 7.5 Integration:** Cluster budget allocation is quality-weighted — clusters whose entities average above the Phase 7.5 quality floor receive proportionally more of the token budget in multi-cluster synthesis rounds. When Phase 17 (self-consistency) is active, a cluster's disagreement score from the prior synthesis run increases its token budget on the next pass, giving the LLM more context precisely where uncertainty was previously observed.
 - Tests cover: threshold boundary (14 files → single-shot, 15 → clustered), directory bucketing correctness, edge-merge joining two coupled directories, merge deduplication on entity names, aggregate-summary call receiving only cluster summaries, schema validation of merged output.
 
 **Pros & Cons**
@@ -1040,6 +1051,7 @@ A new module that ingests CI run results (success / failure / which tests failed
 - `cortex ci status` renders per-entity green/red counts.
 - `cortex ci status --weakest 10` ranks entities by green/red ratio.
 - GitHub Action (Phase 12) gains an optional post-run step that posts CI results back via `cortex ci ingest`.
+- **Phase 7.5 Integration:** `ciSignal` becomes the 6th dimension of the quality formula: `quality += 0.20 × (greenRunsSince / (greenRunsSince + redRunsSince))`, defaulting to 0.5 (neutral) when no CI data exists. Phase 9 (Impact Preview) gains a ⚠ CI-unstable badge for entities where `redRunsSince > greenRunsSince`.
 - Tests cover: lcov parsing, jest/pytest adapter, attribution correctness on a synthetic repo (sync touches entity A, test that covers A fails, A's `ciSignal.redRunsSince` increments).
 
 **Pros & Cons**
@@ -1084,6 +1096,7 @@ Promote `warnings[]` (today a per-log-entry free-form string array) into a first
 - `cortex contradiction resolve <id>` / `mute <id>` mutate status with an audit-trail entry in `log.jsonl`.
 - `read_entity` / `read_concept` MCP responses include a `contradictions` block.
 - CURRENT CONTEXT injection includes open contradictions for entities the diff touches.
+- **Phase 7.5 Integration:** Resolving a contradiction immediately recomputes the quality score for both involved entities — the `contradiction_score` dimension rises for the vindicated entity. The contradiction score is centrality-weighted: a contradiction involving a high-centrality hub is penalized more than one on a leaf. Phase 20 (Advisor) skips entities with open contradictions in its recommendation queue — the advisor surfaces only areas the team can act on cleanly.
 - Tests cover: wikilink extraction from warning text, idempotent edge building under replay, resolution audit trail, MCP response shape, prompt-injected contradictions on a synthetic diff.
 
 **Pros & Cons**
@@ -1133,6 +1146,7 @@ A disambiguation question is a structured object — `{ id, file, summary, optio
 - Disagreement cases produce a queued disambiguation question with structured options; the queue survives daemon restart.
 - `cortex ask` / `cortex answer` resolve questions; resolution drives a committal synthesis.
 - MCP `disambiguation_pending` resource and `resolve_disambiguation` tool exposed.
+- **Phase 7.5 Integration:** Self-consistency agreement rate becomes an optional 7th quality dimension (`consistency_score`): full N/N agreement scores 1.0, majority ⌈N/2⌉ agreement scores 0.7, single-sample (Phase 17 disabled) scores 0.5 neutral — teams not using Phase 17 are not penalized. When both `CORTEX_DISAMBIGUATION=auto` and `CORTEX_REVIEW_MODE=enabled` are active, a resolved disambiguation item automatically triggers a `pendingReview` entry for the resolved entity — one interaction closes both queues simultaneously.
 - Tests cover: 3-of-3 agreement → silent commit, 2-of-3 → majority commit + log event, 1-1-1 → queue with structured options, queue persistence across restart, overflow refusal.
 
 **Pros & Cons**
@@ -1182,6 +1196,7 @@ Embeddings are **not** used as retrieval-instead-of-reading. Cortex's index-firs
 - `cortex similar <entity> --limit 5` returns the 5 nearest entities with a one-line description each.
 - Phase 6 link-injection assist adds embedding-nearest entities to the Librarian's CURRENT CONTEXT on next synthesis, marked as suggestions (acceptance via Librarian-emitted relationships only).
 - `cortex embed train` retrains the fusion projection from accumulated knowledge with a deterministic seed for reproducibility.
+- **Phase 7.5 Integration:** `cortex similar` results are re-ranked by quality × cosine similarity (not cosine similarity alone) — a high-quality neighbor at 0.85 beats a low-quality one at 0.92. A `--min-quality <0–1>` flag filters results below a quality threshold. The entity's quality score is appended as a scalar feature to the text embedding vector pre-fusion, biasing the embedding space toward high-confidence architectural neighborhoods.
 - Tests cover: deterministic encoding of identical input, incremental update correctness, similar() ranking on a known synthetic graph, train→retrieve round-trip, mixed `modelHash` detection and warning.
 
 **Pros & Cons**
@@ -1231,6 +1246,7 @@ A self-supervised distillation pipeline grounded in real production synthesis pa
 - `cortex distill eval` reports per-field agreement on a held-out set with deterministic metrics.
 - `LIBRARIAN_ROUTE=hybrid` routes synthesis requests through the distilled model with frontier fallback on Phase 17 disagreement.
 - A trained model meeting the configurable quality bar achieves ≥5× cost reduction on a defined benchmark workload vs frontier-only routing.
+- **Phase 7.5 Integration:** `cortex distill dataset` accepts `--min-quality <0–1>` (default 0.6) — triples involving entities below the quality floor are excluded from training. In-range triples are weighted by average entity quality: 1.0 for fully-anchored human-reviewed triples, 0.7 for medium-quality. The distilled Librarian therefore learns from the codebase's most-confident architectural knowledge, not from speculative or stale synthesis events.
 - Tests cover: dataset filtering correctness (self-consistent triples included, disagreement excluded), training command produces a valid checkpoint and metadata, hybrid routing fallback triggers on disagreement, `cortex distill use <hash>` switches active model reversibly.
 
 **Pros & Cons**
@@ -1266,12 +1282,273 @@ Implement an opt-in, non-mutating architectural review engine (`cortex suggest` 
 - `cortex suggest` CLI command is implemented and generates markdown suggestions in `.knowledge/suggestions/`.
 - The MCP server exposes a `get_suggestions` tool for IDEs to surface these recommendations.
 - The advisory engine successfully identifies at least three common architectural anti-patterns in a test repository.
+- **Phase 7.5 Integration:** Advisory recommendations are scored by impact × quality × centrality — suggestions targeting high-confidence, high-centrality entities surface first. Entities with quality below 0.4 are held back with a note: "resolve quality issues in this area before actioning advisory." The heuristic library (`src/advisor/heuristics.ts`) is seeded from Phase 16's contradiction graph — recurring contradictions in the same domain become anti-pattern candidates, so the advisor learns from the codebase's own architectural friction.
 - Tests cover: Opt-in boundary enforcement, isolated storage of suggestions, and basic heuristic matching.
 
 **Pros & Cons**
 
 - ✅ **Pros**: Moves Cortex up the value chain from passive memory to active architectural partner. Highly valuable for onboarding or refactoring legacy codebases.
 - ❌ **Cons**: Generates potential noise if the heuristics are too aggressive. Requires maintaining an up-to-date pattern library.
+
+---
+
+## 🔬 Phase 20.1: Architecture Simulation & What-If Analysis — ⏳ Planned
+
+**Layman's Terms**
+What happens to the rest of the app if I remove `PaymentService`? What breaks if I split `AuthModule` in two, or merge `UserRepository` and `OrderRepository`? Today you have to mentally trace the dependencies and guess. Phase 20.1 lets you run these experiments as simulations — no code written, no tests required — and get a concrete damage report: which entities become orphans, which constraints break, which new cycles appear, how quality scores shift. The codebase is untouched.
+
+**Technical Terms**
+A simulation engine that applies hypothetical mutations to an in-memory copy of the entity graph (not to `state.json` or `src/`) and re-evaluates blast-radius, constraint violations, lint checks, and quality scores against the mutated graph. Results are strictly ephemeral — no persistent changes to any file.
+
+Four simulation primitives:
+- `cortex simulate remove <entity>` — delete the entity and all its edges; report orphaned dependents, constraint violations introduced/resolved, cycle resolutions, and quality-score deltas for affected neighbors.
+- `cortex simulate merge <entityA> <entityB>` — collapse two entities into one; show relationship union, new god-module risk (if combined edge count exceeds `CORTEX_GOD_MODULE_THRESHOLD`), and constraint re-evaluation.
+- `cortex simulate extract <entity> --into <newA> <newB>` — simulate splitting an entity's relationships between two children; show new coupling, silo risk, and which constraints would apply to each child.
+- `cortex simulate inject-pattern <pattern> --target <entity>` — apply a standard architectural pattern (Strategy, Facade, Repository, Observer) to the target entity's neighborhood and show the resulting graph shape; no code is generated.
+
+Output: a "what-if report" (markdown or JSON) showing entity-set delta, relationship delta, constraint violations introduced/resolved, lint warnings (cycles, silos, god-module), blast-radius delta, and quality-score deltas for affected entities.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/simulation/engine.ts` (deep-clone `state.json` graph, apply mutation, evaluate), new `src/simulation/patterns.ts` (pattern templates — pure graph transformations over node/edge sets), new `src/cli/simulate.ts`. Reuses Phase 8's graph traversal, Phase 6's blast-radius evaluator, Phase 7's lint checks, and Phase 7.5's quality scoring — all applied to the cloned graph.
+- **Design Pattern**: Deep-clone-and-evaluate. The simulation graph is a separate in-memory object; the real `state.json` is read-only during a simulation run. Unit tests verify the original state is byte-for-byte identical before and after every simulation call.
+- **Key Considerations**:
+  - Simulations must be **completely non-mutating**. There is no code path where a simulation result writes to `state.json`, `log.jsonl`, or any file in `src/`.
+  - Pattern templates are pure functions over graph objects — they take a set of nodes and edges and return a modified set. They do not encode language-specific details or generate code; that remains the developer's domain.
+  - For large graphs (>500 entities), the deep-clone cost is measurable. An incremental projection (clone only the subgraph N hops from the target) is acceptable for `remove` and `extract`; `merge` requires the full graph to detect new god-module status.
+
+**Definition of Ready (DoR)**
+
+- Phase 8's graph traversal is factored into `src/knowledge/graph.ts` — reused by the simulation engine.
+- Phase 6's blast-radius evaluator and constraint checker are importable as library functions (not CLI-only).
+- Phase 7's lint checks are importable as library functions (not CLI-only).
+
+**Definition of Done (DoD)**
+
+- `cortex simulate remove <entity>` reports orphans, constraint breaks, and quality deltas on a test graph.
+- `cortex simulate merge <A> <B>` detects new god-module risk in the merged entity.
+- `cortex simulate extract <entity> --into <X> <Y>` distributes relationships and detects new silos.
+- `cortex simulate inject-pattern Strategy --target <entity>` shows the Strategy graph shape (one interface, N concrete implementations).
+- `--format json` produces machine-readable output for CI or scripting.
+- Non-mutation invariant: original `state.json` is byte-for-byte identical before and after any simulation call (verified by test).
+- Tests cover: remove orphan detection, merge god-module trigger, extract silo detection, constraint re-evaluation on remove, non-mutation invariant.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Turns Cortex from a passive memory into an active thinking tool. "What if I refactor this?" has a concrete, graph-grounded answer before a single line is touched. No competing tool (CodeScene, Lattix, Structure101) provides graph mutation simulation — they show the current graph but do not simulate changes. Directly useful for refactoring planning, migration gating, and onboarding engineers who want to understand coupling without trial-and-error.
+- ❌ **Cons**: Simulations are only as accurate as the entity graph — stale or sparse `state.json` produces misleading results. Mitigated by surfacing quality scores and `staleSince` flags in the simulation report. Pattern templates are opinionated and won't cover every refactoring; mitigated by keeping templates as pure-data YAML and open to contribution.
+
+---
+
+## 🐛 Phase 20.2: Bug Hotspot Prediction — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Some parts of the codebase are just more dangerous than others — they change constantly, half the app depends on them, and CI keeps failing when they're touched. Today you discover this the hard way. Phase 20.2 analyzes dependency coupling, code churn, and CI failure history together and gives you a ranked list of "entities most likely to cause bugs" before you write a line — so you can invest review and testing effort where it matters most.
+
+**Technical Terms**
+Grounded in Nagappan & Ball (ICSE 2008): network analysis on a dependency graph predicts which modules are most defect-prone — 10% higher recall than complexity metrics alone on the Windows Server 2003 dataset. Cortex already has the dependency graph (Phase 6 `relationships[]`), CI failure history (Phase 15 `ciSignal`), and entity churn (derivable from `log.jsonl`). Phase 20.2 combines them into a defect-prediction surface with no LLM in the computation path.
+
+Per-entity hotspot score fusing three signals:
+- **Churn score**: count of synthesis events touching the entity in a rolling window (default 90 days), normalized to [0, 1] against the max-churned entity.
+- **Centrality score**: Phase 8/10's PageRank over the typed dependency graph. High centrality = many entities depend on this one; a bug here cascades.
+- **CI failure rate**: from Phase 15's `ciSignal` — `redRunsSince / (greenRunsSince + redRunsSince)`. Defaults to 0.5 (neutral) when no CI data exists.
+- **Hotspot score**: `churn × centrality × (1 + ci_failure_rate)` — entities that are heavily modified, highly coupled, and frequently fail CI score highest. Formula weights are configurable via `CORTEX_HOTSPOT_WEIGHTS`.
+
+CLI:
+- `cortex predict hotspots [--top N] [--since DATE]` — ranked hotspot list with scores and contributing factor breakdown.
+- `cortex predict impact <entity>` — given an entity you're about to modify, list its dependents ranked by hotspot score ("if you change `AuthService`, these are the riskiest downstream entities").
+- `cortex predict explain <entity>` — break down the hotspot score into its three components with interpretation text.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/prediction/hotspot.ts` (score computation), new `src/prediction/churn.ts` (rolling-window synthesis count from `log.jsonl`), new `src/cli/predict.ts`. Reuses Phase 8/10's centrality scores and Phase 15's `ciSignal`. No LLM in the computation path — all signals are observable facts.
+- **Design Pattern**: Signal fusion with no LLM. Scores are computed on read and are never persisted in `state.json` — consistent with the surface-don't-act principle.
+- **Key Considerations**:
+  - Hotspot scores are **informational only** — `cortex predict` never blocks synthesis, lint, or any other workflow.
+  - Churn is computed from `log.jsonl` at prediction time, not cached — O(log entries) and fast enough for synchronous use.
+  - Phase 15 is a prerequisite for the CI dimension; without it, the CI component defaults to 0.5 neutral and the score still runs on churn + centrality.
+
+**Definition of Ready (DoR)**
+
+- Phase 8/10's centrality scores are stable and queryable.
+- Phase 15's `ciSignal` is populated (or CI component defaults to neutral 0.5).
+- `log.jsonl` (Phase 7) is stable.
+
+**Definition of Done (DoD)**
+
+- `cortex predict hotspots --top 10` produces a ranked list with per-entity scores and component breakdown.
+- `cortex predict impact <entity>` lists dependents ranked by hotspot score.
+- `cortex predict explain <entity>` shows churn / centrality / CI components separately.
+- `CORTEX_HOTSPOT_WEIGHTS` overrides are respected.
+- Scores are not stored in `state.json` — computed on read.
+- Tests cover: churn computation from synthetic `log.jsonl`, centrality-weighted ranking, CI-signal integration, weight override, predict impact listing.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Grounded in published empirical results (Nagappan & Ball ICSE 2008). No LLM in the path — predictions are reproducible and explainable. Reuses existing Cortex signals without new data collection. The "impact before change" query (`cortex predict impact <entity>`) is uniquely valuable at review time — reviewers get an objective risk signal rather than intuition alone.
+- ❌ **Cons**: Accuracy depends on all three input signals being populated. A fresh install with no CI history and few log entries produces low-signal scores — mitigated by surfacing data-sparsity warnings in output. High-churn but stable entities (e.g., actively developed but well-tested) will appear as false positives; mitigated by the component breakdown, which lets users discount misleading signals manually.
+
+---
+
+## 🧩 Phase 20.3: Design Pattern Suggestion — ⏳ Planned
+
+**Layman's Terms**
+Phase 7's `cortex lint` tells you what's wrong — "`AuthModule` is a god module" or "`UserService` and `OrderService` form a cycle." Phase 20.3 tells you what to do about it: "Consider extracting the validation logic into a `Validator` strategy — here's what that graph looks like in Cortex terms." It maps each anti-pattern the linter detects to a canonical design pattern that resolves it, gives a concrete entity-level suggestion, and shows what the knowledge graph would look like after the refactor.
+
+**Technical Terms**
+Inspired by ROSE (2024) — transformer-based refactoring recommendation fine-tuned on 2M+ historical refactorings — but implemented without a trained model: a curated anti-pattern → pattern mapping table that operates over `LintManager` output and instantiates concrete suggestions against the entity's actual graph neighborhood.
+
+Anti-pattern → pattern library (initial set):
+- `god_module` (too many relationships) → Strategy (extract behavior variants), Facade (wrap and delegate sub-systems), or Module Split (if sub-clusters exist in the neighborhood).
+- `cycle` (A → B → A) → Dependency Inversion Principle (introduce an abstract interface entity both sides depend on), Mediator (introduce a coordinator entity).
+- `hub_dependency` (one entity with >N incoming `depends_on` edges) → Abstract Factory, Adapter, or Pub-Sub / Event Bus.
+- `orphan` (no connections) → similarity-based integration suggestion via Phase 18 embeddings; degrades to domain-based suggestion without Phase 18.
+- `silo` (disconnected subgraph) → Bridge Pattern, API Gateway entity suggestion.
+
+Each suggestion output:
+1. Anti-pattern summary from lint output.
+2. Recommended pattern(s) with one-line rationale.
+3. Concrete entity-level suggestion: which entity to introduce, which edges to redirect.
+4. Cortex constraint scaffold: a Phase 6 constraint entry encoding the target graph shape post-refactor, so `cortex lint` would pass after the refactor is implemented.
+5. Confidence flag: `high` (pattern maps cleanly), `medium` (multiple patterns apply — user picks), `low` (heuristic is speculative).
+
+CLI: `cortex suggest pattern [--entity <name> | --anti-pattern <type> | --all]`
+MCP tool: `get_pattern_suggestions(entity?)` for IDE surface.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/advisor/patterns.ts` (anti-pattern → pattern mapping table, pure data), new `src/advisor/suggester.ts` (instantiate entity-specific suggestion from lint issue + graph context), additions to `src/cli/suggest.ts` (`pattern` subcommand), new MCP tool in `src/mcp/server.ts`.
+- **Design Pattern**: Rule-table with context-aware instantiation. The mapping table is pure YAML/data; the suggester instantiates each rule against the entity's actual graph neighborhood. An optional LLM-assisted path (behind `CORTEX_SUGGEST_LLM=true`) generates human-readable suggestion text; the default path is LLM-free.
+- **Key Considerations**:
+  - Pattern suggestions are **never automatically applied**. They are written to `.knowledge/suggestions/` (Phase 20's isolation), never to `state.json` or `src/`. Surface-don't-act applies fully.
+  - The constraint scaffold is a suggestion, not an enforced constraint — users copy it into `cortex.constraints.yaml` manually if they want to enforce the target shape.
+
+**Definition of Ready (DoR)**
+
+- Phase 7's `LintManager` is importable as a library function (not just CLI).
+- Phase 20's `.knowledge/suggestions/` isolation is established.
+- Phase 8's graph is queryable for neighborhood context.
+
+**Definition of Done (DoD)**
+
+- `cortex suggest pattern --entity AuthModule` (where `AuthModule` is a god_module) outputs a Strategy suggestion with a constraint scaffold.
+- `cortex suggest pattern --anti-pattern cycle` outputs DIP or Mediator suggestion for every detected cycle.
+- `cortex suggest pattern --all` runs all lint checks and generates suggestions with confidence flags.
+- Suggestions are written to `.knowledge/suggestions/patterns/<entity>.md` and do not modify `state.json`.
+- MCP `get_pattern_suggestions` tool returns structured suggestions for IDE display.
+- Tests cover: god_module → Strategy suggestion, cycle → DIP suggestion, orphan → similarity-based suggestion (Phase 18 mocked), constraint scaffold format, isolation invariant (state.json unchanged).
+
+**Pros & Cons**
+
+- ✅ **Pros**: Closes the loop between detection and action — `cortex lint` says what's wrong, `cortex suggest pattern` says what to do. Grounded in established design knowledge (GoF patterns, SOLID principles), not LLM speculation. Constraint scaffolds provide a measurable refactoring target: run `cortex lint` after the refactor and verify the suggestion resolved the issue — a pass/fail loop without extra tooling.
+- ❌ **Cons**: Suggestions are opinionated — "introduce a Strategy interface" is sound advice for some god-modules and wrong advice for others. Mitigated by confidence flags and by keeping every suggestion advisory with the developer as final authority. The anti-pattern → pattern table is a permanent maintenance artifact; new anti-patterns or new patterns require table updates.
+
+---
+
+## 💪 Phase 20.4: Evolutionary Architecture Fitness Functions — ⏳ Planned
+
+**Layman's Terms**
+You can write unit tests to make sure your code doesn't break. Phase 20.4 gives you "architecture tests" — rules like "the dependency graph must never have cycles," "no single entity can have more than 15 incoming dependencies," or "at least 80% of entities must have CI evidence." These run in CI automatically. When the architecture drifts outside the bounds the team agreed on, the build fails and the team is alerted — before it ships.
+
+**Technical Terms**
+Grounded in Ford, Parsons, Kua — "Building Evolutionary Architectures" (O'Reilly, 2017). Fitness functions are automated governance checks that verify the architecture remains within acceptable bounds as the system evolves — the architectural equivalent of unit tests. Phase 20.4 implements them as declarative YAML evaluated by `cortex fitness`, intentionally distinct from Phase 6's entity-level constraints (per-entity import rules) and Phase 7.5's org constraints (domain-level rules). Fitness functions are systemic: they measure properties of the entire graph at a point in time.
+
+Pre-built fitness function library (initial set):
+- `ff:no-cycles` — FAIL if any cycle exists in the dependency graph.
+- `ff:max-coupling <N>` — FAIL if any entity has more than N incoming `depends_on` edges.
+- `ff:min-evidence-coverage <ratio>` — FAIL if fewer than `ratio × 100%` of entities have ≥1 evidence anchor.
+- `ff:max-god-modules <N>` — FAIL if more than N `god_module` lint violations exist.
+- `ff:ci-health <ratio>` — FAIL if more than `ratio × 100%` of entities have `redRunsSince > greenRunsSince` (requires Phase 15).
+- `ff:quality-floor <score>` — FAIL if mean quality score across all entities is below `score`.
+- `ff:max-open-contradictions <N>` — FAIL if more than N contradictions are open (requires Phase 16).
+- `ff:max-stale-ratio <ratio>` — FAIL if more than `ratio × 100%` of entities carry a `staleSince` flag.
+
+User-defined fitness functions extend the same format via `cortex.fitness.yaml`. Custom rules use a safe DSL subset (`mustNotEdge`, `requiresField`, `maxCount`, `minRatio`) — no arbitrary script execution.
+
+CLI:
+- `cortex fitness run [--ff <id> | --all]` — evaluate and report PASS/FAIL per function with severity.
+- `cortex fitness suggest` — analyze the codebase and generate a `cortex.fitness.yaml` seed based on what the current graph already violates (rule-based, no LLM).
+- CI integration: Phase 12 GitHub Action gains a `cortex fitness run --all` step; error-severity failures block merge (`--warn-only` override for teams not yet ready to enforce).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/fitness/evaluator.ts` (evaluate each function against the live graph), new `src/fitness/library.ts` (built-in function definitions), new `src/cli/fitness.ts`, additions to Phase 12 GitHub Action. Reuses Phase 7's lint checks, Phase 7.5's quality scoring, Phase 15's `ciSignal`, and Phase 16's contradiction graph as signal inputs.
+- **Design Pattern**: Declarative predicate evaluation. Each fitness function is a named predicate `(graph, signals) → { pass, message, severity }`. The evaluator runs all enabled predicates and aggregates results. No LLM in the evaluation path — all predicates are deterministic.
+- **Key Considerations**:
+  - Fitness functions evaluate the **current state of the graph** — they are point-in-time snapshots, not continuous monitors.
+  - `--warn-only` is the default on first install. Teams commit to hard CI failure only when they've tuned their thresholds.
+  - `cortex fitness suggest` uses simple heuristics: if lint finds cycles, suggest `ff:no-cycles`; if mean quality is below 0.5, suggest `ff:quality-floor 0.5`. No LLM call.
+
+**Definition of Ready (DoR)**
+
+- Phase 7's lint checks are importable as library functions.
+- Phase 7.5's quality scoring is stable.
+- Phase 12's GitHub Action is in place for the CI gate step.
+
+**Definition of Done (DoD)**
+
+- `cortex.fitness.yaml` schema is defined and validated at load time.
+- `cortex fitness run --all` evaluates all enabled functions and reports PASS/FAIL with message and severity.
+- `cortex fitness run --ff ff:no-cycles` exits nonzero on a graph with a cycle; exits zero on a cycle-free graph.
+- `cortex fitness suggest` generates a `cortex.fitness.yaml` seed from current lint output.
+- Phase 12 GitHub Action step `cortex fitness run --all` blocks merge on error-severity failures.
+- User-defined `my-team:` functions in `cortex.fitness.yaml` evaluate correctly.
+- Tests cover: all 8 built-in functions (pass and fail cases), user-defined `mustNotEdge` function, suggest output format, CI exit code behavior.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Architecture tests in CI are the single most-requested enterprise governance feature. No competing tool provides fitness functions as declarative YAML that run in standard CI out of the box. The `suggest` command lowers adoption barrier — teams don't need to know what functions to write; Cortex infers them from what the graph already violates. Directly integrates Phase 6 + Phase 7 + Phase 7.5 + Phase 12 into a unified governance layer.
+- ❌ **Cons**: Fitness functions can become bureaucratic if teams add too many — a failing CI build for every minor metric drift discourages adoption. Mitigated by `--warn-only` default and severity levels. The safe DSL subset won't cover all use cases; for per-entity rules, Phase 6 entity-level constraints are the right tool.
+
+---
+
+## 📐 Phase 20.5: Architecture Documentation Generation — ⏳ Planned
+
+**Layman's Terms**
+Architecture decisions live in developers' heads and Slack threads and get lost. Diagrams go out of date the day they're drawn. Phase 20.5 generates both from what Cortex already knows: architecture decision records ("we tried JWT, it conflicted with sessions, we chose cookies — here's why"), C4-style diagrams refreshed from the live entity graph, and a Conway's Law analysis that maps where team ownership boundaries don't match the dependency graph.
+
+**Technical Terms**
+Three non-mutating documentation generation surfaces over `state.json` and `log.jsonl`:
+
+1. **ADR Generation (`cortex adr generate`)**
+   For each synthesis event with non-empty `failedApproaches[]` or `warnings[]` containing design-choice signals (detected via `[[WikiLink]]` references or keywords like "instead of", "replaced", "chose"), generate an ADR stub: Title, Status, Context (entity description at decision time), Decision (synthesis summary), Consequences (relationships introduced/removed), Alternatives Considered (`failedApproaches[]`). Stubs are written to `.knowledge/adrs/<YYYYMMDD>-<entity-slug>.md` with a `<!-- cortex-generated: review before committing -->` marker. Cortex never overwrites a human-edited ADR — existing files are skipped with a warning. `cortex adr list [--entity <name> | --since <date>]` queries existing ADRs.
+
+2. **C4 Diagram Synthesis (`cortex diagram --level <1|2|3>`)**
+   Level 1 (System Context): whole entity graph as a high-level context diagram. Level 2 (Container): entities grouped by directory cluster (Phase 14's clustering or directory structure). Level 3 (Component): drill into a single entity's direct neighbor set. Output: Mermaid (reusing Phase 8's renderer) or PlantUML. `cortex diagram --level 2 --scope AuthModule --format mermaid` renders a cluster-scoped container diagram. Diagrams are regenerated on each call from `state.json` — always current without a separate sync step.
+
+3. **Conway's Law Analysis (`cortex conway`)**
+   If the repo has `CODEOWNERS` or GitHub team files, read them and compare team ownership boundaries to dependency coupling. Entities owned by different teams but with heavy `depends_on` coupling are flagged: "Team A owns `AuthService` but `PaymentService` (Team B) has 8 direct `depends_on` edges to it — consider a formal contract or ownership transfer." Output is strictly observational; no auto-reassignment. Degrades gracefully when `CODEOWNERS` is absent (reports coupling only, no team attribution).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/docs/adr.ts` (ADR stub generator + parser), new `src/docs/diagram.ts` (C4 renderer, reuses Phase 8's Mermaid logic), new `src/docs/conway.ts` (CODEOWNERS parser + coupling mapper), new `src/cli/adr.ts`, new `src/cli/diagram.ts`, new `src/cli/conway.ts`.
+- **Design Pattern**: Read-side projections over `state.json` and `log.jsonl`. All three surfaces are regenerable from scratch at any time. ADR stubs go to `.knowledge/adrs/` (isolated from canonical entity store). Diagrams go to `.knowledge/diagrams/`. Neither modifies `state.json` or `entities/`.
+- **Key Considerations**:
+  - ADR generation produces **stubs, not final documents**. The `<!-- cortex-generated -->` marker and skip-on-existing behavior force a human decision before each ADR is committed.
+  - C4 diagrams are not cached — regenerated on each `cortex diagram` call. This keeps them always current at the cost of a short render pass.
+  - CODEOWNERS parsing is best-effort — non-standard formats or absent files trigger `--ownership-unknown` mode, not an error.
+
+**Definition of Ready (DoR)**
+
+- Phase 8's Mermaid graph renderer is factored into a reusable function in `src/knowledge/graph.ts`.
+- Phase 7's `log.jsonl` is stable — ADR generation walks it for design-decision signals.
+- Phase 6's `failedApproaches[]` is populated in `state.json` — ADR alternatives come from it.
+
+**Definition of Done (DoD)**
+
+- `cortex adr generate --since <date>` produces ADR stubs in `.knowledge/adrs/` for synthesis events with `failedApproaches` or design-choice signals.
+- `cortex adr list` queries existing ADRs by entity, date, or status.
+- `cortex diagram --level 1` renders a full system context diagram in Mermaid.
+- `cortex diagram --level 2 --scope <cluster>` renders a container diagram for a directory cluster.
+- `cortex diagram --level 3 --entity <name>` renders a component diagram for one entity's neighborhood.
+- `cortex conway` produces a Conway violations report from CODEOWNERS; degrades gracefully when CODEOWNERS is absent.
+- Existing ADRs are not overwritten by regeneration (skip + warn behavior).
+- Tests cover: ADR stub format validity, ADR skip-on-existing behavior, Level 1/2/3 Mermaid output shape, Conway report from a synthetic CODEOWNERS file, Conway degradation with no CODEOWNERS.
+
+**Pros & Cons**
+
+- ✅ **Pros**: ADR generation closes the "decisions live in Slack" problem — every architectural decision that touched code gets a stub document automatically, reducing the manual ADR maintenance burden. C4 diagrams from a live graph are always current without a separate drawing tool. Conway's Law analysis is the closest Cortex comes to CodeScene's team coupling feature — without any cloud dependency. All three surfaces are read-only projections; zero risk of polluting the canonical knowledge store.
+- ❌ **Cons**: ADR stubs require human editing to be valuable — auto-generated ADRs without review are noise. Mitigated by the stub marker and skip-on-existing behavior that forces a human decision before commit. Conway analysis requires CODEOWNERS — teams without it get coupling data only. C4 Level 3 diagrams can be overwhelming for highly-connected entities; mitigated by a `--max-depth 1` flag.
 
 ---
 
