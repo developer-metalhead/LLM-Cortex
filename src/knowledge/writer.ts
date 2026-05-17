@@ -2,23 +2,33 @@ import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { Synthesis } from "../llm/schema.js";
+import { Synthesis, SaveConcept, Relationship, FailedApproach, Constraints } from "../llm/schema.js";
 
 const execAsync = promisify(exec);
 
 const LAST_SYNC_FILE = ".last_sync_commit";
 const STATE_FILE = "state.json";
-const STATE_VERSION = 1;
+const STATE_VERSION = 2;
+
+// Only "actual-usage" relationships participate in constraint validation and
+// blast-radius staleness propagation. `contradicts`, `supports`,
+// `derived_from`, `parent_of` document relationships that don't represent
+// runtime coupling.
+const USAGE_KINDS = new Set<Relationship["kind"]>(["depends_on", "called_by"]);
 
 type EntityRecord = {
   description: string;
-  links: string[];
+  relationships: Relationship[];
+  constraints?: Constraints;
+  failedApproaches?: FailedApproach[];
   sourceFile?: string;
   lastRefined: string;
+  staleSince?: string;
 };
 
 type ConceptRecord = {
   description: string;
+  failedApproaches?: FailedApproach[];
   lastRefined: string;
 };
 
@@ -38,8 +48,10 @@ function emptyState(): KnowledgeState {
 
 export class KnowledgeManager {
   private knowledgeDir: string;
+  private projectRoot: string;
 
   constructor(rootDir: string) {
+    this.projectRoot = rootDir;
     this.knowledgeDir = path.join(rootDir, ".knowledge");
   }
 
@@ -74,6 +86,54 @@ export class KnowledgeManager {
     } catch {
       return "No existing knowledge found.";
     }
+  }
+
+  // Returns a compact guardrails block for ALL entities that have constraints
+  // or failedApproaches. Injected into the ingest prompt as a separate section
+  // so the Librarian sees active constraints and past failures WITHOUT bloating
+  // the main index with full descriptions.
+  //
+  // Design rationale: the index stays lean (## Role only); this block adds
+  // only the actionable guardrail data — typically 10-50 tokens per entity —
+  // so context growth is bounded. For a 50-entity project the block is ~2k
+  // tokens vs ~25k if full entity pages were injected.
+  async getEntityGuardrails(): Promise<string> {
+    const state = await this.readState();
+    const lines: string[] = [];
+
+    for (const [name, entity] of Object.entries(state.entities)) {
+      const parts: string[] = [];
+
+      if (entity.constraints) {
+        const c = entity.constraints;
+        if (c.mustNotImport?.length) parts.push(`  mustNotImport: ${c.mustNotImport.join(", ")}`);
+        if (c.mustNotBeCalledBy?.length) parts.push(`  mustNotBeCalledBy: ${c.mustNotBeCalledBy.join(", ")}`);
+        if (c.contract) parts.push(`  contract: ${c.contract}`);
+      }
+
+      if (entity.failedApproaches?.length) {
+        // Show at most 3 most recent — enough for the Librarian to recognise
+        // a pattern; anything older has low recurrence probability.
+        const recent = entity.failedApproaches.slice(-3);
+        parts.push(...recent.map(fa => `  [FAILED] ${fa.summary}: ${fa.reason}`));
+      }
+
+      if (parts.length > 0) {
+        lines.push(`[[${name}]]`);
+        lines.push(...parts);
+      }
+    }
+
+    if (lines.length === 0) return "";
+    return [
+      "================================================================",
+      "### ENTITY GUARDRAILS — Constraints & Known Failed Approaches",
+      "================================================================",
+      "The following entities have declared constraints or past failed approaches.",
+      "Read them before modifying or creating relationships to these entities.",
+      "",
+      ...lines,
+    ].join("\n");
   }
 
   // Deep-read: full markdown for a specific entity. Used by downstream AIs
@@ -146,10 +206,24 @@ export class KnowledgeManager {
     const statePath = path.join(this.knowledgeDir, STATE_FILE);
     try {
       const raw = await fs.readFile(statePath, "utf8");
-      const parsed = JSON.parse(raw) as KnowledgeState;
-      if (!parsed.entities) parsed.entities = {};
-      if (!parsed.concepts) parsed.concepts = {};
-      return parsed;
+      const parsed = JSON.parse(raw) as any;
+      
+      const state: KnowledgeState = {
+        version: STATE_VERSION,
+        entities: parsed.entities || {},
+        concepts: parsed.concepts || {},
+      };
+
+      // Auto-migrate legacy links to relationships
+      for (const [name, entity] of Object.entries(state.entities)) {
+        if ((entity as any).links) {
+          entity.relationships = ((entity as any).links as string[]).map((t: string) => ({ target: t, kind: "depends_on" }));
+          delete (entity as any).links;
+        }
+        if (!entity.relationships) entity.relationships = [];
+      }
+
+      return state;
     } catch {
       return emptyState();
     }
@@ -174,7 +248,7 @@ export class KnowledgeManager {
         const body = await fs.readFile(path.join(entitiesDir, file), "utf8").catch(() => "");
         state.entities[name] = {
           description: extractBlockquote(body) ?? "(description not recovered during migration)",
-          links: extractLinks(body),
+          relationships: extractLinks(body).map((t: string) => ({ target: t, kind: "depends_on" })),
           sourceFile: extractSourceCitation(body),
           lastRefined: extractLastRefined(body) ?? new Date().toISOString(),
         };
@@ -208,61 +282,212 @@ export class KnowledgeManager {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
+    // Build the post-synthesis "merged" state preview. Two reasons this is done
+    // before any write:
+    //   1) constraint validation must see in-batch additions (e.g. the same
+    //      synthesis creating A→B while B declares mustNotBeCalledBy=[A]);
+    //   2) update-without-re-emitting must preserve prior constraints /
+    //      failedApproaches / sourceFile rather than silently dropping them.
+    const mergedEntities: Record<string, EntityRecord> = { ...state.entities };
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete") {
+        delete mergedEntities[entity.name];
+        continue;
+      }
+      const existing = mergedEntities[entity.name];
+
+      // Merge failedApproaches: new entries are appended to existing ones,
+      // then the combined array is capped at 10 most recent.
+      // This prevents unbounded accumulation across many updates while
+      // keeping the full recent history visible to the Librarian.
+      const mergedFailedApproaches = (() => {
+        const incoming = entity.failedApproaches;
+        const prior = existing?.failedApproaches ?? [];
+        if (!incoming || incoming.length === 0) return prior.length > 0 ? prior.slice(-10) : undefined;
+        // Deduplicate by summary to avoid re-recording the same failure.
+        const seen = new Set(prior.map(fa => fa.summary));
+        const novel = incoming.filter(fa => !seen.has(fa.summary));
+        return [...prior, ...novel].slice(-10);
+      })();
+
+      mergedEntities[entity.name] = {
+        description: entity.description,
+        relationships: entity.relationships,
+        // `undefined` means "Librarian didn't re-emit this field" → preserve
+        // the prior value. An explicit empty object/array clears it.
+        constraints: entity.constraints ?? existing?.constraints,
+        failedApproaches: mergedFailedApproaches,
+        sourceFile: entity.sourceFile ?? existing?.sourceFile,
+        lastRefined: timestamp,
+        staleSince: existing?.staleSince, // recomputed below
+      };
+    }
+
+    // Constraint Validation (against merged state, restricted to actual-usage
+    // edges — `contradicts`/`supports`/etc. document relationships, they
+    // shouldn't trigger import/call violations).
+    //
+    // The two constraint kinds have different applicability:
+    //   - mustNotImport: source-side rule, applies regardless of whether the
+    //     target is a tracked entity (e.g. forbidding `import 'lodash'`).
+    //   - mustNotBeCalledBy: target-side rule, only meaningful when the target
+    //     exists as a tracked entity that declared it.
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete") continue;
+      const entityRecord = mergedEntities[entity.name];
+      for (const rel of entity.relationships) {
+        if (!USAGE_KINDS.has(rel.kind)) continue;
+
+        if (entityRecord?.constraints?.mustNotImport?.includes(rel.target)) {
+          throw new Error(`Constraint Violation: Entity '${entity.name}' must not import '${rel.target}'.`);
+        }
+
+        const targetEntity = mergedEntities[rel.target];
+        if (targetEntity?.constraints?.mustNotBeCalledBy?.includes(entity.name)) {
+          throw new Error(`Constraint Violation: Entity '${rel.target}' must not be called by '${entity.name}'.`);
+        }
+      }
+    }
+
+    // Validation passed — commit merged entities into state.
+    state.entities = mergedEntities;
+
+    // Recompute staleness:
+    //   - Clear staleSince on entities explicitly in this synthesis (they're fresh).
+    //   - Propagate staleSince to dependents of every update/delete (not the
+    //     create case — a brand-new entity has no prior dependents).
+    const synthesisNames = new Set(synthesis.entities.map((e) => e.name));
+    for (const name of synthesisNames) {
+      if (state.entities[name]) delete state.entities[name].staleSince;
+    }
+
+    const stalePropagatedTo = new Set<string>();
+    for (const entity of synthesis.entities) {
+      if (entity.action === "create") continue;
+      for (const [otherName, otherEntity] of Object.entries(state.entities)) {
+        if (synthesisNames.has(otherName)) continue;
+        if (
+          otherEntity.relationships.some(
+            (r) => r.target === entity.name && USAGE_KINDS.has(r.kind),
+          )
+        ) {
+          otherEntity.staleSince = timestamp;
+          stalePropagatedTo.add(otherName);
+        }
+      }
+    }
+
+    // Filesystem writes — entity files (synthesis + stale-stamped dependents),
+    // concept files, deletes, log entry, state.json, index.md.
+    for (const entity of synthesis.entities) {
+      if (entity.action !== "delete") continue;
+      const entityPath = path.join(this.knowledgeDir, "entities", `${safeFilename(entity.name)}.md`);
+      try { await fs.unlink(entityPath); } catch {}
+    }
+
+    const writtenEntityNames = new Set<string>();
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete") continue;
+      await this.renderEntityFile(entity.name, state.entities[entity.name]);
+      writtenEntityNames.add(entity.name);
+    }
+    for (const staleName of stalePropagatedTo) {
+      if (writtenEntityNames.has(staleName)) continue;
+      await this.renderEntityFile(staleName, state.entities[staleName]);
+    }
+
+    for (const concept of synthesis.concepts) {
+      const existing = state.concepts[concept.name];
+      state.concepts[concept.name] = {
+        description: concept.description,
+        failedApproaches: concept.failedApproaches ?? existing?.failedApproaches,
+        lastRefined: timestamp,
+      };
+      await this.renderConceptFile(concept.name, state.concepts[concept.name]);
+    }
+
     const logPath = path.join(this.knowledgeDir, "log.md");
     const logEntry = `\n## [${timestamp}]\n**Summary:** ${synthesis.summary}\n**Impacted:** ${synthesis.entities.map((e) => `[[${e.name}]]`).join(", ")}\n**Warnings:** ${synthesis.warnings.join("; ") || "None"}\n---\n`;
     await fs.appendFile(logPath, logEntry);
 
-    for (const entity of synthesis.entities) {
-      const safeName = safeFilename(entity.name);
-      const entityPath = path.join(this.knowledgeDir, "entities", `${safeName}.md`);
+    await this.writeState(state);
+    await this.updateIndex();
+  }
 
-      if (entity.action === "delete") {
-        delete state.entities[entity.name];
-        try {
-          await fs.unlink(entityPath);
-        } catch {
-          // already absent
-        }
-        continue;
-      }
+  private async renderEntityFile(name: string, record: EntityRecord): Promise<void> {
+    const entityPath = path.join(this.knowledgeDir, "entities", `${safeFilename(name)}.md`);
 
-      state.entities[entity.name] = {
-        description: entity.description,
-        links: entity.links,
-        sourceFile: entity.sourceFile,
-        lastRefined: timestamp,
-      };
+    const sourceLine = record.sourceFile ? `**Source:** \`${record.sourceFile}\`\n\n` : "";
+    const relsLine = record.relationships.length
+      ? record.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
+      : "_(none)_";
+    const staleLine = record.staleSince
+      ? `\n> [!WARNING]\n> **Stale Since:** ${record.staleSince}\n> A dependency was modified; re-verify this entity still reflects the current code.\n`
+      : "";
 
-      const sourceLine = entity.sourceFile
-        ? `**Source:** \`${entity.sourceFile}\`\n\n`
-        : "";
-      const linksLine = entity.links.length
-        ? entity.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")
-        : "_(none)_";
-
-      // Layered descriptions (with `## Role` / `## Interface` / etc. headings)
-      // render as-is. Legacy plain descriptions keep the blockquote wrapper for
-      // backward-compatible rendering.
-      const body = isLayeredDescription(entity.description)
-        ? entity.description.trim()
-        : `> ${entity.description}`;
-
-      const content = `# Entity: ${entity.name}\n\n${sourceLine}${body}\n\n### Relations\n- **Action:** ${entity.action}\n- **Links:** ${linksLine}\n\n---\n*Last Refined: ${timestamp}*\n`;
-      await fs.writeFile(entityPath, content);
+    let constraintsLine = "";
+    if (record.constraints) {
+      const parts: string[] = [];
+      if (record.constraints.mustNotImport?.length) parts.push(`- **Must Not Import:** ${record.constraints.mustNotImport.join(", ")}`);
+      if (record.constraints.mustNotBeCalledBy?.length) parts.push(`- **Must Not Be Called By:** ${record.constraints.mustNotBeCalledBy.join(", ")}`);
+      if (record.constraints.contract) parts.push(`- **Contract:** ${record.constraints.contract}`);
+      if (parts.length) constraintsLine = "\n### Constraints\n" + parts.join("\n") + "\n";
     }
 
-    for (const concept of synthesis.concepts) {
-      const safeName = safeFilename(concept.name);
-      const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
-
-      state.concepts[concept.name] = {
-        description: concept.description,
-        lastRefined: timestamp,
-      };
-
-      const content = `# Concept: ${concept.name}\n\n${concept.description}\n\n---\n*Last Refined: ${timestamp}*\n`;
-      await fs.writeFile(conceptPath, content);
+    let failedApproachesLine = "";
+    if (record.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
     }
+
+    const body = isLayeredDescription(record.description) ? record.description.trim() : `> ${record.description}`;
+    const content = `# Entity: ${name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    await fs.writeFile(entityPath, content);
+  }
+
+  private async renderConceptFile(name: string, record: ConceptRecord): Promise<void> {
+    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeFilename(name)}.md`);
+
+    let failedApproachesLine = "";
+    if (record.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+    }
+
+    const content = `# Concept: ${name}\n\n${record.description}\n${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    await fs.writeFile(conceptPath, content);
+  }
+
+  async saveConcept(concept: SaveConcept) {
+    const timestamp = new Date().toISOString();
+    const state = await this.readState();
+
+    const existing = state.concepts[concept.name];
+    state.concepts[concept.name] = {
+      description: concept.description,
+      // Same merge semantics as saveSynthesis: undefined preserves prior value.
+      failedApproaches: concept.failedApproaches ?? existing?.failedApproaches,
+      lastRefined: timestamp,
+    };
+
+    // Relationships passed to save_concept are rendered into the file directly
+    // but not stored in state — ConceptRecord doesn't carry relationships.
+    // Render manually here rather than via renderConceptFile so the
+    // relationships line is included.
+    const safeName = safeFilename(concept.name);
+    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
+    const relsLine = concept.relationships?.length
+      ? concept.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
+      : "_(none)_";
+    const record = state.concepts[concept.name];
+    let failedApproachesLine = "";
+    if (record.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+    }
+    const content = `# Concept: ${concept.name}\n\n${record.description}\n\n### Relationships\n${relsLine}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
+    await fs.writeFile(conceptPath, content);
+
+    const logPath = path.join(this.knowledgeDir, "log.md");
+    const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** None\n---\n`;
+    await fs.appendFile(logPath, logEntry);
 
     await this.writeState(state);
     await this.updateIndex();
@@ -297,15 +522,119 @@ export class KnowledgeManager {
       for (const name of entityNames) {
         const e = state.entities[name];
         const source = e.sourceFile ? ` — \`${e.sourceFile}\`` : "";
-        const links = e.links.length
-          ? `\n_Links:_ ${e.links.map((l) => `[[${l.replace(/[\[\]]/g, "")}]]`).join(", ")}`
+        const rels = e.relationships.length
+          ? `\n_Relationships:_ ${e.relationships.map((r) => `[[${r.target}]]`).join(", ")}`
           : "";
+        const stale = e.staleSince ? ` **[STALE]**` : "";
         const indexSummary = extractRoleSection(e.description);
-        content += `### [[${name}]]${source}\n${indexSummary}${links}\n\n`;
+        content += `### [[${name}]]${source}${stale}\n${indexSummary}${rels}\n\n`;
       }
     }
 
     await fs.writeFile(path.join(this.knowledgeDir, "index.md"), content);
+  }
+  async getStaleCount(): Promise<number> {
+    const state = await this.readState();
+    return Object.values(state.entities).filter(e => !!e.staleSince).length;
+  }
+
+  async getStaleEntities(): Promise<Array<{ name: string; staleSince: string; sourceFile?: string }>> {
+    const state = await this.readState();
+    return Object.entries(state.entities)
+      .filter(([_, e]) => !!e.staleSince)
+      .map(([name, e]) => ({
+        name,
+        staleSince: e.staleSince!,
+        sourceFile: e.sourceFile,
+      }));
+  }
+
+  // Mark verified-clean stale entities as fresh without re-emitting their full
+  // synthesis. Used by the audit auto-healing path: the AI inspects each stale
+  // entity, confirms the dependency change didn't invalidate any invariant, and
+  // calls this to clear the flag. Re-renders the entity .md (drops the
+  // [!WARNING] block) and refreshes index.md.
+  //
+  // Returns the names actually cleared, and any names skipped because they
+  // weren't stale (or didn't exist) so the AI's report stays honest.
+  async refreshStaleEntities(names: string[]): Promise<{ cleared: string[]; skipped: string[] }> {
+    const state = await this.readState();
+    const cleared: string[] = [];
+    const skipped: string[] = [];
+    for (const name of names) {
+      const entity = state.entities[name];
+      if (!entity || !entity.staleSince) {
+        skipped.push(name);
+        continue;
+      }
+      delete entity.staleSince;
+      cleared.push(name);
+      await this.renderEntityFile(name, entity);
+    }
+    if (cleared.length > 0) {
+      const timestamp = new Date().toISOString();
+      const logPath = path.join(this.knowledgeDir, "log.md");
+      const logEntry = `\n## [${timestamp}]\n**Summary:** Refreshed ${cleared.length} stale entit${cleared.length === 1 ? "y" : "ies"} after audit verification.\n**Impacted:** ${cleared.map((n) => `[[${n}]]`).join(", ")}\n**Warnings:** None\n---\n`;
+      await fs.appendFile(logPath, logEntry);
+      await this.writeState(state);
+      await this.updateIndex();
+    }
+    return { cleared, skipped };
+  }
+
+  async exportSpec(): Promise<string> {
+    const state = await this.readState();
+    const outputPath = path.join(this.projectRoot, "ARCH_SPEC.md");
+    
+    let content = "# Architectural Specification\n\nGenerated by Project Cortex.\n\n";
+
+    content += "## Concepts\n\n";
+    for (const [name, concept] of Object.entries(state.concepts)) {
+      content += `### [[${name}]]\n\n${concept.description}\n\n`;
+      if (concept.failedApproaches?.length) {
+        content += `#### Failed Approaches\n`;
+        for (const fa of concept.failedApproaches) {
+          content += `- **${fa.summary}**: ${fa.reason}\n`;
+        }
+        content += "\n";
+      }
+    }
+
+    content += "## Entities\n\n";
+    for (const [name, entity] of Object.entries(state.entities)) {
+      content += `### [[${name}]]\n\n`;
+      if (entity.sourceFile) {
+        content += `**Source**: \`${entity.sourceFile}\`\n\n`;
+      }
+      content += `${entity.description}\n\n`;
+      
+      if (entity.relationships.length > 0) {
+        content += `#### Relationships\n`;
+        for (const rel of entity.relationships) {
+          content += `- **${rel.kind}**: [[${rel.target}]]\n`;
+        }
+        content += "\n";
+      }
+
+      if (entity.constraints) {
+        content += `#### Constraints\n`;
+        if (entity.constraints.mustNotImport?.length) content += `- **Must Not Import:** ${entity.constraints.mustNotImport.join(", ")}\n`;
+        if (entity.constraints.mustNotBeCalledBy?.length) content += `- **Must Not Be Called By:** ${entity.constraints.mustNotBeCalledBy.join(", ")}\n`;
+        if (entity.constraints.contract) content += `- **Contract:** ${entity.constraints.contract}\n`;
+        content += "\n";
+      }
+
+      if (entity.failedApproaches?.length) {
+        content += `#### Failed Approaches\n`;
+        for (const fa of entity.failedApproaches) {
+          content += `- **${fa.summary}**: ${fa.reason}\n`;
+        }
+        content += "\n";
+      }
+    }
+
+    await fs.writeFile(outputPath, content, "utf-8");
+    return outputPath;
   }
 }
 

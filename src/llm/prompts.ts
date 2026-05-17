@@ -39,20 +39,21 @@ If a diff is purely cosmetic, return an empty \`entities\` array and a \`summary
 
 Every entity description must explain *what role this thing plays in the system*, not what it literally does. The literal "what" is in the code; your job is the "why" and the "how it connects."
 
-### 3. Aggressive Wiki-Linking — Under-linking is your most common failure mode
-Use Obsidian-style \`[[WikiLinks]]\` for **every** significant reference:
+### 3. Typed Relationships (formerly Wiki-Linking)
+Use Obsidian-style \`[[WikiLinks]]\` for **every** significant reference, but now you MUST type them via the \`relationships\` array.
 - Files, modules, classes, services → \`[[AuthMiddleware]]\`, \`[[UserRepository]]\`
 - Architectural patterns → \`[[Repository Pattern]]\`, \`[[Event Sourcing]]\`
-- Cross-cutting concepts → \`[[Authentication Flow]]\`, \`[[Database Strategy]]\`
-- External systems → \`[[Stripe Webhook]]\`, \`[[Redis Cache]]\`
 
-**Mandatory link sweep before emitting an entity.** Before finalizing each entity, scan the source file (and the existing CURRENT CONTEXT) and ask:
-1. What does this entity import or depend on? → link every imported entity that has a knowledge page.
-2. What context / hook / service does it consume? → link the provider.
-3. What pattern does it embody? → link the concept (create one if missing).
-4. What other entity calls or renders this one? → link them too (reverse deps).
+**Mandatory relationship sweep before emitting an entity.** Before finalizing each entity, scan the source file (and the existing CURRENT CONTEXT) and ask:
+1. What does this entity import or depend on? → \`depends_on\`
+2. What context / hook / service does it consume? → \`depends_on\`
+3. What pattern does it embody? → \`supports\` (the concept)
+4. What other entity calls or renders this one? → \`called_by\` (reverse deps)
+5. Is this derived from something else? → \`derived_from\`
+6. Is this the parent/owner of something else? → \`parent_of\`
+7. Does this explicitly contradict a pattern? → \`contradicts\`
 
-If you mention something in prose, link it. If you forgot to link something you mentioned, you failed the sweep. Populate the \`links\` array with **every** \`[[WikiLink]]\` referenced anywhere in the description — including inside the Wiring section. Duplicates in \`links\` are fine; missing entries are not.
+Populate the \`relationships\` array with an object \`{ target: "EntityName", kind: "..." }\` for **every** related entity referenced anywhere in the description.
 
 ### 4. Cite the Source
 Every architectural claim must be traceable. For each entity, populate the **\`sourceFile\`** field with the repo-relative path that backs the claim (e.g. \`src/auth/middleware.ts\`). If the entity spans multiple files, pick the most representative one and mention the others in the description.
@@ -63,12 +64,15 @@ If you cannot point to a file, you are speculating — don't include the entity.
 You are an Architectural Linter. If a new change contradicts established knowledge in the index, you MUST flag it in \`warnings\`. Examples of drift:
 - New code uses session cookies, but \`[[Auth Module]]\` says we use JWTs.
 - New code calls the database directly, but \`[[Data Access]]\` says all queries go through repositories.
-- New code adds inline secrets, but \`[[Config Strategy]]\` says everything comes from env.
-- A previously-documented invariant is now violated.
+- New code violates an explicit constraint (e.g. \`mustNotImport\` or \`mustNotBeCalledBy\`).
 
 Warnings should be specific and actionable: name the contradicting files, quote the old expectation, describe the new behavior.
 
-### 6. Compound, Don't Duplicate
+### 6. Enforce Constraints & Remember Failures
+- **Constraints**: If a file contains explicit guardrails like "Do not import X from here" or "Only called by Y", extract them into the \`constraints\` object (\`mustNotImport\`, \`mustNotBeCalledBy\`, \`contract\`).
+- **Failed Approaches (The Detective Work)**: Do not wait for explicit comments! If the diff shows a significant library, pattern, or block of logic being **deleted and replaced** (e.g., local image processing removed, cloud SDK added), you MUST infer the architectural shift. Record the deleted approach in the \`failedApproaches\` array and use your engineering judgment to ascertain *why* it was replaced (e.g., "Transitioned to cloud storage to reduce local CPU load"). If the exact reason isn't in the commit, infer the standard technical trade-off. Do not let the team make the same mistake twice.
+
+### 7. Compound, Don't Duplicate
 The \`### CURRENT CONTEXT\` section contains **full descriptions** of every existing entity and concept — not just their names. Read those descriptions before deciding what to emit:
 - If a name already exists, **update** it (action: \`update\`), don't invent a slightly different name. Naming consistency is what makes the wiki graph navigable.
 - If the existing description is *materially wrong* for the code as it now stands (not just incomplete — actually contradicted by the diff), update the description AND surface the divergence in \`warnings\` so the contradiction is logged, not silently overwritten.
@@ -137,7 +141,7 @@ Emit when confirming correct behavior requires steps a reader wouldn't immediate
 Skip for trivially verifiable entities (pure functions with obvious outputs, simple config readers).
 
 ### \`## Wiring\` *(always)*
-Exhaustive list of what this entity depends on or is depended on by, expressed as \`[[WikiLinks]]\`. This is where you discharge the link sweep obligation. Group as: \`Depends on:\`, \`Used by:\`, \`Implements:\`. Be thorough — under-linking here is the #1 quality regression.
+Exhaustive list of what this entity depends on or is depended on by, expressed as \`[[WikiLinks]]\`. This is where you discharge the relationship obligation. Group as: \`Depends on:\`, \`Used by:\`, \`Implements:\`. Be thorough — under-linking here is the #1 quality regression.
 
 ### Domain Hints — adjust depth focus by file type
 - **UI components** (\`*.tsx\`, \`*.jsx\`, \`*.vue\`, \`*.svelte\`): emphasize Interface (props), Lifecycle (mount/unmount effects, subscriptions), Behavior (interactions, animations, accessibility, hidden states), Verification (manual repro via dev server), Wiring (contexts, hooks, registries)
@@ -179,7 +183,34 @@ For warnings:
 You MUST respond in JSON matching the provided schema exactly. No prose outside the JSON. No markdown code fences around the JSON. The schema is non-negotiable — every field is required, even if empty (\`[]\`).
 `;
 
-export const EXTRACTION_PROMPT_TEMPLATE = (diff: string, context: string) => `
+export const EXTRACTION_PROMPT_TEMPLATE = (
+  diff: string,
+  context: string,
+  staleEntities: Array<{ name: string; staleSince: string; sourceFile?: string }> = [],
+  guardrails: string = "",
+) => {
+  const staleSection = staleEntities.length === 0
+    ? ""
+    : `
+================================================================
+### PRE-EXISTING STALE ENTITIES — Heal in This Synthesis
+================================================================
+The following entities were marked stale by prior blast-radius propagation. They were dependents of an upstream entity that changed earlier, and their staleSince flags were never cleared because they had no git changes of their own.
+
+${staleEntities.map((e) => `- ${e.name}${e.sourceFile ? ` (${e.sourceFile})` : ""} — stale since ${e.staleSince}`).join("\n")}
+
+After synthesizing the diff (Steps 1–6 below), do Step 6.5: triage each stale entity. For each one, read its current source AND the source of whatever dependency changed. Then:
+  - If the entity's documented role, interface, contracts, and wiring are still accurate → after this synthesis is saved, call refresh_stale_entities with its name to clear the flag without rewriting it.
+  - If the entity's description is now incorrect → include it in your synthesis with action: 'update' and emit the corrected layered description. Re-synthesis auto-clears the stale flag.
+
+Do not silently dismiss stale entities. Each one needs an explicit decision.
+`;
+
+  const guardrailsSection = guardrails
+    ? `\n${guardrails}\n`
+    : "";
+
+  return `
 You will synthesize one architectural update to the knowledge base based on the code changes below.
 
 ================================================================
@@ -192,12 +223,12 @@ This is the project's architectural memory: every existing entity and concept, w
 - **Do not duplicate**: if your change touches something already listed, emit \`action: update\` for that entity, not a new entity under a different name.
 
 ${context || '(No existing knowledge yet — this is the first synthesis. Establish foundational entities and concepts.)'}
-
+${guardrailsSection}
 ================================================================
 ### RECENT CODE CHANGES — Git Diff
 ================================================================
 ${diff}
-
+${staleSection}
 ================================================================
 ### YOUR TASK
 ================================================================
@@ -213,31 +244,44 @@ If cosmetic → return:
 - \`warnings\`: []
 Stop here.
 
-**Step 2 — Extract Entities (layered descriptions).**
+**Step 2 — The Detective Work (Failed Approaches).**
+Scan the diff for DELETIONS of significant logic, libraries, or patterns. If something was replaced, infer the technical reason *why* (e.g., scalability, performance, decoupling) and ensure it gets recorded as a \`failedApproach\` in the relevant entity or concept. Do not just record what was added; record what was abandoned and why.
+
+**Step 3 — Extract Entities (layered descriptions).**
 For each meaningfully changed file/module/class/endpoint:
 - Decide the \`action\`: \`create\` (new), \`update\` (modified), or \`delete\` (removed).
 - Write the \`description\` as a **layered markdown document** with sections \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions where relevant), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). See OUTPUT QUALITY BAR in the system prompt for what each section contains.
 - Apply the **domain hints** by file type (UI / backend / library / infra) — focus depth where it matters for that kind of code.
 - Set the \`sourceFile\` field to the repo-relative path that backs the entity (e.g. \`src/auth/middleware.ts\`).
-- **Link sweep**: before finalizing, scan imports and contexts in the source file; populate \`links\` with **every** \`[[WikiLink]]\` you reference anywhere in the description (Role + Interface + Lifecycle + Behavior + Verification + Wiring). Under-linking is a quality regression.
+- **Relationship sweep**: before finalizing, scan imports and contexts in the source file; populate \`relationships\` with **every** connected entity and assign the correct \`kind\`. Under-linking is a quality regression.
+- **Auto-link Concepts**: Map this entity to existing Concepts from the CURRENT CONTEXT if it clearly fits an established pattern (e.g., automatically linking a new route to the \`REST API\` concept).
 - Reuse names from the CURRENT CONTEXT where applicable. Do not duplicate.
 
-**Step 3 — Extract Concepts.**
+**Step 4 — Extract Concepts.**
 Ask: did this change introduce, change, or reinforce an abstract pattern that spans multiple entities? (Auth strategy, data access pattern, error handling policy, etc.)
+- **Implicit Pattern Detection**: Look for structural clues (e.g., new \`adapters/\` or \`queues/\` directories, or repeated naming conventions like \`*Strategy.ts\`). If you detect a structural pattern, extract it as a Concept even if the developer didn't explicitly mention it.
 - Only add a concept if a real cross-cutting pattern is visible. Do not invent concepts for the sake of completeness.
 - Concept descriptions should explain *what problem the pattern solves here* and reference 2+ entities via \`[[WikiLinks]]\`.
 
-**Step 4 — Detect Drift.**
+**Step 5 — Detect Drift.**
 Re-read the CURRENT CONTEXT. Does anything in the new diff contradict, violate, or silently replace an existing pattern or invariant?
 - If yes → add a specific, actionable entry to \`warnings\`. Quote the old expectation. Name the new contradicting file. Suggest what needs resolving.
 - If no → \`warnings: []\`. Do not invent warnings.
 
-**Step 5 — Write the Summary.**
+**Step 6 — Write the Summary.**
 1–2 sentences. The architectural tl;dr of this change. What shifted? What now connects to what? If nothing architectural shifted, say so.
 
-**Step 6 — Output JSON only.**
+**Step 6.5 — Triage Pre-Existing Stale Entities** *(only when the PRE-EXISTING STALE ENTITIES section above is present)*.
+For each stale entity listed, decide whether its prior description still matches the code:
+- Still accurate → after save_synthesis returns, call refresh_stale_entities with the verified-clean names in a single call.
+- No longer accurate → include it as an additional entry in your synthesis \`entities\` array with \`action: 'update'\` and the corrected layered description. Re-synthesis auto-clears the stale flag.
+Report your triage decision per entity in the \`summary\` so the user sees what was healed vs re-synthesized.
+
+**Step 7 — Output JSON only.**
 Match the schema exactly. No prose before or after. No markdown fences.
 `;
+};
+
 
 export const BOOTSTRAP_PROMPT_TEMPLATE = (fileList: string) => `
 You are performing a **BOOTSTRAP synthesis**. The knowledge base is empty — this is the very first ingest for this project.
@@ -264,7 +308,7 @@ ${fileList}
 3. **Emit every meaningful module/service/class as an entity** with \`action: "create"\`. Populate \`sourceFile\` with the repo-relative path.
 4. **Write each entity description as a layered markdown document** with \`## Role\` (always), \`## Interface\` (when applicable), \`## Lifecycle\` (when setup/teardown obligations exist), \`## Behavior\` (when non-obvious — include purity signal and guard-clause preconditions), \`## Verification\` (when non-trivial to verify), \`## Wiring\` (always). Apply the domain hints (UI / backend / library / infra) from the OUTPUT QUALITY BAR section.
 5. **Identify cross-cutting concepts** (architectural patterns, strategies, invariants) and emit them as concepts.
-6. **Wiki-link aggressively** — populate \`links\` with every \`[[WikiLink]]\` referenced anywhere in any section. Run the link sweep: imports, contexts, patterns, reverse deps.
+6. **Relate aggressively** — populate \`relationships\` with every connected entity and assign the correct \`kind\`. Run the relationship sweep: imports, contexts, patterns, reverse deps.
 7. **Warnings** should be empty (\`[]\`) unless you spot real contradictions inside the user's own code — not "this looks like it just installed Cortex."
 8. **Summary** should describe what the application does in 1–2 sentences. Do not mention Project Cortex.
 

@@ -12,6 +12,9 @@ import { runConfig } from "./config.js";
 import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
+import { runAuditStale } from "./audit.js";
+import { runExportSpec } from "./export.js";
+import { runHookInstall } from "./hook.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -129,6 +132,37 @@ program
     // the client for workspace roots after the MCP handshake.
     const server = new CortexMCPServer(root, undefined, explicit);
     await server.start();
+  });
+
+program
+  .command("audit")
+  .description("Audit the knowledge base")
+  .argument("<type>", "Type of audit to perform (currently supports: 'stale')")
+  .action(async (type) => {
+    if (type === "stale") {
+      await runAuditStale(projectRoot);
+    } else {
+      console.log(`Unknown audit type: ${type}. Supported: 'stale'`);
+    }
+  });
+
+program
+  .command("export")
+  .description("Export knowledge base")
+  .option("--spec", "Export as ARCH_SPEC.md")
+  .action(async (options) => {
+    if (options.spec) {
+      await runExportSpec(projectRoot);
+    } else {
+      console.log("Usage: cortex export --spec");
+    }
+  });
+
+program
+  .command("hook")
+  .description("Install Git pre-commit hook to remind about architectural sync")
+  .action(async () => {
+    await runHookInstall(projectRoot);
   });
 
 program.parse();

@@ -1,1 +1,1 @@
-Call the `get_cortex_status` tool from the `project-cortex` MCP server and report the result to the user, including whether the knowledge base is initialized and when it was last synced.
+Call the `get_cortex_status` tool from the `project-cortex` MCP server and report the result to the user, including whether the knowledge base is initialized, when it was last synced, and the **staleCount** (blast-radius audit). Suggest /ingest if staleCount > 0.
