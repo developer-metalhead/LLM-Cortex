@@ -49,7 +49,8 @@ export async function runWatch(projectRoot: string): Promise<void> {
 
     logger.info({ count: pendingDiffs.size }, "Synthesizing pending changes...");
     const context = await knowledge.getKnowledgeSummary();
-    const synthesis = await synthesizeChanges(batchDiff, context);
+    const guardrails = await knowledge.getEntityGuardrails();
+    const synthesis = await synthesizeChanges(batchDiff, context, guardrails);
 
     if (synthesis) {
       await knowledge.saveSynthesis(synthesis);
@@ -92,7 +93,8 @@ export async function runWatch(projectRoot: string): Promise<void> {
 
     logger.info({ filePath }, "Change detected");
     const context = await knowledge.getKnowledgeSummary();
-    const synthesis = await synthesizeChanges(diff, context);
+    const guardrails = await knowledge.getEntityGuardrails();
+    const synthesis = await synthesizeChanges(diff, context, guardrails);
     if (synthesis) {
       await knowledge.saveSynthesis(synthesis);
       await knowledge.updateLastSyncCommit(projectRoot);

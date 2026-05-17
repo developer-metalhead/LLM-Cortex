@@ -60,7 +60,7 @@ function resolveModel() {
   }
 }
 
-export async function synthesizeChanges(diff: string, context: string): Promise<Synthesis | null> {
+export async function synthesizeChanges(diff: string, context: string, guardrails: string = ""): Promise<Synthesis | null> {
   // --- MOCK ENGINE (FOR TESTING ONLY) ---
   if (process.env.CORTEX_MOCK_AI === 'true') {
     console.error('Testing [MOCK MODE] Simulating LLM Synthesis...');
@@ -96,7 +96,7 @@ export async function synthesizeChanges(diff: string, context: string): Promise<
         output: "object",
         schema: SynthesisSchema,
         system: LIBRARIAN_SYSTEM_PROMPT,
-        prompt: EXTRACTION_PROMPT_TEMPLATE(diff, context),
+        prompt: EXTRACTION_PROMPT_TEMPLATE(diff, context, [], guardrails),
       });
       return object;
     } catch (error) {

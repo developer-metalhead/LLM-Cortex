@@ -50,7 +50,7 @@ export class CortexMCPServer {
 
     this.server = new Server(
       { name: "project-cortex", version: "1.0.0" },
-      { capabilities: { tools: {}, prompts: {} } }
+      { capabilities: { tools: {}, prompts: {} } },
     );
 
     this.setupHandlers();
@@ -82,8 +82,12 @@ export class CortexMCPServer {
         { method: "roots/list", params: {} },
         ListRootsResultSchema,
       );
-      console.error(`[Cortex] Received ${result.roots?.length || 0} roots from client.`);
-      const firstFileRoot = result.roots?.find((r) => r.uri.startsWith("file://"));
+      console.error(
+        `[Cortex] Received ${result.roots?.length || 0} roots from client.`,
+      );
+      const firstFileRoot = result.roots?.find((r) =>
+        r.uri.startsWith("file://"),
+      );
       if (firstFileRoot) {
         console.error(`[Cortex] Found file root: ${firstFileRoot.uri}`);
         this.setProjectRoot(fileURLToPath(firstFileRoot.uri));
@@ -95,7 +99,10 @@ export class CortexMCPServer {
     }
   }
 
-  private async getSourceStats(): Promise<{ tokens: number; fileCount: number }> {
+  private async getSourceStats(): Promise<{
+    tokens: number;
+    fileCount: number;
+  }> {
     if (this._sourceStats) return this._sourceStats;
     const fileList = await listSourceFiles(this.projectRoot);
     let totalBytes = 0;
@@ -104,8 +111,10 @@ export class CortexMCPServer {
         try {
           const stat = await fs.stat(path.join(this.projectRoot, relPath));
           totalBytes += stat.size;
-        } catch { /* skip */ }
-      })
+        } catch {
+          /* skip */
+        }
+      }),
     );
     this._sourceStats = {
       tokens: Math.round(totalBytes / 4),
@@ -114,13 +123,16 @@ export class CortexMCPServer {
     return this._sourceStats;
   }
 
-  private async withSavings(text: string): Promise<Array<{ type: "text"; text: string }>> {
+  private async withSavings(
+    text: string,
+  ): Promise<Array<{ type: "text"; text: string }>> {
     try {
       const { tokens: sourceTokens, fileCount } = await this.getSourceStats();
       const responseTokens = Math.round(text.length / 4);
       const saved = Math.max(0, sourceTokens - responseTokens);
       if (saved < 500) return [{ type: "text", text }];
-      const savedFmt = saved >= 1000 ? `~${(saved / 1000).toFixed(1)}k` : `~${saved}`;
+      const savedFmt =
+        saved >= 1000 ? `~${(saved / 1000).toFixed(1)}k` : `~${saved}`;
       const footer = `\n\n---\n*Cortex saved ${savedFmt} tokens — synthesized knowledge instead of scanning ${fileCount} source files*`;
       return [{ type: "text", text: text + footer }];
     } catch {
@@ -133,7 +145,8 @@ export class CortexMCPServer {
       prompts: [
         {
           name: "ingest",
-          description: "Synthesize all recent code changes into the knowledge base.",
+          description:
+            "Synthesize all recent code changes into the knowledge base.",
         },
         {
           name: "status",
@@ -145,19 +158,23 @@ export class CortexMCPServer {
         },
         {
           name: "explore",
-          description: "Navigate the knowledge base (index → drill into specific entities/concepts).",
+          description:
+            "Navigate the knowledge base (index → drill into specific entities/concepts).",
         },
         {
           name: "before_change",
-          description: "Pre-flight check before implementing, modifying, or fixing code. Forces a knowledge-first workflow so you don't break dependents or duplicate existing patterns.",
+          description:
+            "Pre-flight check before implementing, modifying, or fixing code. Forces a knowledge-first workflow so you don't break dependents or duplicate existing patterns.",
         },
         {
           name: "audit",
-          description: "Find stale entities — knowledge whose dependencies have shifted since it was last synthesized.",
+          description:
+            "Find stale entities — knowledge whose dependencies have shifted since it was last synthesized.",
         },
         {
           name: "export",
-          description: "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
+          description:
+            "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
         },
       ],
     }));
@@ -165,7 +182,8 @@ export class CortexMCPServer {
     this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       if (request.params.name === "ingest") {
         return {
-          description: "Synthesize all recent code changes into the knowledge base.",
+          description:
+            "Synthesize all recent code changes into the knowledge base.",
           messages: [
             {
               role: "user",
@@ -232,7 +250,8 @@ export class CortexMCPServer {
       }
       if (request.params.name === "audit") {
         return {
-          description: "Find stale entities, verify each one, and heal the knowledge base.",
+          description:
+            "Find stale entities, verify each one, and heal the knowledge base.",
           messages: [
             {
               role: "user",
@@ -268,7 +287,8 @@ export class CortexMCPServer {
       }
       if (request.params.name === "export") {
         return {
-          description: "Generate ARCH_SPEC.md from the synthesized knowledge base.",
+          description:
+            "Generate ARCH_SPEC.md from the synthesized knowledge base.",
           messages: [
             {
               role: "user",
@@ -286,7 +306,8 @@ export class CortexMCPServer {
       }
       if (request.params.name === "before_change") {
         return {
-          description: "Knowledge-first pre-flight check before implementing, modifying, or fixing code.",
+          description:
+            "Knowledge-first pre-flight check before implementing, modifying, or fixing code.",
           messages: [
             {
               role: "user",
@@ -321,7 +342,8 @@ export class CortexMCPServer {
       tools: [
         {
           name: "get_cortex_status",
-          description: "Check if Project Cortex is initialized in this project.",
+          description:
+            "Check if Project Cortex is initialized in this project.",
           inputSchema: { type: "object", properties: {} },
         },
         {
@@ -340,7 +362,8 @@ export class CortexMCPServer {
             properties: {
               synthesis: {
                 type: "object",
-                description: "The structured synthesis result matching the Cortex schema.",
+                description:
+                  "The structured synthesis result matching the Cortex schema.",
                 required: ["summary", "entities", "concepts", "warnings"],
                 properties: {
                   summary: { type: "string" },
@@ -348,10 +371,18 @@ export class CortexMCPServer {
                     type: "array",
                     items: {
                       type: "object",
-                      required: ["name", "action", "description", "relationships"],
+                      required: [
+                        "name",
+                        "action",
+                        "description",
+                        "relationships",
+                      ],
                       properties: {
                         name: { type: "string" },
-                        action: { type: "string", enum: ["create", "update", "delete"] },
+                        action: {
+                          type: "string",
+                          enum: ["create", "update", "delete"],
+                        },
                         description: { type: "string" },
                         relationships: {
                           type: "array",
@@ -360,15 +391,31 @@ export class CortexMCPServer {
                             required: ["target", "kind"],
                             properties: {
                               target: { type: "string" },
-                              kind: { type: "string", enum: ["depends_on", "called_by", "supports", "contradicts", "derived_from", "parent_of"] },
+                              kind: {
+                                type: "string",
+                                enum: [
+                                  "depends_on",
+                                  "called_by",
+                                  "supports",
+                                  "contradicts",
+                                  "derived_from",
+                                  "parent_of",
+                                ],
+                              },
                             },
                           },
                         },
                         constraints: {
                           type: "object",
                           properties: {
-                            mustNotImport: { type: "array", items: { type: "string" } },
-                            mustNotBeCalledBy: { type: "array", items: { type: "string" } },
+                            mustNotImport: {
+                              type: "array",
+                              items: { type: "string" },
+                            },
+                            mustNotBeCalledBy: {
+                              type: "array",
+                              items: { type: "string" },
+                            },
                             contract: { type: "string" },
                           },
                         },
@@ -387,7 +434,8 @@ export class CortexMCPServer {
                         },
                         sourceFile: {
                           type: "string",
-                          description: "Repo-relative path to the file this entity describes (e.g. src/auth/middleware.ts). Optional but strongly preferred.",
+                          description:
+                            "Repo-relative path to the file this entity describes (e.g. src/auth/middleware.ts). Optional but strongly preferred.",
                         },
                       },
                     },
@@ -424,7 +472,8 @@ export class CortexMCPServer {
         },
         {
           name: "save_concept",
-          description: "Saves a single architectural concept directly to the knowledge base without doing a full synthesis.",
+          description:
+            "Saves a single architectural concept directly to the knowledge base without doing a full synthesis.",
           inputSchema: {
             type: "object",
             required: ["concept"],
@@ -477,7 +526,11 @@ export class CortexMCPServer {
             type: "object",
             required: ["name"],
             properties: {
-              name: { type: "string", description: "Entity name exactly as it appears in the knowledge index." },
+              name: {
+                type: "string",
+                description:
+                  "Entity name exactly as it appears in the knowledge index.",
+              },
             },
           },
         },
@@ -489,29 +542,40 @@ export class CortexMCPServer {
             type: "object",
             required: ["name"],
             properties: {
-              name: { type: "string", description: "Concept name exactly as it appears in the knowledge index." },
+              name: {
+                type: "string",
+                description:
+                  "Concept name exactly as it appears in the knowledge index.",
+              },
             },
           },
         },
         {
           name: "set_project_root",
-          description: "Manually re-point the Cortex server to a specific project root. **Use this ONLY when:** get_cortex_status reports a mismatched path (e.g., the IDE's installation folder instead of your project). This re-initializes the Knowledge Manager and fixes path-based tool failures.",
+          description:
+            "Manually re-point the Cortex server to a specific project root. **Use this ONLY when:** get_cortex_status reports a mismatched path (e.g., the IDE's installation folder instead of your project). This re-initializes the Knowledge Manager and fixes path-based tool failures.",
           inputSchema: {
             type: "object",
             required: ["path"],
             properties: {
-              path: { type: "string", description: "Absolute path to the project root (e.g. C:/Users/name/Desktop/Project)." },
+              path: {
+                type: "string",
+                description:
+                  "Absolute path to the project root (e.g. C:/Users/name/Desktop/Project).",
+              },
             },
           },
         },
         {
           name: "audit",
-          description: "Perform an architectural audit to find stale entities and blast-radius victims.",
+          description:
+            "Perform an architectural audit to find stale entities and blast-radius victims.",
           inputSchema: { type: "object", properties: {} },
         },
         {
           name: "export",
-          description: "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
+          description:
+            "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
           inputSchema: { type: "object", properties: {} },
         },
         {
@@ -525,7 +589,8 @@ export class CortexMCPServer {
               names: {
                 type: "array",
                 items: { type: "string" },
-                description: "Names of stale entities you've verified as unaffected by the upstream change.",
+                description:
+                  "Names of stale entities you've verified as unaffected by the upstream change.",
               },
             },
           },
@@ -544,12 +609,16 @@ export class CortexMCPServer {
           content: [
             {
               type: "text",
-              text: JSON.stringify({
-                status: knowledgeExists ? "initialized" : "not initialized",
-                lastSyncCommit: lastSync || "never synced",
-                projectRoot: this.projectRoot,
-                staleCount: staleCount
-              }, null, 2),
+              text: JSON.stringify(
+                {
+                  status: knowledgeExists ? "initialized" : "not initialized",
+                  lastSyncCommit: lastSync || "never synced",
+                  projectRoot: this.projectRoot,
+                  staleCount: staleCount,
+                },
+                null,
+                2,
+              ),
             },
           ],
         };
@@ -561,9 +630,10 @@ export class CortexMCPServer {
           content: [
             {
               type: "text",
-              text: entities.length > 0
-                ? `Found ${entities.length} stale entities:\n\n${entities.map(e => `- ${e.name} (Stale since: ${e.staleSince})`).join("\n")}`
-                : "✅ No stale entities found. Architecture is fully synchronized.",
+              text:
+                entities.length > 0
+                  ? `Found ${entities.length} stale entities:\n\n${entities.map((e) => `- ${e.name} (Stale since: ${e.staleSince})`).join("\n")}`
+                  : "✅ No stale entities found. Architecture is fully synchronized.",
             },
           ],
         };
@@ -583,19 +653,32 @@ export class CortexMCPServer {
 
       if (name === "refresh_stale_entities") {
         const rawNames = (args as any)?.names;
-        if (!Array.isArray(rawNames) || rawNames.some((n) => typeof n !== "string")) {
+        if (
+          !Array.isArray(rawNames) ||
+          rawNames.some((n) => typeof n !== "string")
+        ) {
           return {
-            content: [{ type: "text", text: "refresh_stale_entities requires a 'names' string array." }],
+            content: [
+              {
+                type: "text",
+                text: "refresh_stale_entities requires a 'names' string array.",
+              },
+            ],
             isError: true,
           };
         }
-        const { cleared, skipped } = await this.knowledge.refreshStaleEntities(rawNames);
+        const { cleared, skipped } =
+          await this.knowledge.refreshStaleEntities(rawNames);
         const lines: string[] = [];
         if (cleared.length > 0) {
-          lines.push(`✅ Refreshed ${cleared.length} stale entit${cleared.length === 1 ? "y" : "ies"}: ${cleared.join(", ")}`);
+          lines.push(
+            `✅ Refreshed ${cleared.length} stale entit${cleared.length === 1 ? "y" : "ies"}: ${cleared.join(", ")}`,
+          );
         }
         if (skipped.length > 0) {
-          lines.push(`⚠️ Skipped ${skipped.length} (not stale or not found): ${skipped.join(", ")}`);
+          lines.push(
+            `⚠️ Skipped ${skipped.length} (not stale or not found): ${skipped.join(", ")}`,
+          );
         }
         if (lines.length === 0) lines.push("No entities were refreshed.");
         return { content: [{ type: "text", text: lines.join("\n") }] };
@@ -616,24 +699,31 @@ export class CortexMCPServer {
             content: [
               {
                 type: "text",
-                text: JSON.stringify({
-                  mode: "bootstrap",
-                  systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
-                  userPrompt: prompt,
-                  outputSchema: {
-                    summary: "string — 1-2 sentence description of what this application does",
-                    entities: "array of { name, action: 'create', description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
-                    concepts: "array of { name, description, failedApproaches? }",
-                    warnings: "array of strings (usually empty on bootstrap)",
+                text: JSON.stringify(
+                  {
+                    mode: "bootstrap",
+                    systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
+                    userPrompt: prompt,
+                    outputSchema: {
+                      summary:
+                        "string — 1-2 sentence description of what this application does",
+                      entities:
+                        "array of { name, action: 'create', description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
+                      concepts:
+                        "array of { name, description, failedApproaches? }",
+                      warnings: "array of strings (usually empty on bootstrap)",
+                    },
+                    instructions:
+                      "Bootstrap mode — the knowledge base is empty. Use your filesystem tools (Read, Glob, Grep) to inspect the files listed in userPrompt and synthesize the application's full architecture. The git diff has been intentionally excluded because it usually reflects the installation of Project Cortex itself, not the user's code. Emit every documented file as action: 'create'. Then call save_synthesis with the result.",
+                    fileListMeta: {
+                      totalFound: fileList.totalFound,
+                      truncated: fileList.truncated,
+                      source: fileList.source,
+                    },
                   },
-                  instructions:
-                    "Bootstrap mode — the knowledge base is empty. Use your filesystem tools (Read, Glob, Grep) to inspect the files listed in userPrompt and synthesize the application's full architecture. The git diff has been intentionally excluded because it usually reflects the installation of Project Cortex itself, not the user's code. Emit every documented file as action: 'create'. Then call save_synthesis with the result.",
-                  fileListMeta: {
-                    totalFound: fileList.totalFound,
-                    truncated: fileList.truncated,
-                    source: fileList.source,
-                  },
-                }, null, 2),
+                  null,
+                  2,
+                ),
               },
             ],
           };
@@ -647,7 +737,9 @@ export class CortexMCPServer {
 
         if (!diff.trim() && staleEntities.length === 0) {
           return {
-            content: [{ type: "text", text: "No pending changes since last sync." }],
+            content: [
+              { type: "text", text: "No pending changes since last sync." },
+            ],
           };
         }
 
@@ -665,26 +757,42 @@ export class CortexMCPServer {
           };
         }
 
-        const prompt = EXTRACTION_PROMPT_TEMPLATE(diff, knowledgeContext, staleEntities);
+        const guardrails = await this.knowledge.getEntityGuardrails();
+        const prompt = EXTRACTION_PROMPT_TEMPLATE(
+          diff,
+          knowledgeContext,
+          staleEntities,
+          guardrails,
+        );
 
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify({
-                mode: "incremental",
-                systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
-                userPrompt: prompt,
-                staleEntities: staleEntities.map((e) => ({ name: e.name, staleSince: e.staleSince, sourceFile: e.sourceFile })),
-                outputSchema: {
-                  summary: "string — 1-2 sentence high-level summary",
-                  entities: "array of { name, action: create|update|delete, description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
-                  concepts: "array of { name, description, failedApproaches? }",
-                  warnings: "array of strings",
+              text: JSON.stringify(
+                {
+                  mode: "incremental",
+                  systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
+                  userPrompt: prompt,
+                  staleEntities: staleEntities.map((e) => ({
+                    name: e.name,
+                    staleSince: e.staleSince,
+                    sourceFile: e.sourceFile,
+                  })),
+                  outputSchema: {
+                    summary: "string — 1-2 sentence high-level summary",
+                    entities:
+                      "array of { name, action: create|update|delete, description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
+                    concepts:
+                      "array of { name, description, failedApproaches? }",
+                    warnings: "array of strings",
+                  },
+                  instructions:
+                    "Follow the systemPrompt. Analyze the userPrompt. Return a synthesis object matching outputSchema. Then call save_synthesis with the result. If the userPrompt lists pre-existing stale entities, follow its instructions for healing them (refresh_stale_entities for verified-clean, include in the synthesis for those needing updates).",
                 },
-                instructions:
-                  "Follow the systemPrompt. Analyze the userPrompt. Return a synthesis object matching outputSchema. Then call save_synthesis with the result. If the userPrompt lists pre-existing stale entities, follow its instructions for healing them (refresh_stale_entities for verified-clean, include in the synthesis for those needing updates).",
-              }, null, 2),
+                null,
+                2,
+              ),
             },
           ],
         };
@@ -784,7 +892,12 @@ export class CortexMCPServer {
 
         if (!parsed.success) {
           return {
-            content: [{ type: "text", text: `Invalid concept format: ${parsed.error.message}` }],
+            content: [
+              {
+                type: "text",
+                text: `Invalid concept format: ${parsed.error.message}`,
+              },
+            ],
             isError: true,
           };
         }
@@ -811,7 +924,12 @@ export class CortexMCPServer {
         const entityName = (args as any)?.name;
         if (typeof entityName !== "string" || !entityName.trim()) {
           return {
-            content: [{ type: "text", text: "read_entity requires a non-empty 'name' argument." }],
+            content: [
+              {
+                type: "text",
+                text: "read_entity requires a non-empty 'name' argument.",
+              },
+            ],
             isError: true,
           };
         }
@@ -834,7 +952,12 @@ export class CortexMCPServer {
         const conceptName = (args as any)?.name;
         if (typeof conceptName !== "string" || !conceptName.trim()) {
           return {
-            content: [{ type: "text", text: "read_concept requires a non-empty 'name' argument." }],
+            content: [
+              {
+                type: "text",
+                text: "read_concept requires a non-empty 'name' argument.",
+              },
+            ],
             isError: true,
           };
         }
@@ -857,7 +980,12 @@ export class CortexMCPServer {
         const newPath = (args as any)?.path;
         if (typeof newPath !== "string" || !newPath.trim()) {
           return {
-            content: [{ type: "text", text: "set_project_root requires a 'path' argument." }],
+            content: [
+              {
+                type: "text",
+                text: "set_project_root requires a 'path' argument.",
+              },
+            ],
             isError: true,
           };
         }
@@ -918,7 +1046,7 @@ if (__selfUrl && import.meta.url === __selfUrl) {
   loadCortexEnv(projectRoot);
 
   console.error(`[Cortex] Starting MCP server with root: ${projectRoot}`);
-  
+
   const server = new CortexMCPServer(projectRoot);
   server.start().catch((err) => {
     console.error("Failed to start MCP server:", err);

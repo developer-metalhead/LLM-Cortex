@@ -88,6 +88,54 @@ export class KnowledgeManager {
     }
   }
 
+  // Returns a compact guardrails block for ALL entities that have constraints
+  // or failedApproaches. Injected into the ingest prompt as a separate section
+  // so the Librarian sees active constraints and past failures WITHOUT bloating
+  // the main index with full descriptions.
+  //
+  // Design rationale: the index stays lean (## Role only); this block adds
+  // only the actionable guardrail data — typically 10-50 tokens per entity —
+  // so context growth is bounded. For a 50-entity project the block is ~2k
+  // tokens vs ~25k if full entity pages were injected.
+  async getEntityGuardrails(): Promise<string> {
+    const state = await this.readState();
+    const lines: string[] = [];
+
+    for (const [name, entity] of Object.entries(state.entities)) {
+      const parts: string[] = [];
+
+      if (entity.constraints) {
+        const c = entity.constraints;
+        if (c.mustNotImport?.length) parts.push(`  mustNotImport: ${c.mustNotImport.join(", ")}`);
+        if (c.mustNotBeCalledBy?.length) parts.push(`  mustNotBeCalledBy: ${c.mustNotBeCalledBy.join(", ")}`);
+        if (c.contract) parts.push(`  contract: ${c.contract}`);
+      }
+
+      if (entity.failedApproaches?.length) {
+        // Show at most 3 most recent — enough for the Librarian to recognise
+        // a pattern; anything older has low recurrence probability.
+        const recent = entity.failedApproaches.slice(-3);
+        parts.push(...recent.map(fa => `  [FAILED] ${fa.summary}: ${fa.reason}`));
+      }
+
+      if (parts.length > 0) {
+        lines.push(`[[${name}]]`);
+        lines.push(...parts);
+      }
+    }
+
+    if (lines.length === 0) return "";
+    return [
+      "================================================================",
+      "### ENTITY GUARDRAILS — Constraints & Known Failed Approaches",
+      "================================================================",
+      "The following entities have declared constraints or past failed approaches.",
+      "Read them before modifying or creating relationships to these entities.",
+      "",
+      ...lines,
+    ].join("\n");
+  }
+
   // Deep-read: full markdown for a specific entity. Used by downstream AIs
   // navigating wiki-links from the index.
   async readEntity(name: string): Promise<string | null> {
@@ -247,13 +295,28 @@ export class KnowledgeManager {
         continue;
       }
       const existing = mergedEntities[entity.name];
+
+      // Merge failedApproaches: new entries are appended to existing ones,
+      // then the combined array is capped at 10 most recent.
+      // This prevents unbounded accumulation across many updates while
+      // keeping the full recent history visible to the Librarian.
+      const mergedFailedApproaches = (() => {
+        const incoming = entity.failedApproaches;
+        const prior = existing?.failedApproaches ?? [];
+        if (!incoming || incoming.length === 0) return prior.length > 0 ? prior.slice(-10) : undefined;
+        // Deduplicate by summary to avoid re-recording the same failure.
+        const seen = new Set(prior.map(fa => fa.summary));
+        const novel = incoming.filter(fa => !seen.has(fa.summary));
+        return [...prior, ...novel].slice(-10);
+      })();
+
       mergedEntities[entity.name] = {
         description: entity.description,
         relationships: entity.relationships,
         // `undefined` means "Librarian didn't re-emit this field" → preserve
         // the prior value. An explicit empty object/array clears it.
         constraints: entity.constraints ?? existing?.constraints,
-        failedApproaches: entity.failedApproaches ?? existing?.failedApproaches,
+        failedApproaches: mergedFailedApproaches,
         sourceFile: entity.sourceFile ?? existing?.sourceFile,
         lastRefined: timestamp,
         staleSince: existing?.staleSince, // recomputed below

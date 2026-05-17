@@ -441,3 +441,124 @@ describe("Phase 6 — Index rendering", () => {
     assert.match(spec, /tried basic auth/);
   });
 });
+describe("Phase 6 — failedApproaches cap & deduplication", () => {
+  it("caps failedApproaches at 10 most recent across updates", async () => {
+    // Seed entity with 9 failed approaches.
+    const initial = Array.from({ length: 9 }, (_, i) => ({
+      summary: `approach-${i}`,
+      reason: `reason-${i}`,
+      recordedAt: `2026-01-0${i + 1}T00:00:00Z`,
+    }));
+
+    await km.saveSynthesis(syn({
+      entities: [{
+        name: "Auth",
+        action: "create",
+        description: "v1",
+        relationships: [],
+        failedApproaches: initial,
+      }],
+    }));
+
+    // Update with 3 more novel approaches — total would be 12 without the cap.
+    const newOnes = [
+      { summary: "approach-new-1", reason: "r1", recordedAt: "2026-02-01T00:00:00Z" },
+      { summary: "approach-new-2", reason: "r2", recordedAt: "2026-02-02T00:00:00Z" },
+      { summary: "approach-new-3", reason: "r3", recordedAt: "2026-02-03T00:00:00Z" },
+    ];
+
+    await km.saveSynthesis(syn({
+      entities: [{
+        name: "Auth",
+        action: "update",
+        description: "v2",
+        relationships: [],
+        failedApproaches: newOnes,
+      }],
+    }));
+
+    const md = await fs.readFile(
+      path.join(tmp, ".knowledge", "entities", "Auth.md"),
+      "utf8",
+    );
+    // 9 initial + 3 novel = 12 total → capped to 10: evicts approach-0 and approach-1 only.
+    assert.doesNotMatch(md, /approach-0/);
+    assert.doesNotMatch(md, /approach-1/);
+    // approach-2 through approach-8 survive as the 7 oldest kept.
+    assert.match(md, /approach-2/);
+    // The 3 newest novel ones must be present.
+    assert.match(md, /approach-new-1/);
+    assert.match(md, /approach-new-3/);
+
+  });
+
+  it("deduplicates failedApproaches by summary", async () => {
+    const fa = { summary: "tried basic auth", reason: "no logout", recordedAt: "2026-01-01T00:00:00Z" };
+
+    await km.saveSynthesis(syn({
+      entities: [{ name: "Auth", action: "create", description: "v1", relationships: [], failedApproaches: [fa] }],
+    }));
+
+    // Re-submit the same summary in an update — must NOT duplicate it.
+    await km.saveSynthesis(syn({
+      entities: [{ name: "Auth", action: "update", description: "v2", relationships: [], failedApproaches: [fa] }],
+    }));
+
+    const md = await fs.readFile(path.join(tmp, ".knowledge", "entities", "Auth.md"), "utf8");
+    const occurrences = (md.match(/tried basic auth/g) || []).length;
+    assert.equal(occurrences, 1);
+  });
+});
+
+describe("Phase 6 — getEntityGuardrails", () => {
+  it("returns empty string when no entities have constraints or failedApproaches", async () => {
+    await km.saveSynthesis(syn({
+      entities: [{ name: "Plain", action: "create", description: "no guardrails", relationships: [] }],
+    }));
+    const guardrails = await km.getEntityGuardrails();
+    assert.equal(guardrails, "");
+  });
+
+  it("returns a block mentioning constrained entities", async () => {
+    await km.saveSynthesis(syn({
+      entities: [{
+        name: "SecretStore",
+        action: "create",
+        description: "...",
+        relationships: [],
+        constraints: { mustNotImport: ["fs", "child_process"], contract: "Never log secrets" },
+      }],
+    }));
+
+    const guardrails = await km.getEntityGuardrails();
+    assert.match(guardrails, /ENTITY GUARDRAILS/);
+    assert.match(guardrails, /SecretStore/);
+    assert.match(guardrails, /mustNotImport/);
+    assert.match(guardrails, /Never log secrets/);
+  });
+
+  it("includes recent failedApproaches (max 3) in guardrails", async () => {
+    const approaches = Array.from({ length: 5 }, (_, i) => ({
+      summary: `attempt-${i}`,
+      reason: `why-${i}`,
+      recordedAt: `2026-01-0${i + 1}T00:00:00Z`,
+    }));
+
+    await km.saveSynthesis(syn({
+      entities: [{
+        name: "Cache",
+        action: "create",
+        description: "...",
+        relationships: [],
+        failedApproaches: approaches,
+      }],
+    }));
+
+    const guardrails = await km.getEntityGuardrails();
+    // Only the last 3 should appear.
+    assert.doesNotMatch(guardrails, /attempt-0/);
+    assert.doesNotMatch(guardrails, /attempt-1/);
+    assert.match(guardrails, /attempt-4/);
+    assert.match(guardrails, /FAILED/);
+  });
+});

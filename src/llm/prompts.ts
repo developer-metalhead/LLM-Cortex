@@ -187,6 +187,7 @@ export const EXTRACTION_PROMPT_TEMPLATE = (
   diff: string,
   context: string,
   staleEntities: Array<{ name: string; staleSince: string; sourceFile?: string }> = [],
+  guardrails: string = "",
 ) => {
   const staleSection = staleEntities.length === 0
     ? ""
@@ -205,6 +206,10 @@ After synthesizing the diff (Steps 1–6 below), do Step 6.5: triage each stale 
 Do not silently dismiss stale entities. Each one needs an explicit decision.
 `;
 
+  const guardrailsSection = guardrails
+    ? `\n${guardrails}\n`
+    : "";
+
   return `
 You will synthesize one architectural update to the knowledge base based on the code changes below.
 
@@ -218,7 +223,7 @@ This is the project's architectural memory: every existing entity and concept, w
 - **Do not duplicate**: if your change touches something already listed, emit \`action: update\` for that entity, not a new entity under a different name.
 
 ${context || '(No existing knowledge yet — this is the first synthesis. Establish foundational entities and concepts.)'}
-
+${guardrailsSection}
 ================================================================
 ### RECENT CODE CHANGES — Git Diff
 ================================================================
@@ -276,6 +281,7 @@ Report your triage decision per entity in the \`summary\` so the user sees what 
 Match the schema exactly. No prose before or after. No markdown fences.
 `;
 };
+
 
 export const BOOTSTRAP_PROMPT_TEMPLATE = (fileList: string) => `
 You are performing a **BOOTSTRAP synthesis**. The knowledge base is empty — this is the very first ingest for this project.
