@@ -10,6 +10,12 @@ const LAST_SYNC_FILE = ".last_sync_commit";
 const STATE_FILE = "state.json";
 const STATE_VERSION = 2;
 
+// Only "actual-usage" relationships participate in constraint validation and
+// blast-radius staleness propagation. `contradicts`, `supports`,
+// `derived_from`, `parent_of` document relationships that don't represent
+// runtime coupling.
+const USAGE_KINDS = new Set<Relationship["kind"]>(["depends_on", "called_by"]);
+
 type EntityRecord = {
   description: string;
   relationships: Relationship[];
@@ -228,132 +234,197 @@ export class KnowledgeManager {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
-    // 1. Constraint Validation
+    // Build the post-synthesis "merged" state preview. Two reasons this is done
+    // before any write:
+    //   1) constraint validation must see in-batch additions (e.g. the same
+    //      synthesis creating A→B while B declares mustNotBeCalledBy=[A]);
+    //   2) update-without-re-emitting must preserve prior constraints /
+    //      failedApproaches / sourceFile rather than silently dropping them.
+    const mergedEntities: Record<string, EntityRecord> = { ...state.entities };
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete") {
+        delete mergedEntities[entity.name];
+        continue;
+      }
+      const existing = mergedEntities[entity.name];
+      mergedEntities[entity.name] = {
+        description: entity.description,
+        relationships: entity.relationships,
+        // `undefined` means "Librarian didn't re-emit this field" → preserve
+        // the prior value. An explicit empty object/array clears it.
+        constraints: entity.constraints ?? existing?.constraints,
+        failedApproaches: entity.failedApproaches ?? existing?.failedApproaches,
+        sourceFile: entity.sourceFile ?? existing?.sourceFile,
+        lastRefined: timestamp,
+        staleSince: existing?.staleSince, // recomputed below
+      };
+    }
+
+    // Constraint Validation (against merged state, restricted to actual-usage
+    // edges — `contradicts`/`supports`/etc. document relationships, they
+    // shouldn't trigger import/call violations).
+    //
+    // The two constraint kinds have different applicability:
+    //   - mustNotImport: source-side rule, applies regardless of whether the
+    //     target is a tracked entity (e.g. forbidding `import 'lodash'`).
+    //   - mustNotBeCalledBy: target-side rule, only meaningful when the target
+    //     exists as a tracked entity that declared it.
     for (const entity of synthesis.entities) {
       if (entity.action === "delete") continue;
+      const entityRecord = mergedEntities[entity.name];
       for (const rel of entity.relationships) {
-        const targetEntity = state.entities[rel.target];
-        if (!targetEntity) continue;
-        
-        if (targetEntity.constraints?.mustNotBeCalledBy?.includes(entity.name)) {
-          throw new Error(`Constraint Violation: Entity '${rel.target}' must not be called by '${entity.name}'.`);
-        }
-        if (entity.constraints?.mustNotImport?.includes(rel.target)) {
+        if (!USAGE_KINDS.has(rel.kind)) continue;
+
+        if (entityRecord?.constraints?.mustNotImport?.includes(rel.target)) {
           throw new Error(`Constraint Violation: Entity '${entity.name}' must not import '${rel.target}'.`);
         }
+
+        const targetEntity = mergedEntities[rel.target];
+        if (targetEntity?.constraints?.mustNotBeCalledBy?.includes(entity.name)) {
+          throw new Error(`Constraint Violation: Entity '${rel.target}' must not be called by '${entity.name}'.`);
+        }
       }
+    }
+
+    // Validation passed — commit merged entities into state.
+    state.entities = mergedEntities;
+
+    // Recompute staleness:
+    //   - Clear staleSince on entities explicitly in this synthesis (they're fresh).
+    //   - Propagate staleSince to dependents of every update/delete (not the
+    //     create case — a brand-new entity has no prior dependents).
+    const synthesisNames = new Set(synthesis.entities.map((e) => e.name));
+    for (const name of synthesisNames) {
+      if (state.entities[name]) delete state.entities[name].staleSince;
+    }
+
+    const stalePropagatedTo = new Set<string>();
+    for (const entity of synthesis.entities) {
+      if (entity.action === "create") continue;
+      for (const [otherName, otherEntity] of Object.entries(state.entities)) {
+        if (synthesisNames.has(otherName)) continue;
+        if (
+          otherEntity.relationships.some(
+            (r) => r.target === entity.name && USAGE_KINDS.has(r.kind),
+          )
+        ) {
+          otherEntity.staleSince = timestamp;
+          stalePropagatedTo.add(otherName);
+        }
+      }
+    }
+
+    // Filesystem writes — entity files (synthesis + stale-stamped dependents),
+    // concept files, deletes, log entry, state.json, index.md.
+    for (const entity of synthesis.entities) {
+      if (entity.action !== "delete") continue;
+      const entityPath = path.join(this.knowledgeDir, "entities", `${safeFilename(entity.name)}.md`);
+      try { await fs.unlink(entityPath); } catch {}
+    }
+
+    const writtenEntityNames = new Set<string>();
+    for (const entity of synthesis.entities) {
+      if (entity.action === "delete") continue;
+      await this.renderEntityFile(entity.name, state.entities[entity.name]);
+      writtenEntityNames.add(entity.name);
+    }
+    for (const staleName of stalePropagatedTo) {
+      if (writtenEntityNames.has(staleName)) continue;
+      await this.renderEntityFile(staleName, state.entities[staleName]);
+    }
+
+    for (const concept of synthesis.concepts) {
+      const existing = state.concepts[concept.name];
+      state.concepts[concept.name] = {
+        description: concept.description,
+        failedApproaches: concept.failedApproaches ?? existing?.failedApproaches,
+        lastRefined: timestamp,
+      };
+      await this.renderConceptFile(concept.name, state.concepts[concept.name]);
     }
 
     const logPath = path.join(this.knowledgeDir, "log.md");
     const logEntry = `\n## [${timestamp}]\n**Summary:** ${synthesis.summary}\n**Impacted:** ${synthesis.entities.map((e) => `[[${e.name}]]`).join(", ")}\n**Warnings:** ${synthesis.warnings.join("; ") || "None"}\n---\n`;
     await fs.appendFile(logPath, logEntry);
 
-    // 2. Staleness Propagation & Writing
-    for (const entity of synthesis.entities) {
-      const safeName = safeFilename(entity.name);
-      const entityPath = path.join(this.knowledgeDir, "entities", `${safeName}.md`);
-
-      if (entity.action === "delete") {
-        delete state.entities[entity.name];
-        try {
-          await fs.unlink(entityPath);
-        } catch {}
-        continue;
-      }
-
-      const existing = state.entities[entity.name];
-      if (existing && entity.action === "update") {
-        for (const [otherName, otherEntity] of Object.entries(state.entities)) {
-          if (otherEntity.relationships.some(r => r.target === entity.name && ["depends_on", "called_by"].includes(r.kind))) {
-            otherEntity.staleSince = timestamp;
-          }
-        }
-      }
-
-      state.entities[entity.name] = {
-        description: entity.description,
-        relationships: entity.relationships,
-        constraints: entity.constraints,
-        failedApproaches: entity.failedApproaches,
-        sourceFile: entity.sourceFile,
-        lastRefined: timestamp,
-      };
-
-      const sourceLine = entity.sourceFile ? `**Source:** \`${entity.sourceFile}\`\n\n` : "";
-      const relsLine = entity.relationships.length
-        ? entity.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
-        : "_(none)_";
-      const staleLine = state.entities[entity.name].staleSince ? `\n> [!WARNING]\n> **Stale Since:** ${state.entities[entity.name].staleSince}\n` : "";
-      
-      let constraintsLine = "";
-      if (entity.constraints) {
-        constraintsLine = "\n### Constraints\n";
-        if (entity.constraints.mustNotImport?.length) constraintsLine += `- **Must Not Import:** ${entity.constraints.mustNotImport.join(", ")}\n`;
-        if (entity.constraints.mustNotBeCalledBy?.length) constraintsLine += `- **Must Not Be Called By:** ${entity.constraints.mustNotBeCalledBy.join(", ")}\n`;
-        if (entity.constraints.contract) constraintsLine += `- **Contract:** ${entity.constraints.contract}\n`;
-      }
-
-      let failedApproachesLine = "";
-      if (entity.failedApproaches?.length) {
-        failedApproachesLine = "\n### Failed Approaches\n" + entity.failedApproaches.map(fa => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
-      }
-
-      const body = isLayeredDescription(entity.description) ? entity.description.trim() : `> ${entity.description}`;
-      const content = `# Entity: ${entity.name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
-      await fs.writeFile(entityPath, content);
-    }
-
-    for (const concept of synthesis.concepts) {
-      const safeName = safeFilename(concept.name);
-      const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
-
-      state.concepts[concept.name] = {
-        description: concept.description,
-        failedApproaches: concept.failedApproaches,
-        lastRefined: timestamp,
-      };
-
-      let failedApproachesLine = "";
-      if (concept.failedApproaches?.length) {
-        failedApproachesLine = "\n### Failed Approaches\n" + concept.failedApproaches.map(fa => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
-      }
-
-      const content = `# Concept: ${concept.name}\n\n${concept.description}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
-      await fs.writeFile(conceptPath, content);
-    }
-
     await this.writeState(state);
     await this.updateIndex();
+  }
+
+  private async renderEntityFile(name: string, record: EntityRecord): Promise<void> {
+    const entityPath = path.join(this.knowledgeDir, "entities", `${safeFilename(name)}.md`);
+
+    const sourceLine = record.sourceFile ? `**Source:** \`${record.sourceFile}\`\n\n` : "";
+    const relsLine = record.relationships.length
+      ? record.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
+      : "_(none)_";
+    const staleLine = record.staleSince
+      ? `\n> [!WARNING]\n> **Stale Since:** ${record.staleSince}\n> A dependency was modified; re-verify this entity still reflects the current code.\n`
+      : "";
+
+    let constraintsLine = "";
+    if (record.constraints) {
+      const parts: string[] = [];
+      if (record.constraints.mustNotImport?.length) parts.push(`- **Must Not Import:** ${record.constraints.mustNotImport.join(", ")}`);
+      if (record.constraints.mustNotBeCalledBy?.length) parts.push(`- **Must Not Be Called By:** ${record.constraints.mustNotBeCalledBy.join(", ")}`);
+      if (record.constraints.contract) parts.push(`- **Contract:** ${record.constraints.contract}`);
+      if (parts.length) constraintsLine = "\n### Constraints\n" + parts.join("\n") + "\n";
+    }
+
+    let failedApproachesLine = "";
+    if (record.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+    }
+
+    const body = isLayeredDescription(record.description) ? record.description.trim() : `> ${record.description}`;
+    const content = `# Entity: ${name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    await fs.writeFile(entityPath, content);
+  }
+
+  private async renderConceptFile(name: string, record: ConceptRecord): Promise<void> {
+    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeFilename(name)}.md`);
+
+    let failedApproachesLine = "";
+    if (record.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+    }
+
+    const content = `# Concept: ${name}\n\n${record.description}\n${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    await fs.writeFile(conceptPath, content);
   }
 
   async saveConcept(concept: SaveConcept) {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
-    const logPath = path.join(this.knowledgeDir, "log.md");
-    const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** None\n---\n`;
-    await fs.appendFile(logPath, logEntry);
-
-    const safeName = safeFilename(concept.name);
-    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
-
+    const existing = state.concepts[concept.name];
     state.concepts[concept.name] = {
       description: concept.description,
-      failedApproaches: concept.failedApproaches,
+      // Same merge semantics as saveSynthesis: undefined preserves prior value.
+      failedApproaches: concept.failedApproaches ?? existing?.failedApproaches,
       lastRefined: timestamp,
     };
 
+    // Relationships passed to save_concept are rendered into the file directly
+    // but not stored in state — ConceptRecord doesn't carry relationships.
+    // Render manually here rather than via renderConceptFile so the
+    // relationships line is included.
+    const safeName = safeFilename(concept.name);
+    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
     const relsLine = concept.relationships?.length
       ? concept.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
       : "_(none)_";
-
+    const record = state.concepts[concept.name];
     let failedApproachesLine = "";
-    if (concept.failedApproaches?.length) {
-      failedApproachesLine = "\n### Failed Approaches\n" + concept.failedApproaches.map(fa => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
+    if (record.failedApproaches?.length) {
+      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
     }
-
-    const content = `# Concept: ${concept.name}\n\n${concept.description}\n\n### Relationships\n${relsLine}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
+    const content = `# Concept: ${concept.name}\n\n${record.description}\n\n### Relationships\n${relsLine}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
     await fs.writeFile(conceptPath, content);
+
+    const logPath = path.join(this.knowledgeDir, "log.md");
+    const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** None\n---\n`;
+    await fs.appendFile(logPath, logEntry);
 
     await this.writeState(state);
     await this.updateIndex();
