@@ -486,6 +486,39 @@ export class KnowledgeManager {
       }));
   }
 
+  // Mark verified-clean stale entities as fresh without re-emitting their full
+  // synthesis. Used by the audit auto-healing path: the AI inspects each stale
+  // entity, confirms the dependency change didn't invalidate any invariant, and
+  // calls this to clear the flag. Re-renders the entity .md (drops the
+  // [!WARNING] block) and refreshes index.md.
+  //
+  // Returns the names actually cleared, and any names skipped because they
+  // weren't stale (or didn't exist) so the AI's report stays honest.
+  async refreshStaleEntities(names: string[]): Promise<{ cleared: string[]; skipped: string[] }> {
+    const state = await this.readState();
+    const cleared: string[] = [];
+    const skipped: string[] = [];
+    for (const name of names) {
+      const entity = state.entities[name];
+      if (!entity || !entity.staleSince) {
+        skipped.push(name);
+        continue;
+      }
+      delete entity.staleSince;
+      cleared.push(name);
+      await this.renderEntityFile(name, entity);
+    }
+    if (cleared.length > 0) {
+      const timestamp = new Date().toISOString();
+      const logPath = path.join(this.knowledgeDir, "log.md");
+      const logEntry = `\n## [${timestamp}]\n**Summary:** Refreshed ${cleared.length} stale entit${cleared.length === 1 ? "y" : "ies"} after audit verification.\n**Impacted:** ${cleared.map((n) => `[[${n}]]`).join(", ")}\n**Warnings:** None\n---\n`;
+      await fs.appendFile(logPath, logEntry);
+      await this.writeState(state);
+      await this.updateIndex();
+    }
+    return { cleared, skipped };
+  }
+
   async exportSpec(): Promise<string> {
     const state = await this.readState();
     const outputPath = path.join(this.projectRoot, "ARCH_SPEC.md");

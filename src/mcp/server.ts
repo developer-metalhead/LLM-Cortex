@@ -232,18 +232,35 @@ export class CortexMCPServer {
       }
       if (request.params.name === "audit") {
         return {
-          description: "Find stale entities and their blast-radius dependents.",
+          description: "Find stale entities, verify each one, and heal the knowledge base.",
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
                 text: [
-                  "Call the project-cortex:audit tool.",
-                  "Each entity returned is stale because a dependency (via depends_on or called_by) was updated after this entity's last refine — that is the blast radius of recent changes.",
-                  "Present the list, then for each stale entity, call read_entity to inspect its prior state and check whether the change in its dependency invalidates documented behavior or invariants.",
-                  "Recommend running /ingest to heal the stale entities. Do not silently auto-heal — surface the drift first so the user sees it.",
-                ].join(" "),
+                  "Run the audit-and-heal workflow. Do not stop at reporting — finish the cycle so the knowledge base ends in a synchronized state.",
+                  "",
+                  "STEP 1 — List stale entities.",
+                  "Call project-cortex:audit. Each entity returned is stale because a dependency it tracks via depends_on or called_by was updated after this entity's last refine. That is the blast radius of recent changes.",
+                  "",
+                  "STEP 2 — Verify each stale entity.",
+                  "For every name in the audit result, call read_entity(name) to load its full layered page (Role / Interface / Behavior / Wiring). Then read the current source for that entity AND for the dependency that triggered the staleness. Ask:",
+                  "  (a) Does the entity's ## Behavior or ## Interface section still match the code?",
+                  "  (b) Has the upstream change broken any documented invariant, contract, or constraint?",
+                  "  (c) Are any [[WikiLinks]] in ## Wiring now wrong (target renamed, removed, or signature changed)?",
+                  "",
+                  "STEP 3 — Classify each entity into one of two buckets:",
+                  "  • VERIFIED-CLEAN — the dependency moved but this entity's documented role, contracts, and wiring are still accurate. Nothing in its description needs to change. The stale flag is a false positive from blast-radius fan-out.",
+                  "  • NEEDS-UPDATE — the entity's description, relationships, or constraints are now incorrect because of the upstream change. The knowledge needs to be re-synthesized.",
+                  "",
+                  "STEP 4 — Heal the knowledge base.",
+                  "For the VERIFIED-CLEAN bucket: call refresh_stale_entities with all their names in a single call. This clears the staleSince flag without touching their descriptions.",
+                  "For the NEEDS-UPDATE bucket: call save_synthesis with action: 'update' for each, emitting the corrected layered description, relationships, and (if relevant) constraints / failedApproaches. Re-synthesis automatically clears the stale flag for the entities included.",
+                  "",
+                  "STEP 5 — Report.",
+                  "Summarize for the user: which entities you refreshed, which you re-synthesized (and what specifically you changed in each), and any drift that surfaced. End by stating the current stale count is now zero — or, if any new staleness was propagated by your re-syntheses, note the next-iteration plan.",
+                ].join("\n"),
               },
             },
           ],
@@ -497,6 +514,22 @@ export class CortexMCPServer {
           description: "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
           inputSchema: { type: "object", properties: {} },
         },
+        {
+          name: "refresh_stale_entities",
+          description:
+            "Clear the stale flag on entities you have verified as still-valid after inspecting them with read_entity. Use this during the audit workflow when a stale entity's dependency changed but the change did NOT invalidate any of the entity's documented behavior, contracts, or invariants. Do NOT use this to silently dismiss real drift — only for verified-clean entities. If an entity actually needs updating because its description is now wrong, re-emit it via save_synthesis instead.",
+          inputSchema: {
+            type: "object",
+            required: ["names"],
+            properties: {
+              names: {
+                type: "array",
+                items: { type: "string" },
+                description: "Names of stale entities you've verified as unaffected by the upstream change.",
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -548,6 +581,26 @@ export class CortexMCPServer {
         };
       }
 
+      if (name === "refresh_stale_entities") {
+        const rawNames = (args as any)?.names;
+        if (!Array.isArray(rawNames) || rawNames.some((n) => typeof n !== "string")) {
+          return {
+            content: [{ type: "text", text: "refresh_stale_entities requires a 'names' string array." }],
+            isError: true,
+          };
+        }
+        const { cleared, skipped } = await this.knowledge.refreshStaleEntities(rawNames);
+        const lines: string[] = [];
+        if (cleared.length > 0) {
+          lines.push(`✅ Refreshed ${cleared.length} stale entit${cleared.length === 1 ? "y" : "ies"}: ${cleared.join(", ")}`);
+        }
+        if (skipped.length > 0) {
+          lines.push(`⚠️ Skipped ${skipped.length} (not stale or not found): ${skipped.join(", ")}`);
+        }
+        if (lines.length === 0) lines.push("No entities were refreshed.");
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+      }
+
       if (name === "get_pending_changes") {
         // BOOTSTRAP PATH: when the knowledge base is empty, never send a diff —
         // the most recent commits are usually just the installation of Cortex
@@ -590,14 +643,29 @@ export class CortexMCPServer {
         const lastSync = await this.knowledge.getLastSyncCommit();
         const diff = await getPendingDiff(this.projectRoot, lastSync);
         const knowledgeContext = await this.knowledge.getKnowledgeSummary();
+        const staleEntities = await this.knowledge.getStaleEntities();
 
-        if (!diff.trim()) {
+        if (!diff.trim() && staleEntities.length === 0) {
           return {
             content: [{ type: "text", text: "No pending changes since last sync." }],
           };
         }
 
-        const prompt = EXTRACTION_PROMPT_TEMPLATE(diff, knowledgeContext);
+        // When there's no diff but stale entities exist, the user invoked
+        // ingest specifically to heal blast-radius staleness. Route them to
+        // the audit workflow — it's the dedicated healing path.
+        if (!diff.trim() && staleEntities.length > 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No pending code changes since last sync, but ${staleEntities.length} entit${staleEntities.length === 1 ? "y is" : "ies are"} stale from prior blast-radius propagation:\n\n${staleEntities.map((e) => `- ${e.name} (stale since ${e.staleSince})`).join("\n")}\n\nRun the /audit workflow to verify and heal them — it inspects each stale entity, refreshes the ones still accurate, and re-synthesizes the ones whose descriptions no longer match the code.`,
+              },
+            ],
+          };
+        }
+
+        const prompt = EXTRACTION_PROMPT_TEMPLATE(diff, knowledgeContext, staleEntities);
 
         return {
           content: [
@@ -607,6 +675,7 @@ export class CortexMCPServer {
                 mode: "incremental",
                 systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
                 userPrompt: prompt,
+                staleEntities: staleEntities.map((e) => ({ name: e.name, staleSince: e.staleSince, sourceFile: e.sourceFile })),
                 outputSchema: {
                   summary: "string — 1-2 sentence high-level summary",
                   entities: "array of { name, action: create|update|delete, description, relationships: { target, kind }[], constraints?, failedApproaches?, sourceFile? }",
@@ -614,7 +683,7 @@ export class CortexMCPServer {
                   warnings: "array of strings",
                 },
                 instructions:
-                  "Follow the systemPrompt. Analyze the userPrompt. Return a synthesis object matching outputSchema. Then call save_synthesis with the result.",
+                  "Follow the systemPrompt. Analyze the userPrompt. Return a synthesis object matching outputSchema. Then call save_synthesis with the result. If the userPrompt lists pre-existing stale entities, follow its instructions for healing them (refresh_stale_entities for verified-clean, include in the synthesis for those needing updates).",
               }, null, 2),
             },
           ],

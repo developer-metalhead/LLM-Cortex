@@ -284,6 +284,36 @@ describe("Phase 6 — Blast-radius staleness", () => {
     }));
     assert.equal(await km.getStaleCount(), 1);
   });
+
+  it("refreshStaleEntities clears staleSince without rewriting the description", async () => {
+    await seedADependsOnB();
+    await km.saveSynthesis(syn({
+      summary: "update B",
+      entities: [{ name: "B", action: "update", description: "v2", relationships: [] }],
+    }));
+    assert.equal(await km.getStaleCount(), 1);
+
+    const before = await fs.readFile(path.join(tmp, ".knowledge", "entities", "A.md"), "utf8");
+    assert.match(before, /Stale Since/);
+
+    const result = await km.refreshStaleEntities(["A"]);
+    assert.deepEqual(result.cleared, ["A"]);
+    assert.equal(result.skipped.length, 0);
+    assert.equal(await km.getStaleCount(), 0);
+
+    const after = await fs.readFile(path.join(tmp, ".knowledge", "entities", "A.md"), "utf8");
+    assert.doesNotMatch(after, /Stale Since/);
+    // Description body must not have been rewritten — original A description survives.
+    assert.match(after, /depends/);
+  });
+
+  it("refreshStaleEntities skips entities that are not stale or do not exist", async () => {
+    await seedADependsOnB();
+    const result = await km.refreshStaleEntities(["A", "Nonexistent"]);
+    // A was never stamped stale (no B update happened), Nonexistent doesn't exist.
+    assert.deepEqual(result.cleared, []);
+    assert.deepEqual(result.skipped.sort(), ["A", "Nonexistent"].sort());
+  });
 });
 
 describe("Phase 6 — Failed approaches & sourceFile preservation", () => {

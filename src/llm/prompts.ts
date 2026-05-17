@@ -183,7 +183,29 @@ For warnings:
 You MUST respond in JSON matching the provided schema exactly. No prose outside the JSON. No markdown code fences around the JSON. The schema is non-negotiable — every field is required, even if empty (\`[]\`).
 `;
 
-export const EXTRACTION_PROMPT_TEMPLATE = (diff: string, context: string) => `
+export const EXTRACTION_PROMPT_TEMPLATE = (
+  diff: string,
+  context: string,
+  staleEntities: Array<{ name: string; staleSince: string; sourceFile?: string }> = [],
+) => {
+  const staleSection = staleEntities.length === 0
+    ? ""
+    : `
+================================================================
+### PRE-EXISTING STALE ENTITIES — Heal in This Synthesis
+================================================================
+The following entities were marked stale by prior blast-radius propagation. They were dependents of an upstream entity that changed earlier, and their staleSince flags were never cleared because they had no git changes of their own.
+
+${staleEntities.map((e) => `- ${e.name}${e.sourceFile ? ` (${e.sourceFile})` : ""} — stale since ${e.staleSince}`).join("\n")}
+
+After synthesizing the diff (Steps 1–6 below), do Step 6.5: triage each stale entity. For each one, read its current source AND the source of whatever dependency changed. Then:
+  - If the entity's documented role, interface, contracts, and wiring are still accurate → after this synthesis is saved, call refresh_stale_entities with its name to clear the flag without rewriting it.
+  - If the entity's description is now incorrect → include it in your synthesis with action: 'update' and emit the corrected layered description. Re-synthesis auto-clears the stale flag.
+
+Do not silently dismiss stale entities. Each one needs an explicit decision.
+`;
+
+  return `
 You will synthesize one architectural update to the knowledge base based on the code changes below.
 
 ================================================================
@@ -201,7 +223,7 @@ ${context || '(No existing knowledge yet — this is the first synthesis. Establ
 ### RECENT CODE CHANGES — Git Diff
 ================================================================
 ${diff}
-
+${staleSection}
 ================================================================
 ### YOUR TASK
 ================================================================
@@ -244,9 +266,16 @@ Re-read the CURRENT CONTEXT. Does anything in the new diff contradict, violate, 
 **Step 6 — Write the Summary.**
 1–2 sentences. The architectural tl;dr of this change. What shifted? What now connects to what? If nothing architectural shifted, say so.
 
+**Step 6.5 — Triage Pre-Existing Stale Entities** *(only when the PRE-EXISTING STALE ENTITIES section above is present)*.
+For each stale entity listed, decide whether its prior description still matches the code:
+- Still accurate → after save_synthesis returns, call refresh_stale_entities with the verified-clean names in a single call.
+- No longer accurate → include it as an additional entry in your synthesis \`entities\` array with \`action: 'update'\` and the corrected layered description. Re-synthesis auto-clears the stale flag.
+Report your triage decision per entity in the \`summary\` so the user sees what was healed vs re-synthesized.
+
 **Step 7 — Output JSON only.**
 Match the schema exactly. No prose before or after. No markdown fences.
 `;
+};
 
 export const BOOTSTRAP_PROMPT_TEMPLATE = (fileList: string) => `
 You are performing a **BOOTSTRAP synthesis**. The knowledge base is empty — this is the very first ingest for this project.
