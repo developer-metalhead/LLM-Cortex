@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const EvidenceSchema = z.object({
+  sourceFile: z.string(),
+  lineRange: z.tuple([z.number(), z.number()]).optional(),
+  commit: z.string().optional(),
+  content: z.string().max(500).optional(),
+});
+
 export const FailedApproachSchema = z.object({
   summary: z.string(),
   reason: z.string(),
@@ -28,6 +35,7 @@ export const SynthesisSchema = z.object({
     constraints: ConstraintsSchema.optional(),
     failedApproaches: z.array(FailedApproachSchema).max(10).optional(),
     sourceFile: z.string().optional(),
+    evidence: z.array(EvidenceSchema).max(2).optional(),
   })),
   concepts: z.array(z.object({
     name: z.string(),
@@ -49,3 +57,4 @@ export type SaveConcept = z.infer<typeof SaveConceptSchema>;
 export type Relationship = z.infer<typeof RelationshipSchema>;
 export type FailedApproach = z.infer<typeof FailedApproachSchema>;
 export type Constraints = z.infer<typeof ConstraintsSchema>;
+export type Evidence = z.infer<typeof EvidenceSchema>;

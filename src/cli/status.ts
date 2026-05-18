@@ -3,6 +3,7 @@ import path from "path";
 import { execSync } from "child_process";
 import dotenv from "dotenv";
 import { KnowledgeManager } from "../knowledge/writer.js";
+import { AuditManager } from "../knowledge/audit.js";
 
 function describeLock(projectRoot: string): string {
   const lockPath = path.join(projectRoot, ".knowledge", "cortex.lock");
@@ -35,12 +36,19 @@ export async function runStatus(projectRoot: string): Promise<void> {
 
   let lastSync = "Never";
   let staleCount = 0;
+  let evidenceDriftCount = 0;
   if (exists) {
     try {
       lastSync = fs.readFileSync(path.join(projectRoot, ".knowledge", ".last_sync_commit"), "utf-8").trim();
       const statePath = path.join(projectRoot, ".knowledge", "state.json");
       const state = JSON.parse(fs.readFileSync(statePath, "utf-8"));
       staleCount = Object.values(state.entities || {}).filter((e: any) => e.staleSince).length;
+    } catch {
+      // ignore
+    }
+    try {
+      const am = new AuditManager(projectRoot);
+      evidenceDriftCount = await am.getEvidenceDriftCount();
     } catch {
       // ignore
     }
@@ -63,6 +71,7 @@ export async function runStatus(projectRoot: string): Promise<void> {
   Status:    ${exists ? "Initialized" : "Not Initialized"}
   Last Sync: ${lastSync}
   Stale Entities: ${staleCount}
+  Evidence Drift: ${evidenceDriftCount}
 
   [Daemon]
   ${lockLine}

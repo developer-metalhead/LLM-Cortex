@@ -1,10 +1,10 @@
 # Cortex Task List
 
-Derived from source code inspection + `implementation_plan.md`. Last verified 2026-05-16.
+Derived from source code inspection + `implementation_plan.md`. Last verified 2026-05-19.
 
 ---
 
-## ✅ Done — Phases 1–5 (verified against source)
+## ✅ Done — Phases 1–7 (verified against source + 39/39 tests passing)
 
 ### Phase 1 — Ingestion & Monitoring Foundation
 - [x] `src/core/watcher.ts` — chokidar with 3s debounce, `.gitignore` via `ignore` package, hard-coded ignores (`.git`, `.knowledge`, `node_modules`, `dist`)
@@ -70,47 +70,58 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## ⏳ Planned — Layered entity page extensions (small prompt tweaks, pre-Phase 6)
+## ✅ Layered entity page extensions (shipped alongside Phase 6/7 prompt updates)
 
-- [ ] **`## Lifecycle` section** — optional section emitted when an entity has setup/teardown obligations (UI mount/unmount, service init/shutdown, sockets/timers/listeners/file-handle ownership). Format: short `Setup: …` / `Teardown: …` lines. Surfaces paired-resource patterns so AI edits don't drop the cleanup half (the most common resource-leak cause).
-- [ ] **`## Verification` section** — optional section emitted when an entity has a non-trivial verification path. Bullets cover: automated (link to `[[*.test.*]]`), manual repro (one-line console/CLI command), success condition, edge cases worth probing. Longer quoted test code defers to Phase 7's bounded `evidence.content`.
-- [ ] **Purity hint inside `## Behavior`** — prose line when relevant: *"Pure — no side effects"*, *"Stateful — mutates [[GlobalSingleton]]"*, *"Impure — performs I/O via [[FileSystem]]"*. Not a separate field or binary tag (LLM-inferred purity is too unreliable); a soft prose signal in `## Behavior` is enough.
-- [ ] **Guard-clause invariants in `## Behavior`** — when a guard encodes a non-obvious precondition (auth required, init complete, feature flag, deferred state), surface it as a Behavior bullet. Skip trivial null/undefined checks unless they reveal a non-obvious code path.
-- [ ] Combined size: ~25 lines of prompt change in [src/llm/prompts.ts](src/llm/prompts.ts); no writer change, no schema change. Ships independently of Phase 6.
+- [x] **`## Lifecycle` section** — optional section for entities with setup/teardown obligations; format `Setup: …` / `Teardown: …` ([src/llm/prompts.ts:126-130](src/llm/prompts.ts#L126-L130))
+- [x] **`## Verification` section** — optional section for non-trivial verification paths with automated/manual-repro/success-condition/edge-cases bullets ([src/llm/prompts.ts:142-149](src/llm/prompts.ts#L142-L149))
+- [x] **Purity hint inside `## Behavior`** — prose line emitted when purity characteristic is non-obvious ([src/llm/prompts.ts:137](src/llm/prompts.ts#L137))
+- [x] **Guard-clause invariants in `## Behavior`** — emitted when guard encodes non-obvious precondition (auth-required, init-must-complete-first, feature-flag-gated, deferred-state) ([src/llm/prompts.ts:138](src/llm/prompts.ts#L138))
+- [x] Domain hints by file type (UI / backend / library / infra) ([src/llm/prompts.ts:154-158](src/llm/prompts.ts#L154-L158))
 
 **Explicitly NOT added** (evaluated, rejected): stored test-snippet blobs in entity pages (drift risk, two sources of truth), `Used By (Verification Required)` regression-anchor lists (already covered by Phase 6 staleness + Phase 9 `cortex impact`).
 
 ---
 
-## ⏳ Planned — Phases 6–13
+## ✅ Phase 6 — Active Guardrail: Constraints & Blast-Radius Analysis (verified 2026-05-19, all DoD met)
 
-### Phase 6 — Active Guardrail: Constraints & Blast-Radius Analysis
-- [ ] `constraints?` field on entities (`mustNotImport`, `mustNotBeCalledBy`, `contract`) — persisted in `state.json`, injected into CURRENT CONTEXT
-- [ ] `save_synthesis` rejection when a synthesis violates a declared constraint (structured error, not a warning)
-- [ ] `relationships[]` typed edges (`depends_on | called_by | supports | contradicts | derived_from | parent_of`) — replaces flat `links[]`
-- [ ] Auto-migrate legacy `links[]` → `relationships[]` with `kind: "depends_on"` on first load
-- [ ] Blast-radius staleness — `staleSince` stamped on inbound `depends_on`/`called_by` dependents when an entity is materially updated
-- [ ] `failedApproaches[]` on entities/concepts — extracted from `replaces:` clauses, capped at 10, replayed into CURRENT CONTEXT
-- [ ] `save_concept` MCP tool — explicit query-result persistence: `{ name, description, links? }` → creates/updates concept page + log append + index regeneration
-- [ ] `cortex status` reports stale-entity count; `cortex audit stale` lists them
-- [ ] `cortex export --spec` — renders `state.json` as a human-readable `ARCH_SPEC.md` in the project root (entities + concepts + constraints as declarative rules). Minor CLI addition (`src/cli/export.ts`).
-- [ ] Schema extension in `src/llm/schema.ts` + writer + MCP + prompts
-- [ ] Tests: constraint persistence, violation rejection, stale propagation (2-hop), legacy-links migration, failedApproach capture+replay, `save_concept` create vs. update
+- [x] `constraints?` field on entities (`mustNotImport`, `mustNotBeCalledBy`, `contract`) — persisted in `state.json` ([src/llm/schema.ts:22-26](src/llm/schema.ts#L22-L26), [src/knowledge/writer.ts:23](src/knowledge/writer.ts#L23)), injected into CURRENT CONTEXT via `getEntityGuardrails()` ([src/knowledge/writer.ts:133-170](src/knowledge/writer.ts#L133-L170))
+- [x] `save_synthesis` rejection on constraint violation — structured `Constraint Violation:` error thrown by writer ([src/knowledge/writer.ts:444-459](src/knowledge/writer.ts#L444-L459)), caught and returned as `isError: true` by MCP server ([src/mcp/server.ts:891-902](src/mcp/server.ts#L891-L902))
+- [x] `relationships[]` typed edges (`depends_on | called_by | supports | contradicts | derived_from | parent_of`) — replaces flat `links[]` ([src/llm/schema.ts:17-20](src/llm/schema.ts#L17-L20))
+- [x] Auto-migrate legacy `links[]` → `relationships[]` with `kind: "depends_on"` on first load ([src/knowledge/writer.ts:296-303](src/knowledge/writer.ts#L296-L303))
+- [x] Blast-radius staleness — `staleSince` stamped on inbound `depends_on`/`called_by` dependents on update; constraint validation + propagation restricted to `USAGE_KINDS` ([src/knowledge/writer.ts:17](src/knowledge/writer.ts#L17), [src/knowledge/writer.ts:463-487](src/knowledge/writer.ts#L463-L487))
+- [x] `failedApproaches[]` on entities + concepts — capped at 10 most recent + dedup by summary across updates ([src/knowledge/writer.ts:411-419](src/knowledge/writer.ts#L411-L419))
+- [x] `failedApproaches` and `constraints` replayed in CURRENT CONTEXT via `getEntityGuardrails()` (max 3 recent failures per entity to keep prompt bounded)
+- [x] `save_concept` MCP tool — explicit query-result persistence with `relationships?` + `failedApproaches?` ([src/mcp/server.ts:958-985](src/mcp/server.ts#L958-L985), [src/knowledge/writer.ts:598-644](src/knowledge/writer.ts#L598-L644))
+- [x] `cortex status` reports `Stale Entities:` count ([src/cli/status.ts:73](src/cli/status.ts#L73)); `cortex audit stale` lists them with source paths + .md file refs ([src/cli/audit.ts:5-29](src/cli/audit.ts#L5-L29))
+- [x] `cortex export --spec` — renders `state.json` as human-readable `ARCH_SPEC.md` with entities + concepts + constraints + failedApproaches ([src/knowledge/writer.ts:735-788](src/knowledge/writer.ts#L735-L788), [src/cli/export.ts](src/cli/export.ts))
+- [x] `refresh_stale_entities` MCP tool — clears stale flags on verified-clean entities without rewriting descriptions ([src/mcp/server.ts:723-754](src/mcp/server.ts#L723-L754), [src/knowledge/writer.ts:710-733](src/knowledge/writer.ts#L710-L733))
+- [x] `audit` MCP tool + `audit` slash command — staleness reporting via MCP ([src/mcp/server.ts:663-676](src/mcp/server.ts#L663-L676), prompt at [src/mcp/server.ts:254-289](src/mcp/server.ts#L254-L289))
+- [x] `export` MCP tool + `export` slash command ([src/mcp/server.ts:711-720](src/mcp/server.ts#L711-L720))
+- [x] Schema extension in `src/llm/schema.ts` + writer + MCP + prompts (full `Phase 6` updates to Librarian prompt at [src/llm/prompts.ts:42-81](src/llm/prompts.ts#L42-L81))
+- [x] **Tests (15 passing)** in `tests/phase6.test.ts`: constraint persistence, in-batch violation detection, violation rejection on `mustNotImport` + `mustNotBeCalledBy`, non-violation for `contradicts`/`supports`/`derived_from` edges, 2-hop stale propagation, stale-flag re-render with WARNING block, stale-clearing on re-synthesis, no self-stale within batch, propagation only via usage edges, staleCount + staleEntities, `refreshStaleEntities` round-trip + skip-non-stale, `failedApproaches` cap-at-10 + dedup-by-summary, `sourceFile` + concept-`failedApproaches` preservation on omitted-field updates, `getEntityGuardrails` returns block with constraints + recent failures, `exportSpec` includes all sections, `[STALE]` rendered in index
 
-### Phase 7 — Audit & Traceability Tools
-- [ ] `log.jsonl` — structured JSON line emitted alongside `log.md` on every synthesis
-- [ ] `evidence?` block per entity (`sourceFile`, `lineRange?`, `commit?`, `content?`) — bounded: ≤2 entries, ≤10 lines, ≤500 chars total
-- [ ] Secret-redaction pass on `evidence.content` before persistence; warning emitted naming source file
-- [ ] Librarian prompt rule: quote only when it materially clarifies; pointer-only is default
-- [ ] CLI: `cortex log --entity <name>`, `--since <commit|date>`, `--warnings`
-- [ ] CLI: `cortex audit stale`, `cortex audit evidence`
-- [ ] CLI: `cortex evolution <entity> [--since] [--format]` — per-entity semantic timeline from `log.jsonl`
-- [ ] CLI: `cortex evolution --replay --at <commit>` — reproduce `index.md` at any past commit
-- [ ] CLI: `cortex lint` — orphans, silos, cycles, god-module candidates, contradiction-heavy nodes, duplicate candidates; exit 1 on blocking issues
-- [ ] Backfill: parse existing `log.md` → `log.jsonl` on first run, stamped `migrated: true`
-- [ ] MCP tools: `audit_entity`, `audit_since`, `audit_evidence`, `evolution_entity`
-- [ ] New source files: `src/knowledge/audit.ts`, `src/knowledge/lint.ts`, `src/knowledge/evolution.ts`, `src/cli/log.ts`, `src/cli/lint.ts`, `src/cli/evolution.ts`
-- [ ] Tests: dual-emit, query-by-entity, since-filter, warnings-only, evidence-drift detection, silo detection
+## ✅ Phase 7 — Audit & Traceability Tools (verified 2026-05-19, all DoD met)
+
+- [x] `log.jsonl` — structured JSON line emitted alongside `log.md` on every `saveSynthesis` AND `saveConcept`, with embedded `state` snapshot per entry for replay ([src/knowledge/writer.ts:527-540, 634-643](src/knowledge/writer.ts#L527-L540))
+- [x] `evidence?` block per entity (`sourceFile`, `lineRange?`, `commit?`, `content?`) — bounded by writer: ≤ 2 entries per entity, ≤ 10 lines per snippet, ≤ 500 chars total ([src/llm/schema.ts:3-8](src/llm/schema.ts#L3-L8), [src/knowledge/writer.ts:364-391](src/knowledge/writer.ts#L364-L391))
+- [x] Secret-redaction pass on `evidence.content` before persistence — 6 regex patterns covering quoted assignments, env-style `*_KEY/SECRET/TOKEN=`, `Authorization: Bearer/Basic/Token`, JWT triplets, provider prefixes (`sk-`, `ghp-`, `AKIA`, `AIza`, `xoxb-`, etc.), and PEM private-key headers ([src/knowledge/writer.ts:51-76](src/knowledge/writer.ts#L51-L76)); warning emitted naming source file ([src/knowledge/writer.ts:380-384](src/knowledge/writer.ts#L380-L384))
+- [x] Librarian prompt rule: quote only when materially clarifies; pointer-only default ([src/llm/prompts.ts:63-69](src/llm/prompts.ts#L63-L69))
+- [x] CLI: `cortex log --entity <name>`, `--since <commit|date>`, `--warnings-only` ([src/cli/log.ts](src/cli/log.ts), [src/cli/index.ts:157-165](src/cli/index.ts#L157-L165))
+- [x] CLI: `cortex audit stale` + `cortex audit evidence` ([src/cli/audit.ts](src/cli/audit.ts), [src/cli/index.ts:140-155](src/cli/index.ts#L140-L155))
+- [x] CLI: `cortex evolution <entity> [--since] [--format markdown|json]` — per-entity timeline from `log.jsonl` ([src/cli/evolution.ts:50-70](src/cli/evolution.ts#L50-L70), [src/knowledge/evolution.ts:63-77](src/knowledge/evolution.ts#L63-L77))
+- [x] CLI: `cortex evolution --replay --at <commit|date>` — reproduces `index.md` at past point using embedded `state` snapshot (with name-only fallback for pre-snapshot entries) ([src/cli/evolution.ts:18-41](src/cli/evolution.ts#L18-L41), [src/knowledge/evolution.ts:85-135](src/knowledge/evolution.ts#L85-L135))
+- [x] CLI: `cortex lint` — 6 rules implemented: `missing_source`, `orphan` (over full graph), `cycle` (deduped via canonical member set), `god_module` (default >10, configurable via `CORTEX_GOD_MODULE_THRESHOLD`), `contradiction_heavy`, `silo` (handles equal-sized components on 3+ component graphs) ([src/knowledge/lint.ts](src/knowledge/lint.ts), [src/cli/lint.ts](src/cli/lint.ts)); exit code 1 on `error`-severity findings
+- [x] Backfill: `parseLegacyLogToJSONL` runs on first `init()` when `log.md` exists but `log.jsonl` doesn't — stamps entries with `migrated: true` ([src/knowledge/writer.ts:229-278](src/knowledge/writer.ts#L229-L278))
+- [x] MCP tools: `log_query` (consolidates `audit_entity` + `audit_since`), `audit_evidence`, `lint`, `evolution_entity` ([src/mcp/server.ts:601-633, 678-709](src/mcp/server.ts#L601-L633))
+- [x] `--since` resolution accepts ISO date OR git commit hash via `git show -s --format=%cI`; emits stderr warning if neither parses (no silent-pass-everything bug) ([src/knowledge/audit.ts:67-81, 107-112](src/knowledge/audit.ts#L67-L81))
+- [x] Evidence drift detection uses Levenshtein edit distance with bounded early-exit (cap = `clamp(snippet/10, 5, 50)`); prefers `lineRange` slice over whole-file search; surfaces `drift-source-missing` / `drift-content-changed` / `drift-evidence-lost` issue kinds ([src/knowledge/audit.ts:124-203](src/knowledge/audit.ts#L124-L203))
+- [x] `evidenceDriftCount` surfaces in `cortex status` ([src/cli/status.ts:49-54, 74](src/cli/status.ts#L49-L54))
+- [x] New source files: `src/knowledge/audit.ts`, `src/knowledge/lint.ts`, `src/knowledge/evolution.ts`, `src/cli/log.ts`, `src/cli/lint.ts`, `src/cli/evolution.ts` — all present and wired into `src/cli/index.ts`
+- [x] **Tests (12 passing)** in `tests/phase7.test.ts`: evidence rules + secret redaction, expanded redaction patterns (Bearer, AWS env-style, JWT triplets), cycle deduplication on synthetic A→B→A graph, orphan check honors non-usage edges, silo detection on 3-component equal-size graph, god_module threshold respects env var, JSONL backfill from legacy `log.md`, queryLog corrupt-line resilience, `--warningsOnly` filter, `--since` ISO date filter, `--since` invalid-token graceful warning (no silent pass), evidence drift tolerance (small edits pass; large changes flagged; source-missing detected), evolution replay reconstructs index from state snapshot
+
+---
+
+## ⏳ Planned — Phases 8–13
 
 ### Phase 8 — Visual & Browseable Knowledge Graph
 - [ ] `cortex graph` — Mermaid/dot/JSON output; `--scope`, `--depth`, `--include-concepts`, `--format` flags
