@@ -13,6 +13,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 4.5   | Dual-Route IDE Integration                             | ✅ Done (added beyond original plan) |
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
+| 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
+| 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | 🚧 In progress                       |
 | 7     | Audit & Traceability Tools                             | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ⏳ Planned                           |
@@ -62,6 +64,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 26.1  | DLP & Knowledge-Layer PII Redaction                    | ⏳ Planned (enterprise)              |
 | 26.2  | Policy-as-Code (OPA/Cedar)                             | ⏳ Planned (enterprise)              |
 | 26.3  | OpenTelemetry Tracing & Observability Export           | ⏳ Planned (enterprise)              |
+| 26.4  | Cryptographic Event Signing & Non-Repudiation          | ⏳ Planned (enterprise)              |
 | 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
 | 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
 | 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
@@ -485,6 +488,247 @@ recovery_strategies:
 
 - ✅ **Pros**: **Production reliability table-stakes.** Without a watchdog, Cortex's claim to be "always-on architectural memory" is wishful thinking — long-running deployments hit silent failures regularly. Declarative recovery strategies make per-component behavior auditable and tunable without code changes. `cortex doctor` is a single command that answers "is everything OK?" — high-value DX, low-cost engineering. Integrates cleanly with existing Phase 26 audit + Phase 33.2 notifications + Phase 31 dashboards.
 - ❌ **Cons**: Adds operational complexity — watchdog is one more process to reason about. Mitigated by OS-init supervision (humans don't supervise the watchdog). Aggressive auto-restart can mask real bugs ("it just keeps working because it keeps restarting"); mitigated by anomaly detection on restart-loop patterns and by explicitly NOT auto-restarting expensive operations.
+
+---
+
+## ⏰ Phase 5.7: Scheduled Operations & Cron Engine — ⏳ Planned (production reliability)
+
+**Layman's Terms**
+Several Cortex phases imply scheduling — Phase 20.17 sleep consolidation should run nightly, Phase 24 compliance scans run weekly, Phase 18 embedding rebuilds run after model updates, Phase 33.2 remote ops include scheduled backups, Phase 31 executive QBR PDFs ship quarterly. Today each of these reinvents its own cron mechanism (or worse, depends on the user remembering to run things manually). Phase 5.7 introduces a **unified scheduler** that all long-running and recurring Cortex operations consume. One scheduling subsystem instead of N.
+
+**Technical Terms**
+Inspired by Nexus Phase 47's cron engine (which itself adopted OpenClaw's `cron/` patterns). A general-purpose scheduler with three trigger types, full job lifecycle tracking, exponential backoff on failures, and audit integration:
+
+**Three trigger types**:
+
+```yaml
+# .cortex/schedules.yaml
+schedules:
+  - id: nightly-consolidation
+    operation: consolidate
+    args: { dry_run: false, auto_apply: false }
+    trigger:
+      type: cron
+      expression: "0 3 * * *"          # nightly at 3am
+      timezone: "America/New_York"
+    
+  - id: weekly-hipaa-scan
+    operation: compliance.report
+    args: { framework: hipaa, format: pdf, attach: true }
+    trigger:
+      type: cron
+      expression: "0 6 * * MON"
+      timezone: "UTC"
+    on_failure: notify_compliance_channel
+    
+  - id: embeddings-refresh-after-model-update
+    operation: embed.rebuild
+    args: {}
+    trigger:
+      type: at
+      timestamp: "2026-06-15T02:00:00Z"  # one-shot at specific time
+    
+  - id: health-roll-up
+    operation: health.snapshot
+    args: {}
+    trigger:
+      type: every
+      interval_ms: 300000               # every 5 minutes
+      anchor_to: "minute"               # align to clock minute
+    
+  - id: quarterly-qbr
+    operation: qbr.generate
+    args: { format: pdf }
+    trigger:
+      type: cron
+      expression: "0 9 1 */3 *"         # 9am on the 1st of each quarter
+    on_completion: email_executives
+```
+
+**Job lifecycle state** (per-job, tracked in `state.json.schedules[]`):
+
+```typescript
+interface ScheduledJobState {
+  id: string;
+  nextRunAtMs: number;
+  lastRunAtMs?: number;
+  lastRunStatus?: "success" | "failure" | "skipped" | "running";
+  lastRunDurationMs?: number;
+  lastRunError?: string;
+  consecutiveErrors: number;          // for backoff
+  totalRuns: number;
+  totalSuccesses: number;
+  totalFailures: number;
+  currentlyRunningPid?: number;
+  staggerOffsetMs?: number;           // jitter to avoid thundering-herd
+}
+```
+
+**Operations registry** (declarative, extensible):
+
+```typescript
+// src/scheduler/operations.ts
+const SCHEDULABLE_OPERATIONS = {
+  "consolidate":       () => import('../consolidation/run.ts'),
+  "compliance.report": (args) => import('../cli/compliance.ts').then(m => m.report(args)),
+  "embed.rebuild":     () => import('../embeddings/rebuild.ts'),
+  "qbr.generate":      (args) => import('../analytics/qbr.ts').then(m => m.generate(args)),
+  "health.snapshot":   () => import('../watchdog/snapshot.ts'),
+  "dlp.scan":          (args) => import('../dlp/retroactive.ts').then(m => m.scan(args)),
+  // ... extensible — Pro modules add their own operations
+};
+```
+
+**Failure handling**:
+
+- **Exponential backoff** on consecutive failures: 1min → 5min → 30min → 2h → 12h → 24h (capped)
+- **Failure alerts** after configurable threshold (`alert_after_consecutive_failures: 3`) — fire Phase 33.2 notification channels
+- **Failure cooldown** — once alert fires, don't re-alert for the same job for 1h
+- **Dedicated failure destination channel** — `on_failure: notify_compliance_channel` routes failure alerts independently of normal completion notifications
+- **Auto-suspend** after `max_consecutive_failures: 10` — job marked `suspended`, requires manual `cortex schedule resume <id>` to re-enable
+- **Stagger / jitter** to prevent thundering herd — when multiple jobs fire at the same cron time (e.g., 3am), each gets a small random offset (default ±30s) to spread load
+
+**CLI surface**:
+
+- `cortex schedule list` — all scheduled jobs with next-run, last-run, status
+- `cortex schedule show <id>` — full job state including history
+- `cortex schedule add <yaml-file>` — register a new scheduled job
+- `cortex schedule remove <id>` — unregister
+- `cortex schedule pause <id>` / `resume <id>` — manual pause/resume
+- `cortex schedule run-now <id>` — trigger immediate execution (out-of-band)
+- `cortex schedule dry-run <id>` — show what would happen without executing
+- `cortex schedule logs <id> [--since <duration>]` — execution history
+
+**Scheduler as Phase 5.6 watchdog component**: the scheduler process is itself monitored by Phase 5.6 watchdog (heartbeats, auto-recovery on crash). The scheduler never silently dies and silently skips jobs.
+
+**Phase 26 audit**: every job dispatch, success, failure, suspend, and manual override emits an audit event with full job state. Phase 31 dashboard surfaces "scheduled jobs health" panel.
+
+**Tenant + workspace scope**: in Phase 22 multi-tenant deployments, schedules are tenant-scoped by default; workspace-scoped optional. Scheduled jobs respect Phase 29.1 model allowlists and Phase 29 budget caps.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/scheduler/cron.ts` (cron expression parser using `node-cron`), `src/scheduler/scheduler.ts` (job loop with stagger, backoff, lifecycle tracking), `src/scheduler/operations.ts` (operation registry), `src/cli/schedule.ts`, `src/scheduler/persistence.ts` (state.json schedules block), Phase 5.6 watchdog integration.
+- **Design Pattern**: **Declarative jobs, pluggable operations, persistent state.** Schedules are YAML data; operations are typed function references; state survives daemon restart. No bespoke cron logic per phase.
+- **Key Considerations**:
+  - **Time zone correctness** — cron expressions explicitly carry timezone; defaults to UTC; documented prominently. Misaligned schedules across teams are a classic ops failure mode.
+  - **Long-running jobs vs scheduler tick** — scheduler tick is independent of job duration; long jobs run in their own worker; next tick fires regardless.
+  - **Idempotency expectations** — operations registered as schedulable should be idempotent. The scheduler can call `health.snapshot` twice in a row with no harm; it cannot do the same for a non-idempotent operation. Documented per-operation.
+  - **Catch-up on missed schedules** — when the daemon was down across a scheduled fire time, default behavior is "skip missed; resume from next fire." Configurable per-job to "run missed once on resume" for jobs that must not skip (e.g., compliance reports).
+
+### Definition of Ready (DoR)
+
+- Phase 5.6 (watchdog) shipped — scheduler process supervised by it.
+- Phase 26 (audit) shipped — schedule events anchor here.
+- Phase 33.2 (notifications) shipped — failure alerts route through these channels.
+
+### Definition of Done (DoD)
+
+- Three trigger types (cron, at, every) parse and dispatch correctly.
+- Job lifecycle state persisted in `state.json.schedules[]` survives daemon restart.
+- Exponential backoff on consecutive failures with configurable thresholds.
+- Failure alert routing via Phase 33.2 notification channels.
+- Auto-suspend after configurable max consecutive failures.
+- Jitter/stagger on simultaneous fire times.
+- All 6 baseline operations (consolidate, compliance.report, embed.rebuild, qbr.generate, health.snapshot, dlp.scan) registered and schedulable.
+- `cortex schedule list / show / add / remove / pause / resume / run-now / dry-run / logs` CLIs work.
+- Phase 5.6 watchdog monitors scheduler process.
+- Phase 26 audit emits structured events per lifecycle action.
+- Phase 31 dashboard "Scheduled Jobs" panel renders.
+- Tests cover: each trigger type's correctness, lifecycle state persistence across simulated restart, exponential backoff progression, auto-suspend threshold, stagger correctness when 5 jobs fire at same time, catch-up-on-missed behavior, watchdog integration.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Unifies scheduling across the entire roadmap.** Phase 20.17 nightly consolidation, Phase 24 weekly compliance scans, Phase 18 embedding rebuilds, Phase 31 quarterly QBRs, Phase 26.1 retroactive DLP scans all currently sketch ad-hoc cron — now they all consume the same scheduler. Single audit surface for scheduled work; single dashboard. Failure alerts route through existing Phase 33.2 channels. Backoff + auto-suspend prevent runaway failure cascades. Time zone explicit (avoids the classic UTC vs local-time bug). Stagger/jitter prevents thundering-herd at common cron times.
+- ❌ **Cons**: Adds another long-running subsystem to monitor. Mitigated by Phase 5.6 watchdog supervision and by treating the scheduler as a daemon component subject to the same lifecycle guarantees. Misconfigured cron expressions are a permanent user-error class; mitigated by `cortex schedule dry-run` preview and clear timezone documentation.
+
+---
+
+## 👥 Phase 5.8: Multi-Operator Session Coordination — ⏳ Planned (production reliability)
+
+**Layman's Terms**
+Today's Cortex assumes one operator at a time. Phase 5.6's lock file prevents two daemons from running, but it doesn't prevent two operators (or one operator on two devices) from issuing conflicting commands to the same deployment — concurrent `cortex edit`, concurrent `cortex bootstrap refine`, concurrent policy changes via the mobile PWA while someone else is editing on their laptop. Phase 5.8 introduces a **session leadership protocol** — at any moment one operator session is the "leader" (can issue mutating commands); other sessions are "observers" (read-only, but get live updates). Leadership transfers cleanly on request or on idle timeout. This is what makes Cortex safe for actual multi-operator enterprise teams.
+
+**Technical Terms**
+Inspired by Nexus Phase 33.3 (Session Leadership & Concurrency Control). A leadership protocol implemented at the Phase 22 central server (or daemon for self-hosted) that gates mutating operations:
+
+**Session model**:
+
+- Every connecting client (CLI invocation, MCP session, PWA session) gets a unique `sessionId`
+- Sessions authenticate via Phase 25 SSO; identity preserved for audit
+- One session per workspace at a time is the **leader**; all others are **observers**
+- Leader status is tracked at the server with a heartbeat (10s); leader loses status if heartbeat lapses (30s)
+
+**Leadership semantics**:
+
+| Operation class | Allowed when observer? | Allowed when leader? |
+|---|---|---|
+| Read (status, query, list) | ✅ | ✅ |
+| Synthesis (auto via watcher) | ⛔ (watcher doesn't run for observer) | ✅ |
+| Bootstrap / refine / consolidate | ⛔ | ✅ |
+| Edit / promote / approve | ⛔ | ✅ |
+| Policy changes (constraints, allowlists, schedules) | ⛔ | ✅ |
+| Approval actions (Phase 23 review, Phase 43.3 ACP) | ✅ (approvers can be observers) | ✅ |
+| Observation (live progress, notifications) | ✅ | ✅ |
+
+**Leadership transfer**:
+
+- **On-demand**: `cortex session claim-leader` — current leader is notified; if leader is idle (>5min no commands) or accepts, transfer is immediate
+- **On idle**: leader with no command activity for 30 minutes auto-releases; next observer to issue a mutating command is offered leadership
+- **On disconnect**: leader losing heartbeat releases leadership after 30s grace
+- **Forced takeover**: `cortex session force-leader --reason "..."` — Phase 26 audit event emitted with high severity; previous leader notified; useful for emergency operator handoffs
+- **Approval-required takeover** (configurable): in regulated environments, leadership transfer can require the current leader's explicit approval via Phase 33.2 notification
+
+**Conflict resolution at the operation level**:
+
+- If an observer attempts a mutating command: server returns `SessionNotLeaderError` with explanation + current-leader identity + claim-leader instruction
+- If a mutating command is in-flight when leadership transfers: in-flight command completes (don't kill mid-operation); new commands go to new leader
+
+**Status surfaces**:
+
+- `cortex session list` — all active sessions across the deployment with leader/observer status, last command, idle time
+- `cortex session show` — current session's status
+- `cortex session claim-leader / release-leader` — explicit lifecycle
+- Phase 33.2 PWA shows "🔵 Leader" or "👀 Observer" badge prominently in header
+- Phase 31 dashboard "Active Sessions" panel
+
+**Multi-tenant scope**: leadership is per-workspace, not per-tenant. One Cortex deployment with 10 workspaces has 10 independent leadership tracks. A tenant admin can be leader of workspace A while another team member is leader of workspace B.
+
+**Audit**: every leadership transition (claim, release, takeover, expire) emits a Phase 26 audit event with both sessions' identities, timestamp, and reason.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/sessions/leadership.ts` (leader election, heartbeat tracking, transfer protocol), `src/sessions/registry.ts` (session lifecycle + identity tracking), `src/sessions/gate.ts` (operation-level enforcement), `src/cli/session.ts`, integration in Phase 22 central server and standalone daemon.
+- **Design Pattern**: **Simple leader-or-observer model with explicit transfers**. No Paxos / Raft complexity needed for the small N (typically 1-5 concurrent operators per workspace). Heartbeat-based with explicit transfer protocol covers all the realistic failure modes.
+- **Key Considerations**:
+  - **Read-heavy by design** — most operations are reads; leadership only gates mutations. Observers stay highly functional (can browse, query, approve, watch live progress).
+  - **Approvals work as observer** — Phase 23 reviewers and Phase 43.3 ACP approvers can be observers; their decisions are routed regardless of leadership status (otherwise approval queues stall).
+  - **Single-operator deployments** — the typical case is one operator, automatic leadership, no friction. Multi-operator surface emerges only when needed.
+  - **PWA-CLI session continuity** — same operator on PWA + CLI should be one logical session, not two competing ones. Identity-based session merging (same SSO identity within 5min auto-merges).
+
+### Definition of Ready (DoR)
+
+- Phase 25 (SSO) shipped — session identity comes from SSO.
+- Phase 26 (audit) shipped — leadership events anchor here.
+- Phase 22 (central server) shipped for multi-operator centralized deployments.
+- Phase 33.2 (PWA) shipped — leader badge surfaces here.
+
+### Definition of Done (DoD)
+
+- Session lifecycle with `sessionId`, identity, heartbeat tracking.
+- Leadership election with heartbeat-based liveness (10s heartbeat, 30s timeout).
+- Operation gate enforces mutate-only-as-leader; observers get `SessionNotLeaderError` with claim instructions.
+- 4 transfer mechanisms (on-demand, on-idle, on-disconnect, forced-takeover).
+- Per-workspace leadership scope; 10 workspaces = 10 independent tracks.
+- Identity-based session merging (PWA + CLI of same SSO identity within 5min).
+- `cortex session list / show / claim-leader / release-leader` CLIs.
+- PWA + Phase 31 dashboard surface leader/observer status.
+- Phase 26 audit on every leadership transition with severity tagging (forced takeover = high).
+- Tests cover: leader election on first session, observer rejection of mutate command, on-idle transfer, forced takeover with audit emission, multi-workspace independence, PWA+CLI identity merge, heartbeat timeout → grace → release flow.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Makes Cortex safe for multi-operator enterprise teams.** Without this, two operators editing the same workspace simultaneously is a guaranteed data inconsistency event. Simple model (one leader, others observers) avoids distributed-consensus complexity for the small N this targets. Approvals working as observer keeps Phase 23 + Phase 43.3 review flows functional. Identity-based PWA+CLI merging means same operator on multiple devices is one session, not two competitors.
+- ❌ **Cons**: Single-operator usage adds zero friction (auto-leadership) but adds operational concept (some users will encounter "you are observer" the first time they collaborate). Mitigated by clear error messages with claim-leader instructions and by Phase 33.2 PWA badge surfacing role prominently. Forced takeover is a potential audit surface (one operator can disrupt another); mitigated by high-severity audit logging and optional configurable approval requirement.
 
 ---
 
@@ -3545,6 +3789,127 @@ CORTEX_OTEL_VENDOR=datadog|honeycomb|tempo|jaeger|newrelic|splunk
 
 - ✅ **Pros**: **Makes Cortex visible to the SRE / Platform team**, not just the architecture team. Customers correlate Cortex events with their existing system events (deploys, incidents, traffic patterns) — Cortex slots into existing on-call workflows. OTel is **vendor-neutral**: works with any compliant backend, no lock-in. Distributed trace context propagation means an IDE → Cortex → LLM provider call appears as one cohesive trace, surfacing latency bottlenecks that would otherwise be invisible. Pre-built dashboards for Datadog/Grafana/Honeycomb reduce customer onboarding time from days to hours.
 - ❌ **Cons**: Instrumentation is cross-cutting — touches nearly every core component. Mitigated by treating it as additive (no behavior changes, only emissions) and by zero-overhead-when-disabled default. Span count can become large in synthesis-heavy environments; mitigated by configurable head-based sampling. Privacy-mode redaction must be carefully tested per span type to avoid leaking data; mitigated by automated tests asserting which attributes are stripped under `CORTEX_OTEL_PRIVACY=strict`.
+
+---
+
+## 🔏 Phase 26.4: Cryptographic Event Signing & Non-Repudiation — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 26 hash-chains the audit log — the hashes prove no past entry was modified or deleted. That's **integrity**. But it doesn't prove **who authored** a given event. A compromised admin token could insert valid hash-chained entries that look perfectly authentic. For SOX, HIPAA, FedRAMP, and any environment where a regulator might ask *"prove this specific approval came from this specific person at this specific time and has not been forged"*, you need **non-repudiation** — cryptographic signatures that bind each event to an authenticated identity. Phase 26.4 adds Ed25519 per-event signing to the audit log. The hash chain still proves "no tampering"; signatures additionally prove "Alice authored this, signed by her key, at this time — even Cortex itself cannot have forged it."
+
+**Technical Terms**
+Inspired by Nexus Phase 29.1 Cryptographic Signal Signing. Per-event Ed25519 signatures over the canonical JSON serialization of every audit event, layered on top of Phase 26's hash chain:
+
+**Two-key model**:
+
+- **Identity keys** — every authenticated identity (human via Phase 25 SSO, service account, agent via Phase 43.2 Librarian definition) has an Ed25519 key pair. Public key registered in Phase 22 central server's key registry; private key held by the identity (hardware-backed where possible: TPM / Secure Enclave / HSM via Phase 27).
+- **System key** — Cortex itself has a system Ed25519 key pair for events without a human/agent author (auto-generated entities, scheduler dispatches). Co-signs identity-authored events for verifier convenience.
+
+**Signed audit event shape** (additive to Phase 26 schema):
+
+```typescript
+interface SignedAuditEvent {
+  // Phase 26 fields
+  id: string;
+  timestamp: string;
+  actor: string;             // identity ID
+  action: string;
+  resource: string;
+  before?: any;
+  after?: any;
+  prevHash: string;          // hash chain
+  hash: string;
+  
+  // Phase 26.4 additions
+  signature: {
+    algorithm: "Ed25519";
+    actorSignature: string;  // signature by actor's identity key
+    systemSignature: string; // co-signature by Cortex system key
+    signedAt: string;        // timestamp inside the signed payload
+    keyId: string;           // identity key fingerprint for verification
+  };
+}
+```
+
+**Signing pipeline** (extends Phase 26 write path):
+
+1. Phase 26 writer constructs the audit event with `prevHash` + `hash`
+2. Phase 26.4 signing layer computes canonical JSON of the event (excluding signature block itself)
+3. Actor's identity key signs → `actorSignature`
+4. System key co-signs → `systemSignature`
+5. Signed event appended to audit log
+6. Phase 26 hash chain continues as before (next event's `prevHash` covers the full signed payload)
+
+**Verification**:
+
+- `cortex audit verify [--since <date>] [--actor <id>] [--strict]` — walks the hash chain AND verifies every signature
+- `--strict` mode rejects events without valid signatures (post-Phase-26.4 deployments)
+- Public key resolution via Phase 22 central server's key registry (with on-disk cache for offline verification)
+- Independent verification via shipped CLI tool `cortex-audit-verify` — third-party auditors can verify without running Cortex; needs only the audit log + the public key registry export
+
+**Key lifecycle**:
+
+- Identity keys generated on first SSO login (or on-demand via `cortex identity generate-key`)
+- Hardware-backed where available — Cortex never sees the private key; signing happens via TPM/Secure Enclave/HSM API; falls back to OS keychain (macOS Keychain, Windows DPAPI, Linux Secret Service) if no hardware backing
+- Rotation: `cortex identity rotate-key` — generates new key pair; new public key registered; both old and new keys valid for verification during a configurable grace period (default 90 days)
+- Revocation: compromised keys can be revoked via `cortex identity revoke-key --reason "..."`; revocation list distributed via Phase 22 central server; events signed after revocation timestamp fail verification
+
+**Service accounts and agents**:
+
+- Service accounts (CI tokens) get their own Ed25519 key pairs at issue time; private key delivered once, never re-shown; rotation forces re-issue
+- Agents (Phase 43.2 Librarians) have their own keys per `cortex-librarian-v1` definition; child sub-Librarians (Phase 43.4) inherit parent's signing authority via signed delegation tokens
+
+**Performance**:
+
+- Ed25519 signing is fast (~50µs per event on commodity hardware); negligible overhead per audit write
+- Verification is also fast (~150µs per event); full audit log verify scales O(N) with N = event count
+- Batch verification optimizations available for very large audit logs (Ed25519 batch verification is ~3x faster than serial)
+
+**Phase 22 key registry**:
+
+- Distributed key registry storing public keys per identity
+- Signed updates (new key, rotation, revocation) propagate across federation (Phase 25.1)
+- Phase 27 BYO-Key envelope encryption on the registry itself; customer KEK protects the key catalogue
+
+**Phase 24 compliance integration**:
+
+- SOC2 / HIPAA / PCI / FedRAMP compliance reports include non-repudiation evidence: "all 12,847 audit events in this period are individually signed by their respective authors; signature verification rate: 100%; no signature failures detected."
+- Compliance pack rules can require specific actions to be signed by specific identity classes (e.g., PCI compliance pack requires payment-domain entity edits to be signed by an identity in the `payment-team` SSO group)
+
+### Architecture & System Design
+
+- **Core Components**: new `src/audit/signing.ts` (Ed25519 sign + verify via `libsodium` bindings), `src/audit/key-registry.ts` (key storage + distribution), `src/identity/key-management.ts` (lifecycle: generate, rotate, revoke), `src/cli/identity.ts` (key management commands), `src/cli/audit.ts` extended (`verify --strict`), standalone `cortex-audit-verify` binary for third-party verification. Phase 22 central server gains key registry endpoints; Phase 27 BYO-Key wraps the registry storage.
+- **Design Pattern**: **Layered audit integrity** — Phase 26 hash chain (integrity) + Phase 26.4 per-event signatures (non-repudiation). Each layer independently verifiable. Combined, the audit log can be proven to (a) not have been tampered with and (b) have been authored by the claimed identities — the two regulatory primitives.
+- **Key Considerations**:
+  - **Hardware-backed signing where possible** — TPM / Secure Enclave / HSM keep private keys out of the application process. Fallback to OS keychain is acceptable but explicitly noted as lower-trust.
+  - **Backward compatibility** — events pre-dating Phase 26.4 deployment are unsigned; `cortex audit verify` reports them as "unsigned (legacy)" rather than failures unless `--strict-from <timestamp>` is set.
+  - **Key registry is the trust root** — must be highly available, BYO-Key encrypted at rest (Phase 27), and audit-protected itself.
+
+### Definition of Ready (DoR)
+
+- Phase 26 (audit + hash chain) shipped.
+- Phase 25 (SSO) shipped — identity attribution.
+- Phase 22 (central server) shipped — key registry.
+- Phase 27 (BYO-Key) shipped or planned in same release — encrypts the key registry.
+
+### Definition of Done (DoD)
+
+- Ed25519 key pair generation on first SSO login (and via `cortex identity generate-key`).
+- Hardware-backed signing via TPM / Secure Enclave / HSM with documented fallback to OS keychain.
+- Every audit event signed by actor identity key + co-signed by Cortex system key.
+- `cortex audit verify [--strict] [--since <date>] [--actor <id>]` walks chain + verifies signatures.
+- Standalone `cortex-audit-verify` binary works without Cortex installed (third-party auditor use case).
+- Key rotation with 90-day grace period for old keys.
+- Key revocation with distributed revocation list.
+- Phase 22 key registry stores public keys; federated propagation via Phase 25.1.
+- Phase 24 compliance reports include non-repudiation evidence.
+- Phase 26.2 OPA/Cedar policies can require signed-by-specific-class for certain actions.
+- Tests cover: signing/verification round-trip per identity class (human, service account, agent), hardware-backed signing path with fallback, rotation grace-period correctness, revocation enforcement, third-party verification binary works on exported audit log, batch verification performance benchmarked, compliance report non-repudiation evidence format.
+
+### Pros & Cons
+
+- ✅ **Pros**: **The non-repudiation primitive enterprise auditors actually require.** Hash chains prove integrity; signatures prove authorship — both are required for SOX / HIPAA / FedRAMP audit confidence. Hardware-backed signing means a compromised Cortex process cannot forge signatures (private keys never reside in application memory). Standalone third-party verification binary means regulators can audit independently. Performance overhead is negligible (~200µs per audit event). Backward compatibility — legacy unsigned events still readable, just flagged in verification output.
+- ❌ **Cons**: Key management is operational surface — rotation, revocation, recovery paths must be carefully designed. Mitigated by sensible defaults (90-day grace), hardware backing where available, integration with Phase 27 BYO-Key. Hardware backing isn't universal — falls back to OS keychain which is lower-trust; mitigated by surfacing key-backing class in audit verification output so auditors see the trust level. Lost private keys mean future events can't be signed by that identity until rotation; mitigated by clear recovery procedure and admin override paths.
 
 ---
 
