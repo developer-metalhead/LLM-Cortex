@@ -50,19 +50,34 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.21 | Episodic-Semantic Memory Consolidation (Tulving)       | ⏳ Planned (research-grade)          |
 | 20.22 | Spaced Repetition & Forgetting Curves (Ebbinghaus/SM-2)| ⏳ Planned                           |
 | 20.23 | Tool-Use Augmented Synthesis (Toolformer/ReAct)        | ⏳ Planned (research-grade)          |
+| 20.24 | Sequential Thinking & Persistent Reasoning Traces      | ⏳ Planned (research-grade)          |
 | 21    | Polyrepo Federation                                    | ⏳ Planned                           |
 | 22    | Central Knowledge Server                               | ⏳ Planned                           |
 | 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
 | 24    | Compliance Constraint Templates                        | ⏳ Planned                           |
 | 25    | Enterprise SSO, SCIM & Identity Federation             | ⏳ Planned (enterprise)              |
+| 25.1  | Federated Identity for Cross-Tenant Workflows          | ⏳ Planned (enterprise)              |
 | 26    | RBAC, ABAC & Immutable Audit Trail                     | ⏳ Planned (enterprise)              |
+| 26.1  | DLP & Knowledge-Layer PII Redaction                    | ⏳ Planned (enterprise)              |
+| 26.2  | Policy-as-Code (OPA/Cedar)                             | ⏳ Planned (enterprise)              |
 | 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
 | 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
 | 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
+| 29.1  | Approved Model Allowlists & Provider Governance        | ⏳ Planned (enterprise)              |
+| 29.2  | Tenant-Scoped Billing & Metering                       | ⏳ Planned (enterprise)              |
 | 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
 | 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
 | 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
+| 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
 | 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
+| 33.1  | Model Provider Registry & Cost-Tier Routing            | ⏳ Planned (enterprise)              |
+| —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
+| 40    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
+| 41    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
+| 42    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
+| 43    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
+| 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
+| 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
 
 ---
 
@@ -2625,6 +2640,147 @@ Pipeline:
 
 ---
 
+## 🪜 Phase 20.24: Sequential Thinking & Persistent Reasoning Traces — ⏳ Planned (research-grade)
+
+**Research grounding**: **Sequential Thinking MCP Server** (Anthropic, 2024 — reference implementation in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking), TypeScript). Exposes a `sequentialthinking` tool: an LLM iteratively emits structured thoughts with metadata (`thoughtNumber`, `totalThoughts`, `isRevision`, `revisesThought`, `branchFromThought`, `needsMoreThoughts`), enabling linear refinement, mid-stream revision, and explicit branching. Builds on **Chain-of-Thought** (Wei et al. NeurIPS 2022), **Self-Refine** (Madaan et al. CMU NeurIPS 2023), and **Chain-of-Verification (CoVe)** (Dhuliawala, Komeili, Xu, Raileanu, Li, Celikyilmaz, Weston — Meta 2023, arXiv:2309.11495). Persisted reasoning traces frame entities as Toulmin Argument Structures (Toulmin 1958) — claims with explicit warrant, backing, qualifier.
+
+### Honest Scope (what this phase IS and ISN'T)
+
+**IS**: a thin extension that (a) registers Sequential Thinking as a callable tool via Phase 20.23's tool registry, (b) persists the resulting reasoning trace on entities as an additive `reasoningTrace[]` field, (c) surfaces traces in Phase 6 / Phase 12 PR-comment payloads when constraints are violated, and (d) integrates with Phase 7.5 quality scoring (verified traces are a quality dimension).
+
+**IS NOT**: a "proprietary patented reasoning compiler," a replacement for Cortex's existing reasoning patterns (Phase 20.18 ToT, Phase 20.15 dual-process routing, Phase 20.11 Reflexion all stay as designed), or a feature triggered on every synthesis (cost-prohibitive — gated by dual-process routing). Sequential Thinking is open-source MCP from Anthropic; it provides **structured introspection capability**, not IP differentiation. Cortex's moat remains the accumulated knowledge graph + governance fabric (Phases 21-32), not the reasoning tool.
+
+### Layman's Terms
+
+When Cortex's Librarian synthesizes a complex change today, the reasoning vanishes — you see the resulting entity description but not *why* the AI concluded what it did. Phase 20.24 records the step-by-step thinking ("first I considered X; then I noticed Y contradicted it; I revised my conclusion to Z; verified by Q") and stores it with the entity. When a PR is blocked by a constraint violation (Phase 6) or a fitness function (Phase 20.4), the PR comment includes the reasoning chain: *"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."* Developers stop hating constraint blocks because they understand *why*. Powered by Anthropic's open-source Sequential Thinking MCP server, integrated via Phase 20.23's tool registry — not reinvented.
+
+### Technical Terms
+
+**Sequential Thinking as a registered tool** (extends Phase 20.23):
+
+- The `sequentialthinking` MCP tool from `@modelcontextprotocol/server-sequential-thinking` is registered in Cortex's tool registry as `sequential_think`.
+- During slow-path synthesis (gated by Phase 20.15 dual-process router), the Librarian can call `sequential_think({ thought, thoughtNumber, totalThoughts, isRevision?, revisesThought?, branchFromThought?, needsMoreThoughts? })` iteratively to work through complex syntheses.
+- The tool maintains structured state per synthesis call; the Librarian decides when to revise, branch, or conclude.
+- Sequential Thinking is **bundled** as a dependency, not optional — Cortex installs it on `cortex init` so the registry can route to it without manual setup.
+
+**Persistent reasoning traces** (additive schema field on entities):
+
+```typescript
+interface ReasoningTrace {
+  traceId: string;
+  generatedDuring: "synthesis" | "refinement" | "constraint-check";
+  thoughts: Array<{
+    thoughtNumber: number;
+    thought: string;
+    isRevision?: boolean;
+    revisesThought?: number;
+    branchFromThought?: number;
+    verified?: boolean;  // CoVe-style verification flag (see below)
+    evidence?: string[]; // wikilink-style references the thought cites
+  }>;
+  conclusion: string;
+  totalTokensUsed: number;
+  recordedAt: string;
+}
+
+// Additive field on entity records
+interface EntityRecord {
+  // ... existing fields ...
+  reasoningTrace?: ReasoningTrace[];  // last N traces, LRU eviction (default N=3)
+}
+```
+
+Traces are bounded per entity (default 3 most recent; configurable via `CORTEX_REASONING_TRACE_RETENTION`). Older traces age out via LRU. Storage cost: ~2-5KB per trace (typically 5-15 thoughts), ~6-15KB per entity for retention=3.
+
+**Chain-of-Verification (CoVe) final step**:
+
+- Optional final thought is a verification step: *"did my conclusion above actually follow from the cited evidence? Are there any unsupported claims?"*
+- The verification thought has `verified: true | false`. Unverified conclusions are flagged in the entity's quality scorecard.
+- Cheap quality gate that catches LLM hallucinations in the reasoning itself, not just in the final output.
+
+**Activation gating** (cost control):
+
+The `sequential_think` tool is **not** called on every synthesis. It is gated by signals from existing phases:
+
+- Phase 20.15 dual-process routing: only on slow-path (System 2) syntheses.
+- Phase 20.20 active inference: high-surprise syntheses (where prediction diverged from actual) trigger sequential reasoning automatically.
+- Phase 6 constraints: when a synthesis would introduce a constraint violation, the Librarian is instructed to call `sequential_think` to explore alternatives before committing.
+- Phase 16 contradictions: when a synthesis touches an entity with open contradictions, sequential reasoning is requested to address the contradictions explicitly.
+- Explicit user request: `cortex sync --think` flag or `/sync --think` MCP arg forces sequential reasoning for the next synthesis.
+
+This keeps the per-synthesis token multiplier (typically 2-4× without sequential thinking) contained to the ~5-15% of syntheses where deep reasoning pays off.
+
+**Constraint-violation PR payload** (Phase 6 + Phase 12 integration):
+
+When `cortex lint` or a fitness function (Phase 20.4) blocks a PR, the GitHub Action comment now includes:
+
+```markdown
+### ⛔ Cortex blocked this PR
+
+**Rule violated**: `mustNotImport: src/auth/InternalTokenStore` on entity `[[PaymentService]]`
+
+**Cortex's reasoning** (4-step trace from the synthesis that detected this):
+1. The PR introduces `import { InternalTokenStore } from '../auth/InternalTokenStore'` in `src/payment/PaymentService.ts`.
+2. `[[PaymentService]]`'s declared constraint forbids imports from `src/auth/` to enforce the Payment-Auth bounded-context separation (established 2026-02-12 in commit a3f7b21).
+3. The import path bypasses the public `[[AuthFacade]]` interface (which exposes `validateToken()` and `refreshToken()` only) and reaches into internal token storage.
+4. **Verified**: Phase 16 contradiction detector confirms this would re-introduce the auth-payment coupling that was explicitly resolved by ADR-0019 (2026-01-20).
+
+**Suggested fix**: Use `[[AuthFacade]].validateToken(token)` instead of directly importing `InternalTokenStore`. The Facade was created specifically for this use case — see [[AuthFacade]] entity for the public contract.
+
+[View full reasoning trace] · [View constraint definition] · [View ADR-0019]
+```
+
+This is what makes constraint blocks **explainable** instead of cryptic — the developer reads the reasoning, understands the context, and gets a specific remediation, not just an error code.
+
+**Phase 7.5 quality integration**:
+
+- New optional 8th quality dimension: `reasoning_score` = `verified_traces / total_traces` (CoVe verification pass rate).
+- Entities with verified reasoning traces are higher-trust than entities without traces (which are higher-trust than entities with unverified traces).
+- Reasoning score is opt-in via Phase 7.5's configurable weights — teams not using Phase 20.24 are not penalized.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/reasoning/sequential.ts` (registers `sequential_think` in Phase 20.23 tool registry; wraps the bundled `@modelcontextprotocol/server-sequential-thinking` server), new `src/reasoning/trace.ts` (trace persistence + LRU eviction), new `src/reasoning/cove.ts` (CoVe verification thought injection), additive `reasoningTrace[]` field in `src/knowledge/schema.ts`, additions to `src/cli/sync.ts` (`--think` flag), modifications to `src/synthesis/router.ts` (Phase 20.15 router signals activation), modifications to GitHub Action template (Phase 12) for reasoning-bearing PR comments, additions to `src/llm/prompts.ts` (Librarian prompt updated to know when to call `sequential_think`).
+- **Design Pattern**: **Tool + persistence + surface integration**. Sequential Thinking is consumed (not reinvented) via the tool registry. Traces are stored as additive schema. PR-comment rendering is a Phase 12 enhancement. No new core engines.
+- **Key Considerations**:
+  - **Sequential Thinking lives at the tool layer, not the core layer** — the Librarian decides when to use it; Cortex doesn't force it.
+  - **CoVe verification is cheap and high-signal** — adds one thought, catches reasoning-internal hallucinations.
+  - **Trace retention is LRU-bounded** — 3 most-recent traces per entity by default; older ones age out without configuration.
+  - **Reasoning is not a substitute for evidence** — traces complement (don't replace) Phase 7 evidence anchors. A trace with no underlying evidence anchors is flagged as low-quality.
+  - **PR comments respect Phase 24 compliance retention** — if a regulator-required period applies, reasoning traces in audit log entries are retained accordingly.
+
+### Definition of Ready (DoR)
+
+- Phase 20.23 (tool registry) is shipped — Sequential Thinking registered there.
+- Phase 20.15 (dual-process routing) is shipped — provides activation gating.
+- Phase 6 (constraints) and Phase 12 (CI/GitHub Action) are shipped — provide the PR-comment surface.
+
+### Definition of Done (DoD)
+
+- `@modelcontextprotocol/server-sequential-thinking` bundled as Cortex dependency; auto-registered as `sequential_think` in tool registry.
+- `reasoningTrace[]` additive field on entity records, populated when `sequential_think` is called during synthesis.
+- LRU eviction at `CORTEX_REASONING_TRACE_RETENTION` (default 3) traces per entity.
+- CoVe verification thought injection: every sequential reasoning call ends with a verification step recorded with `verified: true | false`.
+- Activation gating: `sequential_think` only invoked when Phase 20.15 routes to slow path OR Phase 20.20 high-surprise OR Phase 6 constraint-near-miss OR Phase 16 open-contradiction-touched OR explicit `--think` flag.
+- Phase 12 GitHub Action renders reasoning traces in constraint-violation PR comments with structured format (numbered thoughts, suggested fix, links to traces/constraints/ADRs).
+- Phase 7.5 quality scoring gains optional `reasoning_score` dimension (verified-trace ratio).
+- `cortex sync --think` and `/sync --think` MCP arg force sequential reasoning.
+- `cortex trace show <entity>` CLI renders the entity's stored reasoning traces.
+- Tests cover: `sequential_think` tool registration + invocation, trace persistence + LRU eviction, CoVe verification flag, activation gating across each signal source, PR-comment rendering format, quality score integration, `--think` override behavior.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Explainability without reinventing reasoning** — Sequential Thinking is a battle-tested open-source MCP server; Cortex consumes it via the existing tool registry rather than building parallel infrastructure. CoVe verification step catches reasoning-internal hallucinations cheaply (one extra thought). PR-comment integration is **the** product win — constraint blocks become teaching moments rather than friction. Reasoning traces feed back into Phase 20.11 Reflexion (richer reflection inputs) and Phase 7.5 quality scoring (verified-trace dimension). Activation gating keeps cost bounded — the typical synthesis pays nothing for this feature; only the ~5-15% of complex/contested syntheses pay the multiplier.
+- ❌ **Cons**: Per-invocation token cost is significant (2-4× single-shot for sequential reasoning chains). Mitigated by aggressive activation gating — most syntheses skip this path entirely. Trace storage adds ~6-15KB per entity (3 traces × 2-5KB each); negligible for small projects, accumulates on huge knowledge bases — mitigated by LRU eviction and by Phase 20.17 sleep consolidation that can archive old traces. Sequential reasoning quality depends on the LLM's ability to self-correct — weaker models produce weaker traces. Mitigated by reserving `sequential_think` for the slow-path frontier model (Phase 20.15) where this quality is reliable. Risk of **trace inflation** (LLM emits many shallow thoughts because the tool encourages it) — mitigated by Librarian prompt explicitly preferring fewer-but-deeper thoughts and by `totalThoughts` cap at 12.
+
+### Why this is a separate phase (not folded into 20.18 or 20.23)
+
+Phase 20.18 (Tree-of-Thoughts) is **breadth-first reasoning**: generate K parallel candidates, score them, pick the best. Phase 20.24 Sequential Thinking is **depth-first reasoning**: one chain that revises itself, with explicit verification. They are complementary patterns, not redundant — the slow path (Phase 20.15) can choose either or both depending on the problem shape.
+
+Phase 20.23 (Tool-Use) ships the tool *registry* and the 6 baseline tools. Phase 20.24 ships the Sequential Thinking tool integration + the persistent trace layer + the PR-comment integration. Folding 20.24 into 20.23 would conflate "tool registry exists" with "Sequential Thinking + trace persistence + PR integration is implemented" — different scopes, different DoR (20.23 requires no other phase; 20.24 requires 20.15 + 6 + 12), different test surfaces.
+
+---
+
 ## 🌐 Phase 21: Polyrepo Federation — ⏳ Planned
 
 **Layman's Terms**
@@ -2945,6 +3101,54 @@ CLI/admin:
 
 ---
 
+## 🔗 Phase 25.1: Federated Identity for Cross-Tenant Workflows — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 21 (Polyrepo Federation) lets repos share entities; Phase 25 lets your company use SSO. Phase 25.1 combines them: when Acme Corp federates with their consulting partner BrightLabs to collaborate on a shared codebase, an Acme engineer can act on BrightLabs's `.knowledge/` (within explicit grants) using their Acme identity — no shadow accounts, no shared passwords, no security review per engineer. The federation is one negotiation between two orgs; engineers from both orgs work seamlessly through their own IdP.
+
+**Technical Terms**
+SAML/OIDC trust federation between Phase 22 Central Knowledge Server tenants, plus cross-tenant authorization grants:
+
+- **Identity federation**: Tenant A's IdP issues an assertion; Tenant B's central server validates the assertion against a pre-established trust relationship (SAML metadata exchange or OIDC issuer trust). Standard SAML 2.0 federation (multi-party metadata) and OIDC federation (RFC 8414 issuer discovery + signed trust chain).
+- **Cross-tenant grants**: `cortex federation grant --to-tenant <id> --resource <pattern> --roles [viewer|contributor] --expires <duration>` issues a scoped grant. Recorded in Phase 26 audit log; revocable any time.
+- **JIT cross-tenant provisioning**: foreign user identity is auto-provisioned with the granted role on first access, scoped to the granted resources only.
+- **Identity claims passthrough**: foreign user's department/role/clearance attributes (from their home IdP) flow into Phase 26 ABAC policy evaluation — policy can reference `user.homeOrg`, `user.foreignClearance`.
+- **Mutual TLS for federation endpoints**: cross-tenant API calls use mTLS in addition to bearer tokens; CA pinning prevents impersonation.
+- **Federation audit trail**: every cross-tenant action emits an audit event tagged with both source-tenant and target-tenant for dual-side compliance reporting.
+
+**Architecture & System Design**
+
+- **Core Components**: extends `src/auth/saml.ts`, `src/auth/oidc.ts` with federation trust handling; new `src/auth/federation.ts` (cross-tenant grant management); new `src/cli/federation.ts`; integration with Phase 22 central server.
+- **Design Pattern**: Federation as explicit bilateral agreement. No transitive trust; every cross-tenant relationship is a named grant. Grants are time-bounded by default (90 days, renewable).
+- **Key Considerations**:
+  - **No transitive federation** — if A federates with B and B with C, A and C have no implied trust. Each pair is explicit.
+  - **Audit dual-sided** — both tenants see the cross-tenant action in their logs; data sovereignty maintained.
+  - **Grant scopes must be narrow by default** — entity-pattern based, not workspace-wide unless explicitly broadened.
+
+**Definition of Ready (DoR)**
+
+- Phase 21 (Polyrepo Federation) shipped — the resource model federation grants operate on.
+- Phase 25 (SSO/SCIM) shipped — identity foundation.
+- Phase 26 (RBAC/ABAC/Audit) shipped — federation grants are first-class audit subjects.
+
+**Definition of Done (DoD)**
+
+- SAML 2.0 multi-party metadata federation works between two reference tenants.
+- OIDC federation via RFC 8414 issuer discovery + signed trust chain works.
+- `cortex federation grant / revoke / list` CLIs work.
+- JIT cross-tenant provisioning on first access.
+- Foreign user attributes flow into ABAC policy evaluation.
+- mTLS enforced on all federation endpoints.
+- Dual-sided audit trail.
+- Tests cover: SAML federation flow, OIDC federation flow, grant scope enforcement, JIT provisioning, attribute passthrough, mTLS verification, revocation propagation.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Unlocks **consulting partnerships, M&A scenarios, and B2B integration use cases** that single-tenant SSO cannot serve. Standard SAML/OIDC federation — no novel protocols, low integration risk for customer InfoSec. Dual-sided audit satisfies both sides' compliance teams.
+- ❌ **Cons**: Federation requires bilateral configuration — non-trivial onboarding for the first federation; mitigated by `cortex federation init-wizard` guided setup. mTLS adds operational complexity (cert rotation); mitigated by integration with Phase 27 BYO-Key cert management.
+
+---
+
 ## 🛡️ Phase 26: RBAC, ABAC & Immutable Audit Trail — ⏳ Planned (enterprise)
 
 **Layman's Terms**
@@ -3006,6 +3210,109 @@ CLI:
 
 - ✅ **Pros**: RBAC + immutable audit is **the requirement** for SOX, HIPAA, PCI, FedRAMP, and any tier-1 financial services contract. The hash-chained audit log is genuinely tamper-evident — competitors typically have "audit logs" that an admin can edit, which fails real forensic review. CEF export means existing SIEM investments work day-one. ABAC + per-entity classification lets one Cortex deployment serve a mixed-classification environment (open-source code + proprietary financial code) safely.
 - ❌ **Cons**: Policy authoring is non-trivial; bad policies either over-restrict (developers can't do their jobs) or under-restrict (security incident). Mitigated by `cortex policy test` dry-run and a starter library of policy templates per industry. Audit storage grows linearly with usage; mitigated by tiered archival (hot → warm → cold object storage).
+
+---
+
+## 🕵️ Phase 26.1: DLP & Knowledge-Layer PII Redaction — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Cortex synthesizes everything it sees. If your code happens to include a customer email in a test fixture, a sample SSN in a comment, or a database connection string with embedded credentials, that data ends up in the synthesized knowledge — a permanent record in `.knowledge/` that's harder to scrub than the source. Phase 26.1 adds first-class data loss prevention (DLP): every synthesis output is scanned for PII, secrets, and customer-classified data before commit, with redaction-or-block policies per data class. Existing entries can be re-scanned on policy update. This is what makes Cortex acceptable for HIPAA/GDPR/PCI environments where the knowledge layer itself is a compliance surface.
+
+**Technical Terms**
+A multi-stage DLP pipeline inserted between synthesis and persistence (Phase 7 writer pipeline), and a retroactive scanner over the existing knowledge graph:
+
+- **Detection engine**: pluggable detectors for PII (emails, phone numbers, SSNs, credit cards), secrets (extends Phase 7.5's 6 regex patterns to ~30 patterns including AWS/GCP/Azure access keys, OAuth client secrets, SSH private keys, JWT signing keys, Stripe/Twilio/SendGrid tokens), and custom-classified data (per-tenant pattern packs).
+- **Confidence scoring**: each detection has a confidence score (regex-only = 0.6, regex + checksum = 0.9, ML-classifier confirmed = 0.95). Action gated by confidence threshold per data class.
+- **Action policy** per data class (`cortex.dlp.yaml`):
+  - `redact` — replace with `[REDACTED:emailAddress]` token, persist redaction; original never written to disk
+  - `mask` — show partial value (`j***@acme.com`); persist masked
+  - `block` — refuse synthesis, surface error with location
+  - `quarantine` — synthesize but move to gated `.knowledge/quarantine/` requiring admin approval before merge
+- **Retroactive scan**: `cortex dlp scan [--since <date>] [--pattern-pack <name>]` re-scans existing entities against current policy; surfaces matches as actionable findings (redact-in-place / move to quarantine / accept exception).
+- **Pre-commit hook**: extends Phase 6 git pre-commit hook to scan staged synthesis payloads before commit; aborts commit if `block`-policy class is detected.
+- **Phase 24 compliance integration**: HIPAA compliance pack ships a default `cortex.dlp.yaml` with PHI detectors; PCI pack ships PAN detectors; GDPR pack ships EU-PII detectors. Compliance audit report includes "DLP findings: N detections, M redactions, P blocks" per framework.
+- **Phase 26 audit integration**: every detection, redaction, block, and quarantine action emits an immutable audit event with `dataClass`, `confidence`, `action`, `entity`, `sourceFile`.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/dlp/detector.ts` (pluggable detector registry), new `src/dlp/pipeline.ts` (pre-persistence scan), new `src/dlp/retroactive.ts` (scan existing knowledge), new `src/dlp/patterns/<class>.yaml` (data class definitions), new `src/cli/dlp.ts`, additions to Phase 7 writer (pipeline insertion).
+- **Design Pattern**: **Detection + scoring + policy-driven action**. Detection is separate from policy — same detector serves multiple environments with different policies (development = mask; production = block).
+- **Key Considerations**:
+  - **False-positive containment**: every detection logs the matched span so users can review and add exceptions. `cortex dlp exceptions add <pattern>` exempts a known-safe pattern from future scans.
+  - **Per-tenant custom packs**: tenants in regulated industries (healthcare, finance) define custom data classes (`HIPAA-claimNumber`, `internal-projectCodename`) and ship them as plugin packs.
+  - **Performance**: regex pipeline ~5-10ms per synthesis; ML classifier (when enabled) adds ~30-100ms. Bounded.
+
+**Definition of Ready (DoR)**
+
+- Phase 7 writer pipeline is stable.
+- Phase 6 git pre-commit hook is shipped.
+- Phase 26 audit infrastructure is shipped — DLP events anchor here.
+
+**Definition of Done (DoD)**
+
+- ~30 detector patterns shipped covering PII + secrets baseline.
+- `cortex.dlp.yaml` policy schema with 4 action types (redact, mask, block, quarantine).
+- Pre-persistence pipeline blocks/redacts before any disk write.
+- Retroactive `cortex dlp scan` works on existing knowledge.
+- Phase 24 compliance packs ship default DLP configs (HIPAA, PCI, GDPR).
+- Pre-commit hook integration blocks staged commits on block-class matches.
+- Phase 26 audit events emitted for every DLP action.
+- `cortex dlp exceptions` whitelist works.
+- Tests cover: each detector pattern accuracy, action policy enforcement, retroactive scan, pre-commit block, audit emission, exception handling, compliance-pack defaults.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Makes Cortex acceptable in regulated environments where the knowledge layer is itself a compliance surface** (HIPAA, GDPR, PCI). Retroactive scan handles the "we already have 6 months of synthesized knowledge" migration problem. Per-tenant custom packs let regulated industries declare their own data classes without core changes. Compliance audit reports include DLP findings, satisfying regulator expectations.
+- ❌ **Cons**: False-positive handling adds operational overhead — every legitimate detection that isn't actually sensitive must be exempted. Mitigated by exception-list management and per-tenant tuning. ML classifier (optional, off by default) adds latency; mitigated by opt-in deployment and tier (regex-only is fast and covers 80% of cases).
+
+---
+
+## 📜 Phase 26.2: Policy-as-Code (OPA/Cedar) — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 7.5 has org-constraints YAML. Phase 26 has ABAC policy expressions. Phase 6 has per-entity constraints. Three different policy systems, three different syntaxes. Phase 26.2 unifies them under industry-standard policy engines: **Open Policy Agent (OPA)** with Rego, or **AWS Cedar** with Cedar's policy language. Customers who already run OPA for Kubernetes / Terraform / API gateways get one unified policy plane covering Cortex too. Their security teams write policies once, applied everywhere.
+
+**Technical Terms**
+Pluggable policy engine layer that compiles Cortex's three policy domains (org-constraints, ABAC, entity-constraints) into OPA Rego or Cedar policies, evaluated by the chosen engine at decision points:
+
+- **OPA integration**: bundled OPA runtime (Go binary) or external OPA cluster reference. Policy bundles distributed as `.tar.gz` per OPA conventions, hot-reloadable.
+- **Cedar integration**: bundled `cedar-policy` Rust crate compiled to WASM; loaded in-process for low-latency evaluation.
+- **Policy synthesis from existing config**: `cortex policy compile --target opa|cedar` converts `cortex.constraints.yaml` + `cortex.policy.yaml` + per-entity constraints into engine-native policy. Output is human-readable; customer security teams review/modify.
+- **Decision points**: every synthesis (constraint check), every API call (RBAC/ABAC check), every cross-tenant grant (federation check), every DLP action (data-class policy check) routes through the policy engine.
+- **Bidirectional compilation**: customers who write policies natively in Rego/Cedar can have them surfaced back in Cortex's UI via `cortex policy decompile`.
+- **Policy testing**: `cortex policy test --query <decision-input>` runs a dry policy evaluation; results show which rules fired and why — same pattern OPA's `opa eval` uses.
+- **Distributed policy bundles**: in multi-tenant central server (Phase 22) deployments, policies are distributed as signed bundles from a central policy registry, hot-reloadable across the fleet without restart.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/policy/engine.ts` (engine abstraction), `src/policy/opa.ts` (OPA bundle compiler + runtime), `src/policy/cedar.ts` (Cedar WASM integration), `src/policy/compile.ts` (Cortex-YAML → Rego/Cedar), new `src/cli/policy.ts` extensions, integration points across constraint evaluator, RBAC checker, federation grants, DLP pipeline.
+- **Design Pattern**: **Engine-as-strategy**. Same policy decision surface; pluggable engine. Customers pick engine at deployment time via `cortex.policy.engine: opa|cedar|cortex-native`.
+- **Key Considerations**:
+  - **Native mode retained as default** — Cortex's existing constraint evaluator is the default engine; OPA/Cedar are opt-in for customers with existing investment.
+  - **Performance comparison documented** — OPA bundle eval adds 1-3ms per decision; Cedar WASM ~0.5-1ms; Cortex-native ~0.2ms. All acceptable.
+  - **Policy migration tooling**: `cortex policy compile` produces equivalent Rego/Cedar; customers can keep Cortex-native and use compilation only for compliance documentation export.
+
+**Definition of Ready (DoR)**
+
+- Phase 7.5 (org-constraints), Phase 26 (RBAC/ABAC), Phase 6 (entity-constraints) all shipped.
+- OPA / Cedar evaluation surfaces understood; runtime libraries vetted.
+
+**Definition of Done (DoD)**
+
+- `cortex.policy.engine` config selects engine (opa, cedar, cortex-native default).
+- `cortex policy compile --target opa|cedar` produces valid policies from Cortex YAML.
+- OPA bundle hot-reload works.
+- Cedar WASM in-process evaluation works.
+- All four decision points (constraint, RBAC, federation grant, DLP) route through the selected engine.
+- `cortex policy test` dry-evaluation surfaces which rules fired.
+- `cortex policy decompile` round-trips Rego/Cedar → Cortex YAML.
+- Phase 22 central server distributes signed policy bundles across fleet.
+- Tests cover: policy compilation correctness, engine round-trip, hot-reload, decision-point integration, dry-test output format, bundle signing/distribution.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Adopts **industry-standard policy engines** (OPA is CNCF-graduated, Cedar is AWS-backed). Customers who already invest in OPA for Kubernetes/Terraform get unified policy plane. Decompilation enables bidirectional sync — policies authored in either Cortex YAML or native Rego/Cedar stay synchronized. Compliance documentation exports as portable Rego/Cedar artifacts (easier for auditors than Cortex-specific YAML).
+- ❌ **Cons**: Two new dependency surfaces (OPA bundle runtime, Cedar WASM) — opt-in mitigates. Policy compilation is non-trivial logic; mitigated by extensive test coverage and Cortex-native default for customers who don't need engine portability.
 
 ---
 
@@ -3204,6 +3511,132 @@ Cost alerts:
 
 - ✅ **Pros**: FinOps is **the language Finance speaks**. Per-team chargeback turns Cortex from "unpredictable OpEx" into a normal cost-allocated line item — making renewals dramatically easier. Budget throttling means a runaway team can never produce a "we spent $200K in a weekend" headline. Graceful degradation to distilled Librarian on throttle preserves usefulness; hard-stop preserves the company.
 - ❌ **Cons**: Pricing tables drift; an outdated table produces wrong chargeback numbers. Mitigated by quarterly updates and explicit "pricing-as-of-date" stamps in every chargeback report. Throttling can mask quality issues if teams notice degradation but not the cause; mitigated by surfacing throttle state prominently in `cortex sync` output.
+
+---
+
+## ✅ Phase 29.1: Approved Model Allowlists & Provider Governance — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+A regulated bank's CISO does not want their developers using random LLMs to synthesize knowledge about their core banking system. They want one approved list: "Claude Opus 4.7 via our Anthropic Enterprise contract, GPT-4o via our Azure OpenAI deployment — nothing else, ever." Phase 29.1 makes this an enforceable policy: per-workspace allowlist of (provider, model, version, region) tuples; synthesis using anything outside the allowlist fails with a clear error; allowlist changes are themselves audit-logged. Combined with Phase 27 (air-gap) and Phase 26 (audit), this is what makes Cortex acceptable in financial-services and government environments where every model choice is a security-review decision.
+
+**Technical Terms**
+A declarative allowlist policy enforced at every LLM call dispatch point, integrated with Phase 26 ABAC + Phase 29 FinOps:
+
+- **Allowlist schema** (`cortex.models.yaml`):
+  ```yaml
+  default_allowlist:
+    - provider: anthropic
+      model: claude-opus-4-7
+      versions: ["2026-04-15", "2026-05-01"]   # specific revisions only
+      regions: ["us-east-1", "eu-west-1"]
+      deployment: "Anthropic Enterprise contract #AC-2026-447"
+    - provider: openai
+      model: gpt-4o
+      versions: ["2024-08-06"]
+      regions: ["azure-eastus"]
+      deployment: "Azure OpenAI Service tenant 7f8a..."
+
+  workspace_overrides:
+    "regulated/banking-core":
+      strict: true
+      additional_blocklist:
+        - { provider: "*", regions: ["us-east-2"] }  # no us-east-2 for any provider
+    "internal/dev-sandbox":
+      strict: false  # allow exploration with non-approved models
+  ```
+- **Enforcement points**: every Phase 33 wave engine call, every Phase 20.15 dual-process route, every Phase 19 distill invocation, every Phase 20.18 ToT, every Phase 20.16 multi-agent dispatch. The model selection layer checks the allowlist; non-allowed models trigger `ModelNotApprovedError` with the workspace's approved alternatives listed.
+- **Per-region pinning**: `regions` field gates by inference region (Anthropic supports `us-east-1`, `eu-west-1`; OpenAI/Azure has region tags). Matches Phase 27 data-residency constraints.
+- **Version pinning**: `versions` array prevents auto-rollout of new model versions without security review — common requirement in regulated environments.
+- **Allowlist change audit**: every modification to `cortex.models.yaml` (or its central server equivalent) emits a Phase 26 audit event with diff, justification, approver identity (Phase 25 SSO).
+- **Phase 22 central server distribution**: in multi-tenant deployments, allowlists are distributed as signed bundles from the central policy registry. Hot-reload across the fleet without restart.
+- **`cortex models list`**: shows currently-approved models per workspace; reachability check.
+- **`cortex models request <provider/model>`**: opens a workflow request for adding a model to allowlist (integrates with Phase 100 Durable Workflow Engine when shipped, or simple ticket export to Jira/ServiceNow via Phase 28).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/governance/allowlist.ts` (allowlist parser + enforcer), integration points in `src/llm/client.ts` (dispatch gate), `src/cli/models.ts`, hot-reload integration with Phase 22 central server.
+- **Design Pattern**: **Default-deny at the model dispatch layer**. Even Cortex's own internal calls (distillation, embedding training) check the allowlist. No backdoors.
+- **Key Considerations**:
+  - **Bootstrap-friendly fallback**: when allowlist is empty (fresh install), no enforcement — fail-open with a startup warning. Once any allowlist entry exists, default-deny activates.
+  - **Phase 33 Provider Registry integration** — the allowlist filters the registry's available providers; UI surfaces only approved ones.
+  - **Regulatory traceability**: Phase 24 compliance reports include "Models used in compliance period: [list]" derived from allowlist enforcement logs.
+
+**Definition of Ready (DoR)**
+
+- Phase 26 (audit), Phase 25 (SSO for approver identity), Phase 29 (FinOps cost tracking) all shipped.
+
+**Definition of Done (DoD)**
+
+- `cortex.models.yaml` schema with provider/model/versions/regions/deployment fields.
+- Workspace-scoped overrides with `strict` and `additional_blocklist`.
+- Enforcement at all LLM dispatch points (`ModelNotApprovedError` on violation).
+- `cortex models list / request` CLIs work.
+- Allowlist change events audited via Phase 26.
+- Phase 22 central server distributes signed allowlist bundles.
+- Tests cover: enforcement on each dispatch point, region/version matching, workspace override precedence, audit emission on change, signed-bundle verification.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Unlocks regulated industries** (financial services, healthcare, government) where every model choice is a CISO-level decision. Version pinning prevents surprise model rollouts breaking compliance posture. Region pinning aligns with Phase 27 data residency without separate config. Allowlist change audit creates the paper trail regulators expect.
+- ❌ **Cons**: Onboarding friction — new model needs to clear allowlist before any team can use it. Mitigated by `cortex models request` workflow and clear messaging when a synthesis is rejected. False-deny risk if model version naming changes upstream; mitigated by allowing version wildcards (`"2026-*"`) and explicit "test mode" for trying new versions in sandbox workspaces.
+
+---
+
+## 💳 Phase 29.2: Tenant-Scoped Billing & Metering — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 29 tracks per-team LLM costs. Phase 29.2 turns that tracking into a **real billing system** when Cortex is sold as a multi-tenant SaaS: per-tenant metering of LLM tokens, storage, API calls, and seats; integration with Stripe/Chargebee/Recurly for actual invoicing; tenant-facing usage dashboards; configurable billing models (per-seat, usage-based, hybrid). This is what makes Cortex sellable as a managed SaaS service in addition to self-hosted enterprise — the same engine, two different commercial wrappers.
+
+**Technical Terms**
+A metering pipeline + billing-backend adapter layer that turns Phase 29's cost events into invoiceable line items per tenant:
+
+- **Metering dimensions**: LLM input tokens, output tokens, embedding tokens, storage GB-months, MCP API calls, active seats, workspace count, cross-tenant federation events.
+- **Per-tenant aggregation**: metering events keyed by `tenantId` (from Phase 25 SCIM tenant resolution) flow into hourly rollup tables.
+- **Billing-backend adapters**:
+  - **Stripe**: line items via `InvoiceItem` API; subscription updates via `Subscription` API.
+  - **Chargebee**: similar; PCI-compliant card handling delegated.
+  - **Recurly**: alternative for European markets.
+  - **Custom**: webhook out for enterprise customers with their own billing platform.
+- **Configurable billing models**:
+  - **Per-seat**: flat per-active-seat-per-month. Active = SSO-authenticated in billing period.
+  - **Usage-based**: per-million-tokens pricing with tiered discounts.
+  - **Hybrid**: per-seat base + usage overage.
+- **Tenant-facing usage dashboard**: tenant admins see real-time consumption, projected month-end bill, top consumers, anomaly alerts. Hosted at `/admin/usage` per tenant.
+- **Customer-facing invoices**: PDF invoices with line items, generated and emailed via billing-backend.
+- **Trial / freemium support**: time-limited or quota-limited trial tenants; auto-conversion to paid on trial end via Stripe Checkout.
+- **Plan management**: `cortex billing plan upgrade --tenant <id> --plan <name>` and self-service tenant admin UI for plan changes (where allowed).
+- **Dunning / collections**: failed payment retry policies; service degradation (Phase 29 throttle) on payment-overdue tenants before service suspension.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/billing/metering.ts` (event collector + rollup), `src/billing/backends/<stripe|chargebee|recurly>.ts` (per-backend adapter), `src/billing/plans.ts` (plan model + upgrade/downgrade), `src/billing/dashboard.ts` (tenant-facing UI), `src/cli/billing.ts`.
+- **Design Pattern**: **Metering as additive event stream** (analogous to Phase 7 `log.jsonl`); **billing adapters as plugins** (similar to Phase 25 IdP plugins). Same metering events power per-seat, per-token, hybrid models depending on plan config.
+- **Key Considerations**:
+  - **Idempotency** — every metering event has a unique ID; billing-backend posts are idempotent (won't double-charge on retry).
+  - **Currency support** — multi-currency invoicing aligned with tenant region.
+  - **Tax compliance** — delegated to billing-backend (Stripe Tax, Chargebee Tax) — Cortex does not compute tax.
+  - **GDPR-compliant data export** — tenant can export all their billing/metering history on request (Phase 24 retention rules apply).
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (central server multi-tenant), Phase 25 (SSO/SCIM tenant resolution), Phase 29 (cost tracking foundation), Phase 26 (audit) all shipped.
+
+**Definition of Done (DoD)**
+
+- 8 metering dimensions instrumented.
+- Hourly rollup per tenant.
+- Stripe, Chargebee, Recurly adapters shipped.
+- Per-seat, usage-based, hybrid billing models supported.
+- Tenant-facing usage dashboard at `/admin/usage`.
+- Trial → paid conversion flow.
+- Dunning policy with throttle-before-suspend.
+- Phase 26 audit emits billing-relevant events.
+- Tests cover: metering accuracy across all 8 dimensions, idempotency, plan upgrade/downgrade, billing-backend integration (mocked), dunning state transitions.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Turns Cortex into a sellable SaaS, not just self-hosted enterprise.** Same engine, two commercial wrappers: enterprise customers self-host with Phase 27/22; SaaS customers consume via the central server with this billing layer. Stripe/Chargebee/Recurly coverage hits most B2B commerce stacks day-one. Tenant-facing usage dashboards reduce support load (customers self-serve consumption questions).
+- ❌ **Cons**: Permanent billing-system maintenance — pricing changes, plan changes, billing-backend API updates. Mitigated by treating billing as a first-class engineering team responsibility, not a side project. Multi-currency / tax handling delegated to backend — accepted trade.
 
 ---
 
@@ -3423,6 +3856,55 @@ A coordinated bundle of artifacts, processes, and external certifications that c
 
 - ✅ **Pros**: Cuts enterprise sales cycles by **50-70%** — by the time procurement asks a question, the answer is already on the trust portal. Pre-filled questionnaires save the customer's InfoSec team 40+ hours per evaluation, which they remember. SOC2 + ISO 27001 are **disqualifying gates** for most Fortune 500 vendors; without them, you cannot enter most procurement processes regardless of how good the product is. FedRAMP unlocks the US federal market — a $100B+ TAM that almost no AI tools have entered.
 - ❌ **Cons**: Compliance is a permanent, expensive program — SOC2 audit ~$30-100K/year, ISO 27001 ~$20-50K/year, FedRAMP ~$500K-2M one-time + ongoing. Mitigated by treating compliance investment as a sales-enablement budget line, not an engineering overhead. Public roadmap commitments create reputational risk if missed.
+
+---
+
+## 🛒 Phase 32.1: Cloud Marketplace Listings (AWS/GCP/Azure) — ⏳ Planned (enterprise distribution)
+
+**Layman's Terms**
+The fastest path to enterprise dollars is the **AWS Marketplace, GCP Marketplace, and Azure Marketplace** — corporate IT buyers can purchase Cortex against pre-approved cloud budget without going through fresh procurement. Many Fortune 500 procurement organizations now mandate "buy through cloud marketplace if available" because the legal terms are pre-vetted and the spend counts toward cloud-vendor committed-use discounts. Phase 32.1 lists Cortex on all three major marketplaces with private offers, pay-as-you-go SaaS pricing, and customer-specific pricing for negotiated deals. This is distribution infrastructure, not product.
+
+**Technical Terms**
+Three parallel marketplace integrations with shared metering pipeline (reuses Phase 29.2):
+
+- **AWS Marketplace**: SaaS Contracts + SaaS Subscriptions API. Cortex registers as a SaaS product; customers subscribe via AWS console. Metering posted hourly to AWS Marketplace Metering API. Private Offers for custom pricing; CPPO (Channel Partner Private Offers) for reseller motion.
+- **GCP Marketplace**: Producer Portal listing. Cortex integrates with Marketplace's Procurement API for subscription provisioning + metering. Service entitlements managed via service control plane.
+- **Azure Marketplace**: Partner Center listing. SaaS offer with Microsoft-handled billing; webhook integration for fulfillment + cancellation. Private plans for enterprise-negotiated terms.
+- **Unified provisioning webhook**: regardless of marketplace, customer subscription triggers Cortex's standard tenant provisioning (Phase 22 central server + Phase 25 SSO + Phase 29.2 billing tenant init). One internal flow, three external surfaces.
+- **Co-sell readiness**: AWS ISV Accelerate, GCP Build, Azure Co-sell programs — eligible after marketplace listing approval; unlocks vendor sales rep introductions to their enterprise customers.
+- **Marketplace-specific compliance**: AWS requires SOC2 Type II + 100+ named customer references; GCP requires Google-side privacy assessment; Azure requires AppSource publisher verification. All gated on Phase 32 completion.
+- **FedRAMP marketplaces**: AWS GovCloud Marketplace, Azure Government Marketplace — require Phase 27 (air-gap) + Phase 32 FedRAMP authorization.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/marketplace/aws.ts`, `src/marketplace/gcp.ts`, `src/marketplace/azure.ts` — each a thin adapter wrapping the marketplace's billing/provisioning APIs around Cortex's internal tenant model. New `src/cli/marketplace.ts` for listing management (deployment of new version bundles to each marketplace).
+- **Design Pattern**: **Marketplace as billing/auth provider; Cortex as the product**. Each marketplace handles tax, payment, dispute, refund; Cortex handles product delivery + provisioning. Same pattern as Salesforce AppExchange / Slack Marketplace.
+- **Key Considerations**:
+  - **Marketplace fees are real** — AWS/GCP/Azure take 3-15% of marketplace revenue. Mitigated by positioning marketplace as additive (customers who would otherwise not have bought) rather than primary.
+  - **Each marketplace has different listing requirements** — pricing model constraints, content guidelines, technical reviews. Permanent ops surface.
+  - **Marketplace deals are often larger** — average AWS Marketplace deal size is reportedly 3-5× direct deals due to ease of buying with pre-committed budget.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (multi-tenant central server), Phase 25 (SSO), Phase 29.2 (tenant billing) all shipped.
+- Phase 32 (SOC2 + ISO + procurement pack) reached the milestone where SOC2 Type II report is available.
+
+**Definition of Done (DoD)**
+
+- Cortex listed on AWS Marketplace with SaaS Contracts + SaaS Subscriptions.
+- Cortex listed on GCP Marketplace via Producer Portal.
+- Cortex listed on Azure Marketplace via Partner Center.
+- Provisioning webhook flow tested end-to-end on each marketplace (test customer subscribes → tenant auto-provisions → SSO works).
+- Hourly metering posted to each marketplace's billing API.
+- Private Offers / private plans configurable per marketplace.
+- Co-sell programs enrolled (AWS ISV Accelerate, GCP Build, Azure Co-sell).
+- Documentation for each marketplace's listing maintenance process.
+- Tests cover: provisioning webhook flow, metering accuracy, subscription cancellation, plan upgrade through marketplace.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Fastest path to enterprise revenue at scale.** Marketplace-listed SaaS products bypass the 9-month custom-contract sales cycle in many corporate procurement processes. AWS Marketplace alone reaches 350,000+ enterprise customers with pre-approved purchasing authority. Co-sell programs introduce Cortex to vendor sales reps who carry it into their customer conversations. Larger average deal sizes due to ease of buying.
+- ❌ **Cons**: 3-15% marketplace fees on revenue. Each marketplace is a permanent integration surface (listing maintenance, version updates, support workflows). Marketplace approval cycles are slow (3-6 months for first listing). Mitigated by treating marketplaces as a 2-year strategic distribution play, not a quick-win — and by prioritizing AWS first (largest enterprise marketplace by far), then Azure (Microsoft enterprise base), then GCP.
 
 ---
 
@@ -4527,6 +5009,430 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 
 - ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes, autonomously." Architectural correctness: identifies and engineers around the **physical output-token wall** that no prompt engineering can bypass, then orchestrates the necessary multi-call wave loop at machine speed instead of chat-agent speed. **Dual execution model (daemon vs. IDE) means the bootstrap works equally well for API-key users (cheaper per-token, headless, parallel) and IDE-subscription users (no API key required, billed against existing subscription, visible in chat)** — both cohorts are first-class, not retrofitted. The reusable `src/llm/wave.ts` engine is consumable across Phases 17, 20.16, 20.18, and 29 — single investment, multiple payoffs. Production-hardening refinements (polyglot/monorepo awareness, prompt caching for 40% cost reduction, semantic validation pipeline, multi-provider failover, declarative config, dry-new mode, explicit failure taxonomy) ship Phase 33 as production-grade. Advanced research-grade refinements (hybrid symbolic+LLM extraction for 30-50% cost reduction, streaming entity emission, empirical benchmark suite with CI regression gates, 6-dimensional quality scorecard with documented formulas, provider-precise tokenization, smart 200k-window context utilization, robust import-graph parsing, Pareto cost-quality dry-run, auditable bootstrap report artifact, comparison vs. competitor tools, determinism for compliance, multi-pass refinement with feedback loop) ship Phase 33 as research-grade. Multi-step MCP protocol with per-IDE adapters (9 IDEs) means **`/bootstrap` works identically across Claude Code, Cursor, Antigravity, VS Code, Windsurf, Cline, Continue, Zed, Claude Desktop** — no per-IDE divergence. MCP-over-HTTP variant integrates with Phase 22 Central Knowledge Server so platform teams can pre-bootstrap repos centrally in CI and developers inherit via Phase 21 pull. Cost attribution flows through Phase 26 audit + Phase 29 FinOps so enterprise customers get bootstrap-as-a-FinOps-event. Domain-specialized prompts give Cortex a path to first-class support for any tech stack without core code changes. Quality gate + auto-refine loop means **self-correcting** bootstrap. Incremental + enrichment + refine-stale + refine-low-quality modes mean the investment compounds over a project's lifetime; bootstrap isn't a one-time event.
 - ❌ **Cons**: ~20× the raw LLM cost vs. the current shallow bootstrap ($3-5 vs. $0.20); mitigated by `--budget` cap, `--dry-run` cost preview, prompt-cache savings on warm runs (~40%), and `--depth shallow` retaining the legacy behavior for users who want cheap. The wave engine + production-hardening surfaces add real engineering surface area (~15-20 new TypeScript files) — significant compared to the current ~5-line bootstrap path. Mitigated by independent testability per refinement and reusability of `wave.ts` across other phases. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX in exchange for a dramatically better cold-start *outcome*; mitigated by the live progress UI showing per-domain ETA, by `--background` mode for huge codebases, and by the fact that bootstrap is one-shot (users don't pay this latency repeatedly). Per-domain specialized prompts are a permanent maintenance surface as ecosystems evolve; mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Multi-provider failover testing requires CI against multiple paid providers — real ongoing cost; mitigated by mocking the provider boundary in standard tests and gating live multi-provider tests behind a CI flag run only on release candidates.
+
+---
+
+## 🔌 Phase 33.1: Model Provider Registry & Cost-Tier Routing — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Today Cortex's LLM provider is set once in env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OLLAMA_HOST`). Mode selection is binary: daemon mode = direct API, IDE mode = IDE's LLM, hybrid = split. Phase 33.1 formalizes this into a **plugin registry** with auto-discovery (Ollama local models found automatically), cost-tier routing (cheap local model first → fallback to cloud premium only when needed), and per-component provider binding (the embedding model can be different from the Librarian model can be different from the predictor model). Customers with mixed environments — some teams on Anthropic, others on Azure OpenAI, edge teams on local Ollama — get one unified configuration surface.
+
+**Technical Terms**
+A pluggable Provider Registry that decouples response generation from any specific provider, supporting auto-discovery, cost-tier fallback, and per-component binding:
+
+- **Provider plugin schema** (`provider-plugins/<id>.provider.js`):
+  ```yaml
+  id: ollama
+  displayName: "Ollama (Local)"
+  type: local                    # local | cloud | ide
+  costTier: free                 # free | economy | standard | premium
+  transport: http
+  http:
+    baseUrl: http://localhost:11434
+    chatEndpoint: /api/chat
+    modelsEndpoint: /api/tags    # auto-discovery
+    streaming: true
+  capabilities: [text, code, vision]
+  latencyProfile: medium
+  autoDiscover: true             # scan models on startup
+  ```
+- **Bundled provider plugins**: `anthropic`, `openai`, `google`, `ollama`, `azure-openai`, `bedrock`, `vertex-ai`, `ide-passthrough` (uses connected IDE's LLM via MCP). Customers can drop in custom provider plugins for proprietary/internal LLM gateways without core code changes.
+- **Ollama auto-discovery**: on startup, if `localhost:11434` (or `OLLAMA_HOST`) is reachable, the Ollama plugin enumerates pulled models via `GET /api/tags`. Each appears as a selectable provider+model in the registry. Install Ollama, pull a model, it appears in Cortex — zero config.
+- **Per-component provider binding**: every LLM-consuming component declares its provider preference + fallback chain:
+  ```yaml
+  # cortex.providers.yaml
+  librarian:
+    primary: anthropic:claude-opus-4-7
+    fallback: [openai:gpt-4o, ide-passthrough]
+  distilled_librarian:
+    primary: ollama:qwen2.5-coder-1.5b
+    fallback: [anthropic:claude-haiku-4-5]
+  embeddings:
+    primary: openai:text-embedding-3-small
+    fallback: [google:text-embedding-004]
+  predictor:                     # Phase 20.20 active inference
+    primary: ollama:qwen2.5-coder-1.5b
+  tier1_enumeration:             # Phase 33 cheap pass
+    primary: ollama:llama3.1-8b
+    fallback: [anthropic:claude-haiku-4-5]
+  tier2_detail:                  # Phase 33 expensive pass
+    primary: anthropic:claude-opus-4-7
+    fallback: [openai:gpt-4o]
+  reasoning:                     # Phase 20.18 ToT
+    primary: anthropic:claude-opus-4-7
+  ```
+- **Cost-tier fallback**: when a primary fails (rate limit, outage, quota), the registry walks the fallback chain in order. Every fallback emits a Phase 26 audit event so customers see when degradation occurred.
+- **Health-checked routing**: `ProviderRegistry.healthCheck(id)` returns `{ reachable, latencyMs, models[] }`; routing skips unhealthy providers until they recover.
+- **`cortex providers list`**: shows all registered providers with health, available models, cost tier, capabilities.
+- **`cortex providers test <id>`**: synthetic-prompt round-trip latency test.
+- **Phase 29 FinOps integration**: every dispatch records which provider+model handled the call; chargeback reports break down by provider so customers see "Anthropic spend: $2400, OpenAI spend: $890, Ollama: $0 (47% of calls)".
+- **Phase 29.1 allowlist integration**: registry filters to allowlist-approved providers only; unapproved providers grey out in UI even when present in config.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/providers/registry.ts` (load, discover, health, route), `src/providers/plugins/<id>.ts` (one file per bundled provider), `src/cli/providers.ts`, integration in `src/llm/client.ts` (replaces hard-coded provider switch).
+- **Design Pattern**: **Strategy + factory pattern**. Components declare what they need (text generation, embeddings, etc.); registry routes to the right provider based on config + fallback + health.
+- **Key Considerations**:
+  - **Backward-compatible**: existing env-var configuration (`ANTHROPIC_API_KEY` alone) auto-creates an `anthropic` provider entry with default model — no breaking change.
+  - **Per-tenant provider config** (Phase 22): each tenant can override the global `cortex.providers.yaml` with their own provider preferences and credentials.
+  - **Ollama latency caveat**: local models are slower for complex reasoning; documented per-component recommendations (lightweight Tier 1 + predictor → local; heavyweight Tier 2 + reasoning → cloud).
+
+**Definition of Ready (DoR)**
+
+- Phase 33 (wave engine) shipped — primary consumer of multi-tier provider routing.
+- Phase 26 (audit) shipped — provider dispatch events anchor here.
+- Phase 29 (FinOps) shipped — cost breakdown by provider depends on registry metadata.
+
+**Definition of Done (DoD)**
+
+- 8 bundled provider plugins (anthropic, openai, google, ollama, azure-openai, bedrock, vertex-ai, ide-passthrough).
+- Ollama auto-discovery works on startup.
+- `cortex.providers.yaml` per-component binding schema with fallback chains.
+- Cost-tier fallback walks chain on failure; audit event on each fallback.
+- `cortex providers list / test` CLIs work.
+- Phase 29 chargeback reports break down by provider+model.
+- Phase 29.1 allowlist filters provider availability.
+- Custom provider plugins loadable without core changes.
+- Tests cover: registry load, Ollama auto-discovery, fallback on rate-limit/outage, health-check exclusion, per-component routing, audit emission on fallback.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Unifies the configuration surface** for organizations with multi-provider strategies (cost reasons, redundancy reasons, regional reasons). Auto-discovery makes local model adoption frictionless — install Ollama, the registry finds it. Per-component binding enables real cost optimization (cheap local model for prediction + enumeration; expensive cloud model only for hot-path detail and reasoning). Fallback chains provide graceful degradation that Phase 26 audit makes visible. Custom provider plugins let enterprise customers integrate proprietary LLM gateways without forking Cortex.
+- ❌ **Cons**: 8 bundled providers is permanent integration maintenance as APIs evolve. Mitigated by Anthropic SDK / OpenAI SDK / Google SDK absorbing most provider-side change. Per-component config has a learning curve; mitigated by sensible defaults (everything routes to one provider unless overridden) and `cortex providers wizard` interactive setup.
+
+---
+
+## 🎯 Cortex vs. Nexus-OS — Product Line Strategy & Bundle GTM
+
+> [!IMPORTANT]
+> This section defines Cortex's commercial positioning relative to **Nexus-OS** (the sister real-time multi-agent orchestration platform). It is the strategic framing for go-to-market and product roadmap decisions across both product lines.
+
+### The Two Products Are Fundamentally Different
+
+| Dimension | **Cortex** | **Nexus-OS** |
+|---|---|---|
+| **Core thesis** | Persistent architectural memory for AI assistants | Real-time multi-agent orchestration with visual IDE awareness |
+| **Time horizon** | Months to years (memory compounds) | Milliseconds to seconds (real-time event loop) |
+| **Data model** | Knowledge graph (entities + relationships + evidence) | Event bus (signals + agent messages + visual snapshots) |
+| **Primary action** | Synthesize from code changes; surface insights on query | Coordinate agents acting on IDEs/files/browsers |
+| **State of the world** | Always-current architectural ground truth | Always-current snapshot of what every agent is doing |
+| **Primary user** | Developer + AI assistant (one user, one IDE typically) | Operator + agent fleet (one user, many agents, many devices) |
+| **Failure mode if absent** | AI assistants re-discover architecture every session | No mission control for distributed agents |
+| **What competitors look like** | CodeScene, Sourcegraph, Aider repo-map | Devin, Cline, AutoGen, MetaGPT |
+| **Sales motion** | Architecture-team / VP-Engineering champion | Platform-team / Head-of-AI champion |
+| **Pricing axis** | Per-developer-seat + LLM consumption | Per-orchestrator + per-agent-execution |
+
+### The Moat
+
+**Cortex's moat is the accumulated knowledge graph + governance fabric.** 18 months of synthesized architectural decisions, contradiction history, evidence anchors, fitness function policies, compliance attestations, and skill library — locked into a format only Cortex's pipeline produces. A competitor with a better LLM cannot replicate that. Phases 25-32 (enterprise track) plus 33 (deep bootstrap) plus 33.1 (provider registry) make it auditable, attributable, and accountable enough for a CIO to bet on.
+
+**Nexus-OS's moat is the multi-IDE control plane + agent mesh.** The Adapter Contract + IDE Profile Registry abstracts every IDE's quirks into pluggable profiles. The agent mesh + bus + dashboard creates a control surface for fleets of AI agents that no single IDE provides. A competitor would need to rebuild the entire CDP/CLI/LSP/Browser adapter ecosystem from scratch.
+
+**Neither moat is the LLM.** Anyone can wrap an LLM. The moat is the surrounding fabric in each case.
+
+### The Bundle GTM Motion
+
+Sell each product separately for its standalone value; bundle them when the customer has both pains:
+
+| Customer profile | What they buy |
+|---|---|
+| Mid-market dev team, 50 engineers, struggling with codebase complexity | **Cortex Standard** ($X per seat) |
+| Large enterprise, 1000 engineers, regulated industry | **Cortex Enterprise** + Phases 25-32 add-ons |
+| AI-first startup running fleets of background agents | **Nexus-OS Standard** ($Y per orchestrator) |
+| Enterprise with both pains: fleet of AI agents AND need for architectural memory | **Cortex + Nexus Bundle** with cross-product integration |
+
+**Integration at the bundle level**:
+- Nexus agents read Cortex's knowledge graph via MCP — they have architectural ground truth, not just real-time snapshots.
+- Cortex's Phase 33 deep bootstrap can use Nexus's headless agent runtime as a parallel execution backend.
+- Phase 41 (per-agent memory partitions) below makes Nexus agents first-class Cortex memory citizens — each Nexus agent has its own scoped Cortex memory plus access to shared workspace memory.
+- Phase 42 (unified multi-workspace knowledge graph) makes a developer with 5 projects open in Nexus see one unified Cortex knowledge surface, not 5 disjoint ones.
+
+**The bundle is the natural upgrade path**: customers who buy Cortex first often add Nexus-OS when they hit "I have multiple AI agents running and no visibility." Customers who buy Nexus-OS first often add Cortex when they hit "my agents are smart but they keep re-explaining the codebase to themselves." The integration phases (40-45) below make the bundled experience meaningfully better than either product alone.
+
+### Roadmap Discipline
+
+Cortex's roadmap will NOT absorb Nexus's:
+- Real-time CDP scraping (Block A of Nexus)
+- IDE adapter pattern (Block B of Nexus)
+- Agent-to-agent messaging mesh (Phase 17.2 of Nexus)
+- Mobile push notifications / PWA mission control (Phase 33.1/33.2 of Nexus)
+- Voice / glassmorphism / visual mirror UI
+
+These define Nexus-OS's distinct identity. Pulling them into Cortex blurs both products' positioning beyond recovery.
+
+Cortex WILL absorb (Phases 40-45 below):
+- Per-agent memory partitioning (memory-side coordination of multiple agents — Cortex-native)
+- Multi-workspace unification (memory-side coordination of multiple projects — Cortex-native)
+- Memory federation protocol (how memories combine — Cortex-native)
+- Cognitive substrate observability (the memory analog of Nexus's dashboard — focused on knowledge, not real-time events)
+
+The line: **memory orchestration is Cortex; action orchestration is Nexus.** Both products coordinate "many things at once," but in different dimensions.
+
+---
+
+## 💎 Cortex Pro Add-On Modules
+
+Cortex Standard ships Phases 1-32 + Phase 33 (bootstrap). Cortex Enterprise activates Phases 25-32 + 25.1/26.1/26.2/29.1/29.2/32.1/33.1 (the enterprise hardening track). **Cortex Pro Add-On Modules** are six advanced modules sold as separate paid SKUs on top of Standard or Enterprise — each addresses a specific high-value use case for customers who have already adopted the base platform.
+
+> [!NOTE]
+> Pro modules are **outlined at strategy level**, not full DoR/DoD specs. Each module's detailed design is a separate sub-roadmap activated when commercial demand is validated. The list below anchors product strategy; specific module phases will be elaborated as customer-funded scope.
+
+### Module 1: Visual Librarian Designer
+
+**For**: customers who want non-developers (architects, tech leads, compliance officers) to author custom Librarian personas without writing code.
+
+**What it does**: drag-and-drop UI for defining specialized Librarian prompts (e.g., `SecurityLibrarian`, `DomainLibrarian`, `LegacyArchaeologistLibrarian`), with reusable prompt blocks, A/B testing across personas, version history, and one-click deployment to the workspace's Phase 20.16 multi-agent system.
+
+**Why Pro**: only ~10% of customers want custom Librarians; the other 90% are well-served by the built-in Architect persona. Making this Pro keeps Standard's surface clean while monetizing the high-value niche.
+
+**Pricing model**: per-author seat (small number of authors per customer) + per-deployment governance fee.
+
+### Module 2: Governance Workflows (Durable Workflow Engine + HITL)
+
+**For**: regulated customers who need formal multi-step approval flows on top of Phase 23 (Human-in-the-Loop Review).
+
+**What it does**: durable workflow engine (built on Temporal.io or AWS Step Functions) defining named workflows like "PR touching `src/payment/` requires CISO approval within 48h or auto-rolls-back." Workflows survive process restarts, span multi-day approvals, integrate with Phase 28 (Slack/Teams/ServiceNow), and produce immutable Phase 26 audit trails per workflow instance.
+
+**Why Pro**: durable workflow infrastructure adds real operational complexity that smaller customers don't need. Pro pricing reflects the operational burden and the regulatory value (HIPAA/SOX/PCI customers will pay for this).
+
+**Pricing model**: per-active-workflow-instance + per-seat for approver licenses.
+
+### Module 3: Private Skill Marketplace
+
+**For**: enterprises and consulting firms who want to share Phase 20.13 (VOYAGER-inspired) skill libraries across teams, divisions, or client engagements while controlling access.
+
+**What it does**: private (per-tenant or per-org-group) marketplace for sharing harvested refactoring skills. Skills published with metadata (effectiveness scores, applicable codebases, harvest provenance); subscribers consume skills into their own Cortex installation via signed packages. Includes skill versioning, dependency resolution between skills, and per-skill payment routing for consultancies monetizing their domain expertise.
+
+**Why Pro**: marketplace infrastructure (signing, distribution, metering, payment) is significant engineering; Pro pricing both monetizes the platform and funds the marketplace operations team.
+
+**Pricing model**: per-tenant marketplace activation + transaction fee on cross-tenant skill purchases.
+
+### Module 4: Compliance Copilot
+
+**For**: compliance officers and security engineers who don't want to learn Cortex's CLI — they want to ask questions in natural language.
+
+**What it does**: conversational interface to Phase 24 compliance packs + Phase 26 audit log + Phase 32 trust portal. Sample interactions: *"Which entities in our payment domain are missing human review per PCI 6.2?"* / *"Show me every constraint violation in the last quarter, grouped by team"* / *"Generate a HIPAA Phase 24 report for last month and attach it to ticket COMP-447."* Backed by a specialized Librarian persona (built using Module 1's Visual Librarian Designer architecture if available).
+
+**Why Pro**: compliance is a high-value, narrow audience; Pro pricing reflects the per-seat value to compliance professionals who would otherwise pay $200/hour for the same answers from a consultant.
+
+**Pricing model**: per-compliance-seat (typically 2-5 seats per customer).
+
+### Module 5: Librarian Observability (SLA-Grade Telemetry)
+
+**For**: Cortex Enterprise customers who need SLAs on synthesis quality, freshness, and availability.
+
+**What it does**: beyond Phase 31 (executive analytics), provides Librarian-specific telemetry — per-synthesis latency P50/P95/P99, quality score percentiles, retry rates, model-specific success rates, drift detection alerts when synthesis quality regresses on specific entity classes. Includes alerting integration (PagerDuty/Opsgenie) and SLA-report generation for monthly business reviews. Vendor-side observability mirroring what FinOps observability vendors (Datadog, New Relic) provide for traditional services.
+
+**Why Pro**: only customers with formal SLAs need this depth; most Standard customers get adequate visibility from Phase 31. Pro pricing reflects the regulatory-grade monitoring it enables.
+
+**Pricing model**: per-workspace + tiered by data retention (30-day, 90-day, 1-year).
+
+### Module 6: Tool Marketplace
+
+**For**: customers who want to extend Phase 20.23 (Tool-Use Augmented Synthesis) with community-contributed or commercial tools.
+
+**What it does**: a marketplace for Cortex MCP tools — grep, git_blame, ast_query, LSP integrations are baseline; the marketplace adds language-specific tools (Rust borrow checker integration, Spring annotation parser, Django ORM analyzer), service-specific tools (Stripe API doc resolver, AWS SDK call analyzer, Kubernetes manifest understander), and proprietary internal tools customers publish for their own teams. Includes tool signing, security review badges, usage analytics per tool, and revenue sharing for paid tools.
+
+**Why Pro**: marketplace ops + security review + revenue infrastructure justify Pro pricing. Aligns Cortex with the broader MCP ecosystem (similar to how VS Code Marketplace monetizes around the editor).
+
+**Pricing model**: per-tenant marketplace activation + tool-author revenue share on paid tools.
+
+### Pro Module Summary
+
+| Module | Target buyer | Pricing axis | Activation gate |
+|---|---|---|---|
+| 1. Visual Librarian Designer | Architects, tech leads | Per-author seat | Cortex Standard |
+| 2. Governance Workflows | Compliance, security | Per-active-workflow + approver seats | Cortex Enterprise (Phase 23 + 26) |
+| 3. Private Skill Marketplace | Enterprises, consultancies | Per-tenant + transaction fee | Cortex Standard (Phase 20.13) |
+| 4. Compliance Copilot | Compliance officers | Per-compliance seat | Cortex Enterprise (Phase 24 + 26) |
+| 5. Librarian Observability | SLA-bound Enterprise | Per-workspace + retention tier | Cortex Enterprise (Phase 31) |
+| 6. Tool Marketplace | Power users, internal platforms | Per-tenant + revenue share | Cortex Standard (Phase 20.23) |
+
+Each Pro module has a clear activation gate (which base-platform phases it depends on) and a clear target buyer (which makes pricing conversations focused). The six together represent the natural high-value extensions that customers ask for *after* they've adopted Cortex — not features that need to ship before product-market fit, but the right monetization expansion vectors once it's reached.
+
+---
+
+## 🌌 Distributed Cognitive Substrate (Phases 40-45) — The Extended Vision
+
+> [!IMPORTANT]
+> Phases 40-45 are the **extended vision tier** of Cortex — its evolution from "single-codebase architectural memory engine" to "distributed cognitive substrate spanning multiple agents, multiple workspaces, and multiple knowledge graphs." These phases are intentionally placed at the extreme end of the roadmap because they presuppose that Cortex Standard + Enterprise tracks are fully mature in production. They are also the natural integration surface with **Nexus-OS** — where the memory side of Cortex meets the orchestration side of Nexus.
+
+### The Vision
+
+Today Cortex assumes: one workspace, one Librarian, one knowledge graph. This works for a single developer's primary codebase. It breaks down when:
+
+- An organization has **multiple AI agents** active on the same codebase (Architect agent + Reviewer agent + BugHunter agent + DocWriter agent), each with overlapping but distinct concerns. Today they all share one knowledge graph, creating contention and identity confusion.
+- A developer has **multiple workspaces** open simultaneously (their primary monorepo + a forked OSS library + a documentation site + their team's design system repo). Today these are 4 disjoint knowledge graphs with no cross-pollination.
+- A team runs **specialized agents on different aspects** of the same project (a Security Librarian focused on `src/auth/`, a Performance Librarian focused on `src/services/`). Today they would step on each other if pointed at the same workspace.
+
+Phases 40-45 generalize Cortex from "one agent's memory" to "a cognitive substrate where many agents have their own scoped memories, plus access to shared workspace memories, plus access to a unified multi-workspace memory." It is the natural memory-side evolution of Cortex; it is **not** Nexus-OS rebuilt inside Cortex (Cortex does not absorb visual IDE awareness, real-time event buses, or agent-to-agent messaging — those remain in Nexus).
+
+### Phase 40: Distributed Cognitive Substrate (Umbrella Phase) — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+The umbrella concept that ties Phases 41-45 together. Cortex evolves from "one agent's memory of one codebase" into a substrate where many agents can have their own private memories AND shared memories AND federated cross-workspace memories — all queryable, auditable, and governable through the same Cortex APIs. It is the architectural memory layer for fleets of agents, not just for one assistant.
+
+**Technical Terms**
+A meta-architecture release that introduces the Substrate model: every memory partition (per-agent, per-workspace, per-tenant) is a first-class addressable entity with its own identity, access controls, retention policy, and federation grants. The Cortex engine becomes a substrate router: every read/write operation specifies a partition (or set of partitions); permissions and aggregation happen at the substrate layer.
+
+**Key design principle**: backward-compatible single-tenant single-agent operation. Phases 1-32 customers see no change unless they explicitly enable substrate mode. Substrate mode adds partition-aware addressing without removing the simple default.
+
+**Architecture**: substrate router (`src/substrate/router.ts`), partition registry, partition-aware access control (extends Phase 26 ABAC with partition scoping), federation grant mapping (extends Phase 25.1 to partition granularity).
+
+**Definition of Done**: substrate-mode enabled via `cortex.substrate.enabled: true`; all subsequent reads/writes are partition-aware; backward-compat mode preserved when disabled.
+
+**Cross-product integration with Nexus-OS**: Nexus's agent mesh becomes first-class consumers of partitions. Each Nexus agent declares its identity to the substrate; the substrate issues per-agent partition tokens; Nexus agents read/write to their assigned partitions while inheriting workspace-scoped shared partitions for collaboration.
+
+---
+
+### Phase 41: Per-Agent Memory Partitions (Private + Shared) — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+When multiple AI agents work on the same codebase, each one needs its own scratch space — private working memory, hypotheses, intermediate observations — while still sharing the team's canonical architectural knowledge. Phase 41 makes this explicit: every agent gets its own `.knowledge/agents/<agent-id>/` private partition, plus read access to the shared workspace partition at `.knowledge/`. Writes to the shared partition require explicit promotion ("this hypothesis is now confirmed, promote to shared knowledge").
+
+**Technical Terms**
+Three-tier memory model per workspace:
+
+- **Private partition** (`.knowledge/agents/<agent-id>/`): per-agent scratchpad. Visible only to the owning agent. Stores ephemeral observations, in-progress hypotheses, agent-specific reflexion traces, agent-specific reasoning chains (Phase 20.24).
+- **Shared workspace partition** (`.knowledge/`): canonical workspace knowledge. Visible to all agents. Writes go through promotion gate (Phase 23 review or auto-promotion based on confidence + cross-agent agreement).
+- **Read-aliasable partitions**: an agent's private partition can be made read-visible to other agents via grant: `cortex substrate grant --from <agent-a> --to <agent-b> --partition private --read-only`.
+
+**Per-agent identity**: agents authenticate to Cortex (Phase 25 SSO with service-account flow, or Nexus-issued agent tokens). Every read/write carries the agent identity for audit.
+
+**Promotion gate**: writes to the shared partition trigger a "promotion event" — either auto-promoted (if confidence high and no conflicts) or queued for human review (Phase 23) or queued for cross-agent quorum (multi-agent verification per Phase 20.16).
+
+**Conflict detection**: when two agents independently write conflicting facts to the shared partition, the substrate detects the contradiction (extends Phase 16) and flags both writes; resolution requires human or quorum vote.
+
+**Definition of Done**: per-agent private partitions work end-to-end; shared partition reads from all agents; writes to shared require promotion; conflicts auto-detected; full Phase 26 audit of every partition operation.
+
+**Nexus-OS integration**: Nexus's multi-agent mesh (its Phase 17.2 agent-to-agent messaging) becomes a first-class consumer — every Nexus agent registers with Cortex and gets a partition. Nexus's mission-control dashboard displays per-agent partition stats (entity count, contradiction count, promotion-queue depth).
+
+---
+
+### Phase 42: Unified Multi-Workspace Knowledge Graph — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+A senior engineer has 5 projects open: their company's main monorepo, a forked open-source library they're modifying, their team's shared design system, the documentation site, and a sandbox for experiments. Today these are 5 disconnected Cortex knowledge graphs. Phase 42 unifies them: the engineer's view across all workspaces is one **meta-knowledge graph** where they can ask "where else have I seen the JWT pattern?", "which workspaces depend on this design system component?", or "show me every place in any of my projects that calls this OSS library's deprecated API." Workspaces remain independent in their own .knowledge/ directories; the unification happens at the substrate query layer.
+
+**Technical Terms**
+A meta-graph layer above per-workspace knowledge graphs that supports cross-workspace query and entity correlation:
+
+- **Workspace registration**: workspaces opt into the meta-graph via `cortex workspace join --substrate <id>`. Each workspace remains the canonical owner of its own entities; the meta-graph is a derived view.
+- **Cross-workspace entity correlation**: entities are correlated across workspaces via embedding similarity (Phase 18) + name match + structural match (relationship topology). Correlations are surfaced as `crossWorkspaceMatches` annotations, never as merges.
+- **Cross-workspace queries**:
+  - `cortex query "JWT validation pattern" --substrate-wide` searches across all joined workspaces
+  - `cortex query --depends-on <entity-in-workspace-A> --substrate-wide` finds dependents in any joined workspace
+  - `cortex query --pattern <pattern-name> --substrate-wide` finds all instances of an architectural pattern across the substrate
+- **Provenance preservation**: every meta-graph result includes the workspace-of-origin and a direct link to the original entity. Aggregations include per-workspace breakdowns.
+- **Workspace-scoped writes**: meta-graph is read-only. All writes go to the originating workspace. No cross-workspace write propagation.
+- **Per-tenant substrate isolation**: substrate IDs are tenant-scoped. A consulting firm with 12 client engagements has 12 isolated substrates; no cross-client leakage.
+
+**Architecture**: substrate index (`src/substrate/index.ts`), cross-workspace correlation engine (reuses Phase 18 embeddings + Phase 17 self-consistency), substrate-aware query dispatcher.
+
+**Definition of Done**: workspaces join/leave substrate via CLI; cross-workspace queries return correlated results with provenance; no cross-workspace writes; per-tenant isolation enforced.
+
+**Nexus-OS integration**: Nexus's "unified workspace" view (where its agents operate across multiple IDEs and projects) gets a memory side that matches. A Nexus agent that operates across 3 workspaces sees one unified Cortex memory surface; cross-workspace correlations bubble up to the Nexus dashboard.
+
+---
+
+### Phase 43: Agent Mesh Runtime Orchestration — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 20.16 (Multi-Agent Librarian Collaboration) defined specialist agents at *synthesis time* — Security + Performance + Domain Librarians all weighing in on the same synthesis. Phase 43 promotes the same pattern to *runtime orchestration*: multiple Cortex Librarian agents run continuously, each specialized to a domain, each managing its own partition (Phase 41), with an orchestrator routing incoming synthesis requests to the right agent (or composition of agents) based on the change's content.
+
+**Technical Terms**
+A runtime orchestrator that dispatches synthesis requests to specialized Librarian instances:
+
+- **Agent registry**: declarative `cortex.agents.yaml` defines runtime agents and their specializations:
+  ```yaml
+  agents:
+    - id: security-librarian
+      specialization: security
+      activation_paths: [src/auth/**, src/api/**, src/middleware/**]
+      partition: agents/security-librarian
+      provider: anthropic:claude-opus-4-7
+      escalation_to: human-reviewer
+    - id: performance-librarian
+      specialization: performance
+      activation_paths: [src/services/**, src/db/**]
+      partition: agents/performance-librarian
+      provider: anthropic:claude-sonnet-4-6
+    - id: general-librarian   # default fallback
+      specialization: general
+      activation_paths: ["**"]
+      partition: agents/general-librarian
+      provider: ide-passthrough
+  ```
+- **Activation routing**: incoming syntheses match activation_paths; multiple agents can activate for one synthesis (multi-specialist composition). Phase 20.16 debate-and-consensus pattern applies at runtime instead of per-call.
+- **Per-agent budget**: each agent has its own Phase 29 budget allocation. Hot specialists (security on a security-heavy codebase) consume more; quiet specialists less.
+- **Per-agent reflexion**: each agent maintains its own Phase 20.11 reflexion history in its private partition.
+- **Cross-agent escalation**: an agent can escalate to another agent (`security-librarian → compliance-librarian` for HIPAA-touching changes) via substrate messaging.
+- **Per-agent health and observability**: extends Phase 31 dashboards with per-agent quality, latency, cost, drift.
+
+**Distinction from Phase 20.16**: 20.16 is synthesis-time orchestration (one synthesis, K specialists). Phase 43 is runtime orchestration (long-running specialist agents that activate on relevant changes, each with persistent state). Phase 20.16 is the per-synthesis pattern; Phase 43 is the deployment topology.
+
+**Definition of Done**: agent registry schema; activation routing on incoming changes; per-agent partitions provisioned automatically; per-agent observability dashboard; cross-agent escalation via substrate.
+
+**Nexus-OS integration**: Cortex's agent mesh maps 1:1 to Nexus's agent mesh. The same agent identity is used in both — `security-librarian` in Cortex's partition registry is the same entity as `@SecurityLibrarian` in Nexus's agent mesh. Nexus dispatches actions to the agent; Cortex provides its memory.
+
+---
+
+### Phase 44: Cross-Agent Memory Federation Protocol — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+When agents share memory (Phase 41) or workspaces unify (Phase 42), there has to be a rigorous protocol for *how* memories combine, who's allowed to read what, what counts as a conflict, and how conflicts resolve. Phase 44 specifies the federation protocol — the rules of memory exchange — so that the substrate behaves predictably under any combination of agents, workspaces, and tenants.
+
+**Technical Terms**
+A formal protocol covering partition addressing, access negotiation, read/write semantics, conflict detection, and conflict resolution:
+
+- **Partition address space**: `substrate://<substrate-id>/workspace/<workspace-id>/agents/<agent-id>/<resource-path>`. Every memory operation has a fully-qualified address.
+- **Access negotiation**: agents request permissions via grant tokens (Phase 25.1 federation grants extended to partition-level). Grants declare scope (read/write/promote), validity period, and rate limits.
+- **Read semantics**:
+  - **Strict** reads return only the latest committed version of an entity. Default for agents.
+  - **Snapshot** reads return a frozen view at a specific timestamp (Phase 20.12 temporal KG).
+  - **Federated** reads aggregate across multiple partitions with provenance. Default for substrate-wide queries.
+- **Write semantics**:
+  - **Owned writes** to own partition: immediate commit + audit.
+  - **Promotion writes** to shared partition: queued for promotion gate (Phase 41).
+  - **Federated writes** are forbidden — every write has exactly one owning partition.
+- **Conflict detection**: when promotion writes from two agents target the same shared entity, the substrate detects via entity identity + structural diff + Phase 16 contradiction analysis. Conflicting writes both go to the conflict queue.
+- **Conflict resolution**:
+  - **Auto-resolution** when one write is strictly more specific/recent and the other is subsumed.
+  - **Quorum resolution** when N agents agree (configurable threshold).
+  - **Human resolution** via Phase 23 review escalation when auto/quorum fails.
+  - **Resolution audit**: every resolved conflict produces an audit event with which write won and why.
+- **Federation envelopes**: cross-substrate operations (one tenant's substrate consuming another's via Phase 25.1) are signed envelopes containing the source substrate identity, the agent identity, the operation, and the timestamp. Receiving substrate verifies signature against pre-established federation trust.
+
+**Architecture**: protocol specification document (`docs/substrate-protocol.md`), reference implementation in `src/substrate/protocol.ts`, conformance test suite, cross-tenant federation envelope spec.
+
+**Definition of Done**: complete protocol specification published; reference implementation passing conformance tests; cross-tenant federation envelopes signed and verified; conflict resolution paths (auto/quorum/human) all functional with audit.
+
+**Nexus-OS integration**: Nexus's agent-to-agent messaging respects the substrate protocol when agents exchange memory references. A Nexus message containing `@PerformanceAgent see substrate://...workspace/main/agents/security-librarian/entities/AuthService` resolves correctly because both Nexus and Cortex share the same partition address space.
+
+---
+
+### Phase 45: Cognitive Substrate Observability — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+With multiple agents, multiple workspaces, multiple partitions, and federation grants flying around, operators need a single observability surface. Phase 45 ships the Substrate Observatory — a dashboard showing every partition, every agent, every grant, every cross-partition operation, every conflict, every promotion event, all queryable with rich filters. The memory-side equivalent of Nexus's mission-control dashboard (which is the action-side equivalent).
+
+**Technical Terms**
+A dedicated observability layer for the substrate:
+
+- **Substrate map**: visual graph of all partitions, agents, workspaces, federation grants. Each node colored by activity / health / quality. Interactive drill-down.
+- **Partition inventory**: per-partition stats — entity count, contradiction count, promotion-queue depth, last write, owning agent, federation grants in/out.
+- **Cross-partition flow**: timeline view of read/write/promote/resolve operations across the substrate. Filterable by agent, workspace, time, operation type.
+- **Conflict heatmap**: visualization of conflict density per shared partition — which areas are contention hotspots requiring human attention or architectural rethinking.
+- **Federation grant map**: graph of cross-tenant federation grants — what flows where, when grants expire, which are unused.
+- **Phase 26 audit integration**: every substrate operation is an audit event; the observatory is the human UI for the audit log.
+- **Phase 29 FinOps integration**: per-agent, per-partition, per-workspace cost breakdown. Identifies expensive agents and underutilized partitions.
+- **Phase 31 executive view**: substrate-wide health rolls up to the CTO dashboard — "your cognitive substrate has 47 agents across 12 workspaces, 0.84 mean quality, 3 active conflicts requiring review."
+
+**Architecture**: extends Phase 22 central server dashboard with substrate-specific views, queries Phase 26 audit log and Phase 29 FinOps streams, no new core data — pure observability layer.
+
+**Definition of Done**: substrate map renders all partitions/agents/grants/workspaces; cross-partition flow timeline; conflict heatmap; federation grant map; per-agent/partition cost breakdown; executive roll-up.
+
+**Cross-product integration with Nexus-OS**: this is **the bundle moment**. The Cortex Substrate Observatory (memory side) and the Nexus Mission Control (action side) are two views of the same agent fleet. A combined customer running both products gets a unified pane of glass: agents executing actions in Nexus, agents remembering what they learned in Cortex, all visible together. This is the single biggest demo win for the **Cortex + Nexus Bundle** GTM.
 
 ---
 
