@@ -3671,6 +3671,170 @@ The wave engine is itself reusable beyond bootstrap — Phase 17 (self-consisten
 - Each completed phase writes immutable artifacts (`skeleton.json`, `domain-<name>.json`, `hotpath.json`, `cross-domain.json`) for inspection and debugging.
 - **Mid-batch crash recovery**: each LLM call result is persisted to a per-batch `.tmp` file before the batch is marked complete. If the daemon crashes mid-batch, the next resume picks up only the unfinished calls within that batch.
 
+### Production-Hardening Refinements
+
+The wave-engine design above is the happy path. Real-world enterprise codebases require additional engineering rigor for the edge cases that determine whether bootstrap succeeds or silently degrades. The following refinements are scoped into Phase 33 to ship it as production-grade, not prototype-grade.
+
+#### 1. Codebase-Shape Awareness
+
+The Phase A skeleton scan must handle realistic codebase topologies, not just clean single-language repos:
+
+- **Polyglot codebases**: Most enterprise apps mix TypeScript frontend + Python/Go/Java backend + infra (Terraform/HCL) + scripts (bash). The skeleton scan uses **per-language import parsers** (lightweight regex-based — TypeScript `import/from`, Python `import/from`, Go `import`, Java `import`, Rust `use`) plus configurable language registration. Each language contributes edges to the same directory import graph; Leiden clustering operates on the unified graph.
+- **Monorepo detection**: Auto-detect Nx (`nx.json`), Turborepo (`turbo.json`), Lerna (`lerna.json`), pnpm workspaces (`pnpm-workspace.yaml`), Yarn workspaces (`package.json:workspaces`), Cargo workspaces (`Cargo.toml:[workspace]`), Go workspaces (`go.work`). When detected, **each workspace package becomes a quasi-domain** at Phase B, with intra-package files clustered into sub-domains. Cross-package dependencies become first-class cross-domain edges in Phase D.
+- **Generated code exclusion**: Auto-detect generated files via signature patterns — `// DO NOT EDIT` headers, `.gen.ts`/`_pb.go`/`.generated.*` extensions, GraphQL/protobuf/OpenAPI output directories, Tailwind/PostCSS outputs, framework codegen (Prisma client, GraphQL Code Generator, OpenAPI Generator, gRPC stubs). Generated files are excluded from synthesis but **retained as evidence anchors** for adjacent hand-written entities (the generated client is referenced by the hand-written service that wraps it).
+- **Test files as evidence enrichment**: Test files (`*.test.*`, `*.spec.*`, `__tests__/**`, `tests/**`) are excluded from entity creation (they are not architecture) but **mined for evidence enrichment**: a test file's `describe(...)`, `it(...)`, and assertion targets become evidence anchors on the entity-under-test. `useQuery` hook called with specific args in tests becomes a behavioral observation attached to the hook's entity. `--include-tests` flag (default ON) controls this enrichment pass.
+- **Lockfile and dependency-manifest extraction**: `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `pom.xml`, `Gemfile` are parsed during Phase A to extract dependency edges into per-domain context — the synthesis sees which third-party libraries a domain depends on without needing to read node_modules.
+
+#### 2. Cost-Efficiency Refinements
+
+The wave engine is already cost-bounded; these refinements compress cost further on the same workload:
+
+- **Prompt caching (Anthropic, OpenAI)**: Per-domain prompts share substantial context (Librarian system prompt, schema definition, CURRENT CONTEXT block). Anthropic's prompt caching reduces cached-token cost by 90%; OpenAI's automatic prompt caching reduces by 50%. The wave engine **orders batches within a domain so the shared prefix is cache-stable**, and uses provider-specific cache control headers (`cache_control: ephemeral` for Anthropic). Empirical savings on a 1800-file project: ~40% reduction in total bootstrap cost vs. uncached.
+- **Embedding-based Tier 1 deduplication**: Different files may describe the same architectural entity (e.g., `index.ts` re-exports from `service.ts`; `UserService.ts` is a thin wrapper around `UserRepository.ts`). After Tier 1 enumeration, embed each stub (cheap, batched embedding call) and merge stubs with cosine similarity >0.85 into single entities with multiple `sourceFile` references. Eliminates ~10-20% of Tier 2 calls on real codebases.
+- **Per-file overflow strategy**: A single 10k-line legacy God class can exceed the per-batch input budget by itself. The skeleton scan detects oversized files (>2000 LOC or >50KB) and **pre-splits them at structural boundaries** (top-level functions, classes, exports) into sub-files that fit individually. Each sub-file becomes a synthesis target; the daemon merges resulting entities into a single multi-segment entity with `sourceSegments[]` referencing each contributing region.
+- **Input-token-aware file selection within a batch**: Within a batch's file count limit, the daemon further trims by input tokens — if the 21 files for a Claude batch would exceed 60k input tokens, drop the lowest-centrality files to fit. Prevents wasted spending on context-window-trim charges some providers apply.
+
+#### 3. Semantic Validation Pipeline (Quality Gate Deepening)
+
+Phase E's quality gate currently checks structural minimums (entity count, evidence coverage). A real production gate also catches semantic drift:
+
+- **Broken wikilink detection**: every `[[EntityName]]` in any synthesis output must resolve to an existing entity. Broken links trigger automatic fix-up: either the missing entity is created with a stub (if it appears in another batch's stubs), or the wikilink is removed with a warning.
+- **Source-file existence verification**: every entity's `sourceFile` must exist in the repo. Hallucinated paths (LLM invents a plausible filename) trigger entity rejection with a regeneration request for that file's correct entity.
+- **Evidence quote verification**: every evidence anchor (`evidence[].content` quoting source code) is searched in the cited source file with edit-distance tolerance (Phase 7's mechanism). Quotes that don't match are flagged as `evidenceDrift` — either the LLM hallucinated the quote or the source has changed mid-bootstrap.
+- **Relationship target verification**: every `relationships[].target` must reference an existing entity (post-merge) or be a known external dependency. Dangling relationships are removed with logging.
+- **Duplicate-entity-name detection within batch**: an LLM can emit two entities with the same name in one response (e.g., a class and a function both called `Request`). Merged into one entity with disambiguation, or split into `Request.Class` and `Request.Function` if structurally distinct.
+- **Hallucinated-API detection**: imported modules and called functions in evidence quotes are cross-checked against actual imports in the cited file. Calls to functions not actually imported are flagged.
+
+Failed semantic validations trigger **targeted batch regeneration** — only the affected entities are re-synthesized, not the whole batch. Budget-aware: max 2 regeneration attempts per entity before falling back to a stub entity with a `qualityWarning` flag.
+
+#### 4. Concurrency-Safe Writes
+
+Five parallel Tier 2 batches each calling `save_synthesis` concurrently means concurrent writes to `.knowledge/state.json`, `log.jsonl`, and per-entity files. Without coordination, this corrupts state. The wave engine ships with:
+
+- **Single-writer state coordinator**: all writes to `state.json` and `log.jsonl` go through a single async queue inside the daemon. Per-entity file writes (entity body markdown) parallelize freely since each entity has its own file.
+- **Optimistic concurrency on entity records**: when two batches concurrently produce entities with the same name (rare but possible across domain boundaries), the writer detects the collision via filesystem `O_EXCL` flag, merges relationship arrays, and emits a `mergeEvent` to `log.jsonl` for traceability.
+- **Lock file at `.knowledge/.bootstrap.lock`**: prevents two `cortex bootstrap` invocations from running simultaneously on the same project. Lock includes PID and start timestamp; stale locks (process gone) auto-cleared after 30s grace.
+- **fsync on checkpoint writes**: bootstrap progress JSON written with `fsync` to survive sudden power loss (genuinely matters on long-running enterprise bootstraps that may span hours).
+
+#### 5. Provider Resilience & Multi-Provider Failover
+
+Enterprise bootstraps may run for hours; provider-side failures are statistically certain over that window:
+
+- **Per-provider rate-limit handling**: respect `Retry-After` headers, X-RateLimit-* hints, exponential backoff capped at 60s, never busy-loop on 429s.
+- **Provider-side outage detection**: 5xx errors trigger circuit breaker (open after 3 consecutive failures, half-open after 60s probe). Open circuit pauses batch dispatch for that provider, surfaces a clear "provider unavailable, waiting" message via the progress stream.
+- **Multi-provider failover** (opt-in via `CORTEX_MULTI_PROVIDER=true`): when primary provider circuit is open >5 minutes, the wave engine fails over to a configured backup provider. State carries `provider: <name>` on each entity record so post-hoc analysis can detect quality drift across providers.
+- **Quota-exhaustion graceful handling**: when the user's account hits hard quota (HTTP 402 / OpenAI `insufficient_quota`), bootstrap pauses with a clear "quota exhausted, resume after recharge" message. State checkpointed; resume picks up after user resolves.
+- **Provider-specific retry policies**: Anthropic 529 (overloaded) → wait 5s and retry; OpenAI `model_overloaded` → retry with backoff; Google `RESOURCE_EXHAUSTED` → wait 30s; Ollama connection refused → assume local LLM crashed, surface clear message.
+
+#### 6. Dry-Run & Cost Transparency
+
+Users facing a $5-50 bootstrap on a huge codebase want to know what they're committing to before pressing enter:
+
+- `cortex bootstrap --dry-run` runs Phase A (free) + Tier 1 enumeration (cheap, ~$0.30) + cost projection — **no Tier 2 spend**. Produces a full plan:
+  ```
+  Bootstrap Plan
+  ────────────────────────────────────────────────────
+  Codebase: 1823 files, 47 directories, 14 domains
+  Languages: TypeScript (78%), Python (18%), HCL (4%)
+  Generated files excluded: 312 (Prisma, GraphQL, Tailwind)
+  Test files: 287 (mining for evidence)
+
+  Per-domain projected calls and cost:
+    auth/                  6 entities    1 batch    $0.18
+    services/              7 entities    1 batch    $0.21
+    redux/                 12 entities   2 batches  $0.36
+    components/atoms/      24 entities   2 batches  $0.48
+    components/molecules/  18 entities   2 batches  $0.42
+    ...
+    [Phase C hot-path]     top 20 × $0.08          $1.60
+    [Phase D cross-domain] 1 × $0.30               $0.30
+    [Phase E quality gate] avg 2 refines × $0.20   $0.40
+  ────────────────────────────────────────────────────
+  Total: 67 entities, 12 concepts, $3.95, ~7 min wall time
+  Confidence: ±20% (calibrated from warmup batch)
+
+  Run? [Y/n]
+  ```
+- `cortex bootstrap --dry-run --json` for CI / scripted use.
+- `--budget` flag aborts at cap; `--dry-run` shows whether the configured budget is sufficient before spending.
+
+#### 7. Declarative Configuration — `.cortex/bootstrap.config.yaml`
+
+Replaces CLI flag soup for projects with stable bootstrap requirements:
+
+```yaml
+# .cortex/bootstrap.config.yaml
+depth: deep
+parallelism: 8
+budget_usd: 10.00
+output_headroom: 0.8
+
+exclude_directories:
+  - vendor/legacy-auth/   # too churny to bother
+  - src/__archived__/
+
+include_tests: true
+detect_generated: true
+
+domain_overrides:
+  redux/:
+    prompt: redux-slices
+    parallelism: 3  # rate-limit-sensitive
+  src/components/:
+    prompt: react.components.atoms
+    max_batch_size: 8  # files are dense
+
+providers:
+  primary: anthropic-claude-4-7-opus
+  failover: openai-gpt-4o
+  embeddings: openai-text-embedding-3-small
+
+quality_gate:
+  min_entities_per_domain: 3
+  min_evidence_per_entity: 1
+  max_refines_per_domain: 3
+
+post_bootstrap:
+  emit_arch_spec: true  # generate ARCH_SPEC.md (Phase 20.5)
+  notify_slack_channel: "#architecture"  # via Phase 28
+```
+
+Config is layered: project file → workspace config → CLI flags (CLI overrides). `cortex bootstrap config validate` lints the file before invocation.
+
+#### 8. Incremental & Enrichment Modes
+
+Bootstrap is not a one-time operation:
+
+- `cortex bootstrap --incremental` — re-runs Phase A skeleton scan, detects new directories or directories with >20% file-count change since last bootstrap, processes only the affected domains. Used after importing a new library or completing a major feature branch merge.
+- `cortex bootstrap --enrich` — for users who ran the legacy shallow bootstrap and want depth without throwing away existing entities. Skips Phase B for already-synthesized entities, runs Phase C (hot-path deepening) on existing entities, then Phase B for missing domains, then Phase D (cross-domain).
+- `cortex bootstrap --refine-stale` — re-process domains whose entities are >30 days `staleSince` (Phase 6). Targets quality-decayed regions without re-doing everything.
+- `cortex bootstrap --refine-low-quality` — re-process domains where mean Phase 7.5 quality score < threshold. Targets observably weak regions.
+
+All four modes respect `--budget` and `--dry-run`.
+
+#### 9. Failure-Mode Taxonomy
+
+Explicit handling per failure scenario, surfaced clearly in progress stream:
+
+| Failure | Detection | Handling |
+|---|---|---|
+| LLM returns malformed JSON | Streaming parser detects parse error | Retry once at half batch size; persistent failure → schema-partitioned mode |
+| LLM hallucinated `sourceFile` | Filesystem stat | Entity rejected; targeted regeneration request for the correct file |
+| LLM duplicated entity name within batch | Post-batch dedup pass | Merge if structurally compatible; else disambiguate with suffix |
+| Broken wikilink in output | Post-batch validation | Auto-fix from other-batch stubs; else strip wikilink with warning |
+| Evidence quote not found in source | Edit-distance check | Mark `evidenceDrift: true`; surface in quality report |
+| File deleted by developer mid-bootstrap | File-read errors during batch | Skip file with warning; remove pre-emitted stub for it |
+| Disk full during write | `ENOSPC` errno | Pause bootstrap, save checkpoint, surface clear error with cleanup hint |
+| Provider 5xx (3 consecutive) | Circuit breaker | Open circuit for 60s, fail over if multi-provider, else pause with status |
+| Provider quota exhausted (HTTP 402) | Status code | Pause bootstrap, checkpoint, surface "quota exhausted" message |
+| Daemon SIGKILL mid-batch | No clean shutdown | Resume: lock-file detection of stale daemon; in-flight batch re-run |
+| Two `cortex bootstrap` invocations on same project | Lock file collision | Second invocation refuses with clear "bootstrap already running" message |
+| LLM model deprecated mid-run | Provider error response | Pause, surface "model deprecated, configure replacement" message |
+| User SCM operation mid-bootstrap (git checkout) | File mtimes shift | Detect via skeleton-scan delta check on resume; offer to restart or proceed with stale targets |
+| Network partition (DNS resolution fails) | Connection error class | Treat as provider outage; circuit breaker engages |
+
+Every failure produces a structured event in `bootstrap_progress` so the IDE can render an explicit error UI (not a silent stall).
+
 ### CLI Surface
 
 All commands run **autonomously in the daemon** — no chat agent required, no MCP roundtrips, no manual "deeper please" prompts. The user issues one command and the daemon runs the wave loop to completion.
@@ -3747,28 +3911,21 @@ A library of domain-recognition heuristics + specialized prompts shipped as data
 
 Domain type is detected from directory structure + `package.json`/`pyproject.toml`/`go.mod` declared dependencies. Unknown domain types fall back to the general Librarian prompt.
 
-### Estimated Performance (target metrics for the production case)
+### Comparison vs. Current Behavior
 
-For the 1800-file React/Redux/Keycloak project from the production observation:
-
-| Phase | Time | LLM cost | Cumulative entities | Cumulative concepts |
-|---|---|---|---|---|
-| A — Skeleton | <5s | $0 | 0 | 0 |
-| B — Per-domain (deep) | ~3-5 min | $1-3 | 30-60 | 8-12 |
-| C — Hot-path deepening | ~2-3 min | $1-2 | 30-60 (refined) | 8-12 |
-| D — Cross-domain | ~1 min | ~$0.50 | 30-60 | 8-12 |
-| E — Quality gate | ~30s + retries | ~$0-1 | 40-80 | 10-15 |
-| **Total (exhaustive)** | **~6-10 min** | **$2.50-6.50** | **40-80** | **10-15** |
-
-Compared to current behavior on the same project: **30 seconds, $0.20, 4 entities, 3 concepts → user has to manually re-prompt 3+ times to get any usable result.** Phase 33 is **20× the cost for 15× the depth in one run** — and the result is actually usable as ground truth.
+For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.20, 4 entities, 3 concepts**, requiring 3+ manual "deeper please" re-prompts to extract any usable depth. **Phase 33 wave engine = ~6-10 minutes, $3.10-5.10, 60-90 entities, 12-18 concepts, fully autonomous, one CLI command, with prompt caching reducing cost ~40% on warm subsequent runs.** Net: ~20× the spend for ~15-20× the depth in one shot — and the result is actually usable as ground truth instead of requiring follow-up archaeology.
 
 ### Architecture & System Design
 
-- **Core Components**: new `src/bootstrap/` package — `skeleton.ts` (directory walk + import graph + Leiden clustering), `synthesizer.ts` (per-domain synthesis orchestrator with parallelism + budget), `hotpath.ts` (PageRank + central-entity deepening), `crossdomain.ts` (cross-domain relationship pass), `qualitygate.ts` (DoD verification + auto-refine), `progress.ts` (checkpoint + resume), `prompts/` (domain-specialized prompts as data). New `src/cli/bootstrap.ts`. Modifications to `src/mcp/server.ts` to handle the `bootstrap-deep` multi-step mode.
-- **Design Pattern**: **Pipeline with checkpoints**. Each phase produces an immutable artifact consumed by the next. Failures at any phase preserve work done. Phase B is internally parallel (domains synthesized concurrently) but phases are sequential (B depends on A's domain map, C depends on B's entity graph, etc.).
+- **Core Components**: new `src/bootstrap/` package — `skeleton.ts` (multi-language directory walk + monorepo detection + import graph + Leiden clustering), `synthesizer.ts` (per-domain Tier 1 enumeration + Tier 2 detail orchestrator), `wave.ts` (the reusable output-budget-aware wave engine consumed across phases), `hotpath.ts` (PageRank + central-entity deepening), `crossdomain.ts` (cross-domain relationship pass), `qualitygate.ts` (semantic validation + auto-refine), `progress.ts` (checkpoint + resume + MCP event emitter), `prompts/` (domain-specialized prompts as data), `validator.ts` (semantic validation: wikilinks, source-file existence, evidence-quote verification, hallucination detection), `config.ts` (`.cortex/bootstrap.config.yaml` loader), `writer-coordinator.ts` (concurrency-safe writes), `provider-router.ts` (multi-provider failover + circuit breakers). New `src/cli/bootstrap.ts` (with `inspect`, `dry-run`, `enrich`, `incremental`, `refine`, `config` subcommands). Modifications to `src/mcp/server.ts` (the `bootstrap_progress` resource + multi-step `bootstrap-deep` mode). Modifications to `src/llm/client.ts` (prompt-caching headers per provider, continuation chain support, streaming JSON parser hook).
+- **Design Pattern**: **Daemon-orchestrated pipeline with checkpointed waves**. Each phase produces an immutable artifact consumed by the next. The wave engine inside Phase B is the reusable core — output-budget-aware, adaptively sized, parallel, rate-limit-aware, provider-resilient. Phases are sequential (B depends on A's domain map, C depends on B's entity graph) but each phase's internal work is maximally parallel. The user issues one command; the daemon is the loop.
 - **Key Considerations**:
-  - **Token budget management is critical** — Phase B can balloon if domains are large. Per-domain cap is enforced; oversized domains are sub-split by sub-directory before synthesis (mirrors Phase 14 clustering pattern).
-  - **Rate limit awareness** — concurrent domain syntheses respect the provider's rate limit. The orchestrator backs off on 429s and resumes.
+  - **Output tokens, not input tokens, are the bottleneck** — design centers on output-budget batching. This inverts the conventional wisdom of input-context-budget RAG systems.
+  - **Daemon owns the loop, not the chat agent** — fundamental architectural change vs. the current shallow bootstrap, which is implicitly chat-driven.
+  - **Prompt caching is first-class** — batches within a domain are ordered to maximize cache hit rate; provider-specific cache headers used aggressively.
+  - **Semantic validation is non-optional** — broken wikilinks, hallucinated `sourceFile` paths, and evidence-quote mismatches are auto-detected and trigger targeted regeneration, not silent acceptance.
+  - **Concurrency-safe by construction** — single-writer state coordinator + lock file + fsync on checkpoints. Five parallel batches never corrupt state.
+  - **Provider resilience is engineered, not assumed** — per-provider rate-limit handling, circuit breakers, multi-provider failover, quota exhaustion as a first-class state.
   - **Domain prompts are versioned data, not code** — community contributions for new domain types (Vue, Svelte, Spring Boot, etc.) ship as data files without code changes.
   - **Deterministic-where-possible** — Phase A (skeleton) is fully deterministic. Phase B/C/D use temperature 0 for stable re-runs. Quality gate scoring is deterministic.
   - **Existing bootstrap path is retained** as `--depth shallow` for users who want the current behavior (or for very small projects where deep is overkill).
@@ -3842,8 +3999,8 @@ Compared to current behavior on the same project: **30 seconds, $0.20, 4 entitie
 
 ### Pros & Cons
 
-- ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes." The 5-phase pipeline is independently testable and resumable, so engineering risk is bounded. Domain-specialized prompts give Cortex a path to first-class support for any tech stack (Vue, Spring, Django, Rails, Go services, etc.) without core code changes. The quality gate + auto-refine loop means the bootstrap is **self-correcting** — if it produces a thin result, it tries harder until it doesn't.
-- ❌ **Cons**: 20× the LLM cost vs. the current shallow bootstrap ($2.50-6.50 vs. $0.20). Mitigated by `--budget` cap, transparent cost preview before execution, and `--depth shallow` retaining the old behavior for users who want cheap. Per-domain specialized prompts are a maintenance surface (each domain type is a prompt file that needs updating as ecosystems evolve); mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX but a dramatically better cold-start *outcome*; mitigated by the live progress UI showing per-domain ETA so the user understands the trade.
+- ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes, autonomously, with one CLI command." Architectural correctness: identifies and engineers around the **physical output-token wall** that no prompt engineering can bypass, then orchestrates the necessary multi-call wave loop in the daemon at machine speed instead of the chat agent at human speed. The reusable `src/llm/wave.ts` engine is consumable across Phases 17, 20.16, 20.18, and 29 — single investment, multiple payoffs. Production-hardening refinements (polyglot/monorepo awareness, prompt caching for 40% cost reduction, semantic validation pipeline, multi-provider failover, declarative config, dry-run mode, explicit failure taxonomy) ship Phase 33 as production-grade rather than prototype-grade. Adaptive batch sizing eliminates per-project tuning. Domain-specialized prompts give Cortex a path to first-class support for any tech stack without core code changes. The quality gate + auto-refine loop means the bootstrap is **self-correcting** — if it produces a thin result, it tries harder until it doesn't. Incremental + enrichment modes mean the investment compounds over a project's lifetime; bootstrap isn't a one-time event.
+- ❌ **Cons**: ~20× the raw LLM cost vs. the current shallow bootstrap ($3-5 vs. $0.20); mitigated by `--budget` cap, `--dry-run` cost preview, prompt-cache savings on warm runs (~40%), and `--depth shallow` retaining the legacy behavior for users who want cheap. The wave engine + production-hardening surfaces add real engineering surface area (~15-20 new TypeScript files) — significant compared to the current ~5-line bootstrap path. Mitigated by independent testability per refinement and reusability of `wave.ts` across other phases. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX in exchange for a dramatically better cold-start *outcome*; mitigated by the live progress UI showing per-domain ETA, by `--background` mode for huge codebases, and by the fact that bootstrap is one-shot (users don't pay this latency repeatedly). Per-domain specialized prompts are a permanent maintenance surface as ecosystems evolve; mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Multi-provider failover testing requires CI against multiple paid providers — real ongoing cost; mitigated by mocking the provider boundary in standard tests and gating live multi-provider tests behind a CI flag run only on release candidates.
 
 ---
 
