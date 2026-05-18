@@ -83,6 +83,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 43.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
 | 43.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
 | 43.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
+| 43.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
+| 43.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
 | 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
 | 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
 
@@ -6337,6 +6339,268 @@ approval_policies:
 
 - ✅ **Pros**: **Makes the agent mesh safe to deploy in regulated environments.** Without runtime gates, the only safety mechanism is post-hoc audit (Phase 26) — bad actions are recorded but not prevented. With Phase 43.3, high-risk actions require explicit consent. Declarative policy means safety rules are auditable, versionable, and not hidden in code. Multi-channel approval respects how humans actually work (mobile for low-risk, Slack for routine, PWA biometric for destructive). Bypass authority handles real emergencies without breaking the audit trail. Complements Phase 23 (synthesis review) cleanly — Phase 23 gates outputs, Phase 43.3 gates actions, together they cover every risk surface.
 - ❌ **Cons**: Approval fatigue is the real risk — too many gated actions create friction. Mitigated by `policy_only` automated mode for low-risk, by per-author session auto-approve cache, and by Phase 31 dashboards flagging policies that fire too often (probably misconfigured). Pending-approval queue grows if humans ignore it; mitigated by clear timeout-on-deny defaults and by Phase 31 dashboard "stale approvals" widget. Bypass authority is a security risk; mitigated by audit + admin-role requirement + 30-day visibility on dashboard.
+
+---
+
+### Phase 43.4: Sub-Librarian Spawning with Context Inheritance — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 43 gives you long-running specialist Librarians (`security-librarian`, `performance-librarian`). But what happens when `security-librarian` is mid-synthesis on an auth refactor and discovers it needs a focused deep-dive on JWT validation logic that would derail its main task? Today it has to do everything inline — losing focus, blowing its token budget, producing a sprawling synthesis. Phase 43.4 lets it **spawn a focused child sub-Librarian** for the JWT deep-dive: child runs its narrow task with its own ephemeral memory partition, produces a result, parent consumes the result and continues. Two spawn modes pick what context the child sees: **Fork** (child inherits parent's full context — for sub-tasks that need the surrounding architectural picture) or **Isolated** (child starts fresh with only the task brief — for sub-tasks where parent context would be noise). This is hierarchical work decomposition for the agent mesh.
+
+**Distinction from Phase 20.16**: Phase 20.16 (Multi-Agent Librarian Collaboration) is **horizontal parallelism at synthesis time** — K specialists debate one synthesis. Phase 43.4 is **vertical decomposition at runtime** — one specialist delegates a focused sub-task to a temporary child. Different patterns, both legitimate, complementary.
+
+**Technical Terms**
+Hierarchical sub-agent spawning inspired by Nexus Phase 18 (Agent Spawn Context Modes) from OpenClaw's `subagent-spawn.ts` pattern.
+
+**Spawn modes**:
+
+| Mode | Child memory | Child sees | Use case |
+|---|---|---|---|
+| **Fork** | Read-only mirror of parent's partition + last N turns of conversation | Full parent context | Sub-tasks needing architectural surround (e.g., "drill into JWT validation while keeping the auth refactor picture") |
+| **Isolated** | Fresh ephemeral partition | Only the explicit task brief | Sub-tasks where parent context is noise (e.g., "scan codebase for SQL injection patterns" — doesn't need the auth refactor context) |
+
+**Spawn API** (called by parent Librarian during reasoning):
+```typescript
+const childResult = await spawn({
+  parent: 'security-librarian',
+  taskBrief: 'Identify JWT validation patterns in src/auth/JwtValidator.ts and rank them by risk',
+  contextMode: 'isolated',
+  childLibrarianId: 'security-librarian.jwt-deep-dive',  // ephemeral child name
+  budget: { maxTokens: 5000, maxDurationSeconds: 120, maxLLMCalls: 5 },
+  expectedReturnShape: 'JwtValidationFinding[]',
+  inheritProvider: true   // child uses parent's provider chain
+});
+```
+
+**Child lifecycle**:
+
+1. **Spawn**: parent calls `spawn(...)`; substrate creates ephemeral child partition at `substrate://workspace/<id>/agents/<parent>/spawns/<child-id>-<spawn-id>/`
+2. **Execute**: child runs its task using its own LLM calls (subject to Phase 43.5 safety controls + Phase 26.1 DLP + Phase 26 audit)
+3. **Return**: child produces structured result conforming to `expectedReturnShape`; result validated against schema before delivery to parent
+4. **Promote-or-discard**: parent decides whether to (a) write the child's findings into its own partition (promotion), (b) write to shared workspace partition (requires Phase 23 promotion gate), or (c) discard
+5. **Dispose**: child partition is moved to `spawns-archive/` (retained for Phase 26 audit + Phase 20.12 temporal queries); child agent process terminated
+
+**Safety controls** (configurable in `cortex.spawning.yaml`):
+
+- `maxSpawnDepth: 3` — chain length limit (parent → child → grandchild → great-grandchild blocked)
+- `maxChildrenPerAgent: 5` — concurrent children per parent
+- `maxSpawnsPerHour: 20` — per-parent spawn rate limit
+- `defaultBudget: { tokens: 3000, seconds: 60, llmCalls: 5 }` — fallback when caller doesn't specify
+- `forbidden_parents: []` — agents that cannot spawn (e.g., explicitly disabled for certain compliance scenarios)
+- All caps enforced by Phase 43.5 coordination safety
+
+**Spawn rollback** (from OpenClaw's `ContextEngine.prepareSubagentSpawn` rollback pattern):
+- If spawn fails mid-initialization (partition collision, permission denied, provider unavailable, budget validation failure), parent state is restored exactly as it was before the spawn attempt
+- No half-spawned children remain; no partial partitions left orphaned; parent's reasoning state preserved
+- Failure recorded in Phase 26 audit + Phase 20.11 reflexion ("attempted spawn for X, failed because Y — try different approach next time")
+
+**Lineage tracking**:
+
+Every spawn records `parentSpawnId` in the child's metadata. Spawn chains form a tree queryable via:
+
+- `cortex agent spawns <parent-id>` — list all current + recent spawns by parent
+- `cortex agent spawn-tree <root-spawn-id>` — render full descendant tree
+- Phase 26 audit log captures full lineage for any incident investigation
+- Phase 31 dashboard surfaces "spawn-heavy parents" as observability signal
+
+**Cross-product integration with Nexus-OS**: maps to Nexus's `subagent-spawn.ts` pattern. A bundled customer's Nexus agent mesh and Cortex sub-Librarian mesh use identical lineage semantics; events bridge across both products.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/substrate/spawning.ts` (spawn lifecycle + lineage tracking), `src/substrate/rollback.ts` (transactional state restoration), `src/cli/agent.ts` extended (`spawns`, `spawn-tree`), integration with Phase 41 (ephemeral partition allocation), Phase 43.5 (budget + safety enforcement), Phase 26 (audit), Phase 23 (promotion gate when child result targets shared partition).
+- **Design Pattern**: **Hierarchical agent processes with transactional spawning**. Spawns are first-class events; lineage is queryable; rollback is atomic. Same operational shape as a process tree in an OS or a span tree in distributed tracing.
+- **Key Considerations**:
+  - **Ephemeral partition cleanup** — child partitions auto-archive after disposal; retention follows Phase 24 compliance rules for the parent's workspace.
+  - **Provider inheritance** — child uses parent's provider chain by default (`inheritProvider: true`); explicit override allowed for cost optimization (cheap child runs on local Ollama while expensive parent uses Anthropic).
+  - **Cost attribution** — child's LLM cost (Phase 29) is attributed to the parent's quota; the spawn lineage in the audit log makes this auditable.
+  - **Promotion path** — child results promoted to parent's partition are immediate; promotion to shared partition routes through Phase 23 review queue normally (no special bypass).
+  - **No spawning humans** — `@human` cannot be a spawn target; agent-to-human messaging remains Phase 43.1 messaging substrate.
+
+### Definition of Ready (DoR)
+
+- Phase 43 (agent mesh) shipped.
+- Phase 41 (partitions) shipped — ephemeral partitions are allocated from the substrate.
+- Phase 43.5 (coordination safety) shipped — provides budget + depth enforcement.
+
+### Definition of Done (DoD)
+
+- `spawn()` API with Fork + Isolated modes.
+- Ephemeral child partition allocation + automatic archive on disposal.
+- 4 safety caps (`maxSpawnDepth`, `maxChildrenPerAgent`, `maxSpawnsPerHour`, `defaultBudget`).
+- Transactional rollback on spawn failure (verified by injected-failure tests).
+- Lineage tracking via `parentSpawnId` chain; `cortex agent spawns / spawn-tree` CLIs.
+- Provider inheritance default + explicit override.
+- Phase 26 audit emits spawn / disposal / rollback events.
+- Phase 31 dashboard surfaces spawn-rate signal per parent.
+- Tests cover: Fork vs Isolated context isolation, depth-cap enforcement, child-cap enforcement, transactional rollback on simulated failure, lineage chain integrity, provider inheritance override, promotion-to-shared via Phase 23 gate, cost attribution to parent.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Enables hierarchical work decomposition** that Phase 43's flat agent mesh cannot express. Specialists can delegate focused sub-tasks without losing focus on their main work. Fork vs Isolated modes give precise control over child context — neither wasted-on-noise nor missing-the-point. Transactional rollback means spawn failures don't corrupt the parent's state. Lineage tracking creates a queryable spawn tree analogous to OS process trees — familiar mental model for operators. Maps cleanly to Nexus's agent spawn pattern for bundle customers running both products.
+- ❌ **Cons**: Adds another runtime coordination surface — more state to debug. Mitigated by Phase 26 audit on every spawn event + Phase 31 dashboard observability. Spawn-bomb risk (parent recursively spawning children that spawn children); mitigated by the four safety caps in Phase 43.5 (depth + children + rate + budget). Cost-attribution complexity (whose budget pays for the child?) explicitly defined as "parent's quota," but customers may want different attribution policies; mitigated by making cost attribution policy configurable in a future iteration if real customer demand emerges.
+
+---
+
+### Phase 43.5: Agent Coordination Safety (Recursion + Rate Limits + Deadlock Detection) — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 43.1 messaging mentions "rate limiting" informally but never specifies how. Phase 43 agent mesh, Phase 43.4 sub-spawning, and Phase 43.1 inter-agent messaging together create six different ways the agent fleet can hurt itself: A agent loops sending itself messages forever (recursion bomb); two agents wait for each other (deadlock); one chatty agent floods the bus (saturation); the spawning tree explodes (spawn bomb); too many concurrent operations exhaust resources; or queue backpressure builds invisibly until the daemon dies. Phase 43.5 specifies the **coordination safety substrate** — six explicit safety controls with declarative thresholds, automatic enforcement, and clear escalation paths. This is what keeps a fleet of autonomous Librarians from accidentally bringing down its own host.
+
+**Technical Terms**
+Six coordination-safety primitives enforced by the substrate, configurable via `cortex.coordination.yaml`:
+
+### 1. Message Depth Limit (Recursion Bomb Prevention)
+
+Every Phase 43.1 message carries a `depth` field incremented on every reply-chain step. Hard cap (default 10) prevents A→B→A→B→... infinite loops:
+
+```yaml
+message_depth:
+  max: 10
+  on_exceed: drop_message + audit_event + alert_parent_human
+```
+
+When depth exceeds cap, the message is dropped before delivery; sender notified with `MessageDepthExceededError`; Phase 26 audit captures the full reply chain for incident investigation.
+
+### 2. Per-Agent Message Rate Limit (Chatty-Agent Containment)
+
+Each agent has `maxMessagesPerMinute` (default 30 outbound, 100 inbound):
+
+```yaml
+rate_limits:
+  outbound_per_minute: 30
+  inbound_per_minute: 100
+  on_exceed:
+    outbound: throttle_500ms + log_warning
+    inbound: queue_up_to_500 + drop_with_alert_beyond
+  burst_window: 10s          # short-window burst allowance: 60/min during a 10s burst
+```
+
+Persistent overshoot beyond burst allowance escalates to pause-and-alert; Phase 33.2 notification fires.
+
+### 3. Deadlock Detection (Cycle Breaker)
+
+When Agent A awaits a reply from Agent B (`awaitReply: true` in Phase 43.1), and B is awaiting A (or any cycle through C, D, ...), the substrate runs a depth-first scan over the await-graph every 5 seconds:
+
+```yaml
+deadlock_detection:
+  scan_interval_seconds: 5
+  on_cycle_detected:
+    break_with: DeadlockError
+    notify_all_agents_in_cycle: true
+    audit_severity: high
+    surface_to_dashboard: true   # render cycle graph
+```
+
+All agents in the cycle receive `DeadlockError` simultaneously; each can recover by either timing out, retrying with different awaitee, or escalating to `@human`.
+
+### 4. Spawn Rate Limit (Spawn Bomb Prevention)
+
+Phase 43.4 sub-spawning has its own rate limit per parent:
+
+```yaml
+spawn_limits:
+  max_per_parent_per_hour: 20
+  max_concurrent_children_per_parent: 5
+  max_chain_depth: 3
+  on_exceed:
+    rate: queue_until_window_opens
+    concurrent: queue_until_slot_opens
+    depth: refuse_with_SpawnDepthExceededError
+```
+
+Combined with Phase 43.4's `defaultBudget`, this ensures spawn trees stay bounded in both width and depth.
+
+### 5. Resource Exhaustion Guard (Mesh-Wide Throttle)
+
+Total in-flight agent operations across the entire mesh capped at a workspace-wide threshold:
+
+```yaml
+resource_guards:
+  max_concurrent_agent_ops: 50    # all agents combined
+  max_concurrent_llm_calls: 20    # respects provider rate limits
+  max_queued_signals: 1000
+  on_exceed:
+    agent_ops: queue_with_backpressure + dashboard_warning
+    llm_calls: queue + delay
+    queued_signals: refuse_new_signals + emit_coordination.saturation
+```
+
+This prevents a fleet of 30 active Librarians from collectively exhausting the daemon's resources or hitting the LLM provider's rate limits hard enough to cause a circuit breaker (Phase 33.1).
+
+### 6. Bus Saturation Detection (Backpressure Visibility)
+
+Continuous monitoring of message queue depths:
+
+```yaml
+saturation_detection:
+  queue_depth_warning_threshold: 500
+  queue_depth_critical_threshold: 1000
+  age_of_oldest_pending_warning_seconds: 60
+  on_warning: emit coordination.saturation_warning event
+  on_critical: emit coordination.saturation_critical event + Phase 33.2 alert
+```
+
+`coordination.saturation` events flow to Phase 26 audit + Phase 33.2 notifications + Phase 31 dashboard. Operators see backpressure building before it becomes a daemon failure.
+
+### Configurable Defaults
+
+All six controls have sensible defaults out-of-box (the numbers shown above). `cortex.coordination.yaml` overrides per-workspace or per-tenant. Compliance environments tighten limits; high-throughput dev environments loosen them.
+
+### Per-Agent Overrides
+
+Specific agents can declare in their `cortex-librarian-v1` definition (Phase 43.2) that they need different limits:
+
+```yaml
+# cortex-librarian-v1
+coordination_overrides:
+  outbound_messages_per_minute: 60   # this agent is a coordinator; needs higher
+  max_spawns_per_hour: 50            # this agent decomposes heavily
+```
+
+Overrides cannot exceed workspace-level caps; substrate enforces the more restrictive of overlay limits.
+
+### Audit + Observability
+
+Every safety event (depth exceeded, rate throttled, deadlock detected, spawn refused, saturation warning) emits a Phase 26 audit entry with full coordination state. Phase 31 dashboard "Coordination Health" panel surfaces:
+
+- Current mesh utilization (operations in flight vs cap)
+- Per-agent message rates with throttle status
+- Recent deadlocks with cycle graphs
+- Spawn tree depth distribution
+- Queue depth trend
+
+### Architecture & System Design
+
+- **Core Components**: new `src/coordination/depth.ts` (message-depth tracking), `src/coordination/ratelimit.ts` (per-agent rate enforcement), `src/coordination/deadlock.ts` (cycle detection via DFS over await-graph), `src/coordination/resource.ts` (mesh-wide guards), `src/coordination/saturation.ts` (queue monitoring), `src/coordination/config.ts` (`cortex.coordination.yaml` parser), integration points in Phase 43.1 message router + Phase 43.4 spawning + Phase 43 agent mesh + Phase 22 central server queue.
+- **Design Pattern**: **Declarative safety thresholds with enforcement at single point of control**. All six controls share the same observability and audit surface. No code-level safety logic scattered across agent implementations.
+- **Key Considerations**:
+  - **Cycle detection is O(N×E)** per scan where N=agents and E=await edges. For mesh sizes <100 agents this is well below 1ms per 5s scan. Acceptable.
+  - **Backpressure semantics matter** — rate-limited messages queue (not drop); resource-exhausted ops queue (not refuse); only depth-exceeded and saturation-critical refuse outright. Refusal vs queueing is the most-tuned operational parameter.
+  - **Per-agent overrides cap at workspace level** to prevent one misconfigured agent from bypassing org-wide safety.
+
+### Definition of Ready (DoR)
+
+- Phase 43 (agent mesh) shipped.
+- Phase 43.1 (messaging substrate) shipped — depth + rate-limit interception points.
+- Phase 43.4 (sub-spawning) shipped — spawn-limit enforcement.
+- Phase 26 (audit) shipped — safety events anchor here.
+- Phase 33.2 (notifications) shipped — alerts route through these channels.
+
+### Definition of Done (DoD)
+
+- Six safety controls implemented with documented YAML schema.
+- Default thresholds shipped (numbers above are reference values).
+- Per-agent override mechanism via `cortex-librarian-v1` field with workspace-cap enforcement.
+- Deadlock cycle detection runs every 5s with `DeadlockError` propagation to all cycle members.
+- Saturation events emit at warning + critical thresholds with Phase 33.2 routing.
+- Phase 26 audit emits structured events for every safety enforcement.
+- Phase 31 "Coordination Health" dashboard panel renders the five live metrics.
+- Tests cover: each control's enforcement (synthetic recursion bomb → depth-capped, synthetic deadlock pair → cycle broken, chatty-agent fixture → throttled, spawn-bomb fixture → refused, queue-saturation fixture → backpressure surfaced), per-agent override respect, configurable threshold propagation, audit emission per event type.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Makes the agent mesh production-safe by construction** rather than by hope. Six explicit safety controls cover the six concrete failure modes the agent mesh creates — no hand-waving "we'll figure it out at scale." Declarative thresholds in YAML make safety policies auditable and tunable per workspace/tenant. Same observability surface (audit + dashboard + notifications) for all six controls — operators learn one mental model and apply it everywhere. Critical for any deployment of more than 2-3 specialist Librarians; absolutely required before Phase 100 (Durable Workflow Engine, in Pro Module 2) which spawns long-running multi-agent workflows.
+- ❌ **Cons**: Six controls with configurable thresholds creates a tuning surface — getting defaults wrong leads to either over-restrictive (legitimate work refused) or under-restrictive (safety not actually preventing bad behavior). Mitigated by shipping conservative defaults validated against the Phase 33 benchmark suite + per-environment override paths. Cycle detection adds a periodic background scan; trivial cost for mesh sizes <100 but bears watching as scale grows. Per-agent overrides add config complexity; mitigated by clear defaults that work for 90% of cases.
 
 ---
 
