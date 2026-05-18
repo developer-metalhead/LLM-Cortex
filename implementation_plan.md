@@ -54,6 +54,14 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 22    | Central Knowledge Server                               | ⏳ Planned                           |
 | 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
 | 24    | Compliance Constraint Templates                        | ⏳ Planned                           |
+| 25    | Enterprise SSO, SCIM & Identity Federation             | ⏳ Planned (enterprise)              |
+| 26    | RBAC, ABAC & Immutable Audit Trail                     | ⏳ Planned (enterprise)              |
+| 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
+| 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
+| 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
+| 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
+| 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
+| 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
 
 ---
 
@@ -2658,7 +2666,8 @@ Each repo publishes a signed knowledge export (a subset of its `state.json` — 
 - Cross-repo constraints in `cortex.constraints.yaml` (with `sourceRepo`/`targetRepo` fields) are evaluated at synthesis time against local stubs.
 - Stale-propagation fires on foreign-entity update (upstream published a new export).
 - Registry self-hostable with Docker + SQLite; zero mandatory cloud dependency.
-- Tests cover: publish/pull round-trip, stub materialization, cross-repo constraint evaluation, staleness propagation from foreign entity update, visibility filtering (private entities not in export).
+- **Enterprise Hardening:** Registry supports **multi-tenant isolation** — each tenant has a dedicated namespace; cross-tenant entity lookups require explicit federation grants. Signing keys rotate via `cortex registry rotate-keys` with 30-day overlap windows so consuming CIs never see auth downtime. Registry exposes Prometheus metrics at `/metrics` (publish rate, pull latency, failed signatures) for ops integration. Tenant data is encrypted at rest with per-tenant DEKs wrapped by a tenant KEK (envelope encryption); KEKs can be supplied by external HSM/KMS (AWS KMS, GCP KMS, HashiCorp Vault) via the BYO-Key surface from Phase 27.
+- Tests cover: publish/pull round-trip, stub materialization, cross-repo constraint evaluation, staleness propagation from foreign entity update, visibility filtering (private entities not in export), multi-tenant isolation, signing-key rotation under load.
 
 **Pros & Cons**
 
@@ -2713,7 +2722,8 @@ Extend the Phase 21 registry into a full **Central Knowledge Server** — a self
 - Dashboard renders entity count, quality scores, stale count, and org-wide graph per repo.
 - Role-based access enforced: VIEWER cannot see private entities, PUBLISHER cannot access admin endpoints.
 - Self-hosted via Docker Compose; zero mandatory cloud dependency.
-- Tests cover: publish round-trip, unified graph query, cross-repo edge resolution, MCP-over-HTTP tool dispatch, role-based access enforcement, dashboard static asset serving.
+- **Enterprise Hardening:** Central Knowledge Server ships with a **production-grade reference deployment** — Kubernetes Helm chart, Terraform modules (AWS/GCP/Azure), and Docker Compose for small ops teams. Backend is pluggable: SQLite (small), Postgres (medium), Postgres + read replicas (large >500 repos). Read path is horizontally scalable behind any standard load balancer; write path serializes via the publish queue. Point-in-time recovery via Postgres WAL archiving + S3-compatible object storage; documented RPO ≤5 minutes, RTO ≤30 minutes. Dashboard supports **white-label** branding (logo, colors, footer text via `cortex server config white-label`) for resellers and internal platform teams. Multi-region active-active via Postgres logical replication for orgs with data-residency requirements (see Phase 27). Operational endpoints: `/healthz` (liveness), `/readyz` (readiness with dependency check), `/metrics` (Prometheus), `/debug/pprof` (gated by admin token).
+- Tests cover: publish round-trip, unified graph query, cross-repo edge resolution, MCP-over-HTTP tool dispatch, role-based access enforcement, dashboard static asset serving, HA failover under load, PITR restore correctness, white-label asset serving.
 
 **Pros & Cons**
 
@@ -2766,7 +2776,8 @@ A prior proposal ("Review-gated falsifiable claims") was rejected because it con
 - Accepted entities gain `human_reviewed: true` and propagate quality score improvement.
 - MCP `review` prompt surfaces the review queue and suggests corrections via `read_entity`.
 - CI warning comment for unreviewed entities matching configured patterns.
-- Tests cover: queue population on synthesis, accept/reject state transitions, edit round-trip validation, `failedApproach` injection on reject, quality score update on accept.
+- **Enterprise Hardening:** Review workflow integrates with **enterprise approval policies** — `cortex.review.yaml` declares per-domain approver groups (`src/payment/** → [@payments-leads, @security-team]`), and an entity requires two-of-three approvals from the designated group to gain `human_reviewed: true`. Review actions emit immutable audit log entries (Phase 26) capturing reviewer identity (SSO-verified), timestamp, before/after, and approval-chain. Review SLA tracking surfaces per-domain median review-time in the Phase 31 executive dashboard, so leadership sees where review bottlenecks form. Optional review-via-Slack/MS Teams flow (Phase 28): a bot DMs the assigned reviewer with the entity diff and accept/reject buttons; the action propagates back through the audit log with the reviewer's SSO identity attached.
+- Tests cover: queue population on synthesis, accept/reject state transitions, edit round-trip validation, `failedApproach` injection on reject, quality score update on accept, multi-approver policy enforcement, Slack/Teams round-trip review action, audit-log immutability of review events.
 
 **Pros & Cons**
 
@@ -2844,12 +2855,573 @@ constraints:
 - `--attach` flag appends a JSONL compliance-report event to `log.jsonl`.
 - At least three packs published: HIPAA, PCI-DSS, SOC2.
 - Custom packs installable via `cortex compliance add <npm-package>`.
-- Tests cover: pack installation, constraint merging (custom + compliance packs coexist), report grouping by regulatory clause, `requiresField: human_reviewed` evaluation with and without Phase 23, PDF rendering smoke test.
+- **Enterprise Hardening:** Compliance reports include a **cryptographic chain-of-custody seal** — each report's JSONL audit entry contains a SHA-256 hash of the report PDF and is co-signed by the central server's signing key (Phase 27 BYO-Key). Auditors can independently verify a report was generated by Cortex and has not been tampered with via `cortex compliance verify <report.pdf>`. Expanded pack library: ships with HIPAA, PCI-DSS, SOC2, ISO 27001 Annex A, NIST 800-53, GDPR (Art. 25/32), and FedRAMP Moderate baselines as of v1.0. Reports auto-attach to **Vanta/Drata/Secureframe** via webhook integration, so SOC2/ISO audits inherit Cortex's architectural evidence automatically. `cortex compliance schedule --framework <name> --cron "0 0 * * MON"` produces weekly reports and pushes to a configurable destination (S3, Confluence page, Jira ticket). Compliance evidence retention is regulator-aware: HIPAA 6 years, PCI-DSS 1 year minimum, SOC2 1 year — enforced by `cortex compliance archive` with cryptographic deletion proofs.
+- Tests cover: pack installation, constraint merging (custom + compliance packs coexist), report grouping by regulatory clause, `requiresField: human_reviewed` evaluation with and without Phase 23, PDF rendering smoke test, chain-of-custody signature verification, Vanta/Drata webhook delivery, retention-policy enforcement.
 
 **Pros & Cons**
 
 - ✅ **Pros**: Turns Cortex from a developer productivity tool into a compliance evidence platform. A SOC2 auditor asks "show me your access controls in the payment domain" — `cortex compliance report --framework soc2 --format pdf` is the answer. The `--attach` flag creates a durable, timestamped record of compliance checks in `log.jsonl` — exactly the kind of audit trail SOC2 Type II requires. This is the feature that justifies a $50K–$200K enterprise contract.
 - ❌ **Cons**: Regulatory frameworks change faster than software. Pack maintenance is a permanent commitment — incorrect regulatory citations are worse than no citations. Mitigated by clear versioning and explicit "regulatory text as of this date" headers in the PDF. The `pdfkit` dependency adds ~1MB to the package; mitigated by making PDF generation an optional peer dependency (`cortex compliance report --format pdf` prompts to install `pdfkit` if absent).
+
+---
+
+## 💼 Enterprise Track (Phases 25–32) — Strategic Positioning
+
+Phases 21–24 establish Cortex as multi-repo organizational infrastructure. Phases 25–32 transform it from "platform team product" into a **CIO-approvable enterprise system of record**. Each enterprise phase targets a specific procurement blocker that today prevents Cortex from clearing a Fortune 500 InfoSec / Procurement / Legal review.
+
+**Why this matters commercially.** An "LLM wrapper with persistent memory" is a feature; enterprise procurement does not buy features, it buys systems that pass risk review. The 8 phases below are the difference between a $50/seat/month tool and a $500K-$2M ACV enterprise contract:
+
+- **Phase 25** (SSO/SCIM) unlocks any company with >500 employees — without SAML, Procurement says no on principle.
+- **Phase 26** (RBAC/Audit) is the requirement that lets SOX-regulated companies use Cortex for code with financial reporting exposure.
+- **Phase 27** (Air-Gap/BYO-Key) opens defense, intelligence, and tier-1 banks — markets where "data leaves your perimeter" is a deal-killer.
+- **Phase 28** (Workflow Integrations) is the difference between "another silo" and "the system that ties our existing tools together."
+- **Phase 29** (FinOps) is what makes Finance say yes — predictable per-team chargeback turns Cortex into an OpEx line item instead of a surprise bill.
+- **Phase 30** (Migration) bridges the "we have 50,000 Confluence pages of architecture docs" objection — Cortex can ingest them, not compete with them.
+- **Phase 31** (Executive Analytics) gives the CTO/VP who signs the PO the dashboard they can show their board.
+- **Phase 32** (Procurement Pack) shortens the average enterprise sales cycle from 9 months to 3 — pre-filled security questionnaires, MSA/DPA/BAA templates, and a certifications roadmap.
+
+The **enterprise moat** is not the LLM — anyone can wrap an LLM. The moat is the accumulated organizational knowledge graph plus the surrounding governance fabric that makes it auditable, attributable, and accountable. A competitor with a better LLM cannot replicate a customer's 18 months of synthesized architectural decisions, contradiction history, evidence anchors, fitness function policies, compliance attestations, and skill library — that data is the customer's, locked into a format only Cortex's pipeline produces. **The data is the moat. The enterprise phases are what make the data trustworthy enough to bet on.**
+
+---
+
+## 🔐 Phase 25: Enterprise SSO, SCIM & Identity Federation — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Today every developer who runs Cortex authenticates with their own LLM API key on their own machine. That works for a 5-person startup, but a Fortune 500 with 10,000 engineers cannot manage 10,000 API keys, cannot revoke access when someone leaves, and cannot prove to auditors who accessed what. Phase 25 plugs Cortex into the company's existing identity system (Okta, Azure AD, Google Workspace, Ping, OneLogin) — when HR deactivates someone in Workday, that person loses Cortex access automatically 5 minutes later. SCIM provisioning means new hires get the right access on day one.
+
+**Technical Terms**
+First-class enterprise identity integration across three protocols:
+
+- **SAML 2.0** — for legacy enterprise IdPs (ADFS, classic Okta, Ping Federate). Service-Provider-initiated and IdP-initiated flows. NameID formats: emailAddress, persistent, transient. Signed AuthnRequests; encrypted assertions (AES-256). Multiple IdP support per tenant (e.g., contractors via separate IdP).
+- **OIDC** — for modern IdPs (Auth0, Okta Identity Cloud, Azure AD, Google Workspace, Keycloak). Authorization Code + PKCE flow. JWKS rotation handled automatically. Claims mapping configurable per IdP (email, groups, department, manager).
+- **SCIM 2.0** — for user/group lifecycle (provisioning, deprovisioning, group membership sync). Inbound SCIM endpoint (`POST /scim/v2/Users`, `PATCH /scim/v2/Groups/{id}`) consumed by the IdP. Standard SCIM filter syntax supported. Outbound webhooks fire on provisioning events for downstream notification.
+
+Identity model:
+
+- **Workspaces** — top-level isolation boundary (typically one per enterprise customer).
+- **Organizations** — sub-tenants within a workspace (e.g., subsidiaries, business units).
+- **Teams** — groups of users mapped from IdP groups via SCIM.
+- **Service accounts** — non-human identities for CI/CD with scoped tokens and explicit expiry.
+
+CLI/admin:
+
+- `cortex idp configure --type saml|oidc --metadata-url <url>` — wire up an IdP.
+- `cortex idp test --user <email>` — dry-run an auth flow for troubleshooting.
+- `cortex scim status` — show last sync timestamp, user/group counts, drift detection.
+- `cortex token issue --service-account <name> --scopes <list> --expires <duration>` — issue scoped tokens for CI.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/auth/saml.ts` (uses `passport-saml`/`@node-saml/node-saml`), `src/auth/oidc.ts` (uses `openid-client`), `src/auth/scim.ts` (SCIM 2.0 endpoint handler), `src/auth/session.ts` (signed-cookie + JWT session management), additions to `src/server/` (Phase 22) for auth middleware on all REST/MCP-HTTP endpoints.
+- **Design Pattern**: IdP-as-source-of-truth. Cortex never stores passwords; identity, group membership, and lifecycle are all derived from the connected IdP. Local "break-glass" admin accounts exist for emergencies (initial setup, IdP outage) and are explicitly flagged in audit logs.
+- **Key Considerations**:
+  - **No password storage, ever**. Even break-glass admin accounts use hardware-key (WebAuthn) or TOTP, never passwords.
+  - **JIT (just-in-time) provisioning** complements SCIM: a user with valid SSO who is not yet in the local user table is auto-provisioned with default team membership at first login.
+  - **Session lifecycle** — SSO sessions default to 8 hours with rolling refresh; admin sessions to 30 minutes. Tunable per workspace.
+  - Multi-IdP support per tenant (employees on Okta, contractors on Auth0) routed by email domain.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (Central Knowledge Server) is shipped — auth integrates at the central server tier.
+- HTTPS termination configured (auth requires TLS).
+
+**Definition of Done (DoD)**
+
+- SAML 2.0 SP- and IdP-initiated flows work with Okta, Azure AD, ADFS reference IdPs.
+- OIDC Authorization Code + PKCE flow works with Auth0, Azure AD, Google Workspace, Keycloak.
+- SCIM 2.0 inbound provisioning (Users + Groups, full CRUD) compliant with RFC 7644.
+- JIT provisioning on first SSO login.
+- Service-account tokens with explicit scopes and expiry.
+- `cortex idp configure / test`, `cortex scim status`, `cortex token issue` CLIs work.
+- Multi-IdP routing by email domain.
+- Break-glass admin accounts require WebAuthn or TOTP (no passwords).
+- Tests cover: SAML signature validation, OIDC PKCE flow, SCIM CRUD round-trip, JIT provisioning, service-account scope enforcement, multi-IdP routing, break-glass auth flows.
+
+**Pros & Cons**
+
+- ✅ **Pros**: SSO is **table-stakes for any enterprise sale above 500 seats**. Without it, procurement says no on first read; with it, Cortex passes the first InfoSec gate. SCIM eliminates the "but how do we deprovision when someone leaves?" question — the most common security-review blocker for SaaS tools. Multi-IdP support handles M&A scenarios (acquired company on different IdP) that single-tenant SSO tools fail.
+- ❌ **Cons**: Identity integration is permanent maintenance — IdP protocols evolve (SAML 2.1, OIDC FAPI, SCIM 2.1), and bugs in identity code are P0 incidents. Mitigated by using battle-tested OSS libraries (`@node-saml/node-saml`, `openid-client`) instead of rolling our own. Adds ~50MB to the deployment footprint via dependencies.
+
+---
+
+## 🛡️ Phase 26: RBAC, ABAC & Immutable Audit Trail — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Today anyone with Cortex access can read everything and edit everything. Phase 26 introduces fine-grained roles: "interns can read but not edit," "the security team can edit security entities but not payment entities," "auditors can read everything but cannot change anything." Every action — every read, every edit, every constraint change — is recorded in a tamper-evident log that auditors can verify cryptographically. This is what lets a SOX-regulated company use Cortex for code that touches financial reporting: every change has a who, when, why, before, and after, signed and immutable.
+
+**Technical Terms**
+Three layers of access control plus a cryptographically-anchored audit trail.
+
+**Role-Based Access Control (RBAC)**:
+- Pre-defined roles: `viewer`, `contributor`, `reviewer`, `architect`, `admin`, `auditor`.
+- Custom roles defined in `cortex.roles.yaml` as a set of (action, resource-pattern) pairs.
+- Permissions enforced at the Phase 22 server tier on every REST and MCP-HTTP call.
+
+**Attribute-Based Access Control (ABAC)**:
+- Policy expressions in `cortex.policy.yaml` using a safe DSL: `allow if user.team in entity.owning_teams AND user.clearance >= entity.classification`.
+- Attributes flow from SSO claims (department, clearance, manager), entity metadata (classification, owning_teams), and runtime context (time-of-day, IP range).
+- Per-entity classification levels: `public`, `internal`, `confidential`, `restricted`. Restricted requires explicit grant.
+
+**Immutable Audit Trail**:
+- Every action emits a structured audit event: `{ id, timestamp, actor, action, resource, before, after, ip, sessionId, signature }`.
+- Audit log is **append-only and hash-chained** — each entry's hash includes the previous entry's hash (Merkle-style), so tampering is detectable.
+- Log periodically anchored to an external timestamp authority (RFC 3161) or a public blockchain (optional) for legal-grade non-repudiation.
+- Storage: `audit.jsonl` in the central server with hourly archival to immutable object storage (S3 Object Lock, GCS Bucket Lock, Azure Immutable Blob Storage).
+- Query: `cortex audit query --actor <email> --since <date> --action <type>` for forensic investigation.
+- Export: `cortex audit export --format <jsonl|csv|cef> --since <date>` for SIEM integration (Splunk, Datadog, Elastic).
+
+CLI:
+- `cortex role list / show / create / assign <user> <role>`
+- `cortex policy validate / test --user <email> --action <type> --resource <path>` (dry-run policy decisions)
+- `cortex audit query / export / verify` (verify validates the hash chain)
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/auth/rbac.ts` (role + permission model), new `src/auth/abac.ts` (policy evaluator over OPA-style Rego or a custom safe DSL), new `src/audit/log.ts` (hash-chained append-only writer), new `src/audit/anchor.ts` (RFC 3161 timestamp anchoring), `src/cli/role.ts`, `src/cli/policy.ts`, `src/cli/audit.ts`.
+- **Design Pattern**: **Default-deny** at the policy layer; every action must match an explicit allow rule. Audit is **write-once-from-the-application** — even the application cannot modify or delete past audit entries; deletion requires admin + cryptographic proof of compliance retention period.
+- **Key Considerations**:
+  - Policy evaluation must be **fast** — every API call evaluates policy, so the evaluator caches compiled policies and uses partial evaluation.
+  - Hash chain verification is **incremental** — `cortex audit verify` validates only newly-appended entries by default, full-chain re-verify on demand.
+  - SIEM exports use the **CEF (Common Event Format)** standard so Splunk/QRadar/ArcSight ingest without custom parsers.
+
+**Definition of Ready (DoR)**
+
+- Phase 25 (SSO/SCIM) is shipped — actor identity comes from authenticated sessions.
+- Phase 22 (Central Knowledge Server) is shipped — RBAC enforcement points are the server endpoints.
+
+**Definition of Done (DoD)**
+
+- 6 baseline roles plus custom-role definitions in `cortex.roles.yaml`.
+- ABAC policy expressions in `cortex.policy.yaml` evaluated on every API call.
+- Per-entity classification levels enforced.
+- Audit log hash-chained and append-only; tamper-detection via `cortex audit verify`.
+- RFC 3161 timestamp anchoring on hourly batches.
+- SIEM export in JSONL, CSV, and CEF formats.
+- S3/GCS/Azure Object Lock integration for immutable archival.
+- `cortex role`, `cortex policy`, `cortex audit` CLIs all work.
+- Tests cover: each baseline role's permission set, custom role parsing, ABAC policy evaluation across attribute permutations, hash-chain validation, tamper detection, SIEM export format conformance.
+
+**Pros & Cons**
+
+- ✅ **Pros**: RBAC + immutable audit is **the requirement** for SOX, HIPAA, PCI, FedRAMP, and any tier-1 financial services contract. The hash-chained audit log is genuinely tamper-evident — competitors typically have "audit logs" that an admin can edit, which fails real forensic review. CEF export means existing SIEM investments work day-one. ABAC + per-entity classification lets one Cortex deployment serve a mixed-classification environment (open-source code + proprietary financial code) safely.
+- ❌ **Cons**: Policy authoring is non-trivial; bad policies either over-restrict (developers can't do their jobs) or under-restrict (security incident). Mitigated by `cortex policy test` dry-run and a starter library of policy templates per industry. Audit storage grows linearly with usage; mitigated by tiered archival (hot → warm → cold object storage).
+
+---
+
+## 🏰 Phase 27: Air-Gapped, Sovereign & BYO-Key Deployment — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Some industries — defense, intelligence, tier-1 banking, regulated healthcare — cannot allow code or architectural information to ever leave their perimeter. They cannot use SaaS Cortex. They cannot use any LLM hosted outside their firewall. They cannot let any third-party cryptographic key touch their data. Phase 27 makes Cortex deployable in fully air-gapped environments using only LLMs and infrastructure inside the customer's perimeter, with all encryption keys held in the customer's own HSM or KMS. This opens markets — defense, intelligence, tier-1 banking — where competing SaaS tools are categorically forbidden.
+
+**Technical Terms**
+Three deployment modes plus pluggable key management.
+
+**Air-Gapped Mode** (`CORTEX_AIRGAP=true`):
+- Zero outbound network calls. No telemetry, no update checks, no LLM API calls to public providers.
+- LLM provider restricted to: locally-hosted Ollama, vLLM, TGI, or any OpenAI-compatible endpoint inside the perimeter.
+- Distribution: signed offline installer bundle (`cortex-airgap-<version>.tar.gz`) containing all dependencies, Docker images, and SBOM. SHA-256 + Sigstore signature verification at install.
+- Updates: customer downloads, scans, and manually applies offline bundles. No auto-update.
+- Documentation, models, embeddings, and pack libraries bundled offline.
+
+**Sovereign Mode** (`CORTEX_RESIDENCY=<region>`):
+- Data and processing constrained to a specific geography (EU, US, UK, Australia, Canada, etc.).
+- For Phase 22 Central Knowledge Server: enforces region pinning for all stored data and forbids cross-region replication unless explicitly granted.
+- For SaaS Cortex (if/when offered): region-specific endpoints with hard data-residency guarantees.
+- Compliance: aligns with GDPR (EU), Schrems II (EU), Data Sovereignty Act (Australia), C-27 (Canada), etc.
+
+**BYO-Key (Bring Your Own Key)**:
+- Envelope encryption with customer-controlled KEKs (Key Encryption Keys).
+- Supported KMS: AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault, on-prem HSM via PKCS#11.
+- All persistent data (entity content, audit logs, SCIM data) encrypted with per-tenant DEKs (Data Encryption Keys) wrapped by the customer KEK.
+- Key rotation: KEK rotation re-wraps DEKs without re-encrypting data (constant-time rotation).
+- "Cryptographic shred" support: revoking the KEK renders all customer data unrecoverable instantly (regulatory deletion requirement).
+
+CLI:
+- `cortex deploy airgap-bundle --version <v>` — produce a signed offline installer.
+- `cortex deploy verify-bundle <path>` — verify signature and SBOM at the receiving end.
+- `cortex kms configure --provider <aws-kms|gcp-kms|azure-kv|vault|pkcs11> --key-id <id>`
+- `cortex kms rotate` — rotate the KEK; DEKs auto-re-wrap.
+- `cortex kms shred --tenant <id> --confirm <token>` — cryptographic deletion.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/airgap/bundle.ts` (signed offline bundler with Sigstore/cosign), new `src/airgap/verify.ts`, new `src/kms/provider.ts` (KMS abstraction), implementations `src/kms/aws.ts`, `gcp.ts`, `azure.ts`, `vault.ts`, `pkcs11.ts`, new `src/crypto/envelope.ts` (envelope encryption pipeline), `src/cli/deploy.ts`, `src/cli/kms.ts`.
+- **Design Pattern**: **Plugin architecture for KMS** — every concrete KMS implements a thin `encrypt(dek) / decrypt(wrappedDek)` interface; the application logic is KMS-agnostic. Air-gap enforcement is **default-deny at the network layer** — a network-policy file blocks all outbound except an explicit allowlist (local LLM, local KMS).
+- **Key Considerations**:
+  - **No "phone home" telemetry anywhere** in air-gap mode. Even error reporting is local-only. Mitigated by an explicit "diagnostic bundle" command users run manually to share issues with support.
+  - **Performance impact**: envelope encryption adds ~1ms per read and ~2ms per write — negligible for normal workloads, occasionally noticeable on high-volume scans (mitigated by DEK caching with bounded TTL).
+  - **Documentation must be exhaustive** for air-gapped customers — they cannot google solutions to problems. Ship a 100-page operations runbook in the air-gap bundle.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (Central Knowledge Server) is shipped — air-gap and sovereign modes are server-tier deployment configurations.
+- Phase 26 (audit) is shipped — audit log must also be encrypted with the customer KEK.
+
+**Definition of Done (DoD)**
+
+- `CORTEX_AIRGAP=true` blocks all outbound network calls (validated by netfilter rules in the reference deployment).
+- Signed offline installer bundle (with Sigstore signature + SBOM) installs without internet access.
+- 5 KMS providers (AWS, GCP, Azure, Vault, PKCS#11) usable for KEK management.
+- Envelope encryption pipeline: every persistent write uses a DEK wrapped by the KEK.
+- Key rotation re-wraps DEKs without re-encrypting data.
+- Cryptographic shred renders tenant data unrecoverable.
+- Sovereign mode enforces region pinning for stored data.
+- Reference deployment includes Kubernetes NetworkPolicy enforcing air-gap.
+- Tests cover: outbound-call blocking, bundle signature verification, each KMS provider's encrypt/decrypt round-trip, key rotation correctness, shred irrecoverability, region-pinning enforcement.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Air-gap + BYO-Key opens **defense, intelligence, tier-1 banking, classified healthcare** — markets where SaaS competitors are categorically prohibited from operating. The market for air-gappable enterprise software is small but the customer ACV is enormous ($500K-$5M per customer). Sovereign mode unlocks EU GDPR / Schrems II concerns that block many US SaaS vendors from selling in Europe. The cryptographic shred capability is a regulatory differentiator (HIPAA, GDPR Article 17 right-to-erasure).
+- ❌ **Cons**: Air-gap support is a permanent operational tax — every dependency update must be re-bundled, signed, and shipped manually. Mitigated by automation in the release pipeline. BYO-Key fragmentation across 5 KMS providers requires permanent integration tests against all 5. KMS outages at the customer can cause Cortex outages; mitigated by short-TTL DEK caching.
+
+---
+
+## 🔌 Phase 28: Enterprise Workflow Integrations Hub — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Most enterprises run their work through Jira (tickets), Slack/Teams (chat), Confluence (docs), ServiceNow (IT), GitHub Enterprise (code). Today Cortex sits in its own world — engineers must context-switch into a separate UI to query architectural knowledge. Phase 28 plugs Cortex into all of these. Type `/cortex auth-service` in Slack and get the architecture summary in-channel. Tag `[[cortex:AuthService]]` in a Jira ticket and the architecture context appears as a comment automatically. A Confluence page about "Authentication Architecture" auto-updates when Cortex syntheses change. ServiceNow incidents on payment services auto-link to the Phase 9 impact analysis.
+
+**Technical Terms**
+Bidirectional integrations with major enterprise SaaS, each implementing the same pattern: a small adapter normalizing webhooks (inbound) and a normalized push API (outbound).
+
+Integrations (initial set):
+
+- **Jira / Linear**: bidirectional. Inbound: webhook on ticket updates parses `[[cortex:Entity]]` syntax and auto-posts architecture context comments. Outbound: `cortex jira link <ticket> --entity <name>` creates the bidirectional link.
+- **Slack / Microsoft Teams**: bot with slash commands. `/cortex <query>` returns entity summary inline. `/cortex impact <entity>` returns Phase 9 impact preview. `/cortex review` surfaces the Phase 23 review queue with accept/reject buttons. Bot listens for `[[cortex:Entity]]` in any channel and auto-expands inline.
+- **Confluence / Notion**: outbound page sync. Each Cortex entity can have a "mirror page" in Confluence/Notion that auto-updates from the entity description. The reverse (Confluence-as-source-of-truth for some entities) is also supported via the import path in Phase 30.
+- **ServiceNow**: incident enrichment. New incidents matching configured patterns (e.g., "service: payment-api") auto-attach Phase 9 impact analysis as a worknote. Bidirectional: resolving the incident in ServiceNow can fire a Phase 23 review-trigger if configured.
+- **GitHub Enterprise / GitLab Self-Managed / Bitbucket Data Center**: PR-comment enrichment beyond Phase 12. PR diff is matched to entities; comment summarizes affected entities, open contradictions, and Phase 20.14 causal impact.
+- **PagerDuty / Opsgenie**: on-call enrichment. When an alert fires on a service mapped to a Cortex entity, the on-call engineer's PD/Opsgenie alert is enriched with the Phase 9 impact analysis and Phase 20.20 active inference surprise score.
+
+CLI:
+- `cortex integration list / install <name> / configure <name>` — manage integrations.
+- `cortex integration test <name>` — fire a test event for setup verification.
+- `cortex integration logs <name> --since <duration>` — debug delivery failures.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/integrations/` package with one subdirectory per integration. Each integration is a small TypeScript package implementing a common interface (`webhook(event) → CortexEvent[]`, `push(CortexEvent) → ProviderEvent`). New `src/integrations/router.ts` (event normalization + delivery), new `src/cli/integration.ts`.
+- **Design Pattern**: **Pluggable adapter pattern with a normalized event bus**. Every external system speaks its native event format; the integration adapter normalizes to a small internal event vocabulary (`entity.read`, `entity.touched`, `review.pending`, `impact.computed`, `alert.fired`). New integrations just implement the adapter — the core event bus is reused.
+- **Key Considerations**:
+  - **Webhook signature verification** — every inbound webhook MUST verify the source signature (Jira HMAC, Slack signing secret, GitHub HMAC, etc.) or the request is rejected with 401. Critical for security.
+  - **Rate limiting + circuit breakers** on outbound calls — a Confluence outage cannot block Cortex syncs. All outbound integration calls go through a circuit breaker with exponential backoff.
+  - **PII redaction at the integration boundary** — if a Cortex entity description contains PII (caught by Phase 7's secret redaction), it is further redacted before being pushed to external systems. Customer-configurable rules per integration.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (Central Knowledge Server) is shipped — integrations register webhooks to the central server.
+- Phase 25 (SSO) is shipped — integration auth tokens are issued to service accounts.
+- Phase 26 (audit) is shipped — every integration event is audit-logged.
+
+**Definition of Done (DoD)**
+
+- 6 baseline integrations (Jira/Linear, Slack/Teams, Confluence/Notion, ServiceNow, GitHub/GitLab/Bitbucket, PagerDuty/Opsgenie) implemented and tested against reference deployments.
+- `cortex integration` CLI lifecycle commands work.
+- Webhook signature verification rejects unsigned/invalid requests.
+- Circuit breaker on outbound calls with documented backoff policy.
+- PII redaction at integration boundary configurable per integration.
+- Slack/Teams bot supports slash commands, button actions, and inline expansion.
+- Integration audit trail (every event delivery logged via Phase 26).
+- Tests cover: each integration's webhook handler, outbound push, signature verification, circuit-breaker behavior, PII redaction, audit-log entries.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Integration with existing enterprise stack is the single biggest determinant of **adoption depth**. A standalone tool gets used by champions; an integrated tool becomes part of the workflow. Slack/Teams integration alone typically 5×s usage. The normalized event bus means future integrations (M365, Asana, Linear, etc.) are 1-2 weeks each, not months.
+- ❌ **Cons**: 6 integrations is 6 surface areas to maintain across provider API changes. Mitigated by the adapter pattern isolating provider details. Webhook security bugs are P0 incidents; mitigated by mandatory signature verification and comprehensive integration tests.
+
+---
+
+## 💰 Phase 29: FinOps — Cost Governance & Chargeback — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Cortex burns LLM tokens. In an enterprise with 1,000 engineers, that bill becomes real money — easily $50K-$500K/month depending on usage. Today there's no way to know which team is burning the most tokens, no way to set per-team budgets, no way to bill them back. Finance hates surprises. Phase 29 makes every token attributable to a team, sets configurable budget caps that auto-throttle when exceeded, generates monthly chargeback reports for internal billing, and exposes FinOps-grade dashboards (broken down by team, repo, model, operation type) that match what Finance already uses for AWS/GCP/Azure spend.
+
+**Technical Terms**
+Per-team / per-repo / per-user cost attribution and governance, exposed via dashboards, alerts, and chargeback reports.
+
+Cost attribution:
+- Every LLM call records: caller (SSO identity), team (from SCIM groups), repo, operation type (synthesis, review, distill-train, etc.), model + provider, input tokens, output tokens, $ cost (derived from a provider pricing table).
+- Stored in a separate `cost.jsonl` event stream (Phase 7-style append-only).
+- Aggregated nightly into `cost-summary.json` keyed by (team, repo, model, day) for fast dashboard queries.
+
+Budget governance:
+- `cortex.budgets.yaml` declares per-team and per-repo monthly budgets:
+  ```yaml
+  budgets:
+    - team: payments
+      monthly_usd: 5000
+      action_at_50pct: notify
+      action_at_80pct: notify_and_warn_in_sync_output
+      action_at_100pct: throttle  # routes to distilled-only via Phase 19
+      action_at_120pct: hard_stop  # synthesis disabled until budget reset or override
+  ```
+- Throttle action routes through Phase 19 distilled Librarian only (no frontier calls) — quality drops gracefully, spending stops growing.
+- Hard-stop action requires explicit admin override (`cortex budget override --team <name> --reason <text>` audit-logged via Phase 26).
+
+Chargeback:
+- `cortex finops chargeback --month <YYYY-MM> --format <csv|json|xero|netsuite>` produces a per-team billable line item report.
+- Configurable cost-allocation rules: shared infrastructure costs (server, storage) can be allocated by team headcount, weighted active usage, or a flat split.
+
+Dashboards (Phase 31 integration):
+- Per-team monthly burn vs budget (RAG color coding).
+- Per-model cost share over time (helps identify when to migrate workloads to cheaper models).
+- Operation-type breakdown (synthesis vs review vs distill-train vs context-pack export).
+- Forecast: linear-trend projection of monthly burn at current rate.
+
+Cost alerts:
+- Slack/Teams/email notification at 50%, 80%, 100% of monthly budget.
+- Anomaly alert: spend rate >2σ above 30-day rolling mean.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/finops/attribution.ts` (cost-event recording), new `src/finops/aggregator.ts` (nightly rollup), new `src/finops/budget.ts` (budget enforcement + throttling), new `src/finops/chargeback.ts` (report generator with format adapters), new `src/cli/finops.ts`, integration points in `src/llm/client.ts` (every call records cost) and `src/synthesis/router.ts` (Phase 20.15) (throttle routes to distilled).
+- **Design Pattern**: Cost-as-a-first-class-event. Cost is not a metric scraped post-hoc; it is a typed event written at the moment of every LLM call, queryable like any other Cortex event stream.
+- **Key Considerations**:
+  - **Pricing table maintenance** — provider prices change quarterly. Pricing table is shipped as a versioned data file (`cortex-pricing-table-v<n>.json`) updated quarterly and pinnable to a specific date for chargeback consistency.
+  - **Currency support** — pricing recorded in USD by default; per-tenant currency override (EUR, GBP, JPY) via daily FX rate snapshots from a configurable source (ECB, OXR, manual).
+  - **Throttling must degrade gracefully** — when a team hits budget, Cortex continues to function via Phase 19 distilled Librarian. Total outage is the hard-stop only, requiring explicit override.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (central server) is shipped — cost events accumulate centrally.
+- Phase 19 (distilled Librarian) is shipped — the throttle fallback path.
+- Phase 25 (SCIM teams) is shipped — team attribution comes from SCIM groups.
+
+**Definition of Done (DoD)**
+
+- Every LLM call writes a cost event with full attribution.
+- Nightly aggregator produces `cost-summary.json` for fast dashboard queries.
+- `cortex.budgets.yaml` schema supports per-team, per-repo, per-org budgets with 4 action tiers.
+- Throttle action routes to distilled Librarian; hard-stop requires admin override.
+- Chargeback report exports in CSV, JSON, Xero, NetSuite formats.
+- Slack/Teams/email alerts at 50/80/100% budget.
+- Anomaly alert at >2σ spend rate.
+- Currency conversion via configurable FX source.
+- Tests cover: cost event accuracy across providers, budget threshold transitions, throttle routing to distilled, chargeback report format correctness, currency conversion, anomaly detection.
+
+**Pros & Cons**
+
+- ✅ **Pros**: FinOps is **the language Finance speaks**. Per-team chargeback turns Cortex from "unpredictable OpEx" into a normal cost-allocated line item — making renewals dramatically easier. Budget throttling means a runaway team can never produce a "we spent $200K in a weekend" headline. Graceful degradation to distilled Librarian on throttle preserves usefulness; hard-stop preserves the company.
+- ❌ **Cons**: Pricing tables drift; an outdated table produces wrong chargeback numbers. Mitigated by quarterly updates and explicit "pricing-as-of-date" stamps in every chargeback report. Throttling can mask quality issues if teams notice degradation but not the cause; mitigated by surfacing throttle state prominently in `cortex sync` output.
+
+---
+
+## 📥 Phase 30: Knowledge Migration & Legacy Ingest — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Every enterprise has 50,000 pages of architecture documents scattered across Confluence, SharePoint, Notion, Google Docs, Word files on shared drives, old wikis, and Slack threads. Asking them to throw this away and start over with Cortex is a non-starter. Phase 30 imports all of that as the starting seed for the knowledge graph: Confluence pages become entities, doc cross-links become relationships, and the existing institutional memory becomes immediately queryable through Cortex's MCP surface. Combined with white-glove migration services, this turns "we have 10 years of docs" from an objection into Cortex's biggest day-one demo.
+
+**Technical Terms**
+A pluggable importer architecture that ingests legacy documentation systems into the Cortex knowledge graph.
+
+Supported sources (initial set):
+
+- **Confluence (Cloud + Server + Data Center)**: page tree → entity hierarchy. Page macros (`{include}`, `{children}`) become `derived_from` / `supports` relationships. Attachments → evidence anchors. Comments → review history.
+- **Notion**: database rows → entities. Page mentions → relationships. Properties → entity metadata.
+- **SharePoint / OneDrive**: Word docs + Excel sheets → entities (parsed via Office OpenXML). Folder structure → categorical grouping.
+- **Google Docs / Google Drive**: docs via Google Drive API → entities. Suggested edits / comments → review history. Folder structure → grouping.
+- **Markdown / MDX repositories**: ingest existing `docs/` directories. Each markdown file → entity. `[[wikilinks]]` resolved as Cortex relationships.
+- **Older wikis (MediaWiki, DokuWiki, TWiki)**: dump format ingestion with `mediawiki-to-cortex` adapter.
+
+Import pipeline:
+
+1. **Discovery**: connect to source, enumerate pages/docs, estimate import size + cost.
+2. **Extraction**: download content + metadata; parse into intermediate representation (IR).
+3. **LLM normalization**: each source document is passed through a one-time normalization Librarian call that converts the freeform doc into a Cortex synthesis (entities, relationships, evidence). Cost is bounded and reported upfront.
+4. **Reconciliation**: imported entities are reconciled against existing Cortex entities by Phase 18 embedding similarity. Duplicates surface for user resolution (merge / keep both / discard import).
+5. **Provenance tagging**: every imported entity gets `importedFrom: { source: "confluence", url: "...", importedAt: "..." }` so origin is traceable.
+
+CLI:
+- `cortex import discover --source <type> --connect <url>` — connection test + size estimate.
+- `cortex import run --source <type> --since <date> --dry-run` — full or incremental import.
+- `cortex import reconcile [--auto-accept-similarity 0.95]` — merge wizard for duplicates.
+- `cortex import resync --source <type>` — re-pull deltas from a previously-connected source (incremental, not re-import).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/import/` with one subdirectory per source. Common interface: `discover() → ImportPlan`, `extract(plan) → IRDocument[]`, `normalize(IRDocument) → SynthesisSchema`. New `src/import/reconcile.ts` (embedding-based deduplication), `src/cli/import.ts`. Reuses Phase 18 embeddings for reconciliation and Phase 2 LLM client for normalization.
+- **Design Pattern**: ETL pipeline with intermediate representation. Sources produce IR; normalization produces canonical syntheses; reconciliation deduplicates. Each stage independently testable.
+- **Key Considerations**:
+  - **Import cost transparency** — `discover` reports estimated total LLM cost before any normalization runs. The customer always knows the bill before pressing go.
+  - **Incremental imports** — re-syncing from a Confluence space pulls only deltas (modified pages since last sync). No need to re-process the entire space monthly.
+  - **Conflict resolution** — reconciliation surfaces merge candidates ranked by embedding similarity. Default is human-mediated; `--auto-accept-similarity 0.95` allows opt-in autonomy for high-confidence matches.
+  - **Source preservation** — `importedFrom` provenance is permanent. An imported entity always knows its origin URL, so the user can verify the import or follow back to the original.
+
+**Definition of Ready (DoR)**
+
+- Phase 18 (embeddings) is shipped — reconciliation depends on it.
+- Phase 2 (LLM client) is stable — normalization uses it.
+
+**Definition of Done (DoD)**
+
+- 6 baseline importers (Confluence, Notion, SharePoint, Google Docs, Markdown repos, MediaWiki) work end-to-end.
+- `cortex import discover` reports size + estimated cost.
+- Dry-run mode shows the import plan without writing.
+- Reconciliation wizard surfaces duplicates and supports merge/keep/discard decisions.
+- Incremental re-sync pulls only deltas.
+- `importedFrom` provenance permanently attached.
+- Tests cover: each importer's discovery + extraction + normalization, reconciliation correctness on synthetic duplicates, incremental sync correctness, provenance preservation through edit cycles.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Turns the "we have 10 years of architecture docs" objection from a deal-killer into Cortex's day-one demo — the prospect's own docs become queryable through Cortex within hours. Provenance tagging means importing is reversible (you can always trace back) and additive (Cortex coexists with the source-of-truth instead of replacing it). Confluence import alone closes 40%+ of enterprise migration concerns.
+- ❌ **Cons**: 6 source connectors is permanent maintenance — APIs change, auth schemes evolve. Mitigated by isolating sources behind the common importer interface. Bad source data produces bad imports; mitigated by the dry-run + reconciliation step that surfaces issues before commit.
+
+---
+
+## 📊 Phase 31: Executive Analytics, ROI Dashboard & Architectural KPIs — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+The CTO who signs the Cortex contract needs to justify it to the CFO and the board. They need numbers: "Cortex saved us $X in onboarding time," "Cortex caught Y architectural regressions before production," "our mean code-review time dropped from 4 days to 1.5." Phase 31 produces these numbers as a real-time dashboard plus exportable quarterly business reviews — converting Cortex's outputs into the language of executive scorecards.
+
+**Technical Terms**
+A read-side analytics surface aggregating Cortex's existing signals (Phase 7 log, Phase 7.5 quality, Phase 15 CI signal, Phase 16 contradictions, Phase 29 cost) into executive-facing KPIs.
+
+KPI categories:
+
+**Architectural Health**:
+- Mean quality score (Phase 7.5) per repo, team, org. Trend over time.
+- Open-contradiction count (Phase 16) per domain. Resolution rate.
+- Stale-entity count and stale-ratio. Trend.
+- Lint-violation density (per 1k LOC).
+- Fitness-function pass rate (Phase 20.4).
+- Causal-strength entropy (Phase 20.14) — proxy for architectural complexity.
+
+**Productivity**:
+- Mean time-to-context (MTTC) — how long from a new developer opening the repo to producing a meaningful PR. Measured indirectly by Phase 4.5 IDE usage telemetry + commit history.
+- Code-review cycle time — does Cortex's CURRENT CONTEXT injection reduce reviewer back-and-forth?
+- Onboarding ramp time — first-30-day commit velocity for new hires vs. historical baseline.
+- Refactor success rate — Phase 20.13 skill-library win rate.
+
+**Risk**:
+- High-hotspot-score entities (Phase 20.2) per domain. Trend.
+- Compliance-violation count (Phase 24) per framework. Trend.
+- Surprise-event count (Phase 20.20) per week. High surprise = architectural drift.
+- Open-contradiction backlog age.
+
+**ROI**:
+- Token spend (Phase 29) vs. estimated counterfactual: "what would this team have spent without Cortex?" (calibrated from baseline measurement at deployment).
+- Bug prevention $: high-hotspot entities × CI failure rate × industry-standard cost-of-incident.
+- Onboarding $: (historical ramp time - current ramp time) × loaded-engineer-cost × new-hire-count.
+- Net ROI: aggregated savings minus Cortex spend.
+
+Dashboard surfaces:
+- Web UI (extending Phase 22 dashboard) with role-aware views: developer view shows their team's metrics; manager view shows their org; CTO view shows everything.
+- PDF QBR report: `cortex qbr generate --quarter Q2-2026 --format pdf` produces a 20-page executive deck with charts, narrative, and per-team breakdowns.
+- Slack/Teams weekly digest: configurable per-channel "Cortex health weekly" post.
+- Public status page: optional anonymized industry-benchmark sharing (opt-in).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/analytics/kpi.ts` (KPI computation from existing signals), new `src/analytics/roi.ts` (ROI calibration + counterfactual estimation), new `src/analytics/qbr.ts` (PDF generator using `pdfkit`), new `src/analytics/dashboard.ts` (extends Phase 22 dashboard), new `src/cli/analytics.ts`. Reuses all existing signal sources — no new data collection.
+- **Design Pattern**: Read-side projection over existing event streams. Every KPI is a query over `log.jsonl`, `cost.jsonl`, `audit.jsonl`, and `state.json` — never a new persisted metric. KPIs are always current, never stale.
+- **Key Considerations**:
+  - **ROI calibration requires a baseline** — at deployment, `cortex roi calibrate` captures current metrics (mean review time, ramp time, bug rate). Subsequent ROI numbers are deltas from this baseline. Without calibration, ROI is reported as "uncalibrated — measure baseline first."
+  - **Benchmarks are opt-in, anonymized, aggregated** — sharing anonymized industry benchmarks is a customer choice (`CORTEX_BENCHMARK_SHARING=true`). Pulled benchmarks let customers compare their stats to industry peers; pushed benchmarks contribute to the community pool.
+  - **QBR PDF is the killer artifact** — designed for executive consumption (charts > tables, narrative > raw numbers). One PDF per quarter is what gets shown at board meetings.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (central server + dashboard) is shipped.
+- Phase 29 (cost tracking) is shipped.
+- Sufficient deployment history (≥1 quarter) for meaningful trends.
+
+**Definition of Done (DoD)**
+
+- 4 KPI categories implemented across architectural health, productivity, risk, ROI.
+- Role-aware dashboard views (developer / manager / CTO).
+- `cortex qbr generate` produces a 20-page executive PDF.
+- Slack/Teams weekly digest posts configurable per channel.
+- `cortex roi calibrate` captures deployment baseline.
+- Industry-benchmark opt-in flag works (no data leaves without explicit opt-in).
+- Tests cover: each KPI computation accuracy, ROI counterfactual calibration, QBR PDF structure validity, dashboard role-based filtering, benchmark privacy enforcement.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Executive analytics is **what makes Cortex visible to the people who renew the contract**. CTO/VP champions need numbers for board reviews; Cortex provides them automatically. The QBR PDF saves the customer 20+ hours per quarter of manual reporting — they pay for the seat license, they get the executive deck for free. ROI calibration creates a deployment ritual that anchors success measurement from day one.
+- ❌ **Cons**: Bad KPIs drive bad behavior. If team A is incentivized to "improve quality score," they might game it by removing genuinely-uncertain entities. Mitigated by surfacing multiple KPIs (no single metric to game) and by documenting that KPIs are guides, not contracts. ROI counterfactuals are estimates, not facts — mitigated by explicit confidence intervals and "this is a model, not measurement" disclaimers.
+
+---
+
+## 📜 Phase 32: Vendor Risk, Procurement Pack & Certifications Path — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+The average enterprise SaaS sale takes 6-9 months — not because of feature evaluation, but because of legal, security, and procurement review. Procurement sends a 400-question security questionnaire. Legal demands MSA changes. InfoSec wants a SOC2 Type II report and a recent pen-test. Phase 32 prepares all of this in advance: pre-filled SIG/CAIQ/VSAQ questionnaires, MSA/DPA/BAA templates, sub-processor list, annual pen-test reports, and a clear roadmap to SOC2/ISO27001/FedRAMP certifications. Cuts the average enterprise sales cycle from 9 months to 3.
+
+**Technical Terms**
+A coordinated bundle of artifacts, processes, and external certifications that compress enterprise procurement.
+
+**Pre-filled Security Questionnaires** (downloadable from `cortex.com/trust`):
+- SIG (Shared Assessments Standardized Information Gathering) — Lite + Full versions, pre-answered.
+- CAIQ (Cloud Security Alliance Consensus Assessments Initiative Questionnaire) v4.
+- VSAQ (Vendor Security Alliance Questionnaire).
+- HECVAT (Higher Education Community Vendor Assessment Tool) — for academic customers.
+- Each questionnaire shipped as both static PDF and dynamic JSON for upload to Vanta/Drata/Whistic/UpGuard.
+
+**Legal Document Templates**:
+- Master Service Agreement (MSA) template — both customer-friendly and Cortex-standard versions.
+- Data Processing Addendum (DPA) — GDPR-compliant, SCC-attached.
+- Business Associate Agreement (BAA) — HIPAA-compliant for healthcare customers.
+- Subprocessor Annex — maintained list of all subprocessors with categories (LLM provider, infrastructure, support, etc.).
+- Acceptable Use Policy (AUP) and Service Level Agreement (SLA) templates.
+
+**Compliance Artifacts**:
+- SOC2 Type II report (annual, auditor: third-party CPA firm).
+- ISO 27001 certificate (annual recertification).
+- Penetration test report (annual, third-party).
+- Vulnerability scanning attestation (quarterly).
+- Bug bounty program with HackerOne or Bugcrowd.
+- ASVS (OWASP Application Security Verification Standard) Level 2 attestation.
+
+**Certifications Roadmap** (multi-year):
+- Year 1: SOC2 Type I → Type II, ISO 27001.
+- Year 2: HIPAA, PCI-DSS Level 1, GDPR Article 42 certification (when scheme finalizes).
+- Year 3: FedRAMP Moderate (US federal), IL4 (US DoD), IRAP (Australia), G-Cloud (UK).
+- Roadmap is **public** at `cortex.com/trust/roadmap` so prospects can plan.
+
+**Vendor Risk Profile** (proactive disclosure):
+- Financial stability: audited annual financials (for late-stage customers' procurement).
+- Insurance: cyber liability + E&O + tech E&O coverage amounts disclosed.
+- Incident response: documented IR plan with named CSIRT.
+- Business continuity / disaster recovery plan with documented RPO/RTO.
+
+**Operational Surface**:
+- `cortex compliance pack download --version <date>` — pulls current procurement pack as a zip.
+- Trust portal at `cortex.com/trust` with live certificate links, sub-processor list, change notifications.
+- Customer-specific extensions: `cortex compliance attestation --customer <name> --requirements <file>` produces a customer-specific compliance pack tailored to their stated requirements.
+
+**Architecture & System Design**
+
+- **Core Components**: This phase is **primarily process and content, not code**. The small code surface: a trust portal (static site + small API for change notifications), `cortex compliance pack download` CLI command, certification status JSON endpoint.
+- **Design Pattern**: Trust-by-disclosure. Rather than treating compliance artifacts as confidential, publish them (with appropriate access gating for SOC2 reports, which require NDA). Prospect Security teams can self-serve answers to common questions without sales involvement.
+- **Key Considerations**:
+  - **Process is the product** — half of Phase 32 is operational rituals (annual audits, quarterly pen-tests, monthly sub-processor reviews) that exist outside the codebase. Document them as runbooks shipped with the product.
+  - **Roadmap commitments are public commitments** — pulling forward a certification date is fine; slipping a public date is reputational damage. Be conservative.
+  - **Customer-specific attestations** are high-leverage — one-off questionnaire answers reused across the next 50 prospects. Maintain an internal questionnaire-answer knowledge base.
+
+**Definition of Ready (DoR)**
+
+- Phase 26 (audit) is shipped — audit log evidence is required for SOC2/ISO.
+- Phase 27 (BYO-Key) is shipped — encryption documentation is required for SOC2 CC6 controls.
+- Phase 24 (compliance packs) is shipped — provides the lint-level compliance evidence.
+
+**Definition of Done (DoD)**
+
+- 4 standard security questionnaires (SIG, CAIQ, VSAQ, HECVAT) pre-filled and published.
+- 5 legal templates (MSA, DPA, BAA, Subprocessor Annex, AUP/SLA) drafted and reviewable.
+- SOC2 Type II completed and report available (initial cycle: 12+ months from start).
+- ISO 27001 certificate obtained.
+- Annual third-party penetration test completed and report (sanitized) available.
+- Quarterly vulnerability scan attestation published.
+- Bug bounty program live (HackerOne or Bugcrowd).
+- Trust portal live at `cortex.com/trust`.
+- `cortex compliance pack download` CLI works.
+- Certifications roadmap published with target dates.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Cuts enterprise sales cycles by **50-70%** — by the time procurement asks a question, the answer is already on the trust portal. Pre-filled questionnaires save the customer's InfoSec team 40+ hours per evaluation, which they remember. SOC2 + ISO 27001 are **disqualifying gates** for most Fortune 500 vendors; without them, you cannot enter most procurement processes regardless of how good the product is. FedRAMP unlocks the US federal market — a $100B+ TAM that almost no AI tools have entered.
+- ❌ **Cons**: Compliance is a permanent, expensive program — SOC2 audit ~$30-100K/year, ISO 27001 ~$20-50K/year, FedRAMP ~$500K-2M one-time + ongoing. Mitigated by treating compliance investment as a sales-enablement budget line, not an engineering overhead. Public roadmap commitments create reputational risk if missed.
 
 ---
 
