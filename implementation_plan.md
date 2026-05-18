@@ -12,6 +12,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 4     | MCP Server Integration                                 | ✅ Done                              |
 | 4.5   | Dual-Route IDE Integration                             | ✅ Done (added beyond original plan) |
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
+| 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | 🚧 In progress                       |
 | 7     | Audit & Traceability Tools                             | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ⏳ Planned                           |
@@ -60,12 +61,14 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 26    | RBAC, ABAC & Immutable Audit Trail                     | ⏳ Planned (enterprise)              |
 | 26.1  | DLP & Knowledge-Layer PII Redaction                    | ⏳ Planned (enterprise)              |
 | 26.2  | Policy-as-Code (OPA/Cedar)                             | ⏳ Planned (enterprise)              |
+| 26.3  | OpenTelemetry Tracing & Observability Export           | ⏳ Planned (enterprise)              |
 | 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
 | 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
 | 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
 | 29.1  | Approved Model Allowlists & Provider Governance        | ⏳ Planned (enterprise)              |
 | 29.2  | Tenant-Scoped Billing & Metering                       | ⏳ Planned (enterprise)              |
 | 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
+| 30.1  | External AI Conversation Import                        | ⏳ Planned (enterprise)              |
 | 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
 | 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
 | 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
@@ -78,6 +81,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 42    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
 | 43    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
 | 43.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
+| 43.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
+| 43.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
 | 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
 | 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
 
@@ -360,6 +365,124 @@ All four extensions are ~25 lines of prompt change combined; no writer change re
 
 - **Stored test-snippet blobs** (full `TEST_SUITE = {…}` JavaScript objects in entity pages) — creates a second source of truth that drifts from real test files; LLM-authored test code is unreliable. The short manual-repro lines under `## Verification` cover the genuinely useful subset; Phase 7's `evidence.content` covers longer quoted snippets when they materially clarify.
 - **"Regression Anchors" / `Used By (Verification Required)` lists** — already covered by Phase 6's blast-radius `staleSince` propagation and Phase 9's `cortex impact <entity>` hop-ranked inbound report. No parallel mechanism needed.
+
+---
+
+## 🩺 Phase 5.6: Daemon Watchdog & Self-Healing — ⏳ Planned (production reliability)
+
+**Layman's Terms**
+Cortex runs a lot of background processes — the file watcher, the LLM client, the MCP server, the sync queue, the embedding service, the bootstrap orchestrator. When one of them silently dies — file watcher hits inotify limit, MCP socket drops without reconnect, bootstrap hangs on an unresponsive provider, memory leak slowly degrades performance — the user doesn't notice for hours. They keep coding, expecting syntheses to happen, until eventually they realize *"wait, when was the last time anything got synthesized?"* Phase 5.6 introduces a watchdog process that heartbeats every component, auto-recovers via documented strategies per failure mode, and surfaces alerts when auto-recovery exhausts. This is the difference between "Cortex works on my laptop" and "Cortex runs reliably for weeks on a customer's production deployment."
+
+**Technical Terms**
+A supervisor process that monitors every running Cortex component via heartbeats and applies per-component recovery strategies on detected failure:
+
+**Components monitored**:
+- **Sync watcher** (`cortex watch`) — file system change detection loop
+- **MCP server** (STDIO or HTTP) — IDE connection endpoint
+- **LLM provider connections** — per-provider liveness via lightweight health pings (Phase 33.1 registry)
+- **File watcher subsystem** — inotify/FSEvents/ReadDirectoryChanges handle health
+- **Bootstrap orchestrator** (when active) — per-batch heartbeat
+- **Distillation training** (Phase 19, when active) — training-loop heartbeat
+- **Embedding service** (Phase 18, when active) — local model server
+- **LSP integration** (Phase 20.23, when active) — TypeScript Language Server child process
+- **Central server** (Phase 22, when deployed) — REST + MCP-HTTP endpoint liveness
+- **Phase 22 backend** (SQLite/Postgres) — connection pool health
+
+**Heartbeat protocol**:
+- Every monitored component emits a heartbeat every 10s to `~/.cortex/heartbeats/<component>.beat` (single-line JSON: `{ pid, ts, lastWorkAt, queueDepth, memMB, customMetrics }`)
+- Watchdog reads heartbeats every 15s; component is "stale" if no beat for 30s, "dead" if no beat for 90s
+- Custom metrics per component: sync watcher tracks `pendingDiffs`; MCP server tracks `activeConnections`; bootstrap tracks `currentBatch + ETA`
+
+**Recovery strategies** (per-component, declarative in `cortex.watchdog.yaml`):
+```yaml
+recovery_strategies:
+  sync_watcher:
+    on_stale:  log_warning
+    on_dead:   restart_with_last_known_state
+    max_restarts_per_hour: 5
+    on_restart_limit: alert_and_pause
+  
+  mcp_server:
+    on_stale:  reconnect_attempt
+    on_dead:   restart_then_alert
+    max_restarts_per_hour: 10
+  
+  llm_provider:
+    on_stale:  failover_to_next_provider  # Phase 33.1 chain
+    on_dead:   circuit_breaker_60s + failover
+  
+  file_watcher_subsystem:
+    on_inotify_limit_reached: switch_to_polling_mode + alert
+    on_dead:   restart_with_polling_fallback
+  
+  bootstrap_orchestrator:
+    on_progress_stall_minutes: 10
+    on_progress_stall: checkpoint + log_warning
+    on_dead:   checkpoint + alert  # never auto-restart bootstrap; user decides
+  
+  embedding_service:
+    on_dead:   restart_with_health_check
+    on_oom:    restart_with_smaller_batch_size + log
+  
+  lsp_subprocess:
+    on_dead:   respawn_with_pid_monitor
+    on_crash_loop: disable_lsp_tools + alert  # 3 crashes/5min = give up
+  
+  central_server:
+    on_dead:   alert_immediately  # production server; humans must intervene
+  
+  database:
+    on_connection_pool_exhausted: alert + temporary_throttle
+    on_dead:   alert_immediately
+```
+
+**Anomaly detection** (beyond simple dead/alive):
+- **Process restart loops**: same component restarted >3 times in 5 minutes → escalate, stop auto-restart
+- **Memory growth**: heartbeat tracks `memMB`; component exceeding 1.5× baseline for 30 minutes → graceful restart with memory dump
+- **Latency drift**: lastWorkAt → current age trending upward (e.g., 50ms → 500ms → 5s) → log warning, surface in Phase 31 dashboard
+- **Queue backpressure**: `pendingDiffs` or `activeConnections` growing unboundedly → alert
+- **Heartbeat skew**: components drifting beyond NTP-sane time → log; may indicate clock issues
+
+**CLI surface**:
+- `cortex health` — current status of all monitored components with last-heartbeat age, recovery history, anomaly flags
+- `cortex health --watch` — live updating display in terminal
+- `cortex health --json` — machine-readable for scripting/CI
+- `cortex doctor` — comprehensive environment + health + connectivity diagnostic (analog of Nexus `nexus-doctor`; includes Phase 0 environment checks + Phase 5.6 component health + Phase 33.1 provider reachability + Phase 22 server connectivity if configured)
+- `cortex watchdog logs [--component <name>] [--since <duration>]` — recovery action history
+
+**Notification integration**: every recovery action and every alert emits a Phase 26 audit event AND fires through Phase 33.2 notification channels (Slack/Teams/Email/Mobile push). Critical alerts (central server dead, database dead, crash loop) escalate per `cortex.notifications.yaml`.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/watchdog/supervisor.ts` (the watchdog process itself; can run as separate process or embedded in `cortex watch`), `src/watchdog/heartbeat.ts` (emit + consume), `src/watchdog/recovery.ts` (strategy executor), `src/watchdog/anomaly.ts` (detection heuristics), `src/cli/health.ts` (`cortex health` + `cortex doctor`), `cortex.watchdog.yaml` schema parser.
+- **Design Pattern**: Supervisor + declarative strategies. The watchdog itself is single-purpose and minimal; recovery strategies are pure data (YAML), so adding a new component or new strategy doesn't require code changes. Heartbeats are file-based for zero dependency on networking — works in air-gapped environments (Phase 27).
+- **Key Considerations**:
+  - **Watchdog itself can fail** — addressed by running it as a separate process supervised by OS init system (systemd / launchd / Windows Service). The OS supervises the supervisor; minimal turtles all the way down.
+  - **Don't auto-restart everything blindly** — bootstrap and distillation training are explicitly NOT auto-restarted (user must decide). High-cost or stateful operations are escalated, not restarted, to prevent runaway spending.
+  - **Recovery is bounded** — `max_restarts_per_hour` per component prevents infinite restart loops from masking real bugs.
+  - **Heartbeat files don't accumulate** — overwritten in place; bounded size; cleaned on graceful shutdown.
+
+**Definition of Ready (DoR)**
+
+- Phase 5 (CLI/daemon) shipped — components to monitor exist.
+- Phase 26 audit shipped — recovery events anchor here.
+- Phase 33.2 notification channels shipped — alerts route through them.
+
+**Definition of Done (DoD)**
+
+- Watchdog supervisor process implementable as standalone or embedded.
+- 10 baseline components monitored with heartbeats.
+- `cortex.watchdog.yaml` declarative schema with documented strategies.
+- 5 anomaly detectors (restart loops, memory growth, latency drift, queue backpressure, heartbeat skew).
+- `cortex health`, `cortex doctor`, `cortex watchdog logs` CLIs.
+- OS init integration documented for systemd / launchd / Windows Service.
+- Phase 26 audit emits recovery events; Phase 33.2 routes alerts.
+- Tests cover: heartbeat freshness detection, dead-component recovery for each strategy, restart-limit enforcement, anomaly detection per type, watchdog-as-OS-service smoke test.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Production reliability table-stakes.** Without a watchdog, Cortex's claim to be "always-on architectural memory" is wishful thinking — long-running deployments hit silent failures regularly. Declarative recovery strategies make per-component behavior auditable and tunable without code changes. `cortex doctor` is a single command that answers "is everything OK?" — high-value DX, low-cost engineering. Integrates cleanly with existing Phase 26 audit + Phase 33.2 notifications + Phase 31 dashboards.
+- ❌ **Cons**: Adds operational complexity — watchdog is one more process to reason about. Mitigated by OS-init supervision (humans don't supervise the watchdog). Aggressive auto-restart can mask real bugs ("it just keeps working because it keeps restarting"); mitigated by anomaly detection on restart-loop patterns and by explicitly NOT auto-restarting expensive operations.
 
 ---
 
@@ -3318,6 +3441,111 @@ Pluggable policy engine layer that compiles Cortex's three policy domains (org-c
 
 ---
 
+## 📡 Phase 26.3: OpenTelemetry Tracing & Observability Export — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 26 records every Cortex action as an immutable audit event for compliance. Phase 31 dashboards roll those events into executive KPIs. But enterprise customers have an entire third layer they already use for everything else — Datadog, Honeycomb, Grafana Tempo, Jaeger, New Relic, Splunk. Their SRE team has alerts wired up there. Their on-call dashboards live there. Without OpenTelemetry export, Cortex is a black box to those teams — they cannot correlate a Cortex synthesis latency spike with a deploy event, an API outage, or a downstream incident. Phase 26.3 makes Cortex a first-class citizen in the customer's existing observability stack.
+
+**Technical Terms**
+First-class OpenTelemetry instrumentation (traces + metrics + logs) exported via standard OTLP, plus standardized semantic conventions for Cortex-specific operations.
+
+**Spans emitted** for every traced operation:
+
+| Span name | Triggered by | Key attributes |
+|---|---|---|
+| `cortex.synthesis.batch` | Phase 33 Tier 2 / Phase 14 cluster synthesis | `entity_count`, `model`, `provider`, `tokens_in`, `tokens_out`, `cost_usd`, `quality_score`, `duration_ms` |
+| `cortex.bootstrap.phase` | Phase 33 Phase A/B/C/D/E | `phase`, `domain`, `batch_id`, `parent_run_id` |
+| `cortex.bootstrap.run` | Top-level bootstrap invocation | `total_entities`, `total_cost_usd`, `quality_overall` |
+| `cortex.embeddings.batch` | Phase 18 embedding generation | `entity_count`, `model`, `tokens_in` |
+| `cortex.constraint.eval` | Phase 6 constraint check | `rule_id`, `entity`, `result` (allowed/denied) |
+| `cortex.policy.eval` | Phase 26.2 OPA/Cedar | `policy_id`, `engine`, `decision` |
+| `cortex.dlp.scan` | Phase 26.1 DLP pipeline | `detector_count`, `findings`, `action_taken` |
+| `cortex.tool.call` | Phase 20.23 tool invocation | `tool_id`, `duration_ms`, `result_size_bytes` |
+| `cortex.federation.publish` | Phase 21 publish | `entity_count`, `target_registry`, `bytes_pushed` |
+| `cortex.federation.pull` | Phase 21 pull | `upstream_repo`, `entities_materialized` |
+| `cortex.review.action` | Phase 23 review queue | `entity`, `action` (accept/reject/edit/skip), `reviewer` |
+| `cortex.compliance.report` | Phase 24 report generation | `framework`, `violations`, `format` |
+| `cortex.audit.write` | Phase 26 audit append | `event_type`, `actor` |
+| `cortex.predict.surprise` | Phase 20.20 active inference | `surprise_score`, `triggered_slow_path` |
+| `cortex.acp.approval` | Phase 43.3 action gate | `action_type`, `decision` (approved/denied/timeout) |
+
+**Trace context propagation**:
+
+- **W3C Trace Context** header propagation across all MCP calls (incoming and outgoing).
+- Bootstrap's parent `cortex.bootstrap.run` span is parent of all child phase/batch spans — full distributed trace from one CLI invocation down to individual LLM calls.
+- Phase 20.16 multi-agent debate creates a parent span with one child per specialist Librarian.
+- Cross-tenant federation (Phase 25.1) propagates trace context across the federation boundary so the originating customer sees the full cross-tenant trace (with appropriate privacy redaction on the receiving side).
+
+**Metrics emitted** (via OTel Metrics API):
+
+- `cortex.synthesis.tokens_per_second` (gauge, per workspace)
+- `cortex.synthesis.cost_usd_per_hour` (gauge, per workspace + per team)
+- `cortex.quality.mean_score` (gauge, per workspace)
+- `cortex.quality.staleness_ratio` (gauge)
+- `cortex.audit.events_per_minute` (counter)
+- `cortex.bootstrap.in_flight_count` (gauge)
+- `cortex.bootstrap.completion_rate_24h` (gauge)
+- `cortex.federation.publishes_per_hour` (counter)
+- `cortex.constraint.violations_per_hour` (counter)
+- `cortex.provider.healthcheck_latency_ms` (histogram, by provider)
+- `cortex.watchdog.recovery_actions_per_hour` (counter, by component) [Phase 5.6]
+- `cortex.acp.approval_latency_ms` (histogram, by action_type) [Phase 43.3]
+
+**Logs**: Phase 26 audit events are also exported as OTel logs with trace correlation (`trace_id`, `span_id` attached so logs link to the relevant span in the trace UI).
+
+**Configuration** (follows OTel SDK conventions, no Cortex-specific config):
+
+```bash
+# Standard OTel environment variables
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.acme.internal:4317
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+OTEL_SERVICE_NAME=cortex
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,cortex.workspace_id=acme-monorepo,cortex.tenant_id=acme-platform
+
+# Vendor-specific (optional shortcuts)
+CORTEX_OTEL_VENDOR=datadog|honeycomb|tempo|jaeger|newrelic|splunk
+```
+
+**Vendor shortcuts**: when `CORTEX_OTEL_VENDOR` is set, Cortex pre-configures endpoint URLs, semantic attribute mappings, and known headers for that vendor — one env var instead of five. Standard OTLP works for any compliant backend.
+
+**Sampling**: configurable via standard OTel sampler env vars (`OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`). Default: head-based sampling at 100% for low-volume ops (constraint eval, federation), 10% for high-volume ops (synthesis batches), 100% for error spans (always sampled).
+
+**Privacy mode** — `CORTEX_OTEL_PRIVACY=strict` redacts sensitive attributes (entity descriptions, audit actor identity, customer data) from spans before export. For customers whose observability backend is third-party (Datadog SaaS) but who want zero customer data leaving the perimeter.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/telemetry/otel.ts` (OTel SDK bootstrap, exporter registration, resource detection), `src/telemetry/spans.ts` (per-operation span helpers), `src/telemetry/metrics.ts` (gauges/counters/histograms registration), `src/telemetry/conventions.ts` (Cortex semantic attribute conventions documented), instrumentation in every existing core component (synthesis pipeline, bootstrap, federation, audit writer, etc.).
+- **Design Pattern**: Cross-cutting instrumentation following OTel idioms exactly — no Cortex-specific opinions imposed on the trace/metric model. Customers' existing OTel infrastructure works without translation.
+- **Key Considerations**:
+  - **Zero-overhead when disabled** — when `OTEL_SDK_DISABLED=true` (default), all span creation is a no-op; no performance impact.
+  - **Resource attribute discipline** — Cortex emits standard resource attributes (`service.name`, `service.version`, `deployment.environment`) plus a documented set of `cortex.*` attributes. No vendor-specific or proprietary attributes.
+  - **Trace context propagation across MCP** — Cortex's MCP server reads incoming W3C headers; Cortex's MCP client (when calling other MCP servers) propagates them. This means an IDE → Cortex → external LLM provider trace is one continuous distributed trace.
+  - **Backward-compatibility** — Phase 26 audit log remains the source of truth; OTel export is additive. Customers who don't enable OTel see no change.
+
+### Definition of Ready (DoR)
+
+- Phase 26 (audit) shipped.
+- Phase 31 (analytics) shipped — defines the metric semantics this phase exports.
+
+### Definition of Done (DoD)
+
+- 15 baseline span types instrumented across core components.
+- 11 baseline metrics emitted.
+- W3C Trace Context propagation across MCP calls (incoming + outgoing).
+- Standard OTLP exporter (HTTP + gRPC).
+- Vendor shortcut for Datadog, Honeycomb, Tempo, Jaeger, New Relic, Splunk.
+- Privacy mode (`CORTEX_OTEL_PRIVACY=strict`) redacts customer data from exported spans.
+- Documented semantic conventions (`docs/otel-conventions.md`) so customers can author dashboards/alerts.
+- Sample Grafana dashboard + Datadog dashboard + Honeycomb board shipped as reference artifacts.
+- Tests cover: span creation when SDK enabled, no-op when disabled, attribute correctness per operation type, trace context propagation across mocked MCP boundary, privacy-mode redaction, vendor shortcut endpoint resolution.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Makes Cortex visible to the SRE / Platform team**, not just the architecture team. Customers correlate Cortex events with their existing system events (deploys, incidents, traffic patterns) — Cortex slots into existing on-call workflows. OTel is **vendor-neutral**: works with any compliant backend, no lock-in. Distributed trace context propagation means an IDE → Cortex → LLM provider call appears as one cohesive trace, surfacing latency bottlenecks that would otherwise be invisible. Pre-built dashboards for Datadog/Grafana/Honeycomb reduce customer onboarding time from days to hours.
+- ❌ **Cons**: Instrumentation is cross-cutting — touches nearly every core component. Mitigated by treating it as additive (no behavior changes, only emissions) and by zero-overhead-when-disabled default. Span count can become large in synthesis-heavy environments; mitigated by configurable head-based sampling. Privacy-mode redaction must be carefully tested per span type to avoid leaking data; mitigated by automated tests asserting which attributes are stripped under `CORTEX_OTEL_PRIVACY=strict`.
+
+---
+
 ## 🏰 Phase 27: Air-Gapped, Sovereign & BYO-Key Deployment — ⏳ Planned (enterprise)
 
 **Layman's Terms**
@@ -3702,6 +3930,121 @@ CLI:
 
 - ✅ **Pros**: Turns the "we have 10 years of architecture docs" objection from a deal-killer into Cortex's day-one demo — the prospect's own docs become queryable through Cortex within hours. Provenance tagging means importing is reversible (you can always trace back) and additive (Cortex coexists with the source-of-truth instead of replacing it). Confluence import alone closes 40%+ of enterprise migration concerns.
 - ❌ **Cons**: 6 source connectors is permanent maintenance — APIs change, auth schemes evolve. Mitigated by isolating sources behind the common importer interface. Bad source data produces bad imports; mitigated by the dry-run + reconciliation step that surfaces issues before commit.
+
+---
+
+## 💬 Phase 30.1: External AI Conversation Import — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 30 imports static documentation — Confluence pages, Notion databases, SharePoint docs. But the **most architecturally rich content in your organization is in AI chat histories**: the Claude.ai conversation where a senior engineer worked through the auth refactor, the ChatGPT debugging session that diagnosed a production incident, the Cursor chat where the team designed the new payment domain, the Antigravity session where the architecture was decided. These conversations contain the *reasoning* behind every architectural decision — and today they evaporate the moment the chat ends. Phase 30.1 imports them as first-class Cortex memory: decisions, rationale, alternatives considered, all preserved as evidence-anchored entities.
+
+**Technical Terms**
+A standardized format and adapter library for importing AI conversation transcripts as Cortex memory:
+
+**Universal format `cortex-conversation-v1`**:
+
+```json
+{
+  "schema": "cortex-conversation-v1",
+  "id": "imp_conv_2026-05-12-acme-auth-refactor",
+  "title": "Auth refactor — JWT vs cookies decision",
+  "source": {
+    "tool": "claude.ai",
+    "model": "claude-opus-4-7",
+    "platform_conversation_id": "01H8X3...",
+    "exportedAt": "2026-05-12T10:00:00Z"
+  },
+  "participants": [
+    { "role": "human", "identity": "alice@acme.com", "displayName": "Alice Chen" },
+    { "role": "assistant", "identity": "claude" }
+  ],
+  "messages": [
+    {
+      "id": "msg_001",
+      "role": "human",
+      "content": "We need to decide between JWT and session cookies for the new auth...",
+      "timestamp": "2026-05-12T09:55:00Z"
+    },
+    {
+      "id": "msg_002",
+      "role": "assistant",
+      "content": "Consider these tradeoffs: ...",
+      "timestamp": "2026-05-12T09:55:30Z",
+      "model": "claude-opus-4-7"
+    }
+  ],
+  "metadata": {
+    "tags": ["auth", "architecture-decision", "ADR-pending"],
+    "outcome": "Decided to use cookies via [[AuthFacade]]; implementation tracked in PR #4471"
+  }
+}
+```
+
+**Import adapters** (per source tool):
+
+- `cortex conversation import --from claude-export <file.json>` — Claude.ai conversation export (JSON download from claude.ai/chats UI). Most direct path; preserves message-level metadata including thinking blocks when present.
+- `cortex conversation import --from chatgpt-export <conversations.json>` — ChatGPT data export ZIP (entire `conversations.json` or filtered subset).
+- `cortex conversation import --from cursor-sessions [--workspace <path>]` — reads Cursor's internal SQLite session store; imports the last N sessions or filtered date range.
+- `cortex conversation import --from claude-code <project-path>` — reads `~/.claude/projects/<hash>/conversations/*.json` session files.
+- `cortex conversation import --from antigravity <project-path>` — reads Antigravity's saved chats via its MCP / file format.
+- `cortex conversation import --from windsurf <project-path>` — Windsurf session files.
+- `cortex conversation import --from copilot-workspace <session-id>` — GitHub Copilot Workspace conversation export.
+- `cortex conversation import --from slack-thread <thread-url> --since <date>` — Slack thread with AI bot (via Slack API; Phase 28 integration if available).
+- `cortex conversation import --from clipboard` — paste a raw conversation transcript; LLM-assisted parsing into the canonical format.
+
+**LLM-assisted post-processing** (mirrors Phase 30 normalization pipeline):
+
+After raw import, each conversation passes through a synthesis pass that:
+
+1. **Extracts architectural decisions** — turns into `decisionsExtracted[]` with rationale, alternatives considered, outcome.
+2. **Identifies referenced entities** — `[[AuthFacade]]`, `[[TokenStore]]`, etc. — links them back as evidence on the entity's "discussed-in" tab (same mechanism as Phase 43.1 messaging).
+3. **Detects failed approaches** — "we tried X but rejected because Y" becomes a `failedApproach` entry on the relevant entity (Phase 6).
+4. **Generates ADR stubs** (Phase 20.5 integration) — significant architectural conversations produce a draft ADR for human review.
+5. **Phase 26.1 DLP scan** — every imported conversation passes through DLP before persistence; PII / secrets / customer data redacted per policy.
+6. **Phase 24 compliance retention** — imported conversations subject to the same compliance retention rules as native syntheses.
+
+**Storage**: imported conversations stored at `.knowledge/conversations/<id>.md` (human-readable) + `.knowledge/conversations/<id>.json` (canonical schema). Entity back-references update the affected entities' "discussed-in" indexes. Conversations are first-class queryable artifacts:
+
+- `cortex conversation list [--source <tool>] [--participant <email>] [--since <date>]`
+- `cortex conversation show <id>`
+- `cortex conversation search "JWT decision"` — full-text + embedding search across all imported conversations
+- `GET /v1/conversations/<id>` (Phase 22 central server)
+- `GET /v1/entities/<name>/discussions` (Phase 22) — surfaces imported conversations alongside Phase 43.1 agent messages
+
+**Provenance preservation**: every imported conversation carries `importedFrom: { source, platform_conversation_id, importedAt, importedBy }`. Original source preserved; reversible (`cortex conversation remove <id>` cleanly removes without leaving orphan references).
+
+### Architecture & System Design
+
+- **Core Components**: new `src/import/conversations/` with one adapter per source tool, new `src/import/conversations/canonical.ts` (schema validator + parser for `cortex-conversation-v1`), new `src/import/conversations/post-process.ts` (LLM-assisted decision/entity/failed-approach extraction; reuses Phase 33 wave engine for cost-bounded batch processing), new `src/cli/conversation.ts`, additions to Phase 22 central server (`/v1/conversations/*` endpoints).
+- **Design Pattern**: ETL pipeline analogous to Phase 30 (Discovery → Extraction → Normalization → Reconciliation). The conversation IS the IR; the post-processing pass extracts memory entities.
+- **Key Considerations**:
+  - **Source tool data formats change** — Claude.ai's export format has evolved; ChatGPT's has evolved. Adapters version-pinned per format; tested against known fixtures; graceful degradation on schema drift.
+  - **Privacy is paramount** — most AI conversations contain proprietary discussions. DLP gate (Phase 26.1) on import; per-conversation classification (`internal` / `confidential` / `restricted`); access governed by Phase 26 RBAC.
+  - **Don't double-ingest** — conversations exported and re-imported should be idempotent. `platform_conversation_id` is the dedup key.
+  - **Cost transparency** — post-processing uses LLM tokens; `cortex conversation import --dry-run` reports estimated cost before commit (mirrors Phase 33 dry-run pattern).
+
+### Definition of Ready (DoR)
+
+- Phase 30 (migration) shipped — shares the importer adapter pattern.
+- Phase 26.1 (DLP) shipped — gates imports.
+- Phase 33 wave engine shipped — post-processing reuses it.
+
+### Definition of Done (DoD)
+
+- `cortex-conversation-v1` schema specified and validated.
+- 9 import adapters (Claude.ai, ChatGPT, Cursor, Claude Code, Antigravity, Windsurf, Copilot Workspace, Slack, clipboard).
+- LLM-assisted post-processing extracts decisions / entities / failedApproaches / ADR stubs.
+- Phase 26.1 DLP runs on every imported conversation.
+- Entity back-references update "discussed-in" indexes automatically.
+- `cortex conversation list / show / search / remove` CLIs.
+- `GET /v1/conversations/*` central server endpoints.
+- Phase 24 compliance retention applies.
+- Tests cover: each adapter's parsing correctness on fixture files, idempotent re-import dedup, DLP redaction during import, decision extraction accuracy on sample conversations, entity back-reference creation, search relevance.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Captures the most valuable architectural content in the org** — chat-based design reasoning that would otherwise be lost. Bridges the "where do decisions live?" gap for AI-assisted teams. Provenance preservation means imports are auditable and reversible. Integrates with Phase 20.5 ADR generation (imported conversations → draft ADRs), Phase 6 failedApproaches (rejected alternatives surface as entity history), Phase 43.1 entity "discussed-in" surface (imported conversations appear alongside agent messages). Differentiator vs. CodeScene / Sourcegraph / Aider — those tools don't ingest AI chat history at all.
+- ❌ **Cons**: 9 source-tool adapters is permanent maintenance as export formats evolve. Mitigated by isolating per-source parsing in dedicated adapter files. Post-processing LLM cost can be significant for large historical imports (years of conversations); mitigated by dry-run cost preview and incremental import via `--since <date>`. Privacy is non-trivial — conversations often contain client data, internal acquisition discussions, personnel matters; mitigated by mandatory DLP gate and per-conversation classification.
 
 ---
 
@@ -5668,6 +6011,332 @@ This routes to the Phase 23 review queue, surfaces in Phase 33.2 mobile PWA noti
 
 - ✅ **Pros**: **Solves a real coordination gap** in the multi-agent architecture — agents can now have explicit architectural conversations, not just write into shared memory and hope. **Memory-mediated, not ephemeral**: every conversation about why-X-was-decided becomes permanent project memory, queryable forever — the highest-value architectural artifact possible. Entity reference bidirectionality means architectural decisions are linked from both directions (`[[AuthFacade]]` entity ↔ "9 messages discussing this"). Reuses existing substrate infrastructure (partitions, audit, federation grants) — no new persistence layer. Complements rather than competes with Nexus's bus: the two products serve different coordination needs and bundle customers get both.
 - ❌ **Cons**: Messaging volume could explode on chatty agent meshes; mitigated by rate limiting, archival, and Phase 29 FinOps tracking. Threading + reference indexing add query surface that needs careful indexing for performance at scale; mitigated by treating discussions index as a derived projection (rebuildable, not load-bearing). Cross-tenant messaging has the same security concerns as Phase 25.1 federation generally — same mitigation (bilateral grants, audit, mTLS).
+
+---
+
+### Phase 43.2: Universal Librarian Definition Schema (`cortex-librarian-v1`) — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 43 lets you declare specialized Librarians (`security-librarian`, `performance-librarian`, etc.) in `cortex.agents.yaml`. But the schema is informal — each customer reinvents what a Librarian "is." Phase 43.2 makes it formal: `cortex-librarian-v1` is a **portable, signed, versioned definition** for a Librarian persona — system prompt, activation rules, provider binding, memory permissions, quality contract, provenance. A Librarian becomes to Cortex what a container image is to Docker: build it, sign it, publish it, install it elsewhere. Customers share Librarians across workspaces; consultancies sell domain-expert Librarians; the community contributes specialized personas (DjangoLibrarian, RailsLibrarian, EmbeddedCLibrarian). This is the foundation that makes Cortex Pro Module 3 (Skill Marketplace) actually work for Librarians, not just refactoring skills.
+
+**Technical Terms**
+A formal portable schema for Librarian persona definitions with publish/install/sign/verify lifecycle:
+
+**Schema**:
+```yaml
+schema: cortex-librarian-v1
+version: 1
+id: security-librarian
+displayName: "Security Librarian"
+publisher: "acme-platform-team"
+license: "Apache-2.0"
+description: |
+  Specialized Librarian for authentication, authorization, and security-related
+  code analysis. Pays attention to token flows, secret handling, input validation,
+  and access control patterns.
+
+specialization:
+  domain: security
+  activation:
+    file_patterns:
+      - "src/auth/**"
+      - "src/api/middleware/**"
+      - "src/services/*Service.{ts,js,py}"
+    embedding_similarity_to_prototype:
+      entities: ["AuthService", "TokenStore", "PermissionResolver"]
+      threshold: 0.78
+    keyword_triggers: ["auth", "token", "permission", "secret", "credential"]
+    activation_threshold: 0.6   # composite score
+
+prompts:
+  system: |
+    You are the Security Librarian for [WORKSPACE_NAME]. Your job is to synthesize
+    architectural knowledge with particular attention to:
+    - Authentication flows (PKCE, OAuth, session, JWT lifecycle)
+    - Authorization patterns (RBAC, ABAC, policy enforcement points)
+    - Secret handling (key rotation, vault integration, env var hygiene)
+    - Input validation (sanitization, injection prevention)
+    - Access control contracts between entities
+    
+    Format expectations:
+    - Every entity in your synthesis must declare its security posture
+    - Every cross-domain dependency must be flagged with auth implications
+    - Constraints emitted should reference OWASP Top 10 categories where applicable
+  
+  refinement: |
+    [Used when called as part of Phase 33 hot-path deepening or Phase 20.18 refinement]
+    ...
+
+provider:
+  primary: anthropic:claude-opus-4-7
+  fallback: [openai:gpt-4o, ide-passthrough]
+  reasoning_provider: anthropic:claude-opus-4-7  # ToT/Self-Ask routing
+  
+memory:
+  partition: agents/security-librarian
+  private_retention: unlimited
+  shared_promotion_policy: quorum_2_of_3   # other agents must agree before promotion
+  reflexion_retention: 10                  # Phase 20.11 reflexions per entity
+
+permissions:
+  can_read_partitions:
+    - "shared"
+    - "agents/compliance-librarian"      # explicit cross-agent read access
+  can_write_partitions:
+    - "agents/security-librarian"
+  can_promote_to: ["shared"]
+  can_message_agents: ["compliance-librarian", "performance-librarian", "human"]
+  can_be_messaged_by: ["*"]              # any agent can ask security questions
+  can_call_tools: ["grep", "git_blame", "ts_lookup_symbol", "ast_query"]
+  forbidden_tools: ["shell.exec"]
+
+quality_contract:
+  required_dimensions:
+    coverage: 0.45
+    anchoring: 0.85       # security claims MUST have evidence
+    constraint_density: 2.0  # average 2+ constraints per security entity
+  on_quality_breach: pause_and_alert
+
+audit_requirements:
+  log_all_constraint_decisions: true
+  log_all_promotion_requests: true
+  log_all_tool_calls: true
+
+provenance:
+  created_at: "2026-05-12T14:32:00Z"
+  created_by: "alice@acme.com"
+  version_history:
+    - { version: "1.0.0", date: "2026-04-01", changes: "initial release" }
+    - { version: "1.1.0", date: "2026-05-12", changes: "added OWASP constraint awareness" }
+  signature: "sha256:abc123...def456"   # signed librarian-definition hash
+  signature_algorithm: "Ed25519"
+  signer_public_key_url: "https://acme-platform-team.example.com/keys/cortex-librarians.pub"
+```
+
+**Lifecycle commands**:
+
+- `cortex librarian validate <file>` — schema validation + signature verification + sanity checks (no broken cross-references, no impossible permissions)
+- `cortex librarian publish <id> [--registry <url>]` — sign and publish to a registry (workspace-local, tenant-wide via Phase 22, or marketplace via Pro Module 3)
+- `cortex librarian install <id> [--from <registry>] [--verify-signature]` — install from a registry; signature verification mandatory for cross-tenant installs
+- `cortex librarian list` — show all installed Librarians with version, signer, last-used, activation rate
+- `cortex librarian inspect <id>` — render the full definition with all defaults expanded
+- `cortex librarian diff <id> <version-a> <version-b>` — semantic diff between two versions of a Librarian
+- `cortex librarian disable <id>` / `enable <id>` — runtime toggle without uninstalling
+- `cortex librarian export <id> > my-librarian.yaml` — export installed Librarian as portable file
+
+**Versioning**:
+
+- Semantic versioning (MAJOR.MINOR.PATCH)
+- MAJOR bump: breaking changes to permissions, partition layout, schema fields
+- MINOR bump: prompt changes, additional activation patterns, new tools allowed
+- PATCH bump: documentation, examples, no behavior change
+- Multiple versions installable side-by-side; activation rule routes to the correct version
+- `cortex librarian rollback <id>` reverts to previous version
+
+**Signing & trust**:
+
+- Ed25519 signatures over the canonical JSON serialization of the definition
+- Public keys distributed via the publisher's `well-known/cortex-librarians.pub` URL or via Phase 22 central server's key registry
+- Trust policy: Cortex refuses to install unsigned Librarians from external sources by default (`CORTEX_TRUST_UNSIGNED=true` opt-out for development)
+- Phase 26 audit logs every install / version change / signature failure
+- Phase 26.2 OPA/Cedar policies can restrict which publishers' Librarians may be installed
+
+**Registry tiers**:
+
+1. **Workspace-local** — `~/.cortex/librarians/` — single-developer installs
+2. **Tenant registry** — Phase 22 central server — shared across the org
+3. **Marketplace** — Pro Module 3 (Private Skill Marketplace) — paid distribution + revenue routing
+
+### Architecture & System Design
+
+- **Core Components**: new `src/librarians/schema.ts` (`cortex-librarian-v1` validator), `src/librarians/signing.ts` (Ed25519 sign + verify), `src/librarians/registry.ts` (install/publish/list operations), `src/librarians/loader.ts` (runtime activation from installed definitions), `src/cli/librarian.ts`, integration with Phase 43 agent mesh (Librarian instances are spawned from installed definitions).
+- **Design Pattern**: Definition-as-data, runtime-as-loader. Same pattern as Docker image / Kubernetes manifest. Librarians become first-class addressable artifacts independent of any specific deployment.
+- **Key Considerations**:
+  - **Signature verification is mandatory for cross-tenant installs** — prevents supply-chain attacks.
+  - **Permission schema is enforced at runtime** — a Librarian declared as "can_read_partitions: shared" cannot read another agent's private partition no matter what its prompt says.
+  - **Per-version provenance preserved** — every install records which version, who installed, when, with what signature; revoking a key revokes all installs descending from it (Phase 26 audit makes this auditable).
+
+### Definition of Ready (DoR)
+
+- Phase 43 (agent mesh) shipped.
+- Phase 41 (memory partitions) shipped — permission schema references partitions.
+- Phase 22 (central server) shipped — tenant registry depends on it.
+- Phase 25 (SSO) shipped — install attribution depends on it.
+
+### Definition of Done (DoD)
+
+- `cortex-librarian-v1` schema specified, validated, documented in `docs/librarian-schema.md`.
+- Ed25519 signing + verification implementation.
+- Publish/install/list/inspect/diff/disable/export CLI surface complete.
+- Workspace-local + tenant-registry + marketplace (Pro Module 3) registry tiers all work.
+- Multi-version side-by-side installs with activation routing.
+- Phase 26 audit on every lifecycle event.
+- Phase 26.2 OPA/Cedar policy hook for publisher trust restrictions.
+- 3 reference Librarian definitions shipped (general-librarian, security-librarian, performance-librarian).
+- Tests cover: schema validation, signature round-trip, signature failure rejection, multi-version routing, permission enforcement at runtime, trust policy enforcement, audit event emission.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Foundation for a Librarian ecosystem.** Customers can share specialist Librarians across teams; consultancies can sell domain-expert Librarians (the Stripe-payments-expert Librarian, the SOC2-compliance Librarian, the React-18-migration Librarian); community can contribute open-source Librarians for popular stacks. Versioning + signing means installations are reproducible and auditable — critical for regulated environments. Cleanly enables Pro Module 3 (Skill Marketplace) to monetize Librarian sharing in addition to refactoring skills. Aligns with how Docker / Kubernetes / npm built ecosystems around portable, signed, versioned artifacts.
+- ❌ **Cons**: Signing infrastructure (key management, public key distribution, revocation) is real engineering. Mitigated by using battle-tested OSS libraries (`libsodium` for Ed25519) and clear documentation. Schema evolution is harder once Librarians are in the wild; mitigated by strict semver discipline and validator backward-compat layer. Compatibility between Librarians and Cortex versions needs ongoing testing; mitigated by `getVersion()` compatibility metadata and explicit "tested against Cortex 1.x" declarations.
+
+---
+
+### Phase 43.3: Agent Action Approval Gate (Runtime ACP) — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 23 (Human-in-the-Loop Review) gates **synthesis outputs** — humans approve or reject completed entity descriptions after they're written. But once the agent mesh (Phase 43) is running multiple specialized Librarians taking real actions — promoting writes to shared memory, federating across tenants, calling tools with side effects, spending money on LLM calls — there's a gap: **no gate on the action itself before it happens.** Phase 43.3 fills that gap with a runtime Agent Control Plane (ACP) — declarative policies that pause high-risk agent actions, route them through approval workflows (Slack/Teams/PWA), and only execute on explicit human consent. This is what makes "fleet of autonomous agents" safe enough to deploy in regulated environments.
+
+**Technical Terms**
+A runtime approval gate intercepting agent actions before execution, with declarative policies, multi-channel approval routing, and full audit trail.
+
+**Action classes** that can be gated (declarative — administrator decides which):
+
+- **Cross-partition writes** — Librarian A writing into Librarian B's partition (Phase 41)
+- **Promotion writes** — agent writes promoted from private → shared partition (Phase 41)
+- **Cross-tenant operations** — federation grants exercised (Phase 25.1)
+- **High-cost operations** — single op over `threshold_usd`, or cumulative session over budget (Phase 29)
+- **Constraint-violation overrides** — agent's synthesis would violate a Phase 6 constraint
+- **Tool calls with side effects** — Phase 20.23 tools tagged `side_effect: true` (e.g., a Pro-Module-6 marketplace tool that posts to Jira)
+- **Federation grants** — issuing or modifying Phase 25.1 cross-tenant grants
+- **Allowlist changes** — modifying Phase 29.1 approved model list
+- **DLP exceptions** — adding patterns to the Phase 26.1 exception list
+- **Policy changes** — modifying Phase 26.2 OPA/Cedar policies
+- **Compliance attestation generation** — Phase 24 reports with `--attach`
+- **Custom action types** — extensible per-tenant via `cortex.acp.yaml`
+
+**Approval policy DSL** (`cortex.acp.yaml`):
+
+```yaml
+approval_policies:
+  - action_type: cross_partition_write
+    when:
+      target_partition: "shared"
+    requires: human_approval
+    approvers: ["@platform-team"]
+    timeout: 4h
+    on_timeout: deny
+    notification_channels: ["slack:#cortex-approvals", "mobile-push"]
+  
+  - action_type: cross_partition_write
+    when:
+      target_partition: "agents/security-librarian"
+    requires: agent_approval
+    approving_agent: "security-librarian"  # the partition owner agrees automatically
+    fallback_on_unavailable: human_approval
+    fallback_approvers: ["@security-team"]
+  
+  - action_type: federation_grant
+    when:
+      to_tenant: "*"  # any cross-tenant grant
+    requires: two_approvals
+    approvers: ["@security-team", "@cto"]
+    timeout: 24h
+    on_timeout: deny
+    notification_channels: ["slack:#security", "email:cto@acme.com"]
+  
+  - action_type: high_cost
+    when:
+      single_op_usd: ">50"
+    requires: human_approval
+    approvers: ["@team-lead", "@author"]   # author can self-approve
+    timeout: 1h
+    on_timeout: deny
+  
+  - action_type: tool_call
+    when:
+      tool_id: "shell.exec"
+    requires: human_approval
+    approvers: ["@author"]
+    timeout: 5m
+    on_timeout: deny
+  
+  - action_type: tool_call
+    when:
+      tool_id: "marketplace.jira_post_comment"
+    requires: human_approval
+    approvers: ["@author"]
+    timeout: 10m
+  
+  - action_type: compliance_attestation
+    requires: two_approvals
+    approvers: ["@compliance", "@cto"]
+    timeout: 48h
+    audit_classification: "regulatory_critical"
+```
+
+**Action lifecycle**:
+
+1. Agent prepares an action (e.g., `promote_to_shared(EntityRecord)`) and calls `requestApproval(action)` instead of executing.
+2. Substrate matches the action against approval policies; if no policy applies, action executes immediately.
+3. If policy applies, action is queued with status `pending_approval`. Phase 26 audit event emitted.
+4. Notification channels fire — Slack message with action summary + Approve/Deny buttons, mobile push to approver's Cortex PWA (Phase 33.2), email with action detail page link.
+5. Approver responds via:
+   - Slack/Teams button (Phase 28 integration)
+   - PWA approve/deny with biometric re-auth (Phase 33.2)
+   - CLI: `cortex acp approve <action-id> [--reason "..."]` / `cortex acp deny <action-id> --reason "..."`
+   - MCP tool: `acp_decide(action_id, decision, reason)` for IDE-driven approval
+6. On approval: action executes; Phase 26 audit logs approver + decision + timestamp + action outcome.
+7. On denial: action rejected; agent receives `ActionDeniedError` with reason; Phase 20.11 reflexion captures the denial for future learning.
+8. On timeout: configured policy decides (deny / escalate / proceed-with-warning).
+
+**Approval modes**:
+
+- **`human_approval`** — single human approver from approvers list
+- **`two_approvals`** — two different humans must approve (configurable: same-group OK or must-be-different-groups)
+- **`agent_approval`** — another agent decides (e.g., partition owner auto-approves writes to its own partition unless flagged)
+- **`quorum_N_of_M`** — N approvers from a list of M
+- **`policy_only`** — automated decision via Phase 26.2 OPA/Cedar policy without human in loop (for low-risk gated actions where deterministic rules suffice)
+
+**Approver routing**:
+
+- `@team-name` resolves via Phase 25 SSO groups
+- `@author` resolves to the human who triggered the agent action (synthesis author, sync author)
+- `@partition-owner` resolves to the owner of the affected partition
+- `@on-call` resolves to PagerDuty on-call rotation
+- Specific identities via `<email>` syntax
+
+**Bypass authority**:
+
+- `cortex acp bypass --action-type <type> --reason "..." --justified-by <ticket-id>` — emergency bypass for break-glass scenarios; requires admin role; audit-logged with high-severity flag; surfaces on Phase 31 executive dashboard for 30 days
+- Bypass authority itself can be policy-gated (meta-policies)
+
+### Architecture & System Design
+
+- **Core Components**: new `src/acp/gate.ts` (action interception + policy matching), `src/acp/policy.ts` (DSL parser, reuses Phase 26.2 policy engine when available), `src/acp/queue.ts` (pending-approval queue + timeout management), `src/acp/notification.ts` (channel routing, reuses Phase 33.2 channels), `src/cli/acp.ts`, integration in Phase 43 agent mesh runtime, integration in Phase 41 partition writer, integration in Phase 20.23 tool dispatcher.
+- **Design Pattern**: **Pre-execution gate with declarative policy**. Actions are first-class typed objects with metadata; gates are pure data; approvals are first-class audit events. Same pattern as Kubernetes admission controllers — policies are central, enforcement points are everywhere.
+- **Key Considerations**:
+  - **Approval-pending state must be persistent** — daemon crash during pending approval cannot lose the queue. Stored to disk with fsync (Phase 5.6 watchdog ensures the daemon recovers).
+  - **Timeout semantics matter** — explicit `on_timeout: deny|escalate|allow_with_warning` per policy; no implicit defaults.
+  - **Approval fatigue is real** — too many policies pause too many actions; mitigated by `policy_only` (automated) mode for low-risk, by Phase 31 dashboards showing approval throughput, and by per-policy "auto-approve same author within session" cache.
+  - **Approval can be requested by humans too** — not just agent actions. A human running `cortex compliance attestation` can be subject to the same gate as an agent would be.
+
+### Definition of Ready (DoR)
+
+- Phase 43 (agent mesh) shipped — primary action source.
+- Phase 41 (partitions) shipped — partition-write gating depends on it.
+- Phase 25 (SSO) + Phase 26 (audit) shipped — approver identity + audit.
+- Phase 33.2 notification channels shipped — alerts route through them.
+- Phase 28 Slack/Teams integration shipped (highly recommended; PWA-only approval works without).
+
+### Definition of Done (DoD)
+
+- 12 baseline action classes gateable.
+- `cortex.acp.yaml` policy DSL parses and validates.
+- 5 approval modes (human, two_approvals, agent_approval, quorum, policy_only).
+- 5 approver routing types (@team, @author, @partition-owner, @on-call, <email>).
+- Action queue persistent across daemon restarts (fsync writes).
+- Timeout handling per policy (deny / escalate / allow_with_warning).
+- Approval via Slack/Teams buttons, PWA biometric, CLI, MCP — all four channels.
+- Bypass authority with audit-logged high-severity flag.
+- Phase 26 audit on every action / approval / denial / bypass.
+- Phase 31 dashboard surfaces approval throughput, denial rate, top-pending actions.
+- Tests cover: policy matching per action class, queue persistence across simulated crash, timeout enforcement per mode, multi-channel approval round-trip, bypass audit emission, approver routing per type.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Makes the agent mesh safe to deploy in regulated environments.** Without runtime gates, the only safety mechanism is post-hoc audit (Phase 26) — bad actions are recorded but not prevented. With Phase 43.3, high-risk actions require explicit consent. Declarative policy means safety rules are auditable, versionable, and not hidden in code. Multi-channel approval respects how humans actually work (mobile for low-risk, Slack for routine, PWA biometric for destructive). Bypass authority handles real emergencies without breaking the audit trail. Complements Phase 23 (synthesis review) cleanly — Phase 23 gates outputs, Phase 43.3 gates actions, together they cover every risk surface.
+- ❌ **Cons**: Approval fatigue is the real risk — too many gated actions create friction. Mitigated by `policy_only` automated mode for low-risk, by per-author session auto-approve cache, and by Phase 31 dashboards flagging policies that fire too often (probably misconfigured). Pending-approval queue grows if humans ignore it; mitigated by clear timeout-on-deny defaults and by Phase 31 dashboard "stale approvals" widget. Bypass authority is a security risk; mitigated by audit + admin-role requirement + 30-day visibility on dashboard.
 
 ---
 
