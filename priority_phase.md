@@ -8,8 +8,8 @@
 
 If you have limited bandwidth, ship in this order. Each tier's revenue ceiling depends on the prior tiers being live:
 
-1. **T0 — Production-Critical** (P0 bug fixes): `33-MVP` → finish `6`
-2. **T1 — Free Tier** (drives adoption, $0 ARPU): `7` → `7.5` → `5.6` → `8` → `10`
+1. **T0 — Production-Critical** (P0 bug fixes): `33-MVP` *(✅ Phase 6 already complete)*
+2. **T1 — Free Tier** (drives adoption, $0 ARPU): ✅ `7` done → `7.5` → `5.6` → `8` → `10`
 3. **T2 — Indie Pro** ($10-50/mo): `9` → `13` → `14` → `33.1` → `33-Full` → `33.2`
 4. **T3 — Team/Startup** ($500/seat, 5-50 seats): `11` → `12` → `21` → `22` → `23` → `28` → `30`
 5. **T4 — Mid-Market** ($1500/seat, 50-500 seats): `25` → `26` → `26.1` → `26.3` → `29` → `31` → `32.1`
@@ -25,9 +25,9 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 6 | Phases 1, 2, 3, 4, 4.5, 5 |
-| 🚧 In Progress | 1 | Phase 6 (Active Guardrail) |
-| ⏳ Planned — Tier-Critical | ~22 | Customer-facing phases driving each tier upgrade |
+| ✅ Done | 8 | Phases 1, 2, 3, 4, 4.5, 5, **6, 7** (Phase 6/7 verified 2026-05-19, 39/39 tests passing) |
+| 🚧 In Progress | 0 | — |
+| ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~24 | Phases 13-20.24, drive differentiation |
 | ⏳ Planned — Enterprise | ~17 | Phases 22-32 family |
 | ⏳ Planned — Extended Vision | ~10 | Phases 40-45 family (Cortex+Nexus bundle) |
@@ -43,10 +43,10 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 **Phases (in order)**:
 
-| # | Phase | Why P0 | Effort |
-|---|---|---|---|
-| 1 | **Phase 33-MVP** (a stripped Deep Bootstrap) | Production bug: 1800-file project produced 4 entities. Adoption-blocker. | Medium (2-4 weeks) |
-| 2 | **Phase 6** — complete (Active Guardrail) | Already in progress. Foundation for every later guardrail/policy phase. | Small remaining |
+| # | Phase | Why P0 | Effort | Status |
+|---|---|---|---|---|
+| 1 | **Phase 33-MVP** (a stripped Deep Bootstrap) | Production bug: 1800-file project produced 4 entities. Adoption-blocker. | Medium (2-4 weeks) | ⏳ Planned |
+| 2 | **Phase 6** — complete (Active Guardrail) | Foundation for every later guardrail/policy phase. | Done | ✅ **Done 2026-05-19** |
 
 **Phase 33-MVP scope clarification**: Phase 33 in `implementation_plan.md` lists Phase 14, 20.9, 20.10, 13 as dependencies. The **MVP variant ships without these** by substituting:
 - Phase 14 clustering → **simple directory-bucket clustering** in Phase A
@@ -64,15 +64,17 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 
 **Phases (dependency-ordered)**:
 
-| Order | Phase | Why this tier | Unlocks |
-|---|---|---|---|
-| 1 | **Phase 7** — Audit & Traceability | Trust ground truth: users see what Cortex changed and why | Required by 7.5, 16, 18, 20.x, 26 |
-| 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 |
-| 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 |
-| 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 |
-| 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 |
+| Order | Phase | Why this tier | Unlocks | Status |
+|---|---|---|---|---|
+| 1 | **Phase 7** — Audit & Traceability | Trust ground truth: users see what Cortex changed and why | Required by 7.5, 16, 18, 20.x, 26 | ✅ **Done 2026-05-19** |
+| 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ⏳ Planned |
+| 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
+| 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ⏳ Planned |
+| 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ⏳ Planned |
 
 **Why this order**: 7 → 7.5 because quality scoring builds on audit. 5.6 in parallel (no deps). 8 → 10 because onboarding consumes the graph.
+
+**Phase 7 verified at 2026-05-19**: all DoD items met, 12 dedicated tests passing — `log.jsonl` dual-emit with embedded state snapshot, evidence redaction with 6 regex patterns, lint (cycle + orphan + silo + god_module + missing_source + contradiction_heavy), evolution replay with state snapshots, `--since` accepts ISO date OR git commit hash with graceful warning on unresolvable tokens. CLI commands and MCP tools (`log_query`, `audit_evidence`, `lint`, `evolution_entity`) all live.
 
 **Tier outcome**: a solo dev runs `cortex bootstrap`, sees a graph, gets a guided tour, trusts the audit log, and recommends Cortex on Reddit/HN. Acquisition cost = zero. **This tier is the moat for everything above.**
 
@@ -322,14 +324,17 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 
 ### Sprint 1 (Q1) — "Make Free Tier Actually Work" → unlocks T1
 
-- ✅ Phase 6 completion
+- ✅ **Phase 6 — COMPLETE (verified 2026-05-19, 25/25 Phase 6 tests passing)**
+- ✅ **Phase 7 — COMPLETE (verified 2026-05-19, 14/14 Phase 7 tests passing)**
 - Phase 33-MVP (stripped Deep Bootstrap)
-- Phase 7 + Phase 7.5
+- Phase 7.5 (Knowledge Quality Foundation — now unblocked)
 - Phase 5.6 (watchdog)
 - Phase 8 (visual graph)
 - Phase 10 (onboarding)
 
 **Outcome**: Free tier becomes genuinely useful. Adoption begins.
+
+**Sprint 1 progress: Phases 6 + 7 done (40% of sprint). Phase 7.5, 5.6, 8, 10, 33-MVP remaining (60%).**
 
 ### Sprint 2 (Q2) — "Indie Pro Launch" → unlocks T2
 
@@ -467,42 +472,42 @@ The foundation everything else builds on. No further work needed.
 - **Phase 4** — MCP Server · deps: 3
 - **Phase 4.5** — Dual-Route IDE Integration · deps: 4
 - **Phase 5** — CLI Polish & Daemonization · deps: 3, 4
+- **Phase 6** — Active Guardrail (Constraints + Blast-Radius + Failed Approaches + save_concept) · deps: 5 ✓ · ✅ **Done 2026-05-19**
+- **Phase 7** — Audit & Traceability (log.jsonl + evidence + lint + evolution + secret redaction) · deps: 6 ✓ · ✅ **Done 2026-05-19**
 
 ### Wave 1 — Start Immediately (only Wave 0 required)
 
 These can be picked up today; no planned phase needs to land first.
 
-- **Phase 6** — Active Guardrail · deps: 5 ✓ · 🚧 in progress
 - **Phase 5.6** — Daemon Watchdog & Self-Healing · deps: 5 ✓
 - **Phase 8** — Visual Knowledge Graph · deps: 3 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
 - **Phase 20.23** — Tool-Use Augmented Synthesis · deps: 2 ✓
 - **Phase 33-MVP** 🅼 — Stripped Deep Bootstrap · deps: 2 ✓ (full version waits for Wave 5-6)
+- **Phase 7.5** — Knowledge Quality Foundation · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
+- **Phase 9** — Refactoring Impact Preview · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
+- **Phase 16** — Contradiction-Aware Retrieval · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
+- **Phase 18** — Architectural Embeddings · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
+- **Phase 20** — Intelligent Architectural Advisor · deps: 6 ✓
+- **Phase 20.5** — ADR + C4 + Conway · deps: 8, 7 ✓ (still waiting on 8)
+- **Phase 20.7** — Mem0 Personalized Memory · deps: 4 ✓, 7 ✓
+- **Phase 20.12** — Temporal Knowledge Graph · deps: 7 ✓
+- **Phase 20.14** — Pearl Causal Analysis · deps: 6 ✓, 7 ✓
+- **Phase 20.19** — Knowledge Editing (ROME/MEMIT) · deps: 7 ✓
 
 ### Wave 2 — After Wave 1
 
-- **Phase 7** — Audit & Traceability · deps: 6
 - **Phase 5.7** — Scheduled Operations & Cron Engine · deps: 5.6 (full version needs 26 + 33.2)
 - **Phase 5.8** — Multi-Operator Session Coordination · deps: 5.6 (full version needs 25)
-- **Phase 12** — Git & CI Integration · deps: 6
-
-### Wave 3 — Quality, Cost, First Research Wave
-
-- **Phase 7.5** — Knowledge Quality Foundation · deps: 6, 7
-- **Phase 9** — Refactoring Impact Preview · deps: 6, 7
+- **Phase 12** — Git & CI Integration · deps: 6 ✓
 - **Phase 13** — Token Economics & Context Packs · deps: 8, 10
-- **Phase 16** — Contradiction-Aware Retrieval · deps: 6, 7
-- **Phase 18** — Architectural Embeddings · deps: 6, 7
-- **Phase 20** — Intelligent Architectural Advisor · deps: 6
-- **Phase 15** — CI Feedback Signal Loop · deps: 12, 7
-- **Phase 20.5** — ADR + C4 + Conway · deps: 8, 7
-- **Phase 20.7** — Mem0 Personalized Memory · deps: 4 ✓, 7
-- **Phase 20.12** — Temporal Knowledge Graph · deps: 7
-- **Phase 20.14** — Pearl Causal Analysis · deps: 6, 7
-- **Phase 20.19** — Knowledge Editing (ROME/MEMIT) · deps: 7
 - **Phase 20.6** — MemGPT Hierarchical Memory Tiering · deps: 4 ✓, 8, 10
-- **Phase 20.1** — Architecture Simulation · deps: 8, 6
+- **Phase 20.1** — Architecture Simulation · deps: 8, 6 ✓
+
+### Wave 3 — After 8, 10, 12 are also done (now slim — most of original Wave 3 promoted to Wave 1/2)
+
+- **Phase 15** — CI Feedback Signal Loop · deps: 12, 7 ✓
 
 ### Wave 4 — Mid-Tier Features & Second Research Wave
 
@@ -608,10 +613,10 @@ These can be picked up today; no planned phase needs to land first.
 
 | Wave | Phases ready | Cumulative count | Tier(s) unlocked |
 |---|---|---|---|
-| 0 | 6 (done) | 6 | — |
-| 1 | 7 new | 13 | T0 (via 33-MVP) starts T1 |
-| 2 | 4 new | 17 | continues T1 |
-| 3 | 14 new | 31 | T1 complete; T2 starts |
+| 0 | **8 (done — incl. 6 + 7 verified 2026-05-19)** | 8 | T0 partially achieved |
+| 1 | 15 new (most of original Wave 3 promoted here) | 23 | T0 (via 33-MVP) + most of T1 features |
+| 2 | 6 new | 29 | T1 complete; T2 starts |
+| 3 | 1 new | 30 | research feedback loop |
 | 4 | 9 new | 40 | T2 / research wave 1 |
 | 5 | 8 new | 48 | T3 base; research wave 2 |
 | 6 | 5 new | 53 | T3 features; 33-Full |
@@ -674,9 +679,13 @@ If you want to start a specific phase NOW and don't know what's blocking, find i
 | Want to build... | Walk back through... | Blocked by (planned, not-yet-done) |
 |---|---|---|
 | **Phase 33-MVP** | 2 ✓ | Nothing — ship now |
-| **Phase 26 (RBAC/Audit)** | 25 → 22 → 21 + 8 + 9 → 11, 7.5, 12, 9 → 6, 7 | 6 (in progress), 7, 7.5, 9, 11, 12, 21, 22, 25 — all of T1-T3 |
-| **Phase 33-Full** | 14, 20.9, 20.10, 13 → 6, 8, 10, 18 | 13, 14, 18, 20.9, 20.10 — Waves 3-5 |
-| **Pro Module 3 (Skill Marketplace)** | 20.13 → 20.3 → 18 → 6, 7 | 18, 20.3, 20.13 — Waves 3-5 |
+| **Phase 7.5** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
+| **Phase 9 (Impact Preview)** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
+| **Phase 16 (Contradictions)** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
+| **Phase 18 (Embeddings)** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
+| **Phase 26 (RBAC/Audit)** | 25 → 22 → 21 + 8 + 9 → 11, 7.5, 12, 9 → 6 ✓, 7 ✓ | 7.5, 9, 11, 12, 21, 22, 25 — T1-T3 (6 + 7 done) |
+| **Phase 33-Full** | 14, 20.9, 20.10, 13 → 6 ✓, 8, 10, 18 | 13, 14, 18, 20.9, 20.10 — Waves 2-5 (6 done) |
+| **Pro Module 3 (Skill Marketplace)** | 20.13 → 20.3 → 18 → 6 ✓, 7 ✓ | 18, 20.3, 20.13 — Waves 1-5 (6 + 7 done) |
 | **Phase 45 (Substrate Observability)** | 22, 26, 29 | 22, 25, 26, 29 — Waves 5-8 |
 | **Phase 43.4 (Sub-Spawning)** | 43.5 → 43.1 → 43 → 41 → 40 → 22, 25, 26 | All of T3-T5 + Wave 12-14 substrate phases |
 
@@ -704,6 +713,7 @@ These can be slotted into any sprint where bandwidth allows — useful when bloc
 - **Phase 11** (only needs Phase 3 ✓) — ship in Wave 1
 - **Phase 20.23** (only needs Phase 2 ✓) — ship in Wave 1
 - **Phase 33-MVP** (only needs Phase 2 ✓) — **P0, ship in Wave 1**
+- **Phase 7.5, 9, 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint**
 
 If your team has spare cycles waiting on a long-running phase, these are the safe parallel options.
 

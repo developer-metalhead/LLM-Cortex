@@ -734,7 +734,7 @@ Inspired by Nexus Phase 33.3 (Session Leadership & Concurrency Control). A leade
 
 ---
 
-## 🚧 Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — 🚧 In progress
+## ✅ Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — ✅ Done
 
 ### Phase 6 Execution Plan
 
@@ -871,7 +871,7 @@ Four related additions, all sharing one schema/migration:
 
 ---
 
-## 🔍 Phase 7: Audit & Traceability Tools — 🚧 In progress
+## ✅ Phase 7: Audit & Traceability Tools — ✅ Done
 
 ### Phase 7 Execution Plan
 
