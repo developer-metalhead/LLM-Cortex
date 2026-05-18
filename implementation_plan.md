@@ -15,8 +15,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
 | 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
-| 6     | Active Guardrail — Constraints & Blast-Radius Analysis | 🚧 In progress                       |
-| 7     | Audit & Traceability Tools                             | ⏳ Planned                           |
+| 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
+| 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 8     | Visual & Browseable Knowledge Graph                    | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ⏳ Planned                           |
@@ -75,6 +75,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
 | 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
 | 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
+| 32.2  | Supply Chain Security: SBOM & SLSA Provenance          | ⏳ Planned (enterprise)              |
 | 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
 | 33.1  | Model Provider Registry & Cost-Tier Routing            | ⏳ Planned (enterprise)              |
 | 33.2  | Remote Operations & Mobile Status PWA                  | ⏳ Planned (enterprise)              |
@@ -88,6 +89,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 43.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
 | 43.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
 | 43.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
+| 43.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
 | 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
 | 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
 
@@ -4620,6 +4622,175 @@ Three parallel marketplace integrations with shared metering pipeline (reuses Ph
 
 ---
 
+## 🔗 Phase 32.2: Supply Chain Security: SBOM & SLSA Provenance — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+When a CIO buys Cortex, their security team asks: *"Can you prove this Docker image we're about to deploy was actually built by Cortex's pipeline, hasn't been tampered with since, and lists every open-source library it includes — including transitive dependencies — in a machine-readable format?"* Without verifiable answers, regulated customers (federal agencies, banks, healthcare, defense contractors) cannot legally procure Cortex. Phase 32.2 is the supply chain hardening track: every release artifact (Docker image, npm package, binary) ships with **CycloneDX/SPDX SBOMs** (Software Bill of Materials), **SLSA Build Level 2 provenance attestations**, and **Cosign signatures published to Rekor** transparency log. This is what unlocks US Executive Order 14028 compliance, FedRAMP High, EU Cyber Resilience Act, and increasingly default corporate procurement requirements.
+
+**Technical Terms**
+Inspired by Nexus Phase 113. End-to-end supply chain integrity for every published Cortex artifact, conforming to OpenSSF / NIST / SLSA standards.
+
+### 1. Software Bill of Materials (SBOM)
+
+Every release artifact produces an SBOM in **both** standard formats:
+
+- **CycloneDX 1.6** (OWASP standard, broader ecosystem adoption) — `cortex-v<version>.sbom.cdx.json`
+- **SPDX 2.3** (Linux Foundation standard, NIST-preferred) — `cortex-v<version>.sbom.spdx.json`
+
+SBOM generation toolchain:
+- **`syft`** (Anchore) for npm + Docker image SBOMs — primary generator
+- **`trivy`** for cross-validation (different scanner, same output) — catches generator bugs
+- Both run in CI; SBOMs cross-compared; mismatch fails the release
+
+SBOM contents per artifact:
+- Every direct dependency with name, version, license, SHA-256
+- Every transitive dependency (full closure)
+- Known vulnerabilities at build time (CVE references via `grype` integration)
+- License compliance attestation (no GPL-3.0-only deps in commercial bundle, etc.)
+- Build environment fingerprint (Node version, OS, toolchain)
+
+Published to:
+- Trust Center (`cortex.com/trust/sbom`) — public, queryable, downloadable
+- Per-release GitHub release assets — alongside release notes
+- Phase 32 trust portal API — `GET /v1/trust/sbom?version=<v>` for automated procurement scanners
+
+### 2. SLSA Build Level 2+ Provenance
+
+Every release artifact ships with **SLSA in-toto provenance attestation** following [SLSA Build Track v1.0](https://slsa.dev/spec/v1.0/levels) at **Build Level 2 minimum, Build Level 3 target**.
+
+Provenance attestation contents (in-toto Statement format):
+```json
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "subject": [{ "name": "cortex:v1.4.2", "digest": { "sha256": "..." } }],
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://slsa.dev/github-actions/v1",
+      "externalParameters": {
+        "workflow": ".github/workflows/release.yml",
+        "ref": "refs/tags/v1.4.2"
+      },
+      "internalParameters": { "runId": "8421341", "runAttempt": "1" },
+      "resolvedDependencies": [
+        { "uri": "git+https://github.com/llm-cortex/cortex.git", "digest": { "sha1": "..." } }
+      ]
+    },
+    "runDetails": {
+      "builder": { "id": "https://github.com/actions/runner" },
+      "metadata": { "invocationId": "...", "startedOn": "...", "finishedOn": "..." }
+    }
+  }
+}
+```
+
+Provenance answers the four SLSA questions verifiably:
+1. **What** — exact source git commit (SHA-1)
+2. **Who** — GitHub Actions builder identity (cryptographically attested)
+3. **How** — exact workflow file + parameters
+4. **When** — start and finish timestamps within builder logs
+
+Build Level 2 achieved via:
+- All builds run in GitHub-hosted runners (no self-hosted; attestation forgery harder)
+- Build process scripted in version-controlled YAML (`.github/workflows/release.yml`)
+- Provenance generated by `slsa-github-generator` (official SLSA tooling)
+- Provenance signed by GitHub OIDC keyless signature
+
+Build Level 3 (target for FedRAMP Moderate+): isolated, ephemeral, reproducible builder. Requires moving to specialized SLSA-3 builder infrastructure (planned post-Phase-32 first listing).
+
+### 3. Cosign Signing + Rekor Transparency Log
+
+Every artifact signed with **Cosign** (Sigstore project):
+- **Docker images** (`cortex.azurecr.io/cortex:v1.4.2`, `ghcr.io/llm-cortex/cortex:v1.4.2`) signed via `cosign sign`
+- **npm packages** (`@llm-cortex/cli@1.4.2`) signed with attached signature manifest
+- **Standalone binaries** (Cortex CLI for macOS / Linux / Windows) signed with detached `.sig` files
+- **SBOM and provenance attestations** themselves signed and attached
+
+**Keyless signing** via GitHub OIDC — no long-lived private keys to compromise; signing identity is the GitHub Actions workflow itself, attested by Fulcio (Sigstore CA).
+
+Signatures published to **Rekor transparency log** (Sigstore's append-only Merkle log) — providing globally verifiable proof that the signature was created at a specific time by a specific identity. Any later modification is detectable because the modified artifact won't match the Rekor-logged signature.
+
+### 4. Customer-Side Verification
+
+Customers verify artifacts using standard tooling (no Cortex-specific software needed):
+
+```bash
+# Verify Docker image
+cosign verify ghcr.io/llm-cortex/cortex:v1.4.2 \
+  --certificate-identity-regexp 'https://github.com/llm-cortex/cortex/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Verify SLSA provenance
+slsa-verifier verify-image ghcr.io/llm-cortex/cortex:v1.4.2 \
+  --source-uri github.com/llm-cortex/cortex \
+  --source-tag v1.4.2
+
+# Verify SBOM
+cosign verify-attestation --type cyclonedx \
+  ghcr.io/llm-cortex/cortex:v1.4.2
+
+# Verify Rekor inclusion
+rekor-cli search --sha 256:<artifact-sha256>
+```
+
+Procurement teams' supply chain scanners (Snyk, Wiz, Aqua, Prisma, JFrog Xray) automatically consume the SBOM + provenance and flag any deviation from declared dependencies.
+
+### 5. Trust Portal Integration
+
+Phase 32 trust portal extended with supply chain section:
+- `cortex.com/trust/supply-chain` — overview page
+- `cortex.com/trust/sbom?version=<v>` — SBOM downloads (CycloneDX + SPDX) per release
+- `cortex.com/trust/provenance?version=<v>` — provenance attestation downloads
+- `cortex.com/trust/verification-guide` — step-by-step verification for security teams
+- Live dashboard showing latest release attestation status (signed ✓, SBOM published ✓, Rekor entry verified ✓)
+- Vulnerability disclosure: `GET /trust/vulnerabilities` lists known CVEs in current release with severity, patched-in-version, and CVSS scores
+
+### 6. Compliance Mapping
+
+Phase 32.2 directly maps to:
+
+- **US Executive Order 14028** (Improving Cybersecurity, May 2021) — Section 4 SBOM requirements for federal software procurement
+- **NIST SP 800-218** Secure Software Development Framework (SSDF) — PS.3.1, PS.3.2, PW.4.1 controls
+- **FedRAMP** Authorization Boundary — supply chain section satisfied by SLSA Build Level 2+
+- **EU Cyber Resilience Act** (CRA) — Article 13 vulnerability handling + Article 11 SBOM requirement
+- **CISA Secure Software Self-Attestation Form** — pre-filled answers shipped as procurement-pack template
+
+### Architecture & System Design
+
+- **Core Components**: extends release CI pipeline (`.github/workflows/release.yml`) with `syft`, `trivy`, `slsa-github-generator`, `cosign`, `rekor-cli`. New trust-portal pages and API endpoints under `src/server/trust/supply-chain.ts`. CI matrix runs SBOM + provenance + sign + Rekor-publish steps in parallel; release blocks on any step failure.
+- **Design Pattern**: **Build-time security artifacts as first-class release deliverables**. SBOMs, provenance, and signatures are not optional metadata — they are mandatory release outputs subject to the same versioning, archival, and retention as the binaries themselves.
+- **Key Considerations**:
+  - **Reproducibility matters** — Build Level 2 requires builds be reproducible from the source commit + recorded parameters. Hermetic builds via pinned Docker base images + locked dependency files (`package-lock.json` + Cargo.lock + go.sum).
+  - **Vulnerability disclosure cadence** — when a new CVE is published in a transitive dependency, customers expect notification within hours (CISA expectation: 72h). Automated CVE monitor in CI ties to Phase 33.2 notification channels.
+  - **Air-gapped customers** (Phase 27) need offline verification — bundled `cortex verify-bundle <path>` tool ships with all artifacts and verifies SBOM + provenance + signatures locally without network access.
+  - **No secrets in SBOM** — SBOM exposes dependency versions; Phase 26.1 DLP gates SBOM publication to ensure no internal package URLs (with embedded auth) leak.
+
+### Definition of Ready (DoR)
+
+- Phase 32 (procurement pack) shipped — supply chain is part of the procurement story.
+- Release CI pipeline exists in GitHub Actions.
+- Phase 27 (BYO-Key) shipped — encryption story aligns with supply chain story.
+
+### Definition of Done (DoD)
+
+- Every release publishes CycloneDX 1.6 + SPDX 2.3 SBOMs, cross-validated between `syft` and `trivy`.
+- Every release publishes SLSA Build Level 2 provenance attestation via `slsa-github-generator`.
+- Every artifact (Docker image, npm package, standalone binary, SBOM, provenance) signed via Cosign keyless signing; signatures published to Rekor.
+- Customer-side verification with `cosign`, `slsa-verifier`, `rekor-cli` works against all release artifacts.
+- Trust portal supply-chain section live with per-release SBOM + provenance downloads.
+- CVE monitor wired to Phase 33.2 notification channels with documented 72h disclosure SLA.
+- Pre-filled CISA Secure Software Self-Attestation Form shipped in procurement pack.
+- Air-gapped customers can run `cortex verify-bundle <path>` to verify SBOM + provenance + signatures locally.
+- Documented verification guide for security teams (`cortex.com/trust/verification-guide`).
+- Tests cover: SBOM generation produces valid CycloneDX + SPDX, generator cross-validation catches injected discrepancies, provenance attestation conforms to SLSA Build Level 2 schema, Cosign signature + Rekor publication round-trip, customer-side verification commands succeed on a released artifact, offline verification works without network.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Unlocks federal/regulated procurement that's otherwise impossible.** US Executive Order 14028 makes SBOM a hard requirement for federal software; without it Cortex cannot bid on federal contracts. EU Cyber Resilience Act (CRA) extends similar requirements across the European market starting 2027. SLSA Build Level 2+ provenance is increasingly demanded by Fortune 500 procurement scanners (Snyk, Wiz, Aqua, Prisma). Cosign + Rekor is the modern industry-standard signing infrastructure (Kubernetes, Helm, npm, PyPI all moving to it). Customer verification uses standard tooling — no Cortex-specific software needed. Trust portal integration creates auditable public record.
+- ❌ **Cons**: CI pipeline complexity grows — SBOM + provenance + signing + Rekor publish add 5-10 minutes to release time. Mitigated by parallel CI execution; failure-isolation per step. SLSA Build Level 3 (target) requires migration to hardened SLSA-3 builder infrastructure; significant operational work. Vulnerability disclosure 72h SLA is a permanent commitment; mitigated by automated CVE monitor + Phase 33.2 notification routing + dedicated security response runbook.
+
+---
+
 ## 🚀 Phase 33: Deep Recursive Bootstrap Ingest — ⏳ Planned (P0 — fixes production issue)
 
 > **Priority: P0.** This phase addresses a critical bootstrap quality issue observed in production on a real ~1800-file React/Redux/Keycloak codebase: the current bootstrap path produced only **4 entities** (AppEntry, AppRouter, ReduxStore, DesignSystem) and **3 concepts** (React Frontend Architecture, Redux State Pattern, Component-Driven UI), missing the entire `services/`, `hooks/`, redux slices, atomic components, utilities, and routing layers. The user had to manually re-prompt three times to extract any depth, and the result was still ~5 entities. Cortex's first-impression problem is severe and adoption-blocking on any non-trivial codebase. Phase 33 is the structural fix.
@@ -6966,6 +7137,253 @@ Every safety event (depth exceeded, rate throttled, deadlock detected, spawn ref
 
 - ✅ **Pros**: **Makes the agent mesh production-safe by construction** rather than by hope. Six explicit safety controls cover the six concrete failure modes the agent mesh creates — no hand-waving "we'll figure it out at scale." Declarative thresholds in YAML make safety policies auditable and tunable per workspace/tenant. Same observability surface (audit + dashboard + notifications) for all six controls — operators learn one mental model and apply it everywhere. Critical for any deployment of more than 2-3 specialist Librarians; absolutely required before Phase 100 (Durable Workflow Engine, in Pro Module 2) which spawns long-running multi-agent workflows.
 - ❌ **Cons**: Six controls with configurable thresholds creates a tuning surface — getting defaults wrong leads to either over-restrictive (legitimate work refused) or under-restrictive (safety not actually preventing bad behavior). Mitigated by shipping conservative defaults validated against the Phase 33 benchmark suite + per-environment override paths. Cycle detection adds a periodic background scan; trivial cost for mesh sizes <100 but bears watching as scale grows. Per-agent overrides add config complexity; mitigated by clear defaults that work for 90% of cases.
+
+---
+
+### Phase 43.6: Bidirectional Librarian↔IDE Native Format Sync — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 43.2 (`cortex-librarian-v1`) defines portable Librarian personas. But developers also already use IDE-native agent conventions every day: Claude Code reads `.claude/commands/*.md`, Cursor reads `.cursor/rules/*.md`, Windsurf reads `.windsurfrules`, GitHub Copilot reads `.github/copilot-instructions.md`. Today these two worlds don't talk. Phase 43.6 makes them bidirectional: **import** existing IDE agent rules as Cortex Librarians (so years of carefully-tuned `.cursor/rules/` aren't lost when adopting Cortex), and **export** Cortex Librarians back to IDE-native formats (so a Librarian created in Cortex is immediately invokable as `/security-librarian` in your Claude Code chat). Cortex becomes the canonical source of truth; IDE files are derived outputs that stay automatically in sync. This is the adoption-velocity feature — meets developers where they already are.
+
+**Technical Terms**
+Inspired by Nexus 49.1 (Agent Discovery Protocol) + 49.2 (Agent Sync Engine), combined into one bidirectional sync subsystem with conflict resolution.
+
+### Two-direction sync pipeline
+
+**INBOUND — IDE convention → Cortex Librarian**:
+
+For each registered IDE convention, an `IDELibrarianScanner` runs on demand or on file-system change:
+
+```typescript
+class IDELibrarianScanner {
+  ideId: "claude-code" | "cursor" | "windsurf" | "copilot" | "antigravity" | ...;
+  scan(): Promise<Partial<CortexLibrarianV1>[]>;
+  parser: "yaml-frontmatter" | "heading-role" | "section-headings" | "monolithic";
+  pathPattern: string;
+  fileGlob: string;
+}
+```
+
+Per-IDE scanner config (in `src/librarians/ide-scanners/<ide>.yaml`):
+
+```yaml
+# claude-code.yaml
+ide_id: claude-code
+strategy: directory-scan
+path: ".claude/commands/"
+file_glob: "*.md"
+parser: heading-role
+fields:
+  slug_from: filename
+  display_name_from: "first H1 (# Role: ...) or first H1"
+  system_prompt_from: full_content_after_first_heading
+  capabilities_from: yaml_frontmatter.capabilities  # optional
+```
+
+```yaml
+# cursor.yaml
+ide_id: cursor
+strategy: directory-scan
+path: ".cursor/rules/"
+file_glob: "*.{md,mdc}"
+parser: heading-role
+fields:
+  slug_from: filename
+  display_name_from: "first H1"
+  system_prompt_from: full_content
+```
+
+```yaml
+# windsurf.yaml
+ide_id: windsurf
+strategy: single-file
+path: ".windsurfrules"
+parser: section-headings   # ## SectionName → one librarian per section
+fields:
+  slug_from: heading_text
+  display_name_from: heading_text
+  system_prompt_from: section_body
+```
+
+```yaml
+# copilot.yaml
+ide_id: copilot
+strategy: single-file
+path: ".github/copilot-instructions.md"
+parser: monolithic        # entire file = one librarian
+fields:
+  slug: copilot-default
+  display_name: "GitHub Copilot Instructions"
+  system_prompt_from: full_content
+```
+
+Parser library (per `parser` type):
+- **`yaml-frontmatter`** — extract YAML block between `---` delimiters; map known keys to `cortex-librarian-v1` schema
+- **`heading-role`** — first `# Role: X` heading → `displayName`; filename stem → `slug`; remainder → `systemPrompt`
+- **`section-headings`** — split on `## <heading>` boundaries; each section becomes a separate Librarian
+- **`monolithic`** — single file = single Librarian
+
+Import command: `cortex librarian import --from ide:<id> [--dry-run]`. Dry-run shows what would be imported (slug, displayName, source path, prompt preview) before commit. On commit, imported Librarians are written to `.knowledge/librarians/<slug>.cortex-librarian.yaml` (Phase 43.2 canonical format) with `provenance.importedFrom: { ide, path, importedAt }` annotation.
+
+**OUTBOUND — Cortex Librarian → IDE convention**:
+
+For each registered IDE convention, an `IDELibrarianExporter` writes the IDE-native file format:
+
+```typescript
+class IDELibrarianExporter {
+  ideId: string;
+  export(librarian: CortexLibrarianV1): string;  // pure function
+  targetPath(librarian: CortexLibrarianV1): string;  // where to write
+}
+```
+
+Per-IDE exporter (in `src/librarians/ide-exporters/<ide>.ts`):
+
+```typescript
+// claude-code.ts
+export const claudeCodeExporter: IDELibrarianExporter = {
+  ideId: "claude-code",
+  export: (lib) => `# Role: ${lib.displayName}\n\n${lib.prompts.system}`,
+  targetPath: (lib) => `.claude/commands/${lib.id}.md`,
+};
+
+// cursor.ts
+export const cursorExporter: IDELibrarianExporter = {
+  ideId: "cursor",
+  export: (lib) => `---
+description: ${lib.specialization?.domain ?? "general"}
+globs: ${JSON.stringify(lib.specialization?.activation?.file_patterns ?? ["**/*"])}
+---
+
+# ${lib.displayName}
+
+${lib.prompts.system}`,
+  targetPath: (lib) => `.cursor/rules/${lib.id}.mdc`,
+};
+
+// windsurf.ts (single-file, multi-section)
+export const windsurfExporter: IDELibrarianExporter = {
+  ideId: "windsurf",
+  export: (lib) => `## ${lib.displayName}\n\n${lib.prompts.system}`,  // appended to .windsurfrules
+  targetPath: () => ".windsurfrules",
+  appendMode: true,  // exporter merges with existing sections
+};
+```
+
+Export command: `cortex librarian export <librarian-id> --to ide:<id>` writes a single Librarian to one IDE's native format. `cortex librarian export <librarian-id> --to all` writes to every registered IDE.
+
+### Continuous bidirectional sync
+
+`cortex librarian sync` activates a persistent watcher that keeps Cortex Librarians and IDE-native files synchronized:
+
+1. **File system watcher** (`chokidar`) on all registered IDE paths AND on `.knowledge/librarians/`
+2. On change in IDE path → re-scan affected file → diff against current Librarian → if non-trivial change, prompt user (or auto-import in `--auto` mode)
+3. On change in `.knowledge/librarians/` → export to all enabled IDE targets (per Librarian's `sync_targets` config)
+4. Debounced at 500ms to handle rapid file saves
+5. Sync events logged to Phase 26 audit (`librarian.sync.imported`, `librarian.sync.exported`)
+
+### Conflict resolution
+
+When the same Librarian is modified concurrently on both sides (rare but possible — user edits `.claude/commands/security-librarian.md` directly while another developer updates the canonical Librarian via `cortex librarian edit`):
+
+- **Detection**: Cortex tracks `lastSyncedHash` per (librarian, IDE) pair. Conflict if both sides changed since last sync.
+- **Resolution policies** (configurable per Librarian or workspace-wide):
+  - **`canonical-wins`** (default) — Cortex Librarian is the source of truth; IDE side overwritten with warning logged
+  - **`ide-wins`** — IDE side takes precedence; canonical updated to match
+  - **`prompt`** — surface in Phase 33.2 PWA / dashboard; user chooses which side wins or merges manually
+  - **`block`** — sync halts for this Librarian; user must resolve via `cortex librarian resolve-conflict <id>`
+- All conflict events emit Phase 26 audit with both diffs preserved
+
+### Per-Librarian sync configuration
+
+Phase 43.2 `cortex-librarian-v1` schema extended with optional `sync_targets` block:
+
+```yaml
+sync_targets:
+  enabled: true
+  ides:
+    - id: claude-code
+      enabled: true
+      conflict_policy: canonical-wins
+    - id: cursor
+      enabled: true
+      conflict_policy: prompt
+    - id: windsurf
+      enabled: false  # this Librarian not synced to Windsurf
+  on_create: auto_export        # automatically export when a new Librarian is created
+  on_update: auto_export        # propagate updates
+  on_delete: prompt             # confirm before removing IDE files
+```
+
+### Adoption migration command
+
+`cortex librarian adopt` runs a one-time guided migration:
+
+1. Scans all enabled IDE conventions in the workspace
+2. Presents found agent definitions grouped by IDE
+3. User selects which to import (multi-select with diffs shown)
+4. Imported as Cortex Librarians with `provenance.importedFrom` annotation
+5. Optional: enable continuous sync for imported Librarians
+
+Example session:
+```
+$ cortex librarian adopt
+🔍 Scanning IDE conventions...
+
+Found 8 agent definitions:
+
+  .claude/commands/
+    [x] security-reviewer.md      (147 lines) — "# Role: Security code reviewer"
+    [x] test-author.md            (89 lines)  — "# Role: Test author"
+
+  .cursor/rules/
+    [x] react-conventions.mdc     (203 lines) — "# React Conventions"
+    [ ] generic-helper.mdc        (12 lines)  — boilerplate, skip
+
+  .windsurfrules (4 sections)
+    [x] ## Backend Standards
+    [x] ## API Contracts
+    [ ] ## Frontend Conventions  — duplicate of cursor/react-conventions, skip
+    [ ] ## Internal Use Only     — confidential, skip
+
+Selected: 5 to import as Cortex Librarians.
+Enable continuous bidirectional sync for imported Librarians? [Y/n]
+```
+
+### Architecture & System Design
+
+- **Core Components**: new `src/librarians/scanner.ts` (per-IDE scanners), `src/librarians/exporter.ts` (per-IDE exporters), `src/librarians/sync.ts` (continuous watcher + conflict resolver), `src/librarians/parsers/<type>.ts` (parser library: yaml-frontmatter, heading-role, section-headings, monolithic), `src/cli/librarian.ts` extended with `import`/`export`/`sync`/`adopt`/`resolve-conflict` subcommands. Per-IDE config in `src/librarians/ide-scanners/*.yaml` + `src/librarians/ide-exporters/*.ts`.
+- **Design Pattern**: **Source-of-truth canonical schema (Phase 43.2) with derived outputs in IDE-native formats**. Same pattern as Phase 43.2.1 IDE-Native Format Sync described in the original 43.2 phase, now implemented as a dedicated sub-phase. Per-IDE adapters are pure data + pure functions — adding a new IDE is a YAML scanner config + a TypeScript exporter function, no core code changes.
+- **Key Considerations**:
+  - **Don't pollute the IDE-native files** with Cortex-specific metadata that would confuse the IDE — exported files are valid in the target IDE's native format with no Cortex magic strings.
+  - **Round-trip stability** — `import` followed by immediate `export` should produce a file byte-identical to the original (or with documented small differences like normalized line endings). Verified in tests.
+  - **Performance** — sync watcher is single-process; file change events are debounced; on-disk diffs computed only when needed. No measurable overhead on developer save events.
+  - **Privacy** — imported Librarians may contain proprietary prompts; the import process is local-only by default. Phase 26.1 DLP can be opted in to scan imported prompts for PII / secrets before they're stored.
+
+### Definition of Ready (DoR)
+
+- Phase 43.2 (Universal Librarian Definition Schema) shipped — canonical format target.
+- Phase 26 (audit) shipped — sync events anchor here.
+- Phase 33.2 (PWA) recommended for conflict resolution UX (works in CLI too).
+
+### Definition of Done (DoD)
+
+- 5 baseline IDE scanners (Claude Code, Cursor, Windsurf, Copilot, Antigravity) with parser library.
+- 5 baseline IDE exporters with documented format conformance.
+- `cortex librarian import --from ide:<id>` works for all 5 IDEs with `--dry-run` preview.
+- `cortex librarian export <id> --to ide:<id>` and `--to all` write IDE-native files.
+- `cortex librarian sync` continuous watcher with debouncing + conflict detection.
+- 4 conflict resolution policies (canonical-wins, ide-wins, prompt, block) configurable per Librarian or workspace-wide.
+- `cortex librarian adopt` guided migration command with multi-select + diff preview.
+- `provenance.importedFrom` annotation preserved on imported Librarians.
+- Phase 26 audit events emitted for every import / export / sync / conflict.
+- Phase 33.2 PWA conflict resolution UI for `prompt` policy.
+- Tests cover: each parser type's correctness on fixture files, each exporter's output format conformance, round-trip stability (import → export = original), conflict detection on simulated concurrent edits, each resolution policy's behavior, debouncing under rapid file changes, adopt command on a synthetic multi-IDE workspace.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Adoption-velocity unlock.** Developers don't have to choose between Cortex Librarians and their existing IDE agent investments — they get both via automatic sync. The "import existing rules → continuous sync" path means a team can adopt Cortex without throwing away years of carefully-tuned `.cursor/rules/` or `.claude/commands/`. Cortex becomes a superset rather than a replacement. The export direction means Librarians authored in Cortex are immediately first-class citizens in IDE chats — `/security-librarian` works in Claude Code with zero extra config. Per-IDE adapters are pure-data + pure-function — community can contribute new IDE adapters as YAML + small TypeScript without touching core code.
+- ❌ **Cons**: 5 IDE conventions × bidirectional = 10 round-trip paths to maintain as IDE conventions evolve. Mitigated by isolating per-IDE knowledge in scanner config + exporter function, and by round-trip stability tests catching regressions. Conflict resolution surfaces real UX complexity for users editing both sides concurrently; mitigated by sensible default (`canonical-wins`) and explicit guidance to use Cortex as source of truth once sync is enabled. IDE conventions can carry implicit semantics that don't map cleanly to `cortex-librarian-v1` (e.g., Cursor's MDC frontmatter `globs` field affects activation in ways Cortex's `activation.file_patterns` covers but doesn't perfectly mirror); documented field-mapping limits and best-effort conversion.
 
 ---
 
