@@ -64,7 +64,7 @@ const SECRET_PATTERNS: RegExp[] = [
   // JWT triplet (3 base64url segments separated by '.')
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
   // Common provider prefixes (OpenAI, GitHub, Slack, AWS, Stripe)
-  /\b(sk|pk|rk|xoxb|xoxp|xoxa|ghp|gho|ghs|github_pat|AKIA|ASIA|AIza)[_-]?[A-Za-z0-9]{16,}\b/g,
+  /\b(sk|pk|rk|xoxb|xoxp|xoxa|ghp|gho|ghs|github_pat|AKIA|ASIA|AIza)[_-]?[A-Za-z0-9_]{16,}\b/g,
   // PEM headers
   /-----BEGIN (?:RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY-----[\s\S]*?-----END [^-]+-----/g,
 ];
@@ -73,9 +73,11 @@ export function redactSecrets(content: string): { redacted: string; didRedact: b
   let out = content;
   let didRedact = false;
   for (const re of SECRET_PATTERNS) {
-    if (re.test(out)) {
+    re.lastIndex = 0;
+    const next = out.replace(re, "// [redacted by Cortex]");
+    if (next !== out) {
       didRedact = true;
-      out = out.replace(re, "// [redacted by Cortex]");
+      out = next;
     }
   }
   return { redacted: out, didRedact };
@@ -367,9 +369,17 @@ export class KnowledgeManager {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
-    // Evidence validation & redaction
+    // Description & Evidence validation & redaction
     for (const entity of synthesis.entities) {
-      if (entity.action === "delete" || !entity.evidence) continue;
+      if (entity.action === "delete") continue;
+
+      const { redacted: descRedacted, didRedact: descDidRedact } = redactSecrets(entity.description);
+      if (descDidRedact) {
+        entity.description = descRedacted;
+        synthesis.warnings.push(`Secret redacted from description in entity '${entity.name}'`);
+      }
+
+      if (!entity.evidence) continue;
 
       if (entity.evidence.length > 2) {
         throw new Error(`Evidence Limit Exceeded: Entity '${entity.name}' has more than 2 evidence entries.`);
@@ -536,6 +546,11 @@ export class KnowledgeManager {
     }
 
     for (const concept of synthesis.concepts) {
+      const { redacted: descRedacted, didRedact: descDidRedact } = redactSecrets(concept.description);
+      if (descDidRedact) {
+        concept.description = descRedacted;
+        synthesis.warnings.push(`Secret redacted from description in concept '${concept.name}'`);
+      }
       const existing = state.concepts[concept.name];
       state.concepts[concept.name] = {
         description: concept.description,
@@ -643,6 +658,13 @@ export class KnowledgeManager {
     const timestamp = new Date().toISOString();
     const state = await this.readState();
 
+    const { redacted: descRedacted, didRedact: descDidRedact } = redactSecrets(concept.description);
+    const warnings: string[] = [];
+    if (descDidRedact) {
+      concept.description = descRedacted;
+      warnings.push(`Secret redacted from description in concept '${concept.name}'`);
+    }
+
     const existing = state.concepts[concept.name];
     state.concepts[concept.name] = {
       description: concept.description,
@@ -672,7 +694,7 @@ export class KnowledgeManager {
     await this.updateIndex();
 
     const logPath = path.join(this.knowledgeDir, "log.md");
-    const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** None\n---\n`;
+    const logEntry = `\n## [${timestamp}]\n**Summary:** Saved concept '${concept.name}' directly.\n**Impacted:** [[${concept.name}]]\n**Warnings:** ${warnings.join("; ") || "None"}\n---\n`;
     await fs.appendFile(logPath, logEntry);
 
     const logJsonlPath = path.join(this.knowledgeDir, "log.jsonl");
@@ -681,7 +703,7 @@ export class KnowledgeManager {
       summary: `Saved concept '${concept.name}' directly.`,
       entities: [],
       concepts: [concept.name],
-      warnings: [],
+      warnings,
       state: { entities: state.entities, concepts: state.concepts },
     };
     await fs.appendFile(logJsonlPath, JSON.stringify(jsonlEntry) + "\n", "utf8");

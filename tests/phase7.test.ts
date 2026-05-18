@@ -75,6 +75,44 @@ test("Phase 7: KnowledgeManager evidence rules and secret redaction", async () =
   assert.ok(entry.state.entities["SecretEv"], "snapshot should include just-saved entity");
 });
 
+test("Phase 7: Description secret redaction on entity and concept", async () => {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cortex-phase7-desc-redact-"));
+  const km = new KnowledgeManager(tmpDir);
+  await km.init();
+
+  const synthesis = {
+    summary: "Test description redaction",
+    entities: [
+      {
+        name: "SecretDescEntity",
+        action: "create" as const,
+        description: "This is a secret key: sk_test_51NzHomelyHubSecretKey999xyz inline.",
+        relationships: [],
+      },
+    ],
+    concepts: [
+      {
+        name: "SecretDescConcept",
+        description: "Concept containing Stripe key: sk_test_5NzHomelyHubSecretKey999xyz in text.",
+      },
+    ],
+    warnings: [] as string[],
+  };
+
+  await km.saveSynthesis(synthesis);
+  const state = JSON.parse(await fs.readFile(path.join(tmpDir, ".knowledge", "state.json"), "utf8"));
+  
+  const savedEntity = state.entities["SecretDescEntity"];
+  assert.match(savedEntity.description, /redacted by Cortex/);
+  assert.doesNotMatch(savedEntity.description, /sk_test_51NzHomelyHubSecretKey999xyz/);
+
+  const savedConcept = state.concepts["SecretDescConcept"];
+  assert.match(savedConcept.description, /redacted by Cortex/);
+  assert.doesNotMatch(savedConcept.description, /sk_test_5NzHomelyHubSecretKey999xyz/);
+
+  assert.ok(synthesis.warnings.length > 0, "should push warnings for redacted description");
+});
+
 test("Phase 7: Stronger secret redaction patterns", async () => {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cortex-phase7-secret-"));
   const km = new KnowledgeManager(tmpDir);
