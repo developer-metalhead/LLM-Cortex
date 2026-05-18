@@ -3,6 +3,8 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { Synthesis, SaveConcept, Relationship, FailedApproach, Constraints, Evidence } from "../llm/schema.js";
+import { computeQuality, formatScore, readQualityGate, QualityBreakdown } from "./quality.js";
+import { OrgConstraintEvaluator, throwOnErrors } from "./org-constraints.js";
 
 const execAsync = promisify(exec);
 
@@ -25,6 +27,10 @@ type EntityRecord = {
   evidence?: Evidence[];
   lastRefined: string;
   staleSince?: string;
+  // Phase 7.5 — human-review facts (set by `cortex review accept`, used by
+  // quality scoring). Optional; absence is treated as "not yet reviewed."
+  human_reviewed?: boolean;
+  reviewed_by?: string;
 };
 
 type ConceptRecord = {
@@ -429,6 +435,12 @@ export class KnowledgeManager {
         evidence: entity.evidence ?? existing?.evidence,
         lastRefined: timestamp,
         staleSince: existing?.staleSince, // recomputed below
+        // Phase 7.5 — human-review facts are NEVER re-emitted by the Librarian
+        // synthesis (those calls don't know about review state). Preserve them
+        // verbatim from the prior record so a re-synthesis doesn't silently
+        // wipe out a previous human sign-off.
+        human_reviewed: existing?.human_reviewed,
+        reviewed_by: existing?.reviewed_by,
       };
     }
 
@@ -455,6 +467,24 @@ export class KnowledgeManager {
         if (targetEntity?.constraints?.mustNotBeCalledBy?.includes(entity.name)) {
           throw new Error(`Constraint Violation: Entity '${rel.target}' must not be called by '${entity.name}'.`);
         }
+      }
+    }
+
+    // Phase 7.5 — Org-wide constraint validation. Runs AFTER per-entity Phase 6
+    // checks against the merged state so in-batch additions are visible. Errors
+    // throw with the "Org Constraint Violation:" prefix (parallel to Phase 6's
+    // "Constraint Violation:") so the MCP server can surface a clear message.
+    // Warnings are forwarded to synthesis.warnings so the rendered log entry
+    // records them without blocking the save.
+    const orgEvaluator = OrgConstraintEvaluator.load(this.projectRoot);
+    if (orgEvaluator) {
+      const violations = orgEvaluator.evaluateAll(mergedEntities);
+      const { errors, warnings } = orgEvaluator.splitBySeverity(violations);
+      throwOnErrors(errors);
+      for (const w of warnings) {
+        synthesis.warnings.push(
+          `[${w.constraintId}] ${w.entity}: ${w.reason}`,
+        );
       }
     }
 
@@ -579,7 +609,21 @@ export class KnowledgeManager {
     }
 
     const body = isLayeredDescription(record.description) ? record.description.trim() : `> ${record.description}`;
-    const content = `# Entity: ${name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}${evidenceLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    // Phase 7.5 — surface the quality breakdown + human review status at the
+    // bottom of the page so anyone reading the drill-down sees exactly why
+    // the score is what it is.
+    const breakdown = computeQuality(record);
+    const reviewLine = record.human_reviewed
+      ? `*Human Reviewed: ✅ by ${record.reviewed_by ?? "human"}*\n`
+      : "";
+    const qualityLine =
+      `*Quality: ${formatScore(breakdown.score)}* ` +
+      `(evidence ${formatScore(breakdown.evidenceFreshness)} · ` +
+      `contradictions ${formatScore(breakdown.contradiction)} · ` +
+      `staleness ${formatScore(breakdown.staleness)} · ` +
+      `age ${formatScore(breakdown.age)} · ` +
+      `human-review ${formatScore(breakdown.humanReview)})\n`;
+    const content = `# Entity: ${name}\n\n${sourceLine}${staleLine}\n${body}\n\n### Relationships\n${relsLine}\n${constraintsLine}${failedApproachesLine}${evidenceLine}\n---\n*Last Refined: ${record.lastRefined}*\n${reviewLine}${qualityLine}`;
     await fs.writeFile(entityPath, content);
   }
 
@@ -676,8 +720,12 @@ export class KnowledgeManager {
           ? `\n_Relationships:_ ${e.relationships.map((r) => `[[${r.target}]]`).join(", ")}`
           : "";
         const stale = e.staleSince ? ` **[STALE]**` : "";
+        // Phase 7.5 quality badge — derived, never persisted. Same call site
+        // for every entity so the formula stays consistent with audit + MCP.
+        const breakdown = computeQuality(e);
+        const quality = ` ▸ quality: ${formatScore(breakdown.score)}`;
         const indexSummary = extractRoleSection(e.description);
-        content += `### [[${name}]]${source}${stale}\n${indexSummary}${rels}\n\n`;
+        content += `### [[${name}]]${source}${quality}${stale}\n${indexSummary}${rels}\n\n`;
       }
     }
 
@@ -686,6 +734,60 @@ export class KnowledgeManager {
   async getStaleCount(): Promise<number> {
     const state = await this.readState();
     return Object.values(state.entities).filter(e => !!e.staleSince).length;
+  }
+
+  // Phase 7.5 — count of entities whose quality score is below the configured
+  // gate (CORTEX_QUALITY_GATE, default 0.5). Surfaced in cortex status and the
+  // MCP get_cortex_status response.
+  async getLowQualityCount(threshold?: number): Promise<number> {
+    const state = await this.readState();
+    const gate = threshold ?? readQualityGate();
+    let count = 0;
+    for (const e of Object.values(state.entities)) {
+      if (computeQuality(e).score < gate) count++;
+    }
+    return count;
+  }
+
+  // Phase 7.5 — full quality breakdown for one entity, used by the
+  // get_entity_quality MCP tool and the cortex audit quality CLI.
+  async getEntityQuality(name: string): Promise<QualityBreakdown | null> {
+    const state = await this.readState();
+    const entity = state.entities[name];
+    if (!entity) return null;
+    return computeQuality(entity);
+  }
+
+  // Phase 7.5 — list every entity with its quality breakdown, sorted by score
+  // ascending. Used by cortex audit quality to surface the bottom decile.
+  async listEntityQuality(): Promise<Array<{ name: string; sourceFile?: string; breakdown: QualityBreakdown }>> {
+    const state = await this.readState();
+    const rows = Object.entries(state.entities).map(([name, e]) => ({
+      name,
+      sourceFile: e.sourceFile,
+      breakdown: computeQuality(e),
+    }));
+    rows.sort((a, b) => a.breakdown.score - b.breakdown.score);
+    return rows;
+  }
+
+  // Phase 7.5 — set or clear human-review facts on an entity. Used by
+  // `cortex review accept/reject`. Re-renders the entity .md + index so the
+  // quality badge reflects the new state immediately.
+  async setHumanReview(
+    name: string,
+    accepted: boolean,
+    reviewer?: string,
+  ): Promise<{ ok: boolean; reason?: string }> {
+    const state = await this.readState();
+    const entity = state.entities[name];
+    if (!entity) return { ok: false, reason: `Entity '${name}' not found.` };
+    entity.human_reviewed = accepted;
+    entity.reviewed_by = accepted ? (reviewer ?? "human") : undefined;
+    await this.writeState(state);
+    await this.renderEntityFile(name, entity);
+    await this.updateIndex();
+    return { ok: true };
   }
 
   async getStaleEntities(): Promise<Array<{ name: string; staleSince: string; sourceFile?: string }>> {

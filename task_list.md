@@ -4,7 +4,7 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## ✅ Done — Phases 1–7 (verified against source + 39/39 tests passing)
+## ✅ Done — Phases 1–7.5 (verified against source + 81/81 tests passing)
 
 ### Phase 1 — Ingestion & Monitoring Foundation
 - [x] `src/core/watcher.ts` — chokidar with 3s debounce, `.gitignore` via `ignore` package, hard-coded ignores (`.git`, `.knowledge`, `node_modules`, `dist`)
@@ -118,6 +118,64 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] `evidenceDriftCount` surfaces in `cortex status` ([src/cli/status.ts:49-54, 74](src/cli/status.ts#L49-L54))
 - [x] New source files: `src/knowledge/audit.ts`, `src/knowledge/lint.ts`, `src/knowledge/evolution.ts`, `src/cli/log.ts`, `src/cli/lint.ts`, `src/cli/evolution.ts` — all present and wired into `src/cli/index.ts`
 - [x] **Tests (12 passing)** in `tests/phase7.test.ts`: evidence rules + secret redaction, expanded redaction patterns (Bearer, AWS env-style, JWT triplets), cycle deduplication on synthetic A→B→A graph, orphan check honors non-usage edges, silo detection on 3-component equal-size graph, god_module threshold respects env var, JSONL backfill from legacy `log.md`, queryLog corrupt-line resilience, `--warningsOnly` filter, `--since` ISO date filter, `--since` invalid-token graceful warning (no silent pass), evidence drift tolerance (small edits pass; large changes flagged; source-missing detected), evolution replay reconstructs index from state snapshot
+
+---
+
+## ✅ Phase 7.5 — Knowledge Quality & Enterprise Governance Foundation (verified 2026-05-19, all DoD met, 42 tests passing)
+
+- [x] **`computeQuality()` pure function** in [src/knowledge/quality.ts](src/knowledge/quality.ts) — 5-dimensional `(score, evidenceFreshness, contradiction, staleness, age, humanReview)` deterministic computation; no I/O, no LLM calls
+- [x] **Per-dimension formulas** matching the spec: staleSince → 0.0; human_reviewed → 1.0 vs 0.7 default; contradiction decays 0.2 per open count; evidence source-missing → 0.0; evidence drift × 0.5 penalty
+- [x] **Age decay curve** — 1.0 ≤30 days, linear decay to 0.3 at 180 days; configurable via `CORTEX_QUALITY_AGE_DECAY_DAYS` ([src/knowledge/quality.ts:48-69](src/knowledge/quality.ts#L48-L69))
+- [x] **`updateIndex()` renders quality badge** per entity — `### [[X]] — \`src/x.ts\` ▸ quality: 94%` ([src/knowledge/writer.ts:709-717](src/knowledge/writer.ts#L709-L717))
+- [x] **Entity drill-down page footer** shows full breakdown — `*Quality: 94% (evidence 100% · contradictions 100% · staleness 100% · age 100% · human-review 70%)*` ([src/knowledge/writer.ts:614-628](src/knowledge/writer.ts#L614-L628))
+- [x] **`human_reviewed` + `reviewed_by` fields** added to `EntityRecord`, persisted in `state.json` ([src/knowledge/writer.ts:30-36](src/knowledge/writer.ts#L30-L36))
+- [x] **Merge logic preserves human review** across re-synthesis ([src/knowledge/writer.ts:441-446](src/knowledge/writer.ts#L441-L446)) — Librarian never sees those fields, so always pulled forward from prior record
+- [x] **`cortex review accept <entity> [--reviewer <name>]`** + **`cortex review reject <entity>`** CLI in [src/cli/review.ts](src/cli/review.ts), wired in [src/cli/index.ts:182-198](src/cli/index.ts#L182-L198)
+- [x] **`cortex audit quality`** CLI: lists every entity by score asc, flags bottom decile (⬇️), exits 1 if any below `CORTEX_QUALITY_GATE` (default 0.5, configurable) ([src/cli/audit.ts:51-93](src/cli/audit.ts#L51-L93))
+- [x] **`cortex status` shows `Low Quality:` count** alongside Stale + Evidence Drift ([src/cli/status.ts:46-50, 81](src/cli/status.ts#L46-L50))
+- [x] **`get_entity_quality` MCP tool** registered with input `{ entity: string }`, returns full breakdown ([src/mcp/server.ts:632-642, 728-748](src/mcp/server.ts#L632-L642))
+- [x] **`get_cortex_status` MCP tool** now includes `lowQualityCount` ([src/mcp/server.ts:644-674](src/mcp/server.ts#L644-L674))
+
+### Phase 7.5 — Org-Wide Custom Constraint Language
+
+- [x] **`cortex.constraints.json` loader** at project root (JSON not YAML — zero new deps, matches rest of Cortex storage; legacy `.yaml/.yml` files trigger a clear migration error) ([src/knowledge/org-constraints.ts:55-95](src/knowledge/org-constraints.ts#L55-L95))
+- [x] **Schema validation** — `version: 1` mandatory; duplicate IDs rejected; unsupported schema versions rejected with file-name-bearing error messages ([src/knowledge/org-constraints.ts:97-138](src/knowledge/org-constraints.ts#L97-L138))
+- [x] **Glob matcher** — `**` matches any path (incl. `/`); `*` matches segment chars except `/`; literal segments must match exactly. Custom impl, no external dep ([src/knowledge/org-constraints.ts:48-72](src/knowledge/org-constraints.ts#L48-L72))
+- [x] **`OrgConstraintEvaluator`** with `evaluateAll()` + `splitBySeverity()` ([src/knowledge/org-constraints.ts:231-300](src/knowledge/org-constraints.ts#L231-L300))
+- [x] **4 rule kinds supported**: `mustNotImport` (string or array of globs against relationship targets, usage-kinds only), `requiresEvidence`, `requiresConstraint: contract|mustNotImport|mustNotBeCalledBy`, scope filters via `sourcePattern` AND/OR `tag`
+- [x] **Error severity throws** `Org Constraint Violation:` (parallel to Phase 6's `Constraint Violation:`) — caught by MCP server's `save_synthesis` handler and returned as structured `isError: true` response ([src/knowledge/writer.ts:473-490](src/knowledge/writer.ts#L473-L490))
+- [x] **Warning severity surfaces in `synthesis.warnings`** rather than blocking; appears in `log.md` + `log.jsonl` for traceability
+- [x] **`cortex lint` reports `org_constraint` rule category** for both error- and warning-severity findings; gracefully degrades to a single lint warning if the constraint file is malformed ([src/knowledge/lint.ts:179-216](src/knowledge/lint.ts#L179-L216))
+
+### Phase 7.5 — Tests (42 passing in `tests/phase7_5.test.ts`)
+
+- [x] Per-dimension score computation (evidenceFreshness, contradiction, staleness, age, humanReview)
+- [x] Age decay curve (1.0 ≤30d, 0.3 floor ≥180d, linear midpoint, configurable window, unparseable date floor)
+- [x] `formatScore()` rounding
+- [x] `updateIndex` emits quality badge format
+- [x] Quality score reflects staleness propagation across re-synthesis
+- [x] `setHumanReview` persists `human_reviewed`/`reviewed_by` in state.json
+- [x] `setHumanReview` boosts score from 0.94 → 1.0
+- [x] Re-synthesis preserves prior human review (Librarian never re-emits these fields)
+- [x] `setHumanReview` returns `{ ok: false, reason }` for unknown entities
+- [x] `listEntityQuality` sorts ascending; bottom-decile flagging correct
+- [x] `getLowQualityCount` respects threshold (0.5 / 0.75 / 0.95)
+- [x] `globMatch` semantics (`**` vs `*` vs literal)
+- [x] `loadOrgConstraints` returns null when file absent
+- [x] `loadOrgConstraints` parses valid JSON; throws on malformed JSON with file name
+- [x] Legacy `.yaml` file triggers migration error
+- [x] Schema validation rejects unsupported version + duplicate IDs
+- [x] `OrgConstraintEvaluator` mustNotImport error → `throwOnErrors` throws
+- [x] sourcePattern filter scopes correctly
+- [x] mustNotImport only fires on usage edges (not contradicts/supports/etc.)
+- [x] `requiresEvidence` flags scoped entities with no evidence
+- [x] `requiresConstraint: contract` flags entities missing the contract
+- [x] No-scope constraints apply globally
+- [x] `mustNotImport` accepts array of globs (any-match)
+- [x] `saveSynthesis` rejects error-severity violations with `Org Constraint Violation:` error
+- [x] Warning-severity violations forwarded to `synthesis.warnings` + appear in `log.md`
+- [x] `cortex lint` emits `org_constraint` rule for violations
+- [x] Malformed constraint file surfaces as single lint warning, doesn't abort lint
 
 ---
 

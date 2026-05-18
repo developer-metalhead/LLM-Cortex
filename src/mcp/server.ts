@@ -631,6 +631,17 @@ export class CortexMCPServer {
             }
           }
         },
+        {
+          name: "get_entity_quality",
+          description: "Phase 7.5 — return the quality breakdown (overall + per-dimension scores) for a named entity. Use this to explain WHY an entity's quality score is what it is: evidence freshness, contradictions, staleness, age, and human-review status are returned as separate 0.0-1.0 components.",
+          inputSchema: {
+            type: "object",
+            required: ["entity"],
+            properties: {
+              entity: { type: "string", description: "Entity name exactly as in the index." }
+            }
+          }
+        },
       ],
     }));
 
@@ -641,6 +652,15 @@ export class CortexMCPServer {
         const knowledgeExists = await this.knowledge.exists();
         const lastSync = await this.knowledge.getLastSyncCommit();
         const staleCount = await this.knowledge.getStaleCount();
+        // Phase 7.5 — surface low-quality count alongside staleCount so an
+        // IDE agent can show "3 entities below quality gate" without a
+        // separate audit call.
+        let lowQualityCount = 0;
+        try {
+          lowQualityCount = await this.knowledge.getLowQualityCount();
+        } catch {
+          // ignore — keep status responsive even if quality compute fails
+        }
         return {
           content: [
             {
@@ -651,12 +671,33 @@ export class CortexMCPServer {
                   lastSyncCommit: lastSync || "never synced",
                   projectRoot: this.projectRoot,
                   staleCount: staleCount,
+                  lowQualityCount: lowQualityCount,
                 },
                 null,
                 2,
               ),
             },
           ],
+        };
+      }
+
+      if (name === "get_entity_quality") {
+        const entityName = (args as any)?.entity;
+        if (typeof entityName !== "string" || !entityName.trim()) {
+          return {
+            content: [{ type: "text", text: "get_entity_quality requires a non-empty 'entity' argument." }],
+            isError: true,
+          };
+        }
+        const breakdown = await this.knowledge.getEntityQuality(entityName);
+        if (breakdown === null) {
+          return {
+            content: [{ type: "text", text: `No entity named "${entityName}" found.` }],
+            isError: true,
+          };
+        }
+        return {
+          content: [{ type: "text", text: JSON.stringify({ entity: entityName, ...breakdown }, null, 2) }],
         };
       }
 

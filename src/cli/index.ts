@@ -12,8 +12,9 @@ import { runConfig } from "./config.js";
 import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
-import { runAuditStale, runAuditEvidence } from "./audit.js";
+import { runAuditStale, runAuditEvidence, runAuditQuality } from "./audit.js";
 import { runExportSpec } from "./export.js";
+import { runReviewAccept, runReviewReject } from "./review.js";
 import { runHookInstall } from "./hook.js";
 import { runLog } from "./log.js";
 import { runLint } from "./lint.js";
@@ -140,15 +141,38 @@ program
 program
   .command("audit")
   .description("Audit the knowledge base")
-  .argument("<type>", "Type of audit to perform (currently supports: 'stale', 'evidence')")
+  .argument("<type>", "Type of audit to perform: 'stale', 'evidence', or 'quality'")
   .action(async (type) => {
     let code = 0;
     if (type === "stale") {
       code = await runAuditStale(projectRoot);
     } else if (type === "evidence") {
       code = await runAuditEvidence(projectRoot);
+    } else if (type === "quality") {
+      // Phase 7.5 — rank by score asc, flag bottom decile, exit 1 if any
+      // entity is below CORTEX_QUALITY_GATE (default 0.5).
+      code = await runAuditQuality(projectRoot);
     } else {
-      console.log(`Unknown audit type: ${type}. Supported: 'stale', 'evidence'`);
+      console.log(`Unknown audit type: ${type}. Supported: 'stale', 'evidence', 'quality'`);
+      code = 2;
+    }
+    process.exitCode = code;
+  });
+
+program
+  .command("review")
+  .description("Mark an entity as human-reviewed (Phase 7.5 quality signal)")
+  .argument("<action>", "Action: 'accept' or 'reject'")
+  .argument("<entity>", "Entity name (must match exactly as shown in the index)")
+  .option("-r, --reviewer <name>", "Name of the reviewer (defaults to 'human')")
+  .action(async (action: string, entity: string, options: { reviewer?: string }) => {
+    let code = 0;
+    if (action === "accept") {
+      code = await runReviewAccept(projectRoot, entity, options.reviewer);
+    } else if (action === "reject") {
+      code = await runReviewReject(projectRoot, entity);
+    } else {
+      console.log(`Unknown review action: ${action}. Supported: 'accept', 'reject'`);
       code = 2;
     }
     process.exitCode = code;
