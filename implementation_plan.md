@@ -3489,27 +3489,224 @@ A five-phase pipeline replacing the current single-shot bootstrap. Each phase is
 - User-visible quality scorecard at the end: per-domain entity count, evidence coverage, relationship density, quality score (Phase 7.5).
 - If overall quality score < 0.5, emit a warning recommending `cortex bootstrap refine --domain <weakest-domain>`.
 
+### The Output-Token Wall — Why Multi-Wave Processing Is Physically Required
+
+A frequent (and reasonable) question: *"why does the LLM need multiple deep dives? Can't it ingest the entire codebase in one shot?"*
+
+**The answer is no, and the reason is a hard physical constraint of LLM architectures: the output token window.**
+
+| Model | Input context | **Output context** | Max detailed entities per single call (~200 tok/entity) |
+|---|---|---|---|
+| GPT-4o | 128k | **16k** | ~80 |
+| GPT-4 Turbo | 128k | **4k** | ~20 |
+| Claude 4.7 Opus | 200k | **8k** | ~40 |
+| Claude 4.6 Sonnet | 200k | **8k** | ~40 |
+| Gemini 2.0 Pro | 2M | **8k** | ~40 |
+| Llama 3.1 405B | 128k | **4k** | ~20 |
+| Llama 3.3 70B | 128k | **4k** | ~20 |
+
+Modern LLMs can **read** entire codebases (1M+ input tokens on Gemini, 200k on Claude/GPT) but cannot **emit** more than 4-16k tokens of structured JSON in a single response. At ~150-400 tokens per detailed entity record (with description + relationships + evidence anchors + behavior), that is a **hard ceiling of 20-80 entities per LLM call** regardless of how much input you provide.
+
+This is not a Cortex bug, not a prompt-engineering issue, and not fixable by feeding more code into the input. It is the same physical constraint that forces every code-understanding tool (Cursor, Windsurf, Continue, Aider, Cline) to chunk large refactors. The only way to produce a 100-entity knowledge graph from a non-trivial codebase is to make **multiple LLM calls**.
+
+The real architectural question is: **who orchestrates those calls?**
+
+- **Today (the problem)**: the user does, manually, via repeated "do another deep dive" prompts in the chat. The user becomes the loop. Cortex is a passive tool waiting for the next chat turn. This is why your 1800-file project required 3+ manual "go deeper" prompts and still produced only ~5 entities — the chat agent has no programmatic way to keep going on its own.
+- **Phase 33 (the fix)**: Cortex's daemon does, programmatically, in one CLI command. The machine becomes the loop, runs at machine speed (parallel batches, no human latency), and never gets bored or distracted. The user runs `cortex bootstrap` once and walks away.
+
+### Output-Budget-Aware Wave Engine
+
+The wave engine sizes batches by **output tokens**, not input tokens — inverting the traditional context-budgeting approach (most RAG systems budget by input because input is the typical bottleneck; for structured synthesis emitting JSON entities, **output is the bottleneck**).
+
+**Per-file output cost estimation**:
+- Calibrated per model from empirical measurement during a warmup batch on the user's own first few files. No fixed assumptions.
+- Default starting estimate: 300 tokens per file for detailed entity output.
+- Updated after every batch via exponential moving average (recent measurements weighted higher).
+
+**Batch sizing formula**:
+- `output_budget = model.max_output_tokens × CORTEX_OUTPUT_HEADROOM` (default 0.8 = 80% of cap, 20% margin against estimation error).
+- `batch_size = floor(output_budget / per_file_output_cost)`.
+- For Claude 4.7 Opus (8k × 0.8 = 6.4k budget, 300 tok/file): **~21 files per batch**.
+- For Llama 3.1 405B (4k × 0.8 = 3.2k budget): **~10 files per batch**.
+- For GPT-4o (16k × 0.8 = 12.8k budget): **~42 files per batch**.
+
+**Schema partitioning for huge domains**:
+- When a domain is too large for a single call even at maximum batch size, the daemon splits the output schema:
+  - Call 1: emit `entities[]` only for the batch (lean records — name, sourceFile, one-line description).
+  - Call 2: emit `relationships[]` only, given the entity list from call 1 as input.
+  - Call 3: emit `evidence[]` only, given the entities.
+  - Call 4: emit `concepts[]` summarizing the batch.
+- Each call's output is bounded; total information emitted is the same; total cost is ~2× single-shot but never truncates.
+
+### Two-Tier Synthesis Pattern
+
+A two-pass strategy per domain that further compresses LLM cost and prevents the "ran out of budget halfway through a domain" failure mode:
+
+**Tier 1 — Enumeration Pass** (one cheap call per domain):
+- Lightweight prompt: *"list every architectural entity in these N files, one line each, with file path and one-sentence purpose."*
+- Output: ~50 entity stubs in ~3-4k tokens. Fast and cheap.
+- Result: Cortex has the **full entity inventory upfront**, before any expensive work begins.
+- Enables accurate cost estimation for Tier 2 (`tier2_cost = enumerated_entity_count × per_entity_cost`).
+
+**Tier 2 — Detail Pass** (parallel batches):
+- Group the stubs from Tier 1 into output-budget-aware batches (8-21 entities per batch, model-dependent).
+- Each Tier 2 call: *"for these N entities, emit full records with relationships, evidence anchors, behavior."*
+- Multiple Tier 2 calls run **in parallel**, rate-limit-aware (default 5 concurrent; respects `Retry-After` headers and exponential backoff on 429s).
+
+Benefits:
+- Tier 1 eliminates the "we discovered 80 entities after spending the full budget on 30" surprise — the inventory is known before the spend.
+- Tier 2 parallelism saturates provider concurrency, cutting wall-clock time on a 100-entity domain from ~10 minutes (serial) to ~2 minutes (5-way parallel).
+
+### Autonomous Daemon Orchestration — `cortex bootstrap` as a Single Command
+
+**The user runs one CLI command. The daemon does everything else.** No chat back-and-forth, no manual "deeper please" prompts, no waiting between phases.
+
+```
+$ cortex bootstrap
+[Phase A] Scanning 1823 files across 47 directories... done (3.2s)
+[Phase A] Identified 14 architectural domains via Leiden clustering
+[Phase A] Estimated bootstrap: 67 entities, 12 concepts, $3.40, ~7 min
+Proceed? [Y/n] y
+
+[Phase B] Per-domain synthesis (5 parallel)
+  ├─ auth/                    [████████████████] 100% (6 entities)
+  ├─ services/                [██████████░░░░░░]  62% (4/7 batches)
+  ├─ redux/                   [████░░░░░░░░░░░░]  25% (1/5 batches)
+  ├─ hooks/                   [░░░░░░░░░░░░░░░░]   0% (waiting)
+  └─ components/atoms/        [░░░░░░░░░░░░░░░░]   0% (waiting)
+Cost so far: $0.82 · ETA: 4m 18s · Entities: 14 · Concepts: 3
+```
+
+The daemon:
+
+1. **Plans** the pipeline upfront (Phase A skeleton scan + cost projection, completes in seconds).
+2. **Confirms** with the user — single Y/N prompt showing projected cost and entity count.
+3. **Calls the LLM API directly** via Phase 2's client. **No MCP roundtrips**, no chat agent in the loop. The daemon is a normal long-running process making `generateObject()` calls in a tight loop.
+4. **Orchestrates the wave loop programmatically** — batch slicing, output-budget sizing, parallel dispatch, retry on 429s, JSON validation, continuation on truncation.
+5. **Checkpoints** after every batch (sub-batch granularity) so a Ctrl+C or crash never loses more than ~30 seconds of work.
+6. **Streams progress** via the MCP `bootstrap_progress` resource so any connected IDE shows live status.
+7. **Returns** when complete (or backgrounds if `--background`).
+
+This is the architectural difference: today the **chat agent** is the wave processor (and a slow, expensive one). Phase 33 makes **the daemon** the wave processor (machine speed, parallel, autonomous).
+
+### Continuation Chains (Provider-Aware Fallback)
+
+When a batch's output is truncated at `max_tokens` despite adaptive sizing (rare but possible on heterogeneous codebases):
+
+- **Anthropic models**: continue via prefill — submit the partial output as a prefilled assistant message and request continuation.
+- **OpenAI models** (`finish_reason: "length"`): continuation request with the partial output appended to the conversation.
+- **Gemini**: similar to OpenAI continuation pattern.
+- **Llama/Ollama**: graceful fallback — if no continuation supported, automatically retry with `batch_size /= 2`.
+
+Continuation loops until the model emits an explicit completion marker (closing JSON bracket recognized by a streaming parser). Hard cap of 3 continuations per batch — beyond that, the daemon splits the batch and retries.
+
+### Adaptive Batch Sizing (Self-Tuning)
+
+The wave engine **learns** per-domain output cost during the run rather than relying on static estimates:
+
+- Start each domain with conservative batch size (5 files).
+- After each batch, measure `actual_output_tokens / files_in_batch`.
+- Update per-domain estimator via exponential moving average (α=0.3, weights recent batches higher).
+- Adjust next batch:
+  - If outputs are <50% of budget AND JSON valid AND no truncation → **increase batch by 1.5×**.
+  - If outputs hit `max_tokens` OR JSON truncated → **decrease batch by 2×** AND switch to schema-partitioned mode.
+  - If outputs invalid (JSON parse failure) → retry once at half batch size; persistent failure escalates to schema partitioning.
+- Per-domain memory persists across the bootstrap run — `auth/` files (often dense with security logic) might stabilize at batch=6; `utils/` files (often simple helpers) might stabilize at batch=18.
+
+This means the daemon **converges to the optimal batch size for each domain within the first 2-3 batches**, then stays there. The user never tunes anything.
+
+### MCP Progress Streaming
+
+New MCP resource: `bootstrap_progress` exposes a long-poll event stream that the IDE consumes for real-time visualization:
+
+```json
+{
+  "phase": "per-domain",
+  "currentDomains": ["auth", "services", "redux"],
+  "domainsCompleted": ["routes", "config"],
+  "domainsTotal": 14,
+  "batchesCompleted": 47,
+  "batchesEstimated": 84,
+  "entitiesProduced": 31,
+  "conceptsProduced": 7,
+  "costSoFarUSD": 1.20,
+  "estimatedRemainingUSD": 2.10,
+  "etaSeconds": 240,
+  "currentBatch": {
+    "domain": "services",
+    "files": ["src/services/Keycloak.js", "src/services/UserService.js", ...],
+    "outputTokensUsed": 4200,
+    "outputBudget": 6400
+  }
+}
+```
+
+The IDE renders a progress bar with per-domain status, current batch detail, cost so far, and ETA. The user can watch the bootstrap progress in real time inside Claude Code / Cursor / VS Code — but does not need to interact with it. The daemon does the work.
+
+### Estimated Performance — Revised With Wave Engine
+
+For the same 1800-file React/Redux/Keycloak production case, with the output-budget-aware wave engine:
+
+| Stage | Calls | Wall time | LLM cost | Cumulative entities |
+|---|---|---|---|---|
+| A — Skeleton + clustering | 0 | <5s | $0 | 0 |
+| B — Tier 1 enumeration (14 domains × 1 call) | 14 | ~40s (parallel 5) | $0.30 | 60-80 (stubs) |
+| B — Tier 2 detail (5-21 files/batch, ~12 batches × 5 parallel) | ~12 | ~3 min | $1.50-2.50 | 60-80 (detailed) |
+| C — Hot-path deepening (top 20 entities × 1 call each, parallel) | 20 | ~2 min | $1.00-1.50 | 60-80 (refined) |
+| D — Cross-domain (1 call) | 1 | ~30s | $0.30 | 60-80 |
+| E — Quality gate + targeted refines (1-3 calls) | 1-3 | ~30s + retries | $0-0.50 | 60-90 |
+| **Total** | **~50 calls** | **~6-8 min** | **$3.10-5.10** | **60-90 entities, 12-18 concepts** |
+
+The wave engine achieves the Phase 33 entity-count target **with no manual intervention** — the user runs `cortex bootstrap`, walks to get coffee, and returns to a fully-indexed codebase. The 50 LLM calls happen at machine speed in 6-8 minutes; under the chat-driven model that same depth would require **the user to type "deeper please" 50 times across hours of interactive sessions**.
+
+### Cross-Phase Synergies
+
+The wave engine is itself reusable beyond bootstrap — Phase 17 (self-consistency sampling), Phase 20.16 (multi-agent collaboration), Phase 20.18 (Tree-of-Thoughts), and Phase 29 (FinOps budget enforcement) all benefit from the output-budget-aware batching primitive. Phase 33 ships the `src/llm/wave.ts` engine as a reusable core; future phases consume it for any structured-emit workload that exceeds the single-call output ceiling.
+
 ### Resumability & Checkpointing
 
-- Bootstrap state persisted to `.knowledge/.bootstrap/progress.json` after every phase completion and every per-domain synthesis.
-- `cortex bootstrap resume` continues from the last checkpoint (skips completed phases/domains).
-- Daemon crash or Ctrl+C is safe — work-in-flight is not lost.
+- Bootstrap state persisted to `.knowledge/.bootstrap/progress.json` after every phase completion **and every individual batch** (sub-batch granularity).
+- `cortex bootstrap resume` continues from the last checkpoint (skips completed phases/domains/batches).
+- Daemon crash or Ctrl+C is safe — work-in-flight is not lost; at most the currently-in-flight batch is re-run on resume.
 - Each completed phase writes immutable artifacts (`skeleton.json`, `domain-<name>.json`, `hotpath.json`, `cross-domain.json`) for inspection and debugging.
+- **Mid-batch crash recovery**: each LLM call result is persisted to a per-batch `.tmp` file before the batch is marked complete. If the daemon crashes mid-batch, the next resume picks up only the unfinished calls within that batch.
 
 ### CLI Surface
 
-- `cortex bootstrap` — interactive: shows estimated cost + projected entity count + per-phase plan, asks for confirmation.
+All commands run **autonomously in the daemon** — no chat agent required, no MCP roundtrips, no manual "deeper please" prompts. The user issues one command and the daemon runs the wave loop to completion.
+
+**Primary commands**:
+- `cortex bootstrap` — runs the full pipeline autonomously. Shows estimated cost + entity count, asks for Y/N confirmation, then executes. Default depth auto-selected from project size (≤500 files: standard; >500 files: deep; >5000 files: exhaustive with `--background` recommended).
+- `cortex bootstrap --yes` — skip confirmation prompt (for CI / scripted use).
+- `cortex bootstrap --background` — fork into daemon, return immediately. Recommended for huge codebases (>5000 files) where bootstrap may take 30+ minutes.
+- `cortex bootstrap --watch` — verbose live progress in terminal (every batch, every entity emitted, every cost increment).
+
+**Depth and budget controls**:
 - `cortex bootstrap --depth shallow|standard|deep|exhaustive`:
-  - `shallow` — Phase A only (the current behavior, retained as the cheapest mode).
+  - `shallow` — Phase A only (the legacy single-shot behavior, retained as the cheapest mode for tiny projects).
   - `standard` — Phases A+B (default for projects ≤500 files).
-  - `deep` — Phases A+B+C (default for projects >500 files).
-  - `exhaustive` — Phases A+B+C+D+E (auto-refine until quality gates pass).
-- `cortex bootstrap --budget 10.00` — hard cap on total LLM spend. Bootstrap aborts at cap with a checkpoint saved.
-- `cortex bootstrap --parallelism 5` — concurrent domain syntheses.
-- `cortex bootstrap status` — progress UI for in-flight bootstrap (which domain is being processed, ETA, cost so far).
-- `cortex bootstrap resume` — continue from the last checkpoint.
-- `cortex bootstrap refine --domain <name>` — re-process a specific domain at deep mode (used when a domain's quality is observably low).
+  - `deep` — Phases A+B+C (default for projects 500-5000 files).
+  - `exhaustive` — Phases A+B+C+D+E with auto-refine (default for projects >5000 files).
+- `cortex bootstrap --budget 10.00` — hard cap on total LLM spend in USD. Bootstrap aborts cleanly at cap with a checkpoint saved; user can resume after raising the cap.
+- `cortex bootstrap --max-entities 200` — soft cap on entity count (Tier 1 enumeration above the cap triggers a warning + user confirmation).
+
+**Wave engine tuning** (advanced; defaults are auto-tuned per model):
+- `cortex bootstrap --parallelism 5` — concurrent batches (default 5; respects provider rate limits).
+- `cortex bootstrap --output-headroom 0.8` — fraction of model's max output tokens to use per batch (default 0.8 = 80%).
+- `cortex bootstrap --schema-partitioned` — force schema-partitioned mode (entities → relationships → evidence → concepts as separate calls). Default: auto-engaged when adaptive sizing detects truncation.
+
+**Status, resume, refine**:
+- `cortex bootstrap status` — query in-flight bootstrap state (phase, current domains, batches completed, cost, ETA). Works while bootstrap runs in background.
+- `cortex bootstrap progress --follow` — tail-style live event stream (useful with `--background`).
+- `cortex bootstrap resume` — continue from the last checkpoint (after crash, Ctrl+C, or budget abort).
+- `cortex bootstrap refine --domain <name>` — re-process a specific domain at deep mode (used when a domain's quality is observably low or after a major change in that domain).
+- `cortex bootstrap refine --auto` — auto-refine all domains scoring below a quality threshold.
 - `cortex bootstrap quality-report` — per-domain quality scorecard.
+
+**Inspect intermediate artifacts** (for debugging the wave engine):
+- `cortex bootstrap inspect skeleton` — show Phase A's domain map and complexity scores.
+- `cortex bootstrap inspect domain <name>` — show Tier 1 + Tier 2 outputs for one domain.
+- `cortex bootstrap inspect batch <id>` — show one batch's LLM input/output for debugging.
 
 ### MCP Integration
 
@@ -3586,16 +3783,62 @@ Compared to current behavior on the same project: **30 seconds, $0.20, 4 entitie
 
 ### Definition of Done (DoD)
 
-- `cortex bootstrap --depth deep` on the 1800-file reference project produces **≥40 entities and ≥10 concepts in one run**.
+**Autonomous single-command operation**:
+- `cortex bootstrap` runs the **entire pipeline autonomously** from one CLI invocation — no chat agent, no MCP roundtrips, no manual "deeper please" prompts.
+- The daemon orchestrates the wave loop programmatically via direct LLM API calls.
+- `--background` and `--watch` modes work as specified.
+- `cortex bootstrap status` returns accurate state for in-flight bootstrap.
+
+**Output-budget-aware wave engine**:
+- Per-batch sizing derived from `model.max_output_tokens × CORTEX_OUTPUT_HEADROOM`, not from input size.
+- Adaptive sizing converges within first 2-3 batches per domain (measured via test on heterogeneous synthetic codebase).
+- Schema partitioning (entities → relationships → evidence → concepts) auto-engages on truncation.
+- Continuation chains work on Anthropic (prefill) and OpenAI/Gemini (continuation) models; graceful fallback to batch splitting on unsupported providers.
+- Reusable `src/llm/wave.ts` engine consumable by Phases 17, 20.16, 20.18, 29.
+
+**Two-tier synthesis**:
+- Tier 1 enumeration pass produces entity stub inventory per domain in one cheap call.
+- Tier 2 detail pass batches enumerated stubs into output-budget-sized groups.
+- Tier 2 batches run in parallel (default 5 concurrent, rate-limit-aware with 429 backoff).
+
+**Quality targets on the 1800-file reference project**:
+- `cortex bootstrap` (no flags, depth auto = deep) produces **≥60 entities and ≥12 concepts in one autonomous run** (Phase 33's revised target with the wave engine).
 - All major architectural domains covered (auth, state, routing, services, hooks, components-atoms, components-molecules, utilities, config) — verified by per-domain entity count ≥ 1.
 - Each entity has ≥1 evidence anchor (Phase 7).
 - Cross-domain relationships established (auth → services, components → hooks, routes → layouts).
-- Bootstrap is resumable across process restarts.
-- Per-domain quality scorecard visible.
+- Wall-clock time ≤10 minutes; total LLM cost ≤$5.50 at default settings.
+
+**Reliability**:
+- Bootstrap is resumable across process restarts at sub-batch granularity (no >30s of work lost on crash).
 - `--budget` hard-cap is honored; bootstrap aborts cleanly at cap with checkpoint.
-- IDE-route bootstrap via MCP completes end-to-end via the multi-step `bootstrap-deep` mode.
-- ≥10 domain-specialized prompts shipped (React stack + 2-3 backend stacks).
-- Tests cover: skeleton scan correctness on synthetic 1000-file repo, per-domain synthesis token-budget enforcement, hot-path deepening PageRank correctness, cross-domain relationship extraction, quality-gate auto-refine, checkpoint resume after simulated crash, multi-step MCP orchestration.
+- Mid-batch crash recovery: re-running `cortex bootstrap resume` picks up only unfinished calls within the in-flight batch.
+- Per-domain quality scorecard visible via `cortex bootstrap quality-report`.
+
+**MCP progress streaming**:
+- `bootstrap_progress` MCP resource emits real-time events (phase, current batch, cost, ETA, entity count).
+- IDE clients (Claude Code, Cursor, VS Code) render a live progress bar without controlling the loop.
+
+**Provider compatibility**:
+- Works against Anthropic, OpenAI, Google, and OpenAI-compatible local providers (Ollama, vLLM, TGI).
+- Per-provider output-token caps respected (4k for older models, 8k for Claude/Gemini, 16k for GPT-4o).
+- Per-provider continuation strategy auto-selected.
+
+**Domain-specialized prompts**:
+- ≥10 domain-specialized prompts shipped (React stack: components-atoms, components-molecules, hooks, redux-slices, redux-sagas, routing, services-api, services-auth, utilities, config) + 2-3 backend stacks (Express/Fastify, FastAPI, Spring Boot).
+- Unknown domains fall back to general Librarian prompt with no degradation.
+
+**Tests**:
+- Skeleton scan correctness on synthetic 1000-file repo (Phase A).
+- Output-budget-aware batch sizing converges to optimal within 3 batches on synthetic heterogeneous corpus.
+- Schema partitioning correctness — split outputs reconstruct identically to single-shot.
+- Continuation chains succeed on synthetic truncated outputs.
+- Parallel Tier 2 batches respect rate-limit backoff on simulated 429s.
+- Hot-path deepening PageRank correctness on known synthetic graph (Phase C).
+- Cross-domain relationship extraction (Phase D).
+- Quality-gate auto-refine triggers on synthetic thin-domain case (Phase E).
+- Checkpoint resume after simulated mid-batch crash (no work lost beyond in-flight call).
+- MCP `bootstrap_progress` event stream conformance (event schema validation, ordering, completeness).
+- End-to-end autonomous run on the 1800-file reference project produces ≥60 entities within budget.
 
 ### Pros & Cons
 
