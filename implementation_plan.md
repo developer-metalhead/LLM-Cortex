@@ -3835,6 +3835,276 @@ Explicit handling per failure scenario, surfaced clearly in progress stream:
 
 Every failure produces a structured event in `bootstrap_progress` so the IDE can render an explicit error UI (not a silent stall).
 
+### Advanced Engineering Refinements
+
+The above hardens the wave engine for production failure modes. The following refinements raise Phase 33 from production-grade to **research-grade**: they reduce cost, improve quality, enable reproducibility, and provide the empirical infrastructure to prove the design's claims rather than assert them.
+
+#### 10. Hybrid Symbolic + LLM Extraction
+
+The cheapest semantic facts are not LLM facts. Phase 33 extends Phase A's skeleton scan with a **structural facts extraction pass** before any Tier 2 LLM call:
+
+- **Tree-sitter parsing** for supported languages (TypeScript, JavaScript, Python, Go, Rust, Java, Ruby, C/C++, C#, PHP, Kotlin, Swift): enumerate exports, imports, class/method signatures, type definitions, decorators, JSDoc/docstring blocks. These are **facts, not interpretations** — extracted deterministically, cached per file.
+- **Regex fallback** for unsupported languages (Haskell, OCaml, Elixir, Lua, Erlang): capture top-level definitions even without an AST.
+- **Tier 2 LLM only interprets** what cannot be enumerated: purpose, behavior, design pattern recognition, cross-file relationships, evidence anchor selection, contradiction detection.
+- **Hybrid prompt construction**: Tier 2 LLM call receives the tree-sitter facts as a structured "facts block" alongside the file content, with explicit instruction "do not re-emit these facts; describe them, relate them, interpret them."
+
+**Cost impact**: ~30-50% reduction in Tier 2 token cost — the LLM no longer wastes output tokens listing what tree-sitter already produced. On a 1800-file project, this drops bootstrap cost from $3.10-5.10 to **~$2.00-3.50**.
+
+**Quality impact**: eliminates the entire class of LLM hallucinations on names/signatures (LLM mentions a method that doesn't exist) since those facts come from the AST. Symbolic-extracted facts also become evidence anchors automatically — every entity has at least the file path + export signature as ground truth, with edit-distance-tolerated drift detection (Phase 7's mechanism).
+
+#### 11. Streaming Entity Emission
+
+Instead of waiting for a batch's full LLM response before parsing, stream-parse the response as it arrives:
+
+- **Provider streaming** (server-sent events on Anthropic, OpenAI, Google; chunked HTTP on Ollama) keeps the connection open while tokens generate.
+- **Streaming JSON parser** (custom SAX-style or `stream-json` library) recognizes complete entity objects as the closing `}` of each array element arrives.
+- **Each complete entity** is validated against `SynthesisSchema`, written to its per-entity markdown file, and checkpointed in `progress.json` **before** the batch finishes.
+- **Failure recovery granularity**: a crash mid-batch now loses only the entity in flight (typically <2 seconds of work), not the whole batch (~30-60 seconds).
+- **Progress streaming becomes per-entity** (vs. per-batch) — the user sees entities appear in real time in the live progress UI, dramatically improving perceived responsiveness.
+
+#### 12. Empirical Benchmark Suite
+
+Phase 33's performance claims (60-90 entities, $3-5, 6-10 minutes on a 1800-file project) must be empirically verified, not asserted. The benchmark suite is **non-negotiable infrastructure** for Phase 33's credibility:
+
+**Public benchmark corpus** — 12 open-source codebases spanning size and shape:
+
+| Size class | Corpora |
+|---|---|
+| Small (200-500 files) | `create-react-app` starter, `fastapi` sample, `gin-gonic` Go template |
+| Medium (500-2000 files) | `vscode-languageserver`, Django blog tutorial, React component library |
+| Large (2000-10k files) | Apache Kafka client (Java), Rails monolith reference, NextJS commerce template |
+| Huge (>10k files) | `kubectl` (Go, ~50k LOC), TypeScript compiler self-host, Rust standard library |
+
+**Per-corpus reference baselines** committed in `bench/baselines/<corpus>.json`:
+- `cortex bootstrap --depth shallow` — entity count, cost, wall time
+- `cortex bootstrap --depth deep` — entity count, cost, wall time, quality scorecard
+- **Manual gold standard** — human-curated entity list for the corpus (one-time investment, ~4 hours per corpus)
+
+**CI regression gates**:
+- Every release must produce entity count within ±10% of baseline on each corpus.
+- Cost regression >15% on any corpus fails the build.
+- Quality scorecard regression >0.05 on any dimension fails the build.
+- Benchmark runs against multiple providers (Anthropic, OpenAI, Google) on a nightly schedule; results published to `bench/results/<date>/<provider>.json`.
+
+**Public leaderboard** at `cortex.com/bench` showing how each release performs vs. baselines and vs. competitor tools (Aider repo-map entity count, Cursor symbol index size, Continue chunk count). Community contributions accepted: anyone can submit a new corpus + gold standard via PR.
+
+#### 13. Precise Quality Scorecard Rubric
+
+Phase E's quality gate uses a **precise 6-dimensional rubric** with documented formulas, replacing vague "quality target":
+
+| Dimension | Formula | Default target |
+|---|---|---|
+| **Coverage** | `entities_created / significant_files_in_repo` (significant = LOC > 50 AND not generated AND not test) | ≥ 0.40 |
+| **Depth** | `mean(relationships per entity)` | ≥ 3.0 |
+| **Anchoring** | `entities_with_evidence / total_entities` | ≥ 0.80 |
+| **Connectivity** | `largest_connected_component / total_entities` | ≥ 0.70 |
+| **Diversity** | `distinct_relationship_kinds_used / 6 (kinds available)` | ≥ 0.67 |
+| **Domain coverage** | `domains_with_≥3_entities / total_domains` | ≥ 0.90 |
+
+**Overall score** = weighted average:
+```
+quality = 0.25×coverage + 0.20×depth + 0.20×anchoring 
+        + 0.15×connectivity + 0.10×diversity + 0.10×domain_coverage
+```
+
+Gate threshold: **0.75** (configurable via `bootstrap.config.yaml: quality_gate.threshold`).
+
+Each dimension's threshold is independently tunable. Per-domain scorecards in `cortex bootstrap quality-report` show actual value vs. target per dimension, with explicit rendering of dimensions below target and suggested remediation (`refine --domain X`, `enrich --evidence`, etc.).
+
+#### 14. Token-Counting Precision
+
+Per-provider tokenizers replace char-count heuristics:
+
+- **`tiktoken`** for OpenAI / Anthropic-compatible counting (via `gpt-tokenizer` npm package).
+- **`@anthropic-ai/tokenizer`** for Anthropic-precise counting (when distributed).
+- **`transformers.js`** for Llama family (LLaMA, Mistral, Qwen).
+- **Per-content-type calibration** from empirical measurement: TypeScript ~3.5 chars/token; minified JS ~5.0; markdown ~4.0; JSON ~3.0; comments-heavy code ~4.5; Python ~3.8; Go ~3.5; CJK characters ~1.5; emoji-rich content ~1.0.
+- **Per-file token count cached at skeleton time** (computed once during Phase A, reused everywhere — `skeleton.json` carries `tokenCount` per file).
+- Batch input budget enforced **precisely**, not approximately. Reduces both over-conservative under-utilization (paying for headroom that never gets used) and accidental over-budget cuts (a batch silently dropped 3 files because the heuristic was wrong).
+
+#### 15. Smart Context Window Utilization
+
+Modern models have 200k-2M input windows; current design uses ~50k per batch. Recoup the headroom for better quality:
+
+For each Tier 2 batch, the LLM context includes:
+
+1. **Primary files** (the entities being synthesized) — **full content**.
+2. **Direct dependencies** of primary files (imported modules) — full content if small (<200 LOC), one-paragraph summary if large.
+3. **Direct callers** of primary files (files that import from primary) — full content if small, summary if large.
+4. **Rest of domain** — one-line summary per file (sourced from Tier 1 enumeration).
+5. **Project-level conventions** — package.json devDeps, eslint config, project-level prompts in `.cortex/`.
+
+Hard cap: **80% of model input window** (160k for Claude/GPT, leaves headroom for the response). Hierarchical selection: if budget tight, drop level 5 first, then 4, then 3, never 1 or 2.
+
+**Effect**: synthesis sees richer context per entity (the LLM can describe how `AuthMiddleware` interacts with `TokenStore` because both are in context), producing better relationships and evidence anchoring, with **identical output token cost**. The improvement is qualitative — better entity descriptions, fewer hallucinated relationships — measurable in the Phase 33 benchmark suite.
+
+#### 16. Robust Import Graph Parsing
+
+The skeleton's import graph must handle real-world edge cases that break naïve parsers:
+
+- **Dynamic imports** `import('./x')` / `require('./x')`: resolved to the target file when the argument is a string literal; flagged as `dynamicEdge: true` when the argument is an expression (e.g., `import(\`./modules/${name}\`)`).
+- **Re-exports** `export * from './x'`: traversed transitively. **Barrel files** (files containing only re-exports with no original definitions) are collapsed into their targets — the barrel doesn't become an entity; its targets become the entities, with the barrel's import path recorded as an alias.
+- **Path aliases**: resolved via:
+  - `tsconfig.json` `compilerOptions.paths` (TypeScript)
+  - `babel.config.js` plugins (`module-resolver`)
+  - `webpack.config.js` `resolve.alias`
+  - `vite.config.ts` `resolve.alias`
+  - `jest.config.js` `moduleNameMapper`
+  - Python: `pyproject.toml` source roots
+  - Go: module path from `go.mod`
+- **Conditional imports** (e.g., `if (process.env.NODE_ENV === 'development') require('./devTools')`): treated as **soft edges** with lower graph weight (0.3 vs 1.0 for unconditional imports).
+- **Circular imports**: detected during graph construction; **broken at the lowest-centrality edge** for Leiden clustering purposes; flagged in `skeleton.json` for the user (often indicates an architectural smell worth knowing about).
+- **Generated imports**: imports targeting `.gen.*` files or files matching generated-code patterns are marked as **external dependencies** — the import contributes to the source file's "external surface" but the target is not synthesized as a Cortex entity.
+
+These edge cases are universal in real codebases; failing on them silently produces incorrect domain clustering and missed relationships. Phase 33 ships with tested parsers for the 6 most-common languages.
+
+#### 17. Cost-vs-Quality Pareto in Dry-Run
+
+The `--dry-run` output extends with a **Pareto curve** showing the tradeoff between cost and quality, so users pick the right depth tier explicitly:
+
+```
+Bootstrap Tradeoff Analysis (your 1823-file project)
+─────────────────────────────────────────────────────────────────────
+Mode            Cost      Time     Entities    Quality    
+─────────────────────────────────────────────────────────────────────
+shallow         $0.20     30s      ~4          0.15       ← current behavior
+skeleton+       $0.30     1m       ~30         0.35       ← Phase A + Tier 1
+standard        $1.80     3m       ~50         0.62
+deep            $3.95     7m       ~67         0.78       ← RECOMMENDED
+exhaustive      $6.20     10m      ~85         0.91
+─────────────────────────────────────────────────────────────────────
+Your --depth choice: deep
+
+Marginal analysis:
+  shallow  → skeleton+   +$0.10 → +20 entities, +0.20 quality   (great)
+  skeleton+→ standard    +$1.50 → +20 entities, +0.27 quality   (good)
+  standard → deep        +$2.15 → +17 entities, +0.16 quality   (good)
+  deep     → exhaustive  +$2.25 → +18 entities, +0.13 quality   (diminishing)
+
+Proceed with deep? [Y/n]
+```
+
+Quality projections are calibrated from the Phase 33 benchmark suite (cross-corpus regression model: `quality = f(depth, codebase_size, language_mix)`). User sees both absolute and marginal value of each tier and picks the trade explicitly.
+
+#### 18. Bootstrap Report Artifact
+
+At the end of every bootstrap, generate an immutable audit artifact at `.knowledge/bootstrap-reports/<ISO-timestamp>.md`:
+
+```markdown
+# Bootstrap Report — 2026-05-18T14:32:11Z
+
+## Scanned
+- 1823 files, 47 directories
+- Languages: TypeScript (78%), Python (18%), HCL (4%)
+- LOC: 234,512 (excluding generated and tests)
+- Monorepo: detected pnpm workspaces (3 packages)
+
+## Excluded
+- Generated: 312 files (Prisma client, GraphQL types, Tailwind output)
+- Test files: 287 files (mined for evidence enrichment)
+- Oversized files (>2000 LOC): 4 files (pre-split into 11 segments)
+
+## Per-Domain Synthesis
+| Domain | Files | Tier 1 stubs | Tier 2 entities | Evidence anchors | Quality |
+| ------ | ----- | ------------ | --------------- | ---------------- | ------- |
+| auth/  | 18    | 6            | 6               | 22               | 0.84    |
+| services/ | 24 | 7            | 7               | 31               | 0.79    |
+| ... | ... | ... | ... | ... | ... |
+
+## Quality Scorecard
+- Coverage:        0.42 ✓ (target 0.40)
+- Depth:           3.4  ✓ (target 3.0)
+- Anchoring:       0.83 ✓ (target 0.80)
+- Connectivity:    0.74 ✓ (target 0.70)
+- Diversity:       0.83 ✓ (target 0.67)
+- Domain coverage: 0.93 ✓ (target 0.90)
+- Overall:         0.78 ✓ (target 0.75)
+
+## Cost Breakdown
+- Phase A (skeleton): $0.00 (0 LLM calls)
+- Phase B Tier 1: $0.32 (14 calls)
+- Phase B Tier 2: $2.18 (47 calls, prompt cache hit rate 64%)
+- Phase C: $1.10 (20 calls)
+- Phase D: $0.28 (1 call)
+- Phase E (auto-refine): $0.42 (3 calls)
+- **Total: $4.30**
+
+## Failures Encountered
+- 2 batches truncated → schema-partitioned mode engaged → success
+- 1 entity rejected (hallucinated sourceFile) → regenerated successfully
+- 4 broken wikilinks → auto-fixed from cross-batch stubs
+
+## Reproducibility
+- Cortex version: v1.4.2
+- Model: claude-opus-4-7 (revision 2026-04-15)
+- Config hash: sha256:8a3f...e2c1
+- Deterministic mode: false
+- Bootstrap run ID: brt-2026-05-18-1432-7f3a
+```
+
+Auditable trail required for compliance use cases (Phase 24 PCI/SOC2/HIPAA). Reports retained for the regulator's mandated period (Phase 24 retention policies).
+
+#### 19. Comparison vs. Existing Tools
+
+Phase 33 enters a market with adjacent tools; explicit positioning prevents the "isn't this just X?" question:
+
+| Tool | Approach | Strengths | Cortex's structural advantage |
+|---|---|---|---|
+| **Aider repo-map** | Tree-sitter symbol map | Free, fast, deterministic | Aider produces a symbol index for LLM prompts; Cortex produces a **synthesized semantic entity graph with relationships, evidence, contradictions, and architectural patterns** |
+| **Cursor codebase indexing** | Embedding-based chunk retrieval | Fast semantic search inside the IDE | Cursor returns matched code chunks per query; Cortex produces **persistent structured entities** queryable across sessions and tools |
+| **Continue context retrieval** | Embedding + symbol indexing | Multi-language, IDE-integrated | Same architectural shape as Cursor — no first-class architectural graph; no synthesized entity descriptions |
+| **GitHub Copilot Workspace** | LLM context selection per task | Tight GitHub PR/issue integration | Copilot Workspace context is **ephemeral per task**; Cortex's knowledge **persists and compounds** across PRs, sessions, and team members |
+| **Sourcegraph batch indexer** | LSIF symbol indexing | Enterprise-scale code search | Sourcegraph is **code search infrastructure**; Cortex is **architectural memory** — different layer of the stack |
+| **Sema** | LLM-based code analytics | KPI dashboards for engineering leaders | Sema produces **metrics for leadership**; Cortex produces **actionable architectural ground truth for developers and AI assistants** |
+| **CodeQL / Semgrep** | Static analysis rules | Find specific patterns | Pattern-matchers find known issues; Cortex **discovers and describes architecture**, then runs lint/fitness on top |
+
+The structural difference at the category level: every other tool indexes for **search** (find me code like X); Cortex synthesizes for **understanding** (what is this codebase, how does it work, what does it depend on, where are its contradictions). The wave-engine bootstrap is what makes that synthesis feasible at scale — competitors cannot trivially add it because their core data model (vector chunks or symbol indexes) is not a knowledge graph.
+
+#### 20. Determinism Guarantees for Compliance
+
+For SOC2/HIPAA/PCI scenarios where bootstrap output must be reproducible across audits, `cortex bootstrap --deterministic` enforces:
+
+- `temperature=0` on all LLM calls (no sampling stochasticity).
+- **Fixed file enumeration order** in skeleton scan (alphabetical by path).
+- **Fixed batch composition** (smallest-file-first within each domain).
+- **Fixed processing order** (alphabetical by domain name, not by complexity).
+- **Provider-version pinning** — refuse to run if the model version differs from the previous bootstrap's recorded version. User must explicitly opt into model migration via `--allow-model-migration`.
+- **Adaptive sizing disabled** — fixed batch sizes from `bootstrap.config.yaml`.
+- **Prompt cache disabled** (caching can introduce subtle ordering effects).
+
+Output: **byte-identical** `.knowledge/` artifacts given same code + same prompts + same model version. Records `deterministicHash` (SHA-256 of the entire `.knowledge/` tree) in the bootstrap report for auditor independent verification.
+
+This is significantly slower and more expensive (no caching, no adaptive sizing) but is the only mode acceptable for regulated environments where reproducibility is auditable.
+
+#### 21. Multi-Pass Refinement With Feedback Loop
+
+Phase E quality gate doesn't just pass/fail — it **generates a structured feedback signal** consumed by a targeted Phase B2 pass:
+
+```json
+{
+  "weakDomains": [
+    {
+      "domain": "services/payment",
+      "scores": { "coverage": 0.32, "depth": 1.8, "anchoring": 0.45 },
+      "below_target": ["coverage", "depth", "anchoring"],
+      "suggested_action": "re-synthesize with larger per-file budget; specific entities low on evidence: [PaymentProcessor, RefundEngine]"
+    }
+  ],
+  "weakEntities": [
+    { "name": "PaymentProcessor", "issues": ["only 1 relationship", "no evidence anchors", "description <50 chars"] }
+  ]
+}
+```
+
+Phase B2 (refinement pass) consumes this feedback:
+- **Different prompt** for re-synthesis: "your previous synthesis of `services/payment` produced thin entity descriptions and missed relationships; the following entities specifically need attention: [PaymentProcessor, RefundEngine]. Re-read these files with extra attention to interfaces, behavior, error paths, and external integrations."
+- **Larger per-entity budget** (target was 300 tok, allow 500 for refinement).
+- **Expanded context**: includes Phase E's identified weakly-connected entities as additional context for cross-referencing.
+
+Refinement loop: up to **3 passes** by default (configurable). Each pass has diminishing returns; the loop terminates early if a pass produces no quality improvement >0.05 in any dimension. Final quality reported with refinement count: `"quality: 0.82 (after 2 refinement passes)"`. Cost of refinement passes is tracked separately in the bootstrap report for FinOps visibility.
+
+This closes the loop between Phase E (detection) and Phase B (generation) — Phase 33 is **self-correcting** rather than merely self-reporting.
+
 ### CLI Surface
 
 All commands run **autonomously in the daemon** — no chat agent required, no MCP roundtrips, no manual "deeper please" prompts. The user issues one command and the daemon runs the wave loop to completion.
@@ -3871,26 +4141,233 @@ All commands run **autonomously in the daemon** — no chat agent required, no M
 - `cortex bootstrap inspect skeleton` — show Phase A's domain map and complexity scores.
 - `cortex bootstrap inspect domain <name>` — show Tier 1 + Tier 2 outputs for one domain.
 - `cortex bootstrap inspect batch <id>` — show one batch's LLM input/output for debugging.
+- `cortex bootstrap inspect report <timestamp>` — render a past bootstrap report.
 
-### MCP Integration
+**Benchmark & quality** (for validating the design's claims):
+- `cortex bootstrap bench --corpus <name>` — run against a published benchmark corpus, report deltas vs. baseline.
+- `cortex bootstrap bench --all` — full benchmark suite (12 corpora × current provider).
+- `cortex bootstrap quality-report [--domain <name>]` — render the 6-dimensional scorecard for the most recent bootstrap (or a specific domain).
+- `cortex bootstrap quality-report --history` — quality scorecard trend across recent bootstraps.
 
-`get_pending_changes` (the bootstrap entry point used by IDE-route ingestion) gains a `mode: "bootstrap-deep"` branch that returns a **multi-step plan** instead of a single prompt:
+**Compliance-grade modes** (for regulated environments):
+- `cortex bootstrap --deterministic` — enforce reproducibility (temperature=0, fixed ordering, pinned model, no adaptive sizing, no prompt cache). Slower and more expensive but byte-identical given same inputs.
+- `cortex bootstrap --allow-model-migration` — opt into running with a different model version than the previous bootstrap; mandatory in deterministic mode if the model has been updated.
+- `cortex bootstrap --report-only` — produce the bootstrap report from existing `.knowledge/` state without re-running synthesis (for compliance re-reporting cycles).
+
+### Dual Execution Model — Daemon-Driven vs. IDE-Driven Wave Engine
+
+A critical design decision: **who pays for the LLM tokens during bootstrap?** The wave engine must support both execution models, with auto-detection based on entry point.
+
+| Mode | Who runs the loop | LLM caller | Billed against | Best for |
+|---|---|---|---|---|
+| **daemon** | Cortex daemon process | Direct provider API calls (Anthropic/OpenAI/Google SDKs) | User's `*_API_KEY` env var | Headless CI, automation, users with API keys, air-gapped local LLMs |
+| **ide** | IDE's chat loop via MCP roundtrips | IDE's built-in LLM (Claude, GPT-4o, Gemini, etc.) | User's IDE subscription (Claude Code, Cursor Pro, Windsurf, Antigravity, Copilot) | Users without API keys, subscription users, IDE-first workflows |
+| **hybrid** | Daemon for Phase A+E, IDE for Phase B+C+D | Mixed | Mixed | Power users on metered IDE subscriptions who want skeleton/QA done locally and synthesis billed to subscription |
+
+**Auto-detection**:
+- `cortex bootstrap` invoked from CLI → defaults to `daemon` mode.
+- `/bootstrap` slash command invoked from IDE chat → defaults to `ide` mode.
+- `get_pending_changes` MCP call with empty `state.json` → returns `mode: "bootstrap-wave"` and lets the IDE drive (effectively `ide` mode).
+- Explicit override via `--execution daemon|ide|hybrid` flag on CLI, or via MCP tool argument.
+
+**Concurrent-invocation safety**: lock file at `.knowledge/.bootstrap.lock` carries `{ pid, mode, startedAt }`. A daemon-mode bootstrap blocks an IDE-mode invocation attempt (and vice versa) with a clear error: *"bootstrap already running in [mode] mode since [time]; use `cortex bootstrap status` to monitor or `cortex bootstrap abort` to cancel."*
+
+**Cost attribution clarity**: regardless of mode, every LLM call is recorded with `executionMode: "daemon" | "ide"` and `tokenSource: "api-key" | "ide-subscription"` in the bootstrap report (refinement #18). Users on metered IDE subscriptions can see exactly how many tokens were consumed against their subscription quota, even though Cortex didn't pay the bill.
+
+### IDE-Orchestrated Wave Bootstrap (MCP Protocol)
+
+The MCP-driven mode turns the IDE's chat loop into the wave engine. Cortex's MCP server emits **one step at a time**; the IDE's LLM executes each step and reports back. The conversation **is** the bootstrap pipeline.
+
+#### Multi-Step MCP Protocol — State Machine
+
+The bootstrap conversation is a strict state machine driven by `get_pending_changes`:
+
+```
+┌─────────────────┐    ┌────────────────────┐    ┌──────────────────┐
+│ 1. discover     │ →  │ 2. confirm-plan    │ →  │ 3. tier1-batch   │
+│ (Phase A done   │    │ (user/IDE Y/N on   │    │ (per-domain      │
+│  in daemon)     │    │  cost + plan)      │    │  enumeration)    │
+└─────────────────┘    └────────────────────┘    └─────────┬────────┘
+                                                            │
+                       ┌────────────────────────────────────┘
+                       ↓
+              ┌────────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+              │ 4. tier2-batch     │ →  │ 5. hotpath-batch │ →  │ 6. crossdomain   │
+              │ (parallel-able     │    │ (top-N entities  │    │ (one final pass) │
+              │  domain batches)   │    │  refined)        │    │                  │
+              └─────────┬──────────┘    └──────────────────┘    └─────────┬────────┘
+                        │ (loop until all                                  │
+                        │  domains done)                                   ↓
+                        │                                       ┌──────────────────┐
+                        │                                       │ 7. quality-gate  │
+                        │                                       │ (validate +      │
+                        │                                       │  optional        │
+                        │                                       │  refine loop)    │
+                        │                                       └─────────┬────────┘
+                        │                                                 │
+                        │                                                 ↓
+                        │                                       ┌──────────────────┐
+                        │                                       │ 8. complete      │
+                        │                                       │ (emit report,    │
+                        │                                       │  release lock)   │
+                        │                                       └──────────────────┘
+```
+
+Each `get_pending_changes` call returns the **current step** to execute; after the IDE calls `save_synthesis_batch` (new tool, see below), `get_pending_changes` returns the **next step**. The state machine is server-side; the IDE just executes whatever step it's handed.
+
+#### MCP Response Shape Per Step
 
 ```json
 {
-  "mode": "bootstrap-deep",
-  "plan": {
-    "domains": [...],
-    "phases": ["skeleton", "per-domain", "hot-path", "cross-domain", "quality-gate"],
-    "estimatedCostUSD": 3.20,
-    "estimatedEntityCount": 60
+  "mode": "bootstrap-wave",
+  "state": {
+    "runId": "brt-2026-05-18-1432-7f3a",
+    "currentStep": 23,
+    "totalSteps": 87,
+    "phase": "tier2-batch",
+    "phaseDescription": "Per-domain detailed synthesis"
   },
-  "currentStep": { "phase": "per-domain", "domain": "auth", "filesToRead": [...] },
-  "instructions": "..."
+  "plan": {
+    "domains": [
+      { "name": "auth", "files": 18, "tier1Done": true, "tier2Batches": 2, "tier2Done": 0 },
+      { "name": "services", "files": 24, "tier1Done": true, "tier2Batches": 3, "tier2Done": 1 },
+      { "name": "redux", "files": 32, "tier1Done": true, "tier2Batches": 3, "tier2Done": 0 },
+      ...
+    ],
+    "estimatedRemainingCostUSD": 2.40,
+    "estimatedEntityCountRemaining": 38
+  },
+  "step": {
+    "type": "tier2-batch",
+    "batchId": "b-services-2-of-3",
+    "domain": "services",
+    "domainPromptType": "services.auth",
+    "filesToRead": [
+      { "path": "src/services/Keycloak.js", "tokenCount": 1420, "tier1Stubs": ["KeycloakService"] },
+      { "path": "src/services/UserService.js", "tokenCount": 980, "tier1Stubs": ["UserService", "UserApiClient"] },
+      { "path": "src/services/PermissionResolver.js", "tokenCount": 2100, "tier1Stubs": ["PermissionResolver"] }
+    ],
+    "treeSitterFacts": {
+      "src/services/Keycloak.js": {
+        "exports": ["initKeycloak", "refreshToken", "isAuthenticated"],
+        "imports": ["keycloak-js", "../config/auth"],
+        "classes": []
+      },
+      ...
+    },
+    "expectedEntityCount": 5,
+    "outputBudgetTokens": 6400,
+    "schemaPartitioned": false
+  },
+  "instructions": "[SERVICES.AUTH DOMAIN — TIER 2 DETAIL PASS]\n\nYou are synthesizing the `services` domain of this codebase, focused on authentication services. For the 3 files provided, emit detailed Cortex entity records.\n\nFor each entity:\n1. Use the tree-sitter facts as ground truth — do NOT re-emit exports/imports already in `treeSitterFacts`. Reference them in your description.\n2. Identify the authentication flow (which functions handle which step: PKCE init, token refresh, session validation, logout).\n3. Capture relationships: which other entities does this service depend on? Which entities call it?\n4. For each entity, include ≥1 evidence anchor citing a specific function or import.\n5. Note any auth-specific architectural patterns (token storage strategy, refresh debouncing, session timeout).\n\nReturn the synthesis via `save_synthesis_batch` with batchId='b-services-2-of-3'.",
+  "nextAction": "Call save_synthesis_batch with the synthesis payload, then re-query get_pending_changes for next step.",
+  "abortInstructions": "If user wants to abort, call abort_bootstrap with runId='brt-2026-05-18-1432-7f3a'."
 }
 ```
 
-The IDE-driven Librarian (Phase 4.5) runs each step, calls `save_synthesis` per step, and re-queries `get_pending_changes` for the next step. The result is end-to-end progress orchestrated through MCP without changing the existing tool surface.
+The IDE's LLM reads `step`, `treeSitterFacts`, and `instructions`, synthesizes the batch, calls `save_synthesis_batch`, then loops by calling `get_pending_changes` again for step 24.
+
+#### New MCP Tools for Wave Bootstrap
+
+Extends Phase 4's tool surface with three new bootstrap-specific tools:
+
+- **`save_synthesis_batch(batchId, entities[], concepts[], warnings[])`** — accepts a multi-entity batch result. Cortex validates each entity against `SynthesisSchema`, runs semantic validation (broken wikilinks, hallucinated `sourceFile`, evidence-quote drift), writes to disk via the concurrency-safe coordinator, checkpoints progress, and signals readiness for the next step. Replaces per-entity `save_synthesis` calls during bootstrap (kept for non-bootstrap incremental syncs).
+- **`abort_bootstrap(runId, reason?)`** — graceful abort: state is checkpointed, lock file released, `bootstrap_progress` emits final event. Resume via subsequent `get_pending_changes` call (which will detect the in-progress run).
+- **`bootstrap_status(runId?)`** — returns current state without advancing — useful for IDE status panels that poll independently of the chat loop.
+
+All three tools are also accessible via the daemon-mode wave engine internally — same code path, different invocation source.
+
+#### Per-IDE Adapter Layer
+
+Different IDEs have different MCP tool-call ergonomics, message rendering, and tool-call concurrency limits. Phase 33 ships per-IDE adapters that normalize the bootstrap experience:
+
+| IDE | Tool concurrency | Step rendering | Slash command | Quirk handling |
+|---|---|---|---|---|
+| **Claude Code** | Sequential (one tool at a time) | Markdown w/ code blocks renders cleanly | `/bootstrap` registered in `.claude/commands/bootstrap.md` | Long instructions truncated at ~8k chars → adapter chunks `step.instructions` |
+| **Cursor** | Sequential, with auto-run for trusted tools | MCP responses render in chat panel | `/bootstrap` via Cursor's slash command registry | Tool argument size cap (~16KB) → adapter pre-clips large `treeSitterFacts` |
+| **Antigravity (Gemini)** | Sequential, tools auto-execute by default | Renders MCP responses inline | `/bootstrap` via `.antigravity/commands/` | Gemini's structured output strict mode → adapter ensures `step` matches Gemini's structured response schema |
+| **VS Code (Copilot)** | Sequential, with manual approval for MCP tools | Tool output in side panel | `/bootstrap` via VS Code command palette | Copilot's MCP integration buffers full tool response before showing → adapter uses smaller per-step responses for perceived progress |
+| **Windsurf** | Sequential, auto-execute trusted tools | Inline rendering | `/bootstrap` via Cascade command | Similar to Cursor; same chunking strategy |
+| **Cline** | Sequential, auto-execute trusted tools | Markdown-heavy rendering | `/bootstrap` via Cline rules | Cline reads MCP server descriptions strictly → adapter ensures every step's `instructions` are self-explanatory standalone |
+| **Continue** | Parallel tool calls allowed | Code-focused rendering | `/bootstrap` via Continue config | Can parallelize Tier 2 batches across multiple tool calls → adapter sets `parallelizable: true` on Tier 2 steps when Continue is the client |
+| **Zed** | Sequential | Compact rendering | `/bootstrap` via Zed assistant | Newer MCP support; adapter follows Claude Code conventions for compatibility |
+
+Adapter selection is automatic based on the MCP client identifier (each IDE sends a distinct `clientInfo.name` in MCP handshake). Adapters are pure-data configuration files in `src/mcp/adapters/<ide>.yaml`:
+
+```yaml
+# src/mcp/adapters/antigravity.yaml
+client_id_patterns: ["antigravity*", "gemini-cli*"]
+max_instructions_chars: 12000
+max_tool_arg_bytes: 32768
+parallelizable_steps: false
+auto_execute_tools_default: true
+structured_output_strict: true
+preferred_step_size: medium  # adapter chunks to medium-size steps for Antigravity's UI
+```
+
+#### Slash Command Surface (Cross-IDE)
+
+`/bootstrap` is a universal slash command registered across all 9 supported IDEs (writing IDE-native command files during `cortex setup`):
+
+- `/bootstrap` — start bootstrap wave (IDE-driven mode). Triggers the discover-confirm-execute flow inside the chat.
+- `/bootstrap status` — query in-flight bootstrap (works mid-stream or for daemon-mode bootstraps).
+- `/bootstrap resume` — continue from last checkpoint if interrupted.
+- `/bootstrap abort` — cancel in-flight bootstrap (checkpoints saved).
+- `/bootstrap refine <domain>` — re-process specific domain in-chat.
+- `/bootstrap dry-run` — interactive plan + cost preview without execution.
+- `/bootstrap report` — render the most recent bootstrap report in the chat.
+
+Each command is implemented identically across IDEs — adapters handle rendering differences but the underlying MCP protocol is uniform.
+
+#### Cost Attribution & Transparency in IDE Mode
+
+Since IDE-mode bootstrap is billed against the user's IDE subscription (not Cortex's API key), token consumption matters to the user even though Cortex isn't billing directly. Phase 33 surfaces this transparently:
+
+- **Per-step token estimate** in each `step` response: `"estimatedTokens": { "input": 18000, "output": 4500 }` — so the IDE can warn the user if a step approaches their subscription's per-message limit.
+- **Running total** in `state`: `"tokensConsumed": { "input": 240000, "output": 58000 }` — cumulative across all steps in the bootstrap run.
+- **Subscription-aware throttling**: if `clientInfo.subscriptionTier` is provided by the IDE (some MCP clients pass this), Cortex can pace step dispatch to stay within known subscription quotas (e.g., Cursor Pro = 500 fast requests/month).
+- **Bootstrap report includes `tokenSource: "ide-subscription"`** for every IDE-mode step, with cumulative subscription-token consumption rolled up for the user's awareness.
+
+#### Concurrent IDE + Daemon Coordination
+
+If a user has the daemon running (`cortex watch` started) AND types `/bootstrap` in their IDE, two execution paths could collide. The lock file (`.knowledge/.bootstrap.lock`) is the primary coordinator, but Phase 33 ships a richer coordination policy:
+
+- **First-invocation wins** — second invocation receives a clear MCP/CLI error with the first invocation's mode and PID.
+- **Mode upgrade**: if daemon-mode is running but the user types `/bootstrap --upgrade-to-ide` in IDE, the daemon checkpoints, releases the lock, and the IDE mode picks up from the checkpoint. Useful when user discovers mid-run they don't want to spend more API credits.
+- **Mode downgrade** (rare): inverse direction works the same way — `/bootstrap abort` in IDE then `cortex bootstrap resume --execution daemon` from CLI.
+- **Read-only concurrent operations**: `cortex bootstrap status` and `cortex bootstrap quality-report` work regardless of which mode is in flight.
+
+#### MCP-over-HTTP for Phase 22 Central Server
+
+For organizations running the Phase 22 Central Knowledge Server, bootstrap can run **centrally** rather than per-developer:
+
+- Central server's MCP-over-HTTP endpoint exposes the same wave-bootstrap state machine.
+- A platform team can pre-bootstrap a repo from a CI job (`cortex bootstrap --execution daemon --target-server https://cortex.internal/v1`), and individual developers' IDEs inherit the pre-built `.knowledge/` via Phase 21 pull.
+- Per-developer IDE-mode bootstrap is still available for personal/experimental repos not registered with the central server.
+- Authentication, audit, and cost attribution all flow through Phase 25 (SSO) + Phase 26 (audit) + Phase 29 (FinOps) — bootstrap runs are first-class FinOps events, attributable to the requesting user/team.
+
+#### IDE Mode vs Daemon Mode — When to Use Which
+
+The bootstrap docs (and `cortex bootstrap --help`) include explicit guidance:
+
+**Choose `--execution ide` when**:
+- You're already paying for an IDE subscription with included LLM tokens (Claude Code / Cursor Pro / Antigravity / Windsurf / Copilot Enterprise).
+- You don't have an LLM provider API key.
+- You want the bootstrap visible as a conversation in your IDE chat.
+- You're a single developer bootstrapping a personal project.
+
+**Choose `--execution daemon` when**:
+- You're running in CI/automation (no IDE available).
+- You have an API key and want the cheapest per-token pricing (direct API often cheaper than per-IDE subscription tokens).
+- You're using a local LLM (Ollama, vLLM, TGI) — no IDE intermediation needed.
+- You want maximum parallelism (daemon can run 5 concurrent batches; IDEs are typically sequential).
+- You're bootstrapping a huge codebase (>5000 files) where IDE chat history would become unwieldy.
+
+**Choose `--execution hybrid` when**:
+- You want skeleton scan + quality gate to run locally (free, fast, deterministic) but synthesis billed to your IDE subscription.
+- You're on a metered subscription and want to control which expensive operations the subscription pays for.
+
+The CLI's `cortex bootstrap` invocation defaults to `daemon`; the IDE's `/bootstrap` defaults to `ide`. Auto-detect is overridable via `--execution` (CLI) or `executionMode` (MCP arg).
 
 ### Per-Domain Specialized Prompts
 
@@ -3940,11 +4417,33 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 
 ### Definition of Done (DoD)
 
-**Autonomous single-command operation**:
+**Autonomous single-command operation (daemon mode)**:
 - `cortex bootstrap` runs the **entire pipeline autonomously** from one CLI invocation — no chat agent, no MCP roundtrips, no manual "deeper please" prompts.
 - The daemon orchestrates the wave loop programmatically via direct LLM API calls.
 - `--background` and `--watch` modes work as specified.
 - `cortex bootstrap status` returns accurate state for in-flight bootstrap.
+
+**IDE-orchestrated wave bootstrap (MCP mode)**:
+- `/bootstrap` slash command works identically across all 9 supported IDEs (Claude Code, Cursor, Antigravity, VS Code, Windsurf, Cline, Continue, Zed, Claude Desktop).
+- `get_pending_changes` returns `mode: "bootstrap-wave"` when bootstrap is in progress, with per-step instructions for the IDE's LLM.
+- Multi-step MCP state machine drives the conversation: discover → confirm → tier1 → tier2 (loop) → hotpath → crossdomain → quality-gate → complete.
+- `save_synthesis_batch` MCP tool accepts multi-entity batches with semantic validation.
+- `abort_bootstrap` and `bootstrap_status` MCP tools work mid-stream.
+- Per-IDE adapters in `src/mcp/adapters/<ide>.yaml` handle tool concurrency limits, message-size caps, and structured-output constraints per IDE.
+- Cost attribution: every step records `executionMode` and `tokenSource` in the bootstrap report; IDE-mode steps roll up subscription-token consumption.
+- Concurrent-invocation handling: lock file blocks second invocation with clear error including first invocation's mode and PID.
+- Mode upgrade/downgrade between daemon and IDE works via `--upgrade-to-ide` / explicit `--execution` flag with checkpoint preservation.
+
+**Dual execution model**:
+- Auto-detect entry point: CLI → daemon mode; MCP → IDE mode.
+- Explicit override via `--execution daemon|ide|hybrid` on CLI or `executionMode` arg in MCP calls.
+- Hybrid mode: Phase A + Phase E run in daemon (free/fast/deterministic); Phase B + C + D run via IDE chat (billed to subscription).
+- Bootstrap report renders `executionMode` and per-step `tokenSource` for full cost attribution.
+
+**MCP-over-HTTP for central server (Phase 22 integration)**:
+- Central server's MCP-over-HTTP endpoint exposes the same wave-bootstrap state machine.
+- Pre-bootstrap from CI job: `cortex bootstrap --execution daemon --target-server <url>` runs centrally; per-developer IDEs inherit via Phase 21 pull.
+- Bootstrap runs are first-class events in Phase 26 audit log and Phase 29 FinOps reporting; attributable to requesting user/team via Phase 25 SSO.
 
 **Output-budget-aware wave engine**:
 - Per-batch sizing derived from `model.max_output_tokens × CORTEX_OUTPUT_HEADROOM`, not from input size.
@@ -3984,22 +4483,49 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 - ≥10 domain-specialized prompts shipped (React stack: components-atoms, components-molecules, hooks, redux-slices, redux-sagas, routing, services-api, services-auth, utilities, config) + 2-3 backend stacks (Express/Fastify, FastAPI, Spring Boot).
 - Unknown domains fall back to general Librarian prompt with no degradation.
 
+**Advanced refinements (research-grade additions)**:
+- Hybrid symbolic + LLM extraction (tree-sitter for 12+ languages) reduces Tier 2 cost by ≥30% on benchmark corpus.
+- Streaming entity emission — entities appear in `progress.json` before batch completes; mid-batch crash loses ≤1 entity.
+- Empirical benchmark suite covers 12 corpora; CI regression gates fail on >10% entity-count delta, >15% cost regression, or >0.05 quality regression on any dimension.
+- 6-dimensional quality scorecard (coverage, depth, anchoring, connectivity, diversity, domain-coverage) computed precisely with documented formulas; threshold configurable.
+- Token counting via provider-native tokenizers (`tiktoken`, `@anthropic-ai/tokenizer`, `transformers.js`); per-content-type ratios calibrated.
+- Smart context window utilization includes dependencies + callers up to 80% of model input window.
+- Import graph parsing handles dynamic imports, re-exports, path aliases (tsconfig/babel/webpack/vite/jest), conditional imports, circular imports, generated imports — tested against synthetic edge-case repo.
+- `--dry-run` produces Pareto curve across all 5 depth modes with calibrated quality projections.
+- Every bootstrap produces `.knowledge/bootstrap-reports/<timestamp>.md` artifact with full audit trail.
+- Determinism: `--deterministic` mode produces byte-identical `.knowledge/` tree given same inputs (SHA-256 verified).
+- Multi-pass refinement: Phase E generates structured feedback consumed by targeted Phase B2; up to 3 refinement passes with early termination on diminishing returns.
+
+**Comparison & positioning**:
+- Documented comparison vs. Aider repo-map, Cursor indexing, Continue, Copilot Workspace, Sourcegraph, Sema, CodeQL — published in `docs/comparison.md`.
+
 **Tests**:
-- Skeleton scan correctness on synthetic 1000-file repo (Phase A).
+- Skeleton scan correctness on synthetic 1000-file repo with monorepo structure + polyglot + dynamic imports + barrel files (Phase A edge cases).
 - Output-budget-aware batch sizing converges to optimal within 3 batches on synthetic heterogeneous corpus.
 - Schema partitioning correctness — split outputs reconstruct identically to single-shot.
-- Continuation chains succeed on synthetic truncated outputs.
+- Continuation chains succeed on synthetic truncated outputs across 3 providers.
 - Parallel Tier 2 batches respect rate-limit backoff on simulated 429s.
 - Hot-path deepening PageRank correctness on known synthetic graph (Phase C).
 - Cross-domain relationship extraction (Phase D).
-- Quality-gate auto-refine triggers on synthetic thin-domain case (Phase E).
+- Quality-gate auto-refine triggers on synthetic thin-domain case (Phase E); refinement loop terminates on diminishing returns.
 - Checkpoint resume after simulated mid-batch crash (no work lost beyond in-flight call).
-- MCP `bootstrap_progress` event stream conformance (event schema validation, ordering, completeness).
-- End-to-end autonomous run on the 1800-file reference project produces ≥60 entities within budget.
+- Streaming entity emission: entities appear in checkpoint before batch completes (verified by injected mid-stream interrupt).
+- Hybrid extraction: tree-sitter facts match LLM output for known fixtures; LLM rejects hallucinations of methods not in tree-sitter output.
+- Determinism mode: two consecutive runs produce identical SHA-256 hash of `.knowledge/`.
+- Benchmark suite: full regression run against all 12 corpora in CI nightly; baseline file maintained.
+- MCP `bootstrap_progress` event stream conformance (event schema validation, ordering, completeness, per-entity granularity).
+- IDE-orchestrated wave bootstrap end-to-end test (mocked MCP client): full discover → confirm → tier1 → tier2 → hotpath → crossdomain → quality-gate → complete cycle.
+- Per-IDE adapter conformance tests: each of 9 adapter YAMLs validated against a mocked MCP client emulating that IDE's tool concurrency and message-size constraints.
+- Mode upgrade test: start daemon-mode bootstrap, mid-flight switch to IDE mode via `--upgrade-to-ide`, verify checkpoint preserved and IDE picks up cleanly.
+- Concurrent-invocation test: two simultaneous bootstraps (one CLI, one MCP) — second invocation receives clear error including first's mode/PID.
+- Cost-attribution test: bootstrap report correctly distinguishes `executionMode: daemon/ide` and `tokenSource: api-key/ide-subscription` per step.
+- MCP-over-HTTP wave bootstrap test against Phase 22 central server (mocked): pre-bootstrap from CI job, verify per-developer pull inherits result.
+- Slash command registration test: `cortex setup` correctly writes `/bootstrap` command files for all 9 supported IDEs.
+- End-to-end autonomous run on the 1800-file reference project produces ≥60 entities within budget AND quality ≥0.75 (run in both daemon mode and IDE mode; results within ±10% of each other).
 
 ### Pros & Cons
 
-- ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes, autonomously, with one CLI command." Architectural correctness: identifies and engineers around the **physical output-token wall** that no prompt engineering can bypass, then orchestrates the necessary multi-call wave loop in the daemon at machine speed instead of the chat agent at human speed. The reusable `src/llm/wave.ts` engine is consumable across Phases 17, 20.16, 20.18, and 29 — single investment, multiple payoffs. Production-hardening refinements (polyglot/monorepo awareness, prompt caching for 40% cost reduction, semantic validation pipeline, multi-provider failover, declarative config, dry-run mode, explicit failure taxonomy) ship Phase 33 as production-grade rather than prototype-grade. Adaptive batch sizing eliminates per-project tuning. Domain-specialized prompts give Cortex a path to first-class support for any tech stack without core code changes. The quality gate + auto-refine loop means the bootstrap is **self-correcting** — if it produces a thin result, it tries harder until it doesn't. Incremental + enrichment modes mean the investment compounds over a project's lifetime; bootstrap isn't a one-time event.
+- ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes, autonomously." Architectural correctness: identifies and engineers around the **physical output-token wall** that no prompt engineering can bypass, then orchestrates the necessary multi-call wave loop at machine speed instead of chat-agent speed. **Dual execution model (daemon vs. IDE) means the bootstrap works equally well for API-key users (cheaper per-token, headless, parallel) and IDE-subscription users (no API key required, billed against existing subscription, visible in chat)** — both cohorts are first-class, not retrofitted. The reusable `src/llm/wave.ts` engine is consumable across Phases 17, 20.16, 20.18, and 29 — single investment, multiple payoffs. Production-hardening refinements (polyglot/monorepo awareness, prompt caching for 40% cost reduction, semantic validation pipeline, multi-provider failover, declarative config, dry-new mode, explicit failure taxonomy) ship Phase 33 as production-grade. Advanced research-grade refinements (hybrid symbolic+LLM extraction for 30-50% cost reduction, streaming entity emission, empirical benchmark suite with CI regression gates, 6-dimensional quality scorecard with documented formulas, provider-precise tokenization, smart 200k-window context utilization, robust import-graph parsing, Pareto cost-quality dry-run, auditable bootstrap report artifact, comparison vs. competitor tools, determinism for compliance, multi-pass refinement with feedback loop) ship Phase 33 as research-grade. Multi-step MCP protocol with per-IDE adapters (9 IDEs) means **`/bootstrap` works identically across Claude Code, Cursor, Antigravity, VS Code, Windsurf, Cline, Continue, Zed, Claude Desktop** — no per-IDE divergence. MCP-over-HTTP variant integrates with Phase 22 Central Knowledge Server so platform teams can pre-bootstrap repos centrally in CI and developers inherit via Phase 21 pull. Cost attribution flows through Phase 26 audit + Phase 29 FinOps so enterprise customers get bootstrap-as-a-FinOps-event. Domain-specialized prompts give Cortex a path to first-class support for any tech stack without core code changes. Quality gate + auto-refine loop means **self-correcting** bootstrap. Incremental + enrichment + refine-stale + refine-low-quality modes mean the investment compounds over a project's lifetime; bootstrap isn't a one-time event.
 - ❌ **Cons**: ~20× the raw LLM cost vs. the current shallow bootstrap ($3-5 vs. $0.20); mitigated by `--budget` cap, `--dry-run` cost preview, prompt-cache savings on warm runs (~40%), and `--depth shallow` retaining the legacy behavior for users who want cheap. The wave engine + production-hardening surfaces add real engineering surface area (~15-20 new TypeScript files) — significant compared to the current ~5-line bootstrap path. Mitigated by independent testability per refinement and reusability of `wave.ts` across other phases. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX in exchange for a dramatically better cold-start *outcome*; mitigated by the live progress UI showing per-domain ETA, by `--background` mode for huge codebases, and by the fact that bootstrap is one-shot (users don't pay this latency repeatedly). Per-domain specialized prompts are a permanent maintenance surface as ecosystems evolve; mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Multi-provider failover testing requires CI against multiple paid providers — real ongoing cost; mitigated by mocking the provider boundary in standard tests and gating live multi-provider tests behind a CI flag run only on release candidates.
 
 ---
