@@ -32,6 +32,24 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.3  | Design Pattern Suggestion                              | ⏳ Planned                           |
 | 20.4  | Evolutionary Architecture Fitness Functions            | ⏳ Planned                           |
 | 20.5  | Architecture Documentation Generation                  | ⏳ Planned                           |
+| 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
+| 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
+| 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
+| 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
+| 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
+| 20.11 | Reflexion-Style Self-Correcting Synthesis              | ⏳ Planned (research-grade)          |
+| 20.12 | Temporal Knowledge Graph                               | ⏳ Planned (research-grade)          |
+| 20.13 | Pattern Skill Library (VOYAGER-inspired)               | ⏳ Planned                           |
+| 20.14 | Causal Impact Analysis (Pearl do-calculus)             | ⏳ Planned (research-grade)          |
+| 20.15 | Dual-Process Synthesis (System 1 / System 2)           | ⏳ Planned (research-grade)          |
+| 20.16 | Multi-Agent Librarian Collaboration                    | ⏳ Planned (research-grade)          |
+| 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
+| 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
+| 20.19 | Surgical Knowledge Editing (ROME/MEMIT)                | ⏳ Planned                           |
+| 20.20 | Active Inference & Predictive Synthesis (Friston)      | ⏳ Planned (research-grade)          |
+| 20.21 | Episodic-Semantic Memory Consolidation (Tulving)       | ⏳ Planned (research-grade)          |
+| 20.22 | Spaced Repetition & Forgetting Curves (Ebbinghaus/SM-2)| ⏳ Planned                           |
+| 20.23 | Tool-Use Augmented Synthesis (Toolformer/ReAct)        | ⏳ Planned (research-grade)          |
 | 21    | Polyrepo Federation                                    | ⏳ Planned                           |
 | 22    | Central Knowledge Server                               | ⏳ Planned                           |
 | 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
@@ -1549,6 +1567,1052 @@ Three non-mutating documentation generation surfaces over `state.json` and `log.
 
 - ✅ **Pros**: ADR generation closes the "decisions live in Slack" problem — every architectural decision that touched code gets a stub document automatically, reducing the manual ADR maintenance burden. C4 diagrams from a live graph are always current without a separate drawing tool. Conway's Law analysis is the closest Cortex comes to CodeScene's team coupling feature — without any cloud dependency. All three surfaces are read-only projections; zero risk of polluting the canonical knowledge store.
 - ❌ **Cons**: ADR stubs require human editing to be valuable — auto-generated ADRs without review are noise. Mitigated by the stub marker and skip-on-existing behavior that forces a human decision before commit. Conway analysis requires CODEOWNERS — teams without it get coupling data only. C4 Level 3 diagrams can be overwhelming for highly-connected entities; mitigated by a `--max-depth 1` flag.
+
+---
+
+## 🧠 Phase 20.6: Hierarchical Memory Tiering — ⏳ Planned (research-grade)
+
+**Research grounding**: MemGPT (Packer, Wooders, Lin, Fang, Patil, Stoica, Gonzalez — UC Berkeley 2023 — *"MemGPT: Towards LLMs as Operating Systems"*, arXiv:2310.08560). MemGPT introduces a hierarchical memory architecture inspired by traditional OS virtual memory: a small "main context" (in the LLM's window) and a large "external context" paged in/out via function calls. The LLM controls its own paging via a small set of memory-management functions. Reports that MemGPT outperforms fixed-context baselines on long-document QA and multi-session chat consistency.
+
+**Layman's Terms**
+Today every Cortex query reads the entire knowledge index. As the knowledge base grows past a few hundred entities, the index becomes too big for the AI to read efficiently. Phase 20.6 introduces a two-tier memory: a "hot" working memory of frequently-accessed entities that's always loaded, and a "cold" archive of rarely-touched entities that's pulled in on demand. The AI controls the paging itself — it can request "load the auth subsystem into working memory" and "evict the payment subsystem to make room." This is the architecture behind MemGPT, applied to Cortex's growing knowledge base.
+
+**Technical Terms**
+A two-tier memory architecture over `state.json`:
+
+- **Hot tier (in-context)**: a small working set (default 50 entities, configurable via `CORTEX_WORKING_SET_SIZE`) held in the MCP server's session cache. Composed of most-recently-read, most-recently-synthesized, and highest-centrality entities. `read_knowledge_index` returns hot-tier entities in full.
+- **Cold tier (paged out)**: all other entities. Listed in the index as header + one-line description only ("read on demand via `page_in(entity)`"). Full entity content is paged in on explicit MCP tool calls.
+- **Self-paging tool surface**: new MCP tools `page_in(entity)`, `page_out(entity)`, `working_set_status()`. The AI agent decides what to load and evict based on the current task — the LLM is in control, not Cortex.
+- **Eviction policy**: LRU within the hot tier, with "pinned" override for entities marked `centrality > 0.8` (always-resident high-centrality hubs).
+- **Pressure signal**: when the hot tier is full, `page_in` returns a "pressure" warning listing the LRU eviction candidates so the LLM can make an informed choice.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/memory/tier.ts` (hot/cold partition logic, LRU eviction), modifications to `src/mcp/server.ts` (new `page_in`, `page_out`, `working_set_status` tools; modified `read_knowledge_index` returns hot tier in full and cold tier as headers), additions to `src/cli/status.ts` (working-set composition readout).
+- **Design Pattern**: OS virtual memory analog. The hot tier is the LLM's "RAM"; the cold tier is "disk." The MCP server is the memory controller; the AI agent makes paging decisions. No knowledge is lost — eviction shifts from in-context to on-disk.
+- **Key Considerations**:
+  - Backward-compatible: clients that don't call `page_in` still see the full index minus full content for cold entities — header + description is enough to know what exists. Existing IDE integrations work without modification.
+  - Pinned entities (centrality >0.8) stay in the hot tier always, so the foundational architecture is immediately available without paging.
+  - Tiering is a derived projection — `state.json` is unchanged. The hot/cold partition is recomputed on each MCP session start.
+
+**Definition of Ready (DoR)**
+
+- Phase 4 (MCP) is stable.
+- Phase 8/10 centrality scores are computed.
+- Knowledge base typically exceeds 50 entities in real-world use (below that, tiering adds overhead without benefit).
+
+**Definition of Done (DoD)**
+
+- `CORTEX_WORKING_SET_SIZE=50` config controls hot tier capacity.
+- `read_knowledge_index` returns hot-tier entities in full and cold-tier entities as header + one-liner.
+- `page_in(entity)` loads a cold-tier entity into the hot tier (evicting LRU if full).
+- `page_out(entity)` moves a hot-tier entity to cold.
+- `working_set_status()` returns current hot-tier composition with eviction-candidate ranking.
+- High-centrality entities (>0.8) are pinned and not evictable.
+- Tests cover: cold-tier rendering format, LRU eviction order, pinning override, full round-trip page_in → page_out, pressure warning on full tier.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Solves the scaling problem for knowledge bases >200 entities — the LLM no longer reads 100KB of architecture on every query. The agent-controlled paging is the MemGPT contribution: the LLM manages its own memory, not us guessing what's relevant. Reuses Cortex's existing centrality scoring as the pinning heuristic. No `state.json` schema changes.
+- ❌ **Cons**: AI agents unaware of paging tools fall back to cold-tier headers — they get one-line descriptions instead of full content for non-hot entities. Mitigated by clear "page in for details" prompts in the cold-tier listing. Tier composition is per-session — fresh agents pay a cold-start cost rebuilding their working set on first queries.
+
+---
+
+## 👤 Phase 20.7: Personalized Per-Developer Memory — ⏳ Planned
+
+**Research grounding**: Mem0 (Mem0 AI, 2024 — *"Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory"*). Mem0 is an open-source memory layer for AI agents that stores facts, preferences, and history per user in a hybrid vector + graph + key-value store. Its key contribution is the **ADD/UPDATE/DELETE/NOOP** decision: every potential memory operation is classified before commit, so contradictory or redundant facts don't accumulate. Mem0 reports significant memory quality gains over append-only memory stores.
+
+**Layman's Terms**
+Today Cortex's knowledge is the team's knowledge — every developer reads the same entity descriptions. But every developer has their own context: "I work on the payment subsystem," "I prefer functional style," "I burned a day last week trying to use the legacy auth API." Phase 20.7 adds a personalized memory layer per developer: Cortex tracks what each developer has worked on, what failed approaches they've personally hit, what patterns they prefer. The AI assistant then knows you specifically, not just your team. Inspired by Mem0's personalized agent memory architecture.
+
+**Technical Terms**
+A per-developer memory store layered on top of the team-wide `state.json`. Identified by `git config user.email`, hashed to `sha256(email)[:12]` for the directory name. Stored at `.knowledge/personal/<email-hash>/memory.jsonl` — gitignored by default (personal, not shared).
+
+Three memory types per developer:
+
+- **Working areas**: which entities the developer has synthesized changes for in the last N days. Auto-populated from `log.jsonl` filtered to the developer's commits.
+- **Personal failed approaches**: failed approaches the developer specifically hit, with timestamp and context. Auto-populated when synthesis adds to `failedApproaches[]` on a commit authored by the developer.
+- **Stated preferences**: explicit `cortex remember "<fact>"` CLI command stores a free-text preference, processed via the Mem0 **ADD/UPDATE/DELETE/NOOP decision pattern** — a small LLM call classifies whether the new fact contradicts (DELETE+ADD), extends (UPDATE), duplicates (NOOP), or is novel (ADD) relative to existing memories. Prevents preference cruft.
+
+CLI:
+
+- `cortex remember "<fact>"` — add a personal memory (ADD/UPDATE/DELETE/NOOP classified).
+- `cortex forget <id|--match "<text>">` — remove a personal memory.
+- `cortex memory list [--type areas|failed|prefs]` — show personal memory.
+- `cortex memory inject` — output current personal memory as a CURRENT CONTEXT preamble for the next synthesis.
+
+MCP integration: when `get_pending_changes` is called by an IDE running as the developer, the response includes a `personalContext` block with the developer's working areas, recent failed approaches, and stated preferences.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/memory/personal.ts` (per-developer store with ADD/UPDATE/DELETE/NOOP classifier), new `src/cli/remember.ts`, additions to `src/mcp/server.ts` (`personalContext` block in `get_pending_changes`).
+- **Design Pattern**: Per-developer memory as an additive layer. Team-wide knowledge in `.knowledge/` stays canonical and shared via git. Personal memory in `.knowledge/personal/<email-hash>/` is gitignored — never leaves the developer's machine unless they explicitly push it.
+- **Key Considerations**:
+  - Personal memory is **local-first and private by default**. The `personal/` directory is in the `.gitignore` shipped with `cortex init`. Teams that want shared "team preferences" use the team-wide `state.json` via existing synthesis flow.
+  - The ADD/UPDATE/DELETE/NOOP decision uses a small LLM call only when `cortex remember` is invoked — not on every synthesis. Per-developer LLM cost is bounded.
+  - Email-hash directory naming prevents accidental email leakage if `personal/` is committed by mistake.
+
+**Definition of Ready (DoR)**
+
+- Phase 7's `log.jsonl` is stable — working areas are derived from it.
+- Phase 4 (MCP) is stable — personal context injection rides existing tool responses.
+
+**Definition of Done (DoD)**
+
+- `cortex remember "<fact>"` stores a personal memory with ADD/UPDATE/DELETE/NOOP decision.
+- `cortex memory list` shows all three types with timestamps.
+- `cortex forget --match "<text>"` removes matching memories.
+- Working areas are auto-computed from `log.jsonl` filtered to the developer's commits.
+- `get_pending_changes` MCP response includes `personalContext` for the developer.
+- `.knowledge/personal/` is in the default `.gitignore` shipped by `cortex init`.
+- Tests cover: ADD/UPDATE/DELETE/NOOP classification on conflicting facts, working-area derivation from `log.jsonl`, email-hash directory naming, gitignore generation.
+
+**Pros & Cons**
+
+- ✅ **Pros**: First-class personalization — the AI assistant knows you, not just your team. Reduces re-explaining context: "I'm working on the payment subsystem this week" is captured once and surfaced automatically. The local-first, gitignored storage sidesteps the privacy concerns that block enterprise adoption of shared memory tools. Mem0's ADD/UPDATE/DELETE/NOOP pattern means preferences don't accumulate as cruft — explicit override is detected.
+- ❌ **Cons**: Per-developer state introduces a new sync surface (your laptop vs. your work machine) that Cortex does not bridge. Mitigated by documenting that personal memory is per-machine and recommending `cortex remember` for important preferences. The ADD/UPDATE/DELETE/NOOP decision adds an LLM call per `cortex remember` — bounded but non-zero cost.
+
+---
+
+## 🌊 Phase 20.8: Memory Stream Retrieval Scoring — ⏳ Planned (research-grade)
+
+**Research grounding**: Generative Agents (Park, O'Brien, Cai, Morris, Liang, Bernstein — Stanford 2023 — *"Generative Agents: Interactive Simulacra of Human Behavior"*, arXiv:2304.03442). The agents use a memory stream — an append-only log of observations — with a retrieval scoring formula combining **recency** (exponential decay), **importance** (LLM-rated 1-10), and **relevance** (cosine similarity to query). The combined score, not pure similarity, drives what gets surfaced. The paper's behavioral evaluations show this scoring produces more believable, contextually-grounded agent behavior than similarity-only retrieval.
+
+**Layman's Terms**
+When the AI asks "what do I know about authentication?" today, Cortex returns whatever entity has the best name match. Phase 20.8 makes retrieval smarter: it scores each candidate by three things at once — how recently was it touched, how important is it to the codebase, and how relevant is it to the actual question. An entity touched yesterday with high centrality beats an obscure one with a slightly closer name match. This is the retrieval-scoring formula from Stanford's Generative Agents paper, adapted to Cortex's entity store.
+
+**Technical Terms**
+A weighted retrieval scoring formula combining three signals at query time:
+
+- **Recency**: `exp(-decay_rate × days_since_last_touch)` where `decay_rate = 0.05` (configurable). Entities touched today score ~1.0; entities untouched for a year score ~0.0. Measured from the entity's `lastRefined` timestamp (Phase 7.5), not file mtime.
+- **Importance**: Phase 8/10's PageRank centrality score, already computed and cached.
+- **Relevance**: cosine similarity to the query, using Phase 18's hybrid embeddings (or BM25 fallback when Phase 18 is not active).
+- **Combined score**: `α × recency + β × importance + γ × relevance` with `α=0.3, β=0.3, γ=0.4` default weights (configurable via `CORTEX_RETRIEVAL_WEIGHTS=recency:0.3,importance:0.3,relevance:0.4`).
+
+Applied at three surfaces:
+
+- `cortex similar <entity>` — re-ranks Phase 18's nearest-neighbor results by combined score.
+- MCP `get_pending_changes` — CURRENT CONTEXT block ranks injected entities by combined score relative to the diff (the diff's text is the query).
+- New CLI `cortex recall "<query>"` — semantic search across the knowledge base ranked by combined score, the closest analog to a chat-style "what do you know about X?" query.
+
+The formula is documented as a heuristic, weights are configurable, and the components are reported individually in `--explain` output so users can see why an entity ranked where it did.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/retrieval/scoring.ts` (combined-score formula), modifications to `src/cli/similar.ts` (apply combined scoring), new `src/cli/recall.ts`, modifications to `src/mcp/server.ts` (CURRENT CONTEXT block uses combined scoring).
+- **Design Pattern**: Score fusion at query time, no precomputation. Each query computes recency from `state.json` timestamps, importance from cached centrality, relevance from embeddings/BM25. Score is ephemeral — no persistence of ranking results.
+- **Key Considerations**:
+  - The combined score is **a heuristic**, not a learned ranker. Default weights are starting points calibrated from Park et al.'s reported settings; teams should tune based on their codebase's churn pattern. Fast-churning codebases benefit from higher recency weight; stable codebases from higher importance.
+  - Without Phase 18, relevance falls back to BM25 over entity text. The formula still works — embeddings are an enhancement, not a prerequisite.
+  - Recency decay is **measured from `lastRefined`**, not file mtime. An entity rewritten yesterday but unchanged for months prior still scores high recency — recency tracks the knowledge update, not the file touch.
+
+**Definition of Ready (DoR)**
+
+- Phase 8/10's centrality is queryable.
+- `lastRefined` timestamp is populated on every entity (Phase 7.5).
+
+**Definition of Done (DoD)**
+
+- `CORTEX_RETRIEVAL_WEIGHTS` env var configures weights.
+- `cortex similar <entity>` results are re-ranked by combined score.
+- `cortex recall "<query>"` returns combined-score-ranked entities for a text query.
+- MCP `get_pending_changes` CURRENT CONTEXT block uses combined-score ranking.
+- BM25 fallback works when Phase 18 embeddings are not available.
+- `--explain` flag breaks down per-entity score into recency / importance / relevance components.
+- Tests cover: recency decay correctness, weight override behavior, BM25 fallback, combined-score tie-breaking, `--explain` output format.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Grounded in a high-impact, peer-reviewed cognitive architecture paper (Park et al. 2023, 2000+ citations). Recency + importance + relevance captures more of human "what's worth surfacing" intuition than cosine similarity alone. Calibration is explicit (weights are configurable) — no hidden model judgment. The formula degrades gracefully when components are missing.
+- ❌ **Cons**: Weight defaults are not universal — teams will need to tune them for their codebase's pattern. Mitigated by good documentation and the explicit `CORTEX_RETRIEVAL_WEIGHTS` knob. Importance from PageRank can over-weight central-but-uninteresting entities (e.g., a config module everything imports); mitigated by users adjusting `β` downward if observed and by the `--explain` transparency.
+
+---
+
+## 🌍 Phase 20.9: Community Synthesis & Hierarchical Abstraction — ⏳ Planned (research-grade)
+
+**Research grounding**: Two convergent 2024 papers.
+
+- **GraphRAG** (Edge, Trinh, Cheng, Bradley, Chao, Mody, Truitt, Larson — Microsoft Research 2024 — *"From Local to Global: A Graph RAG Approach to Query-Focused Summarization"*, arXiv:2404.16130). Detects communities (Leiden algorithm) in an LLM-extracted knowledge graph and generates per-community summaries that enable global queries impossible with chunk-based RAG.
+- **RAPTOR** (Sarthi, Abdullah, Tuli, Khanna, Goldie, Manning — Stanford 2024 — *"RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval"*, ICLR 2024). Builds a tree of recursive abstractive summaries at multiple levels of granularity; retrieval traverses the tree to find the right granularity for a query.
+
+**Layman's Terms**
+Today Cortex has individual entities (`AuthService`, `JWTValidator`, `SessionStore`) but nothing that says "these three together are the authentication subsystem." If you ask "what does this codebase do at a high level?", Cortex can't answer — it only has entity-level descriptions, not subsystem-level ones. Phase 20.9 detects clusters of tightly-connected entities (using the Leiden algorithm Microsoft's GraphRAG uses) and generates a hierarchical summary tree: entity → module → subsystem → system. Now Cortex can answer global queries because it has summaries at every scale.
+
+**Technical Terms**
+Hierarchical community summaries above the entity layer, generated via Leiden community detection (GraphRAG approach) and recursive abstractive summarization (RAPTOR approach).
+
+Pipeline:
+
+1. **Community detection**: run Leiden algorithm over the typed dependency graph, weighted by edge type (`depends_on` weighted highest, `derived_from` lowest). Outputs communities at multiple resolution levels (Leiden's hierarchical mode).
+2. **Per-community synthesis**: for each community, generate a "community entity" summarizing purpose, key external dependencies, and characteristic patterns. Uses a dedicated `CommunitySynthesis` LLM prompt distinct from the entity-level Librarian prompt.
+3. **Hierarchical abstraction**: communities are themselves clustered into super-communities, recursively, producing a tree of abstractions (RAPTOR's contribution). Default depth: 4 levels (entity → module → subsystem → system).
+4. **Storage**: community entities live at `.knowledge/communities/<level>/<community-name>.md` with a `communityLevel: N` field. The community graph is stored in `state.json.communities[]` with parent/child links.
+5. **Query routing**: a new `cortex ask "<question>"` CLI routes queries to the appropriate level — broad questions ("what does this system do?") hit level 3/4; specific questions ("what does AuthService do?") hit level 0/1.
+
+CLI:
+
+- `cortex communities build` — run detection + synthesis pipeline (expensive; run after large architectural shifts or on a schedule).
+- `cortex communities show [--level N]` — show communities at level N with their entity members.
+- `cortex ask "<question>"` — global query interface routed to the right community level.
+
+MCP tool: `read_community(name)` returns a community summary for IDE consumption.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/communities/leiden.ts` (uses `graphology-communities-leiden`), new `src/communities/synthesize.ts` (per-community LLM synthesis), new `src/communities/router.ts` (query → level routing), new `src/cli/communities.ts`, new `src/cli/ask.ts`, additions to `src/mcp/server.ts` (`read_community` tool).
+- **Design Pattern**: Hierarchical abstraction over the entity graph. Community entities are a derived layer — rebuildable from `state.json` at any time via `cortex communities build`. The community graph never replaces entity-level knowledge; it augments it.
+- **Key Considerations**:
+  - Community detection is **expensive** (Leiden on a 500-entity graph + N LLM calls for synthesis). Not run per-sync — invoked by `cortex communities build`, typically scheduled (weekly cron) or triggered after a major refactor. The community graph carries `staleSince` if the entity graph has drifted past a threshold.
+  - Per-community synthesis reuses Phase 14's clustering insight: each community is small enough for focused LLM reasoning. Communities are split if `entities.length > 30`.
+  - Community-level queries hit `cortex ask`, not `read_knowledge_index`. The default MCP surface remains entity-level for backward compatibility.
+
+**Definition of Ready (DoR)**
+
+- Phase 6's typed `relationships[]` are stable — Leiden uses the typed graph.
+- Phase 14's clustering provides the per-cluster synthesis pattern that per-community synthesis reuses.
+- Knowledge base has ≥30 entities — below that, community detection collapses to one community and adds no value.
+
+**Definition of Done (DoD)**
+
+- `cortex communities build` runs Leiden detection and per-community synthesis, writing community entities to `.knowledge/communities/`.
+- Communities are stored at 4 levels with parent/child links in `state.json`.
+- `cortex communities show --level 2` lists subsystem-level communities with members.
+- `cortex ask "<question>"` routes broad questions to higher-level communities and specific to entity level.
+- MCP `read_community(name)` returns a community summary.
+- Community staleness is tracked via `staleSince` when the entity graph drifts past threshold.
+- Tests cover: Leiden detection on a synthetic graph with known communities, hierarchical clustering (4 levels), community staleness propagation, query routing accuracy.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Microsoft GraphRAG and Stanford RAPTOR are two of the most-cited 2024 RAG papers (each >300 citations). The hierarchical community structure enables global queries that no current Cortex surface supports ("explain this codebase at a high level"). Reuses the typed dependency graph from Phase 6. The community layer is genuinely novel for code architecture — existing tools (CodeScene, Lattix) cluster but don't synthesize per-cluster summaries.
+- ❌ **Cons**: Community synthesis is the heaviest LLM workload Cortex would run — N communities × M tokens per synthesis. Mitigated by infrequent invocation, small per-community context (≤30 entities), and Phase 7.5 quality scoring carrying over to community summaries. Leiden resolution-parameter tuning matters for very large codebases (>2000 entities).
+
+---
+
+## 🦛 Phase 20.10: Hippocampal Retrieval — ⏳ Planned (research-grade)
+
+**Research grounding**: HippoRAG (Gutiérrez, Shu, Gu, Yasunaga, Su — Ohio State University + Stanford 2024 — *"HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models"*, arXiv:2405.14831, NeurIPS 2024). Models the hippocampal indexing theory of human memory: an entity-centric index (analog to the hippocampus) combined with Personalized PageRank for one-step multi-hop retrieval. Reports 20-30% improvement over standard RAG on multi-hop QA (MuSiQue, 2WikiMultiHopQA) at 10-30× lower inference cost than iterative RAG.
+
+**Layman's Terms**
+When you ask Cortex "which entities are likely affected if I change the JWT validator?", today it does a one-hop dependency lookup. But the real answer might be three hops away — the JWT validator is used by the auth middleware, called by the API gateway, which serves payment endpoints. Phase 20.10 implements hippocampus-inspired retrieval: it does one mathematical computation (Personalized PageRank) that captures all multi-hop reachability at once. Faster, more accurate, and grounded in cognitive science research (HippoRAG, OSU 2024).
+
+**Technical Terms**
+Personalized PageRank (PPR) based multi-hop retrieval over the typed dependency graph. Given a query entity (or set), the personalized PageRank vector is computed with restart probability anchored to the query, yielding a relevance score for every entity in the graph that captures multi-hop reachability in one computation.
+
+Pipeline:
+
+1. **Entity-centric index**: each entity is a node in a graph where edge weights reflect Phase 6's typed relationships (`depends_on` weighted highest).
+2. **Query anchoring**: given a query (text or entity), identify anchor entities — direct text matches or query-embedding-nearest entities via Phase 18 hybrid embeddings.
+3. **Personalized PageRank**: compute PageRank with restart vector concentrated on anchor entities (`α=0.5` default). Score every entity by its PPR value.
+4. **Top-k retrieval**: return the top-k entities by PPR score as the "neighborhood" relevant to the query.
+
+Applied at:
+
+- New `cortex neighborhood <entity> [--k 10]` — show top-k entities most architecturally connected to the query, including multi-hop paths.
+- MCP `get_pending_changes` CURRENT CONTEXT block uses PPR-ranked entities (not one-hop neighbors) for the diff's anchor entities.
+- Phase 9 (Impact Preview) gains a PPR-based `--deep` mode that surfaces multi-hop dependents, not just direct ones.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/retrieval/ppr.ts` (Personalized PageRank using `graphology-pagerank`), new `src/retrieval/anchoring.ts` (query → anchor entity identification), modifications to `src/mcp/server.ts` and `src/cli/impact.ts` (Phase 9), new `src/cli/neighborhood.ts`.
+- **Design Pattern**: Single-computation multi-hop retrieval. Where today's retrieval is O(hop_count × neighbor_count) for explicit traversal, PPR is O(graph_size × iterations) for one computation that captures all hops. Trade-off: richer per-query signal at higher per-query compute.
+- **Key Considerations**:
+  - PPR is **computed on demand**, not cached — the personalization vector differs per query. PageRank (iter ~20) is fast enough for graphs up to ~10k entities at synchronous latency.
+  - Anchor entities use Phase 18 embeddings when available, falling back to text matching against entity names and descriptions. Without Phase 18, PPR still works but with weaker anchoring.
+  - The restart probability (`α=0.5`) controls "depth": higher α concentrates on the anchor; lower α explores further. Exposed via `cortex neighborhood --depth shallow|deep`.
+
+**Definition of Ready (DoR)**
+
+- Phase 6's typed `relationships[]` are stable.
+- Phase 8/10's graph traversal is factored into a reusable library.
+- Knowledge base has ≥50 entities — below that, PPR adds no benefit over direct traversal.
+
+**Definition of Done (DoD)**
+
+- `cortex neighborhood <entity> --k 10` returns top-10 PPR-ranked entities with scores and hop-distance annotation.
+- MCP `get_pending_changes` uses PPR-ranked entities in CURRENT CONTEXT for entities touched by the diff.
+- Phase 9 `--deep` flag uses PPR for multi-hop dependent identification.
+- `cortex neighborhood --depth shallow|deep` toggles restart probability.
+- Tests cover: PPR correctness on a synthetic graph (known reachability), anchor identification via embeddings vs. text matching, depth parameter behavior, performance on a 500-entity graph (<200ms).
+
+**Pros & Cons**
+
+- ✅ **Pros**: Grounded in HippoRAG (OSU 2024 NeurIPS), high-citation paper with documented 20-30% multi-hop QA improvements at 10-30× lower cost than iterative RAG. Captures multi-hop reachability in one computation — exactly what impact analysis genuinely needs. Reuses Cortex's existing graph and embeddings. Calibration-free: PPR scores are mathematical, not LLM-emitted.
+- ❌ **Cons**: PPR is per-query compute — on very large graphs (>10k entities), repeated PPR calls have measurable latency. Mitigated by caching PPR vectors per recently-queried entity. The restart probability is a magic number that affects results significantly; mitigated by exposing it as a CLI flag and documenting its effect.
+
+---
+
+## 🔁 Phase 20.11: Reflexion-Style Self-Correcting Synthesis — ⏳ Planned (research-grade)
+
+**Research grounding**: Reflexion (Shinn, Cassano, Berman, Gopinath, Narasimhan, Yao — Northeastern + Princeton + MIT 2023 — *"Reflexion: Language Agents with Verbal Reinforcement Learning"*, arXiv:2303.11366, NeurIPS 2023). Agents reflect verbally on their failures, store the reflection in episodic memory, and use it next time. Reports 91% pass@1 on HumanEval (vs. 80% GPT-4 baseline) via reflexion across iterations.
+
+Related: **Self-RAG** (Asai, Wu, Wang, Sil, Hajishirzi — UW 2023 — *"Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"*) demonstrates the same self-correction pattern for retrieval. **CRAG** (Yan, Gui, Li, Sun, Tu — 2024 — *"Corrective Retrieval Augmented Generation"*) extends it with a retrieval-evaluator triggering corrections.
+
+**Layman's Terms**
+Today when the Librarian (the AI doing synthesis) gets something wrong — produces a synthesis flagged by lint, or contradicting existing knowledge, or rejected by human review — Cortex just records the rejection. The Librarian gets no feedback. Phase 20.11 closes the loop: when a synthesis fails some quality check, Cortex generates a "reflection" — a short text explaining what went wrong and what to try differently — and stores it. The next synthesis on the same area sees the reflection in its context and avoids the same mistake. This is the Reflexion pattern (NeurIPS 2023), applied to Cortex's Librarian.
+
+**Technical Terms**
+A reflection-and-retry loop around synthesis, triggered by quality-check failures.
+
+Triggers (failure signals that produce a reflection):
+
+- **Lint failure**: synthesis introduces a `god_module`, `cycle`, or `silo` lint warning. Reflection: *"The previous synthesis on this area introduced a cycle between [A] and [B]; avoid creating circular dependencies."*
+- **Contradiction**: synthesis introduces inconsistency with an existing entity (Phase 16's contradiction detection). Reflection: *"The previous synthesis claimed [X] uses JWT, contradicting existing knowledge that [X] uses cookies; reconcile or explicitly resolve."*
+- **Human review rejection**: synthesis rejected via Phase 23's `cortex review reject`. Reflection: *"The previous synthesis was rejected by [reviewer] with reason: [text]."*
+- **CI signal degradation**: synthesis touches an entity whose `ciSignal` worsens within N days. Reflection: *"The previous synthesis on [entity] correlated with [redRunsSince increase]; consider reviewing the contract assumption."*
+
+Reflection storage: additive `reflections[]` field in entity records — `{ entity, trigger, summary, recordedAt, sourceSynthesis }`. Bounded per entity (default 5 most recent; LRU eviction).
+
+CURRENT CONTEXT injection: when synthesizing on an entity with stored reflections, the Librarian prompt includes them as a "Lessons from past attempts:" block.
+
+CLI:
+
+- `cortex reflections list [--entity <name>]` — show stored reflections.
+- `cortex reflections clear <entity>` — manually clear stored reflections (e.g., after a refactor that obsoletes them).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/reflection/triggers.ts` (failure detection hooks), new `src/reflection/generator.ts` (LLM-based reflection text generation), additive `reflections[]` field in `src/knowledge/schema.ts`, additions to `src/llm/prompts.ts` (reflection injection in CURRENT CONTEXT).
+- **Design Pattern**: Failure-triggered, append-only reflection store. Reflections are generated only when failures occur — no proactive reflection. They feed into the next synthesis's context, closing the learning loop without fine-tuning.
+- **Key Considerations**:
+  - Reflection generation is a **small LLM call** (50-100 tokens output) — bounded cost. Generated only on failure events, not on every synthesis, so amortized cost is low.
+  - The 5-reflection cap per entity prevents prompt bloat. Older reflections evict LRU; recent failures are assumed more relevant than ancient ones.
+  - Reflections are **stored, not acted on autonomously** — they enter the next synthesis's context as input, but the Librarian decides what to do with them. Consistent with surface-don't-act.
+
+**Definition of Ready (DoR)**
+
+- Phase 7 (lint) is stable — lint-trigger reflections depend on it.
+- Phase 16 (contradiction graph) is stable — contradiction-trigger reflections depend on it.
+- Phase 23 (human review) is desirable but optional — Phase 20.11 still works without it, just with fewer triggers.
+
+**Definition of Done (DoD)**
+
+- Lint failure on a synthesis generates a reflection stored on the affected entity.
+- Contradiction detection generates a reflection.
+- Phase 23 review rejection generates a reflection.
+- CI signal degradation generates a reflection (when Phase 15 is active).
+- Next synthesis on the same entity includes stored reflections in CURRENT CONTEXT.
+- `cortex reflections list / clear` CLI commands work.
+- Reflections are bounded to 5 per entity with LRU eviction.
+- Tests cover: each trigger type produces a reflection, reflection injection in CURRENT CONTEXT, LRU eviction at the 5-cap boundary, manual clearing.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Reflexion is one of the most-replicated 2023 agent papers (1500+ citations). Closes the feedback loop between Cortex's existing failure signals (lint, contradictions, reviews, CI) and the Librarian's next synthesis — without any fine-tuning. Reflections are interpretable text, not opaque embeddings, so users can read why the system thinks it learned something. Fits cleanly with surface-don't-act: reflections are input to the next synthesis, not autonomous corrections.
+- ❌ **Cons**: Reflections add a small LLM call per failure event — bounded but non-zero cost. Mitigated by triggering only on failures, not on success. Reflections can themselves be wrong (the reflection generator misdiagnoses the failure), creating bad "lessons." Mitigated by the 5-reflection cap (bad reflections age out) and the manual `cortex reflections clear` escape hatch.
+
+---
+
+## ⏳ Phase 20.12: Temporal Knowledge Graph — ⏳ Planned (research-grade)
+
+**Research grounding**: Temporal knowledge graph (TKG) literature.
+
+- **TNTComplEx** (Lacroix, Obozinski, Usunier — Facebook AI Research 2020 — *"Tensor Decompositions for Temporal Knowledge Base Completion"*, ICLR 2020). Adds a time dimension to ComplEx KG embeddings: facts become `(subject, predicate, object, time)` tuples.
+- **TimePlex** (Jain, Rathi, Chakrabarti — IIT Delhi + IBM 2020 — *"Temporal Knowledge Base Completion: New Algorithms and Evaluation Protocols"*, EMNLP 2020). Models time-validity intervals with relation-pair recurrent patterns.
+- **TeMP** (Wu, Cao, Hamilton, Tang, Maddison, Cohen — McGill 2020 — *"TeMP: Temporal Message Passing for Temporal Knowledge Graph Completion"*, EMNLP 2020). Message-passing over a temporal graph.
+
+Together these establish a representation pattern: every fact carries `(validFrom, validTo)` intervals, enabling time-travel queries like "what was true at time T?" and "when did fact F become true?" without log replay.
+
+**Layman's Terms**
+Today Cortex tells you what the architecture is *right now*. It can't tell you what it was last month — "did AuthService depend on JWT then?" or "when did we switch from sessions to OAuth?" Phase 20.12 adds time-validity intervals to every relationship: each `depends_on` edge has a `validFrom` and (optionally) `validTo`. Cortex can now answer time-travel queries directly without replaying the entire JSONL log. This is the temporal knowledge graph pattern from KG research (TNTComplEx, TimePlex), applied to Cortex's architecture graph.
+
+**Technical Terms**
+Time-aware extension to the entity relationship model. Each edge in `state.json.entities[].relationships[]` gains:
+
+- `validFrom: ISO 8601 timestamp` — when the relationship was first observed (the synthesis event that introduced it).
+- `validTo?: ISO 8601 timestamp` — when the relationship was removed. Absent for currently-valid edges.
+
+Entity-level temporal fields:
+
+- `firstSeenAt`: when the entity was first synthesized.
+- `lastSeenAt`: most recent synthesis touching the entity.
+- `removedAt?`: when the entity was deleted (entity record retained with `removed: true` flag — soft delete for time-travel queries).
+
+Time-travel queries:
+
+- `cortex graph at <timestamp>` — render the entity graph as it was at a given timestamp.
+- `cortex graph diff <t1> <t2>` — show edges added/removed between two timestamps.
+- `cortex history <entity>` — timeline of relationship changes for an entity, with timestamps and synthesis event references.
+
+Integrates with Phase 7's `cortex evolution --replay --at <commit>` at a finer granularity — `evolution` reconstructs full state at a commit; `graph at` queries the temporal edge model directly without replay.
+
+**Architecture & System Design**
+
+- **Core Components**: additive `validFrom`/`validTo` fields in `src/knowledge/schema.ts`, modifications to `src/knowledge/writer.ts` (stamp validity on every relationship write), modifications to `src/knowledge/evolution.ts` (use temporal fields instead of JSONL replay for fast queries), new `src/cli/graph.ts` (`at`, `diff` subcommands), new `src/cli/history.ts`.
+- **Design Pattern**: **Bitemporal** model — validity time (when the fact was true in the world) plus event time (when Cortex learned it). Cortex tracks both: `validFrom` is the synthesis event time; the JSONL entry's commit hash is the git event time. They usually match but can differ when a synthesis observes a relationship that existed in code earlier.
+- **Key Considerations**:
+  - Existing entities without temporal fields are migrated lazily — when `state.json` loads, missing `validFrom` is populated from the earliest JSONL entry touching the relationship. One-time migration per relationship.
+  - Temporal fields are **additive and gitignored-safe** — they don't break existing readers. Downstream tools see the same relationship shape with extra fields.
+  - Time-travel queries are bounded by JSONL retention. If `log.jsonl` is rotated/compressed, queries past the rotation point fall back to Phase 7 state snapshots in the rotated archive.
+
+**Definition of Ready (DoR)**
+
+- Phase 7's `log.jsonl` is stable with state snapshots (so migration can backfill `validFrom`).
+- `state.json` schema changes have a defined migration pattern.
+
+**Definition of Done (DoD)**
+
+- New relationships are stamped with `validFrom`.
+- Removed relationships gain `validTo` (soft delete; not physically removed for time-travel support).
+- Existing relationships are migrated on first load to populate `validFrom` from JSONL.
+- `cortex graph at <timestamp>` renders the graph state at the given time.
+- `cortex graph diff <t1> <t2>` shows edge additions/removals between two times.
+- `cortex history <entity>` shows the entity's relationship change timeline.
+- Time-travel queries run in O(graph size) without JSONL replay.
+- Tests cover: validFrom stamping on new synthesis, validTo stamping on relationship removal, migration of pre-temporal relationships, `graph at` correctness against known historical states, history rendering format.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Enables genuinely useful queries: "when did this dependency get introduced?", "what did the architecture look like before the auth migration?", "which edges have been added in the last week?" — all O(graph) instead of O(log replay). Temporal KG is a well-established research area, so the data model is on solid ground. The bitemporal distinction (validity vs. event time) is the right level of rigor for an architectural memory tool — it's how databases handle this (SQL:2011 system-versioned tables).
+- ❌ **Cons**: Doubles the relationship field count (every edge gains 2-3 extra fields). Mitigated by the fields being small (timestamps) and persisted only in `state.json`, not in human-readable markdown. Soft-delete semantics (entities retained with `removed: true`) accumulate cruft over time; mitigated by an optional `cortex prune --before <date>` command that hard-deletes old soft-deleted records (explicit user invocation).
+
+---
+
+## 🎒 Phase 20.13: Pattern Skill Library — ⏳ Planned
+
+**Research grounding**: VOYAGER (Wang, Xie, Jiang, Mandlekar, Xiao, Zhu, Fan, Anandkumar — NVIDIA + Caltech 2023 — *"VOYAGER: An Open-Ended Embodied Agent with Large Language Models"*, arXiv:2305.16291, TMLR 2024). VOYAGER is a lifelong learning agent in Minecraft that maintains a growing "skill library" — reusable code snippets the agent has successfully used. New tasks consult the library before generating new skills. Reports 3.3× more unique items, 2.3× longer distances, 15.3× faster tech tree progression than baselines.
+
+Related: **Generative Agents** skill-formation patterns (Park et al. 2023), and the broader case-based reasoning literature going back to Schank (1982) — *Dynamic Memory*.
+
+**Layman's Terms**
+When a refactor succeeds (say, "extract a Strategy pattern from a god module" or "introduce a Repository to break a database cycle"), Cortex today doesn't remember the pattern of that successful change. Phase 20.13 builds a "skill library" — a growing catalog of refactor patterns the team has successfully applied, indexed by the anti-pattern they resolved. Next time the same anti-pattern appears, Cortex consults the library first: "your team has resolved this kind of cycle 3 times before, here's how." Skills are concrete, executable patterns — what edges changed, what new entities were introduced — not vague advice. This is the VOYAGER architecture (NVIDIA 2023), applied to code refactoring.
+
+**Technical Terms**
+A growing skill library that captures successful refactor patterns and makes them retrievable for future anti-pattern occurrences.
+
+Skill structure:
+
+```yaml
+# .knowledge/skills/<skill-id>.yaml
+id: extract-strategy-from-god-module-2026-04-12
+trigger: god_module  # lint anti-pattern type
+applied_to_entity: AuthMiddleware  # historical example
+graph_before:
+  entity_count: 1
+  external_edges: 24
+graph_after:
+  entity_count: 4  # 1 facade + 3 strategies
+  external_edges: 8  # delegated through facade
+sequence_of_synthesis_events: [event_id_1, event_id_2]
+outcome_signals:
+  ci_signal_delta: improved
+  quality_score_delta: +0.18
+  human_review: accepted
+extracted_pattern: |
+  Identified hot methods in god module via centrality.
+  Extracted top-3 behavior variants into Strategy entities.
+  Original entity became Facade delegating to strategies.
+```
+
+Lifecycle:
+
+1. **Skill harvesting (post-merge)**: when a sequence of syntheses resolves a lint anti-pattern (god_module → no god_module, cycle → no cycle, etc.) AND resulting entities have improved quality scores (Phase 7.5), the sequence is harvested into a skill. Triggered via `cortex skills harvest --since <commit>`.
+2. **Skill retrieval**: when `cortex suggest pattern` (Phase 20.3) runs, it first searches the skill library for prior successful resolutions of the same anti-pattern type on similar graph shapes. If found, the suggestion includes the historical example.
+3. **Skill curation**: `cortex skills list / show <id> / remove <id>` for manual maintenance.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/skills/harvester.ts` (detect anti-pattern → resolution sequences from `log.jsonl`), new `src/skills/library.ts` (storage + retrieval), new `src/cli/skills.ts`, integration into Phase 20.3's `cortex suggest pattern`.
+- **Design Pattern**: **Observed-outcome library**. Skills are derived from observed (anti-pattern, resolution, outcome) tuples in `log.jsonl` — never declared manually. The library grows organically from team behavior, not from a static knowledge base.
+- **Key Considerations**:
+  - Harvesting is **post-hoc, not real-time**. Skills emerge from a sequence of syntheses that collectively resolved an issue — typically over hours or days. The harvester runs explicitly via `cortex skills harvest` or scheduled (daily cron).
+  - Skills are **examples, not templates**. A retrieved skill says "here's how this team resolved this kind of issue last time," not "apply this transformation automatically." The developer reads and applies judgment.
+  - Skill matching uses graph-shape similarity (Phase 18 embeddings on the relationship subgraph), not entity-name matching — the goal is "find analogous past situations," not "find identical entities."
+
+**Definition of Ready (DoR)**
+
+- Phase 20.3 (Pattern Suggestion) is shipped — the integration target.
+- Phase 7's `log.jsonl` is stable.
+- Phase 7.5 quality scoring is in place — needed for outcome-signal harvesting.
+
+**Definition of Done (DoD)**
+
+- `cortex skills harvest --since <commit>` detects anti-pattern → resolution sequences and creates skill entries.
+- `cortex skills list [--trigger <type>]` lists skills by anti-pattern type.
+- `cortex skills show <id>` displays full skill structure.
+- `cortex suggest pattern` (Phase 20.3) checks the skill library and includes matching prior examples in suggestion output.
+- Skill matching uses Phase 18 embeddings for graph-shape similarity (when available).
+- Tests cover: harvester correctly detects god_module → resolution sequence, skill storage round-trip, retrieval ranking by similarity, integration with `cortex suggest pattern`.
+
+**Pros & Cons**
+
+- ✅ **Pros**: VOYAGER's skill library is a high-profile lifelong-learning paper (TMLR 2024, 800+ citations). The "your team did this before, here's how" framing is uniquely valuable — most static refactoring tools give generic advice; Cortex's skill library gives team-specific historical precedent. The library compounds in value: more successful refactors → better future suggestions. Reuses Cortex's existing log, quality, and embedding infrastructure.
+- ❌ **Cons**: Skill harvesting depends on outcome signals — without Phase 15 (CI), Phase 7.5 (quality), and ideally Phase 23 (review), the harvester has weaker "successful" signals. Mitigated by graceful degradation: weaker signals produce fewer skills, not wrong ones. Skill quality varies with team behavior — a team that resolves anti-patterns poorly harvests poor skills. Mitigated by the manual `cortex skills remove` escape hatch.
+
+---
+
+## ⚖️ Phase 20.14: Causal Impact Analysis — ⏳ Planned (research-grade)
+
+**Research grounding**: Judea Pearl — *Causality: Models, Reasoning, and Inference* (Cambridge 2009, 2nd ed., 50,000+ citations). *The Book of Why* (Pearl & Mackenzie 2018). Pearl's structural causal models (SCM) and do-calculus distinguish correlation from causation, enabling counterfactual queries ("what would have happened if X had not occurred?"). Recent software engineering applications: **CausalDebugger** (Brun et al. ICSE 2023); **Causal Inference for Bug Localization** (Wang & Lin FSE 2024); **CausalRL** for fault-tolerant systems (Zheng et al. ASE 2024).
+
+**Layman's Terms**
+Today Cortex tells you "AuthService and SessionStore are related" but doesn't tell you whether changing AuthService will *cause* SessionStore to break, or whether they're correlated through some shared parent dependency. Phase 20.14 builds a causal model over the architecture: when you ask "what happens if I remove the JWT library?", Cortex answers using Pearl's do-calculus — the same math the FDA uses to evaluate drug interventions — to give a causal answer, not just a correlational one. Root-cause analysis ("which entity is the likely origin of this failure?") becomes a first-class query.
+
+**Technical Terms**
+A structural causal model (SCM) layer over the Phase 6 typed dependency graph. Each `depends_on` edge gains a `causalStrength: number` (0-1) derived from observed change-propagation in `log.jsonl`: if changes to A historically caused changes to B within N syncs, the A→B edge gains causal strength proportional to the conditional probability `P(change_B | change_A)` over the empirical history.
+
+Three new query types:
+
+1. **Counterfactual** — `cortex causal counterfactual --remove <entity>`: "if entity X had never existed, which other entities would also not exist or look structurally different?" Uses backward causal traversal.
+2. **Intervention** — `cortex causal intervention --modify <entity>`: "if we change X today, which entities are most likely to need changes within 30 days?" Pearl-style do-calculus over the SCM with `do(X = modified)`.
+3. **Root cause** — `cortex causal root-cause --symptom <entity>`: given a broken/failing entity, walk backwards through high-causal-strength edges to rank likely originating entities.
+
+Causal-strength computation:
+- For each ordered pair (A, B) with a `depends_on` edge: count syncs where A changed and B changed within the same sync or next N=3 syncs; divide by total A-change events. Output ∈ [0, 1].
+- Updated incrementally on each sync; full recomputation via `cortex causal rebuild`.
+- Stored as additive field in `relationships[]`; absent for edges with <3 A-change events (low-sample warning surfaced).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/causal/scm.ts` (SCM construction from `log.jsonl`), new `src/causal/docalculus.ts` (intervention + counterfactual queries, Pearl algorithms), new `src/causal/rootcause.ts` (backward causal walk), new `src/cli/causal.ts`, additive `causalStrength` field on `relationships[]`.
+- **Design Pattern**: Observed-frequency SCM. We don't assume unobserved causal mechanisms — we observe co-change frequency and treat it as the empirical causal signal. This is *not* full Pearl SCM with latent confounders; it's a useful approximation that matches what we can directly observe (sync co-occurrence over git history).
+- **Key Considerations**:
+  - Causal strength is **derived, not asserted**. The system never claims A *causes* B metaphysically; it reports the empirical co-change conditional probability with a confidence interval based on sample size. Documentation explicitly frames the metric as "if A changes, expect B to change with this empirical probability."
+  - The SCM is acyclic by construction: cycles are broken by treating them as bidirectional uncertainty. Phase 7's cycle detection still applies.
+  - Counterfactual queries on sparse history (low N) return wide confidence intervals — users see "low confidence (n=3 observations)" annotations rather than misleading point estimates.
+
+**Definition of Ready (DoR)**
+
+- Phase 6 typed `relationships[]` are stable.
+- Phase 7 `log.jsonl` is stable with sufficient history (≥100 sync events for meaningful causal estimates).
+
+**Definition of Done (DoD)**
+
+- `causalStrength` computed and stored on edges with ≥3 A-change observations.
+- `cortex causal intervention --modify <entity>` returns ranked entities likely to need changes within 30 days, with confidence intervals.
+- `cortex causal counterfactual --remove <entity>` returns ranked entities likely to disappear or change shape.
+- `cortex causal root-cause --symptom <entity>` returns ranked candidate root-cause entities.
+- `cortex causal rebuild` fully recomputes causal strengths from `log.jsonl`.
+- Tests cover: causal-strength computation on synthetic log, intervention forward-propagation, root-cause backward walk, confidence-interval reporting on low-sample edges.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Pearl's causal framework is the foundational text of modern causal inference (50,000+ citations across the corpus). Moving from correlation to causation directly addresses the "blast radius is sometimes wrong" problem with empirical grounding. Root-cause analysis is among the highest-value debugging primitives — directly applicable to production incident triage. The empirical (not assumed) causal model sidesteps the unfalsifiability critique of SCMs with hidden confounders.
+- ❌ **Cons**: Requires substantial sync history before estimates are meaningful — first 50-100 syncs produce only weak signals. Mitigated by explicit low-sample warnings. Empirical causality is "correlation-in-time," not "true causality"; we mark this explicitly in documentation to avoid claims the system can't support.
+
+---
+
+## 🧠 Phase 20.15: Dual-Process Synthesis (System 1 / System 2) — ⏳ Planned (research-grade)
+
+**Research grounding**: Daniel Kahneman — *Thinking, Fast and Slow* (Macmillan 2011, 100,000+ citations). System 1 (fast, intuitive) vs System 2 (slow, deliberative). LLM application: **Tree of Thoughts** (Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan — Princeton 2023 — arXiv:2305.10601, NeurIPS 2023, 1500+ citations). **Self-Refine** (Madaan et al., CMU 2023, NeurIPS 2023). **Chain-of-Thought** (Wei, Wang, Schuurmans, Bosma, Ichter, Xia, Chi, Le, Zhou — Google 2022 — NeurIPS 2022, 6000+ citations).
+
+**Layman's Terms**
+Today Cortex synthesizes every change the same way — same prompt, same depth, same time budget. But not every change deserves the same thought: a typo fix doesn't require deep architectural reasoning; introducing a new domain model does. Phase 20.15 routes syntheses by complexity: simple diffs go to a fast path (Phase 19 distilled model, single shot); complex diffs trigger a deliberate path (frontier model with tree-of-thoughts reasoning across multiple alternatives). This is Kahneman's System 1 / System 2 distinction — the most-cited cognitive psychology framework of the 21st century — applied to the Librarian.
+
+**Technical Terms**
+Two synthesis paths gated by a deterministic complexity classifier:
+
+- **System 1 (fast path)**: Phase 19 distilled local Librarian, single-shot synthesis, ~200ms per diff.
+- **System 2 (slow path)**: frontier model with Tree-of-Thoughts — generate K=3 candidate syntheses with different reasoning chains, score each via a separate critic LLM call (structural validity + consistency + evidence anchoring), return the best. ~5-10s per diff.
+
+Complexity classifier signals (combined into a routing score 0-1):
+- Diff size (lines, files touched) — normalized
+- Number of entities in CURRENT CONTEXT affected
+- Centrality of touched entities (Phase 8/10)
+- Open contradictions on touched entities (Phase 16)
+- Prior reflection count on touched entities (Phase 20.11)
+- Predictive surprise score (Phase 20.20)
+
+Routing rule: `score > CORTEX_SLOW_PATH_THRESHOLD (default 0.5) → System 2; else System 1`.
+
+CLI overrides: `cortex sync --force-slow` (always deliberate), `cortex sync --force-fast` (always fast).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/synthesis/router.ts` (complexity scoring + path selection), new `src/synthesis/tot.ts` (Tree-of-Thoughts implementation), modifications to `src/llm/client.ts` (route through router). The actual ToT mechanics live in Phase 20.18; this phase implements only the router.
+- **Design Pattern**: Two-tier inference router. System 1 amortizes routine cost; System 2 spends compute only when complexity justifies it. Routing decisions are logged on every synthesis event for post-hoc calibration analysis.
+- **Key Considerations**:
+  - Token cost: System 2 uses ~5-10× the tokens of System 1 per sync. Phase 13 cost simulator must show projected costs separately for the two paths.
+  - The complexity classifier is rule-based and transparent — components are documented and weights are tunable. Future enhancement: train the classifier on observed quality outcomes (which path produced higher-quality syntheses retrospectively).
+
+**Definition of Ready (DoR)**
+
+- Phase 19 (distilled Librarian) is shipped — provides System 1.
+- Phase 13 (cost simulation) is shipped — Phase 13 cost output separates fast/slow path projections.
+
+**Definition of Done (DoD)**
+
+- Complexity classifier scores every diff with documented component breakdown.
+- Routes above threshold use System 2 (delegating to Phase 20.18 mechanics); below use distilled Librarian.
+- `cortex sync --force-slow|--force-fast` overrides work.
+- Phase 13 cost simulator separates the two path estimates.
+- Routing decisions are logged on each synthesis event with score + components.
+- Tests cover: routing decisions on a corpus of known-complexity diffs, override flags, score-breakdown logging.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Tree-of-Thoughts (Yao et al. 2023, NeurIPS) is the most-cited deliberate-reasoning paper of 2023. Routes compute where it actually pays off — most syncs stay fast, rare complex ones get deep treatment. Closes the loop between Phase 19 distillation (fast path) and Phase 17 self-consistency (a System 2 mechanism). Brings Kahneman's well-validated cognitive distinction into the architecture.
+- ❌ **Cons**: ToT adds latency on complex syncs — 5-10s vs sub-second. Acceptable because complex syncs are infrequent. The critic LLM call doubles per-alternative cost, amplifying System 2's premium; mitigated by activation gating ensuring this only fires when warranted.
+
+---
+
+## 🎭 Phase 20.16: Multi-Agent Librarian Collaboration — ⏳ Planned (research-grade)
+
+**Research grounding**: **AutoGen** (Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, Awadallah, White, Burger, Wang — Microsoft Research + Penn State 2023 — *"AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation"*, arXiv:2308.08155, ICLR 2024). **MetaGPT** (Hong, Zheng, Chen, Cheng, Wang, Zhang, Wang, Yau, Lin, Zhou, Ran, Xiao, Wu, Schmidhuber — DeepWisdom 2023 — arXiv:2308.00352, ICLR 2024 Oral). **Multi-Agent Debate** (Du, Li, Torralba, Tenenbaum, Mordatch — MIT 2023 — arXiv:2305.14325). **CAMEL** (Li, Hammoud, Itani, Khizbullin, Ghanem — KAUST 2023, NeurIPS 2023). **ChatDev** (Qian, Liu, Zhang, Chen, Dang, Liu, Cong, Sun — Tsinghua 2024, ACL 2024).
+
+**Layman's Terms**
+Today Cortex has one Librarian — a single AI handling every kind of architectural insight. But "is this auth pattern secure?" needs different expertise than "is this query going to scale?" Phase 20.16 splits the Librarian into specialists — ArchitectLibrarian (general structure), SecurityLibrarian (auth/secrets/access), PerformanceLibrarian (scaling/caching/queries), DomainLibrarian (business logic). They debate on every synthesis: each proposes its view, they critique each other, a final consensus is written. Inspired by Microsoft's AutoGen and MIT's Multi-Agent Debate research showing that LLM debate improves factual accuracy.
+
+**Technical Terms**
+Multi-agent synthesis via parallel specialized Librarians plus a debate-and-consensus aggregator.
+
+Specialist roles (initial set):
+
+- **ArchitectLibrarian** (default, always active): general structural synthesis — current Cortex Librarian behavior.
+- **SecurityLibrarian**: role prompt directs attention to auth, secrets, access control, input validation, injection risks.
+- **PerformanceLibrarian**: scaling, caching, query patterns, N+1 issues, async/await usage.
+- **DomainLibrarian**: business-domain modeling, entity relationships, aggregate boundaries.
+
+Pipeline per synthesis:
+
+1. **Independent generation**: each activated specialist generates a synthesis with role-specific prompting (parallel LLM calls).
+2. **Debate round** (N=1 default, configurable): each specialist sees the others' syntheses and either reaffirms, adjusts, or flags disagreement.
+3. **Consensus**: aggregator LLM call produces the final synthesis, merging non-contradictory contributions and surfacing unresolved disagreements as `multiAgentWarnings[]` on the entity.
+
+Cost-aware activation: specialists beyond the default ArchitectLibrarian only activate when the diff matches their domain — regex-based file matching (e.g., SecurityLibrarian on `src/auth/`) plus Phase 18 embedding cosine similarity to the specialist's "domain prototype" entity. A pure UI tweak doesn't activate SecurityLibrarian.
+
+CLI: `cortex sync --agents <list>` overrides activation (e.g., `--agents architect,security` for an auth refactor).
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/agents/specialists/` (one file per role, role-specific prompt + activation rule), new `src/agents/debate.ts` (multi-round debate orchestration), new `src/agents/aggregator.ts`, modifications to `src/llm/client.ts` (route synthesis through agent committee when enabled).
+- **Design Pattern**: Specialist + debate + consensus, narrowed to the synthesis-only domain. Pattern proven in AutoGen and MetaGPT.
+- **Key Considerations**:
+  - Cost: 4 agents × 2 rounds + aggregator ≈ 9× single-Librarian cost. Activation gating restricts to relevant diffs; default OFF, opt-in via `CORTEX_MULTI_AGENT=true`. Phase 13 cost simulator surfaces the multiplier.
+  - Multi-agent debate is a research-validated **quality improver but cost multiplier**. Trade-off framed explicitly in docs.
+  - New specialists are pluggable: a YAML role definition + prompt template + activation rule, no code changes for community-contributed specialists.
+  - Cross-provider specialists: routing different specialists to different model providers (Anthropic for Architect, OpenAI for Security, Google for Performance) reduces shared-bias risk — different model families produce different blind spots.
+
+**Definition of Ready (DoR)**
+
+- Phase 4 (MCP) stable.
+- Phase 18 (embeddings) stable — used for activation similarity matching.
+- Phase 13 (cost simulator) stable — must show multi-agent cost projections.
+
+**Definition of Done (DoD)**
+
+- 4 baseline specialists implemented with role prompts and activation rules.
+- Multi-round debate orchestration with configurable round count.
+- Consensus aggregator produces a single synthesis with `multiAgentWarnings[]` for unresolved disagreements.
+- Activation gating (regex + embedding similarity) restricts to relevant diffs.
+- `cortex sync --agents <list>` override works.
+- Cross-provider routing supported via `CORTEX_AGENT_<ROLE>_PROVIDER` env vars.
+- Tests cover: per-specialist prompting, debate round behavior, consensus on agreeing inputs, warning emission on disagreeing inputs, activation gating, cross-provider routing.
+
+**Pros & Cons**
+
+- ✅ **Pros**: AutoGen (ICLR 2024) and Multi-Agent Debate are extensively cited 2023 papers (each >1000 citations). Per-domain specialization captures expertise breadth no single Librarian prompt can match. The disagreement signal is unique research value — `multiAgentWarnings[]` flags exactly where specialists couldn't agree, which is high-signal for human review.
+- ❌ **Cons**: 4-9× token cost. Mitigated by activation gating and opt-in default. Debate can amplify shared biases when all agents share one base model — mitigated by cross-provider routing. Coordination overhead can produce diluted or noncommittal consensus on contested topics; mitigated by surfacing disagreement rather than hiding it.
+
+---
+
+## 😴 Phase 20.17: Sleep Consolidation & Memory Reorganization — ⏳ Planned (research-grade)
+
+**Research grounding**: **Generative Agents** (Park et al., Stanford 2023) — agents have a "reflection" phase that consolidates raw observations into higher-order insights. Biological inspiration: **Walker & Stickgold** — *"Sleep-dependent learning and memory consolidation"* (Neuron 2004); **Diekelmann & Born** — *"The memory function of sleep"* (Nature Reviews Neuroscience 2010, 3000+ citations). Computational analog: **Complementary Learning Systems** (McClelland, McNaughton, O'Reilly — Psych Review 1995, 5000+ citations). LLM application: **MemoryBank** (Zhong, Guo, Gao, Ye, Wang — Fudan 2024 — AAAI 2024).
+
+**Layman's Terms**
+Humans don't just accumulate facts — they sleep, and during sleep the brain reorganizes what was learned that day into deeper patterns. Today Cortex just keeps adding entities forever. Phase 20.17 adds a "sleep" phase: every N syncs (or nightly via cron), Cortex runs a consolidation pass that merges duplicate concepts, archives resolved contradictions, generates higher-order pattern insights, and prunes truly dead entities. The knowledge base stays sharp instead of accumulating as cruft.
+
+**Technical Terms**
+A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Five operations:
+
+1. **Duplicate merging**: identify entities with high Phase 18 embedding similarity (>0.9) AND overlapping `sourceFile` paths AND no distinguishing relationships. Propose merge candidates; user applies via `cortex consolidate --apply-merges`.
+2. **Resolved-contradiction cleanup**: contradictions resolved >30 days ago with no recurrence are archived (moved from active `contradictions[]` to `contradictions-archive.jsonl`).
+3. **Higher-order pattern extraction**: detect entity clusters that share architectural patterns (Repository, Strategy, Factory) via Phase 20.13 skill library + Phase 20.9 communities, and synthesize a meta-entity describing the pattern at the cluster level.
+4. **Dead entity pruning**: entities with `removed: true` (Phase 20.12) AND no temporal queries against them in 90 days are hard-deleted (with explicit user confirmation per batch).
+5. **Reflection generation**: per Generative Agents pattern, an LLM pass over recent `log.jsonl` events produces "what did we learn this week" insights stored at `.knowledge/reflections/weekly/<date>.md`.
+
+Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to true.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/consolidation/duplicates.ts`, `contradictions.ts`, `patterns.ts`, `prune.ts`, `reflection.ts`, new `src/cli/consolidate.ts`.
+- **Design Pattern**: Batch off-hours consolidation mirrors biological sleep consolidation — not real-time, but periodic restructuring.
+- **Key Considerations**:
+  - All destructive consolidation actions require **explicit user approval** by default (merge candidates surfaced, not applied). `--auto-apply` exists but defaults to off — consistent with surface-don't-act.
+  - The reflection pass is unconditional and non-destructive — produces `.knowledge/reflections/weekly/` artifacts that augment but never replace per-entity files.
+  - Consolidation respects Phase 20.21's episodic-semantic distinction: `log.jsonl` (episodic) is never modified by consolidation; only the semantic projection in `state.json` is reorganized.
+
+**Definition of Ready (DoR)**
+
+- Phase 18 (embeddings) stable for duplicate detection.
+- Phase 20.12 (temporal KG) stable for dead-entity identification.
+- Phase 12 (CI/cron) stable for scheduled triggering.
+
+**Definition of Done (DoD)**
+
+- `cortex consolidate` runs all 5 operations with `--dry-run` defaulting to true.
+- Duplicate merge candidates correctly identified by embedding + sourceFile overlap.
+- Resolved contradictions archived after configurable window.
+- Higher-order pattern entities generated from skill + community signals.
+- Dead-entity pruning requires per-batch confirmation.
+- Weekly reflection markdown produced.
+- Tests cover: each consolidation operation on synthetic state, dry-run vs apply behavior, scheduling integration.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Solves the "knowledge base grows forever as cruft" problem at the architectural level that biological sleep solves it (batch off-hours). Generative Agents' reflection phase is one of the paper's most-replicated mechanisms. The weekly reflection artifact is high-value documentation that emerges naturally from this layer. Diekelmann & Born (Nature Reviews) is a foundational reference frame for the design.
+- ❌ **Cons**: Consolidation is computationally expensive (~N² entity-pair embedding comparisons for duplicate detection). Mitigated by off-hours scheduling. User-approval-by-default means consolidation only happens when humans review — acceptable trade since architectural memory consolidation is too high-stakes to fully automate.
+
+---
+
+## 🌳 Phase 20.18: Tree-of-Thoughts & Self-Ask Synthesis — ⏳ Planned (research-grade)
+
+**Research grounding**: **Tree of Thoughts** (Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan — Princeton + Google DeepMind 2023 — *"Tree of Thoughts: Deliberate Problem Solving with Large Language Models"*, NeurIPS 2023, arXiv:2305.10601). **Self-Ask** (Press, Zhang, Min, Schmidt, Smith, Lewis — UW + Meta 2022 — *"Measuring and Narrowing the Compositionality Gap in Language Models"*, EMNLP 2023). **IRCoT** (Trivedi, Balasubramanian, Khot, Sabharwal — AI2 2023 — *"Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions"*, ACL 2023). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022, ICLR 2023). **LATS** (Zhou, Yang, Chen, Yang, Liu, Wong, Zhu, Wang, Lake — Stanford 2024 — *"Language Agent Tree Search Unifies Reasoning Acting and Planning"*, ICML 2024).
+
+This is the implementation layer for Phase 20.15's System 2 path.
+
+**Layman's Terms**
+When Phase 20.15 routes a change to the "slow path" — the deliberate System 2 reasoning — it needs an actual slow-thinking mechanism. Phase 20.18 provides three: Tree-of-Thoughts (generate multiple candidate explanations as a tree, evaluate each, pick the best), Self-Ask (decompose a complex synthesis into sub-questions, answer each, aggregate), and IRCoT (look up entities mid-reasoning rather than hallucinate). These are the most-cited deliberate-reasoning patterns of 2022-2024.
+
+**Technical Terms**
+Three complementary deliberate-reasoning mechanisms invoked by Phase 20.15's slow path:
+
+**Tree-of-Thoughts (ToT)** synthesis:
+1. Generate K=3 root candidates (parallel LLM calls, temperature 0.7).
+2. For each root, generate 2 follow-up "thought" expansions exploring different angles.
+3. A critic LLM scores each branch on structural validity (matches `SynthesisSchema`?), consistency (no contradiction with existing entities), evidence anchoring (citation quality).
+4. Return the best-scoring branch.
+
+**Self-Ask decomposition** — for syntheses where the diff touches >5 entities or crosses module boundaries:
+1. Decomposer LLM call: "what sub-questions must be answered to synthesize this diff?" Outputs structured list of (entity, question) pairs.
+2. For each sub-question, retrieve relevant context (entity descriptions + Phase 20.10 PPR neighborhood) and synthesize a partial answer.
+3. Aggregator LLM call stitches partial answers into the final synthesis.
+
+**IRCoT** (interleaved retrieval CoT): at each reasoning step, optionally fetch additional entity context from `state.json` to ground the next thought. Prevents the LLM from hallucinating about entities it should have looked up.
+
+All three produce structured intermediate artifacts inspectable via `cortex synth-trace <event-id>` for debugging and trust-building.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/synthesis/tot.ts` (tree expansion + critic scoring), new `src/synthesis/selfask.ts` (decomposer + aggregator), new `src/synthesis/ircot.ts` (interleaved retrieval), invoked from Phase 20.15's router.
+- **Design Pattern**: Multi-step deliberate reasoning. ToT for breadth (explore alternatives); Self-Ask for depth (decompose then aggregate); IRCoT for grounding (look up rather than hallucinate).
+- **Key Considerations**:
+  - Cost: ToT ≈ 10× single-shot tokens (3 roots × 2 expansions + critic + final); Self-Ask ≈ 3-5× (decomposer + N sub-answers + aggregator). Activation only via System 2 routing.
+  - All three patterns produce structured intermediate artifacts (tree, sub-Q/A pairs, retrieval calls) stored on synthesis events for `cortex synth-trace` introspection.
+
+**Definition of Ready (DoR)**
+
+- Phase 20.15 (router) is shipped — provides invocation gating.
+- Phase 20.10 (PPR retrieval) is shipped — Self-Ask sub-question context.
+
+**Definition of Done (DoD)**
+
+- ToT generates K branches, critic-scores them, returns best.
+- Self-Ask decomposes complex diffs, answers sub-questions, aggregates.
+- IRCoT interleaves entity lookups during reasoning.
+- `cortex synth-trace <event-id>` shows the full reasoning trace.
+- Phase 20.15 router invokes these on slow-path diffs.
+- Tests cover: ToT on a multi-alternative diff, Self-Ask decomposition correctness, IRCoT entity-lookup tracking, trace persistence.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Tree-of-Thoughts and Self-Ask are foundational 2023 reasoning papers (combined 4000+ citations). Synthesis traces are interpretable — users can see exactly how a complex synthesis was reasoned, building trust. IRCoT directly addresses hallucination in long-context synthesis. LATS extends ToT with reinforcement learning — potential future enhancement path.
+- ❌ **Cons**: 5-10× token cost on slow path. Mitigated by activation gating in Phase 20.15. Trace storage adds ~10KB per slow-path synthesis; mitigated by retention policy (keep last 100 traces).
+
+---
+
+## ✏️ Phase 20.19: Surgical Knowledge Editing — ⏳ Planned
+
+**Research grounding**: **ROME** (Meng, Bau, Andonian, Belinkov — MIT + Northeastern 2022 — *"Locating and Editing Factual Associations in GPT"*, NeurIPS 2022, arXiv:2202.05262). **MEMIT** (Meng, Sharma, Andonian, Belinkov, Bau — MIT 2023 — *"Mass-Editing Memory in a Transformer"*, ICLR 2023). **MEND** (Mitchell, Lin, Bosselut, Finn, Manning — Stanford 2022, ICLR 2022). These papers introduce "locate-and-edit" techniques for surgical updates to factual knowledge in transformer models without retraining. The patterns apply to structured knowledge bases too.
+
+**Layman's Terms**
+Today when one fact about an entity changes — say, the auth library version is upgraded — Cortex must re-synthesize the entire entity description, which can shift unrelated details. Phase 20.19 adds surgical editing: change ONE specific fact about an entity (the library version, the file path, a single relationship) without touching the rest. Inspired by MIT's ROME/MEMIT work on editing facts in neural networks without retraining, applied here to Cortex's knowledge graph.
+
+**Technical Terms**
+A targeted edit API that modifies specific fields of an entity/concept while leaving others structurally unchanged. Distinct from re-synthesis (which rewrites the whole entity).
+
+Edit operations:
+
+- `cortex edit set <entity> <field> <value>` — set a specific scalar field (e.g., `description`, `sourceFile`).
+- `cortex edit relationship <entity> add|remove|change <kind> <target>` — surgical relationship modifications.
+- `cortex edit evidence <entity> add|remove <ref>` — surgical evidence updates.
+- `cortex edit constraint <entity> add|remove <constraint>` — surgical constraint updates.
+
+Every edit:
+1. Validates against `SynthesisSchema`.
+2. Writes an explicit `edit:` typed entry to `log.jsonl` (distinct from `synthesis:` entries) with `field`, `before`, `after`, `editor` (git user), optional `reason`.
+3. Updates `lastRefined` but NOT `firstSeenAt`.
+4. Recomputes Phase 7.5 derived quality score.
+5. Does NOT trigger LLM re-synthesis.
+
+Immutable fields (`firstSeenAt`, `synthesisEvent`, provenance fields) are protected — attempts error with clear messages.
+
+MCP tool: `edit_entity(entity, field, value, reason?)` for IDE-assisted surgical edits.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/knowledge/editor.ts` (validation + atomic field update + log emission), new `src/cli/edit.ts`, additive MCP tool in `src/mcp/server.ts`.
+- **Design Pattern**: Field-level compare-and-swap. The editor never bulk-rewrites; every change is one structured operation in `log.jsonl`, mirroring how Git tracks individual blob changes rather than file rewrites.
+- **Key Considerations**:
+  - Edits are **first-class log events** distinct from syntheses. Phase 7's `log.jsonl` schema gains an `edit:` event type. Audit trail preserved with full before/after.
+  - Edits bypass LLM cost entirely — important for high-volume mechanical updates (e.g., a global file move across 50 entities).
+  - Phase 20.11 Reflexion treats human edits as a feedback signal: an edit to a previously-synthesized field generates a reflection ("the previous synthesis stated X; a human corrected it to Y; consider why").
+
+**Definition of Ready (DoR)**
+
+- Phase 7's `log.jsonl` schema is stable and extensible.
+- Phase 7.5 quality scoring is stable.
+
+**Definition of Done (DoD)**
+
+- `cortex edit set/relationship/evidence/constraint` operations work on real entities.
+- Schema validation rejects malformed edits.
+- `log.jsonl` `edit:` events contain field, before, after, editor, optional reason.
+- Immutable fields (firstSeenAt, synthesisEvent) are protected with clear error messages.
+- Phase 7.5 quality score recomputed after each edit.
+- MCP `edit_entity` tool exposes the same operations.
+- Phase 20.11 reflexion fires on field corrections.
+- Tests cover: each edit type, immutable-field protection, log event format, quality re-computation, reflexion trigger.
+
+**Pros & Cons**
+
+- ✅ **Pros**: ROME/MEMIT (combined 2000+ citations) established locate-and-edit as a research-validated alternative to retraining. The CLI/MCP edit surface fills a real gap — today users either accept re-synthesis (which shifts unrelated details) or manually hand-edit markdown (bypassing validation). Surgical edits preserve quality scoring and audit trail. Eliminates LLM cost for mechanical updates.
+- ❌ **Cons**: Bypassing LLM synthesis means edits can introduce inconsistencies the Librarian would have caught. Mitigated by schema validation and by Reflexion treating human edits as a feedback signal for future syntheses. Edit log entries can accumulate (high-frequency mechanical updates); mitigated by Phase 20.17 consolidation pruning old edit entries.
+
+---
+
+## 🔮 Phase 20.20: Active Inference & Predictive Synthesis — ⏳ Planned (research-grade)
+
+**Research grounding**: Karl Friston — *"The free-energy principle: a unified brain theory?"* (Nature Reviews Neuroscience 2010, 6000+ citations). **Active Inference**: Parr, Pezzulo, Friston — *Active Inference: The Free Energy Principle in Mind, Brain, and Behavior* (MIT Press 2022). Computational implementation: pymdp (Heins, Millidge, Demekas, Klein, Friston, Couzin, Tschantz — JOSS 2022). The core idea: an intelligent agent maintains a generative model of its environment and minimizes surprise (prediction error) by either updating the model or acting on the environment. Friston has h-index >250; this is among the most-cited frameworks in computational neuroscience.
+
+**Layman's Terms**
+Today Cortex is reactive — it waits for a code change, then synthesizes. Phase 20.20 makes it predictive: before you commit a change, Cortex predicts what synthesis it expects based on past patterns. When your actual change matches the prediction, the system is unsurprised and synthesizes quickly. When your change is wildly unexpected ("you just imported a payment library in the auth module — never seen that before"), the system surfaces *surprise* as a signal: "this is unusual relative to your codebase's pattern — worth a careful look." Inspired by Karl Friston's Free Energy Principle.
+
+**Technical Terms**
+A predictive model over the synthesis distribution: P(synthesis | diff, current_context). On each diff:
+
+1. **Prediction step**: a fast prediction LLM call (Phase 19 distilled Librarian) generates an *expected* synthesis given the diff and CURRENT CONTEXT, *before* the actual synthesis runs.
+2. **Synthesis step**: actual synthesis proceeds (any path — fast, slow, multi-agent).
+3. **Surprise computation**: structural diff between prediction and actual synthesis:
+   - Entity-set Jaccard distance
+   - Relationship-set Jaccard distance
+   - Action-verb agreement
+4. **Surprise score**: weighted combination, normalized to [0, 1]. Stored as `synthesisSurprise` on the log event.
+5. **Active inference action**: when surprise > threshold (default 0.6):
+   - Surface in `cortex sync` output: ⚠ HIGH SURPRISE — review recommended.
+   - Auto-trigger Phase 20.15 System 2 slow-path re-synthesis (deliberate confirmation).
+   - Optionally trigger Phase 23 review queue entry (when enabled).
+
+CLI: `cortex surprise log [--top N]` — ranked list of most-surprising recent syntheses (research-grade leaderboard for finding architectural anomalies). Also feeds Phase 20.15's routing as one of the complexity signals.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/predictive/predictor.ts` (fast prediction LLM call via Phase 19 distilled model), new `src/predictive/surprise.ts` (structural diff + scoring), new `src/cli/surprise.ts`, modifications to `src/llm/client.ts` (prediction step before synthesis).
+- **Design Pattern**: Predict-then-observe-then-update. The "free energy" being minimized is surprise — high-surprise syntheses get more attention (compute, review); low-surprise are routine and fast. The distilled Librarian's role as predictor is a natural fit — distillation already approximates the expected synthesis.
+- **Key Considerations**:
+  - Prediction cost: one extra small-model call per sync (~$0.0001 with Phase 19 distilled model). Bounded.
+  - The predictor reuses **Phase 19's distilled Librarian** — perfect match: prediction is exactly what distillation does. Surprise = where distilled and frontier diverge, which is also the signal driving Phase 19's hybrid routing.
+  - High-surprise syntheses are tagged but not blocked. Surface-don't-act.
+
+**Definition of Ready (DoR)**
+
+- Phase 19 (distilled Librarian) is shipped — provides the fast predictor.
+- Phase 7's `log.jsonl` schema can accept `synthesisSurprise` field.
+
+**Definition of Done (DoD)**
+
+- Prediction step runs before every synthesis with bounded latency (<500ms).
+- `synthesisSurprise` stored on every log event.
+- High-surprise syntheses auto-trigger Phase 20.15 slow-path re-synthesis.
+- `cortex surprise log --top 10` ranks recent syntheses by surprise.
+- Surprise threshold configurable (`CORTEX_SURPRISE_THRESHOLD=0.6`).
+- Phase 20.15 router consumes surprise as one complexity signal.
+- Tests cover: prediction-synthesis Jaccard computation, threshold gating, auto-trigger of slow path, surprise leaderboard, router integration.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Free Energy Principle is the most-cited unified theory in computational neuroscience. Predict-then-update is a research-validated paradigm. The surprise leaderboard is genuinely useful — it surfaces the most architecturally anomalous changes, exactly where bugs and architectural drift hide. Reuses Phase 19's distilled Librarian without new infrastructure.
+- ❌ **Cons**: Surprise threshold tuning matters — too low and every sync is "surprising," too high and nothing surfaces. Mitigated by exposing the threshold and documenting calibration via empirical observation. Requires Phase 19 distillation for cost-efficient prediction.
+
+---
+
+## 📚 Phase 20.21: Episodic-Semantic Memory Consolidation — ⏳ Planned (research-grade)
+
+**Research grounding**: Endel Tulving — *Elements of Episodic Memory* (Oxford 1983); *"How many memory systems are there?"* (American Psychologist 1985, 6000+ citations). Tulving's distinction: **episodic** memory (specific events, time-tagged) vs **semantic** memory (general facts, atemporal). Computational analog: **Complementary Learning Systems** (McClelland, McNaughton, O'Reilly — Psych Review 1995, 5000+ citations): hippocampus (episodic, fast learning) consolidates to neocortex (semantic, slow learning) during sleep. Recent LLM application: **MemoryBank** (Zhong et al., AAAI 2024); **A-MEM** (Xu et al., 2024) — agentic memory management.
+
+**Layman's Terms**
+Cortex already has two kinds of memory but doesn't distinguish them: `log.jsonl` is *episodic* (specific events: "on March 12 we changed AuthService") and `state.json` entities are *semantic* (general facts: "AuthService validates JWTs"). Today the transformation from one to the other is implicit. Phase 20.21 makes it explicit: a structured pipeline that consolidates episodic events into semantic facts, with traceability ("this semantic fact derives from these 3 episodic events"). Grounded in Tulving's foundational memory theory.
+
+**Technical Terms**
+A typed pipeline that explicitly transforms episodic events (`log.jsonl`) into semantic claims (`state.json` entity fields), with provenance tracking.
+
+Semantic claims structure (additive in entity records):
+
+```
+semanticClaims: [
+  {
+    claim: "AuthService validates JWTs using the jose library",
+    derivedFrom: [event_id_1, event_id_2, event_id_3],  // episodic origin
+    consolidatedAt: "2026-05-15T03:00:00Z",
+    confidence: 0.92,  // supporting / (supporting + contradicting) events
+    contradictingEvents: []
+  }
+]
+```
+
+Consolidation pipeline (runs as a Phase 20.17 sleep consolidation step):
+
+1. **Episodic mining**: scan `log.jsonl` since last consolidation for entity-claims (declarative statements in synthesis summaries).
+2. **Claim clustering**: group events supporting the same semantic claim via embedding similarity + entity match.
+3. **Confidence scoring**: claim confidence = supporting events / (supporting + contradicting). Claims with confidence <0.6 flagged.
+4. **Semantic update**: high-confidence claims written to `semanticClaims[]` on entity records with provenance back to source events.
+5. **Episodic retention**: original events remain in `log.jsonl` (never modified). Consolidation is purely additive — semantic claims layer on top.
+
+Retrieval:
+
+- `cortex claims <entity>` — list semantic claims with provenance.
+- `cortex claims trace <claim-id>` — show originating episodic events.
+- MCP `read_entity` includes `semanticClaims[]` in output.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/memory/consolidate.ts` (episodic → semantic pipeline), additive `semanticClaims[]` field in `src/knowledge/schema.ts`, new `src/cli/claims.ts`. Runs as a Phase 20.17 consolidation step.
+- **Design Pattern**: Complementary Learning Systems analog. Episodic store (`log.jsonl`) is fast, append-only, event-based. Semantic store (`semanticClaims[]`) is slow, consolidated, fact-based. They never overwrite each other.
+- **Key Considerations**:
+  - Semantic claims are **derived, not authoritative**. The authoritative source is episodic events; semantic claims are a consolidated view. Direct edits go to the entity description, not to `semanticClaims[]` directly.
+  - Confidence scoring is grounded in event counts, not LLM-emitted — consistent with the no-LLM-confidence-numbers principle.
+
+**Definition of Ready (DoR)**
+
+- Phase 7 `log.jsonl` is stable.
+- Phase 18 (embeddings) for claim clustering.
+- Phase 20.17 (sleep consolidation) for invocation context.
+
+**Definition of Done (DoD)**
+
+- Consolidation pipeline extracts entity-claims from `log.jsonl`.
+- Claims clustered by embedding + entity match.
+- Confidence scored from event support/contradiction ratio.
+- High-confidence claims written to `semanticClaims[]` with provenance.
+- `cortex claims <entity>` and `cortex claims trace <id>` work.
+- MCP `read_entity` includes claims with provenance.
+- Tests cover: episodic mining on synthetic log, clustering correctness, confidence computation, provenance roundtrip.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Tulving's episodic/semantic distinction is foundational memory theory (cited tens of thousands of times across the corpus). The provenance trail makes every semantic claim auditable to its episodic origins — a research-grade traceability feature no current code-memory tool provides. Complements Phase 20.17 consolidation cleanly. Bridges to active research on neural network episodic-semantic separation (Complementary Learning Systems in deep RL).
+- ❌ **Cons**: Adds storage (semanticClaims[] per entity). Mitigated by claim count being small (typically 3-10 per entity). Consolidation correctness depends on synthesis summaries being declarative enough to mine; mitigated by Librarian prompt updates encouraging claim-style statements.
+
+---
+
+## 🔁 Phase 20.22: Spaced Repetition & Forgetting Curves — ⏳ Planned
+
+**Research grounding**: Hermann Ebbinghaus — *Memory: A Contribution to Experimental Psychology* (1885) — the foundational forgetting curve, the oldest experimental psychology result still cited daily. **SuperMemo SM-2** (Wozniak 1990) — the spaced repetition algorithm used by Anki and most modern flashcard systems. Modern formalization: **A Stochastic Model of Human Memory** (Cepeda, Vul, Rohrer, Wixted, Pashler — Psych Sci 2008). LLM application: **Active Forgetting in LLMs** (Bian, Huang, Cheng, Liu — 2024).
+
+**Layman's Terms**
+Some Cortex entities haven't been touched in 6 months. Are they still accurate? Today nothing reminds you to check. Phase 20.22 applies spaced repetition (the science behind Anki flashcards) to architectural memory: entities get review intervals that grow when confirmed accurate and shrink when found inaccurate. The system surfaces "due for review" entities proactively. Grounded in Ebbinghaus's 1885 forgetting curve and the SuperMemo SM-2 algorithm — 140 years of evidence-grounded memory science.
+
+**Technical Terms**
+A review scheduling layer that assigns each entity an interval based on Ebbinghaus-style decay and SM-2 update rules.
+
+Per-entity scheduling fields (additive):
+
+```
+reviewSchedule: {
+  intervalDays: 14,       # current review interval
+  easeFactor: 2.5,        # SM-2 EF, initial 2.5
+  lastReviewed: "2026-04-01",
+  nextDue: "2026-04-15",
+  reviewHistory: [{date, outcome: "confirmed"|"updated"|"stale"}]
+}
+```
+
+SM-2 update on review outcome:
+- `confirmed` (still accurate): `interval *= EF`, `EF` unchanged.
+- `updated` (still relevant but needed edits): `interval *= 1.3`, `EF -= 0.15`.
+- `stale` (no longer accurate): `interval = 1`, `EF -= 0.25` (floor 1.3).
+
+Triggers:
+- Manual: `cortex review-due [--top N]` lists entities past `nextDue`.
+- MCP: `read_knowledge_index` surfaces a `reviewDue: [...]` block.
+- CI: Phase 12 GitHub Action gains an optional weekly summary commenting on stale entities.
+
+Auto-confirmation: an entity touched by a recent synthesis (last 30 days) is auto-confirmed without manual review — no need to ask "is this still accurate?" if it was just rewritten.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/memory/scheduler.ts` (SM-2 algorithm), new `src/cli/review-due.ts`, additive `reviewSchedule` field on entity records.
+- **Design Pattern**: Pull-based review system. Entities don't expire; they ask to be looked at. Forgetting is explicit, not implicit.
+- **Key Considerations**:
+  - SM-2 is parameter-stable across decades of Anki use — no parameter tuning needed for initial deployment.
+  - Auto-confirmation prevents review fatigue on active codebases. Only quiescent entities accumulate as "due."
+
+**Definition of Ready (DoR)**
+
+- Phase 7.5 `lastRefined` timestamp populated on every entity (used for auto-confirmation).
+
+**Definition of Done (DoD)**
+
+- `reviewSchedule` field populated on all entities.
+- SM-2 algorithm correctly updates intervals on review outcomes.
+- Auto-confirmation triggers on recent synthesis touch.
+- `cortex review-due` lists entities past due.
+- MCP `read_knowledge_index` includes `reviewDue` block.
+- Tests cover: SM-2 interval updates for all 3 outcomes, auto-confirmation behavior, due-entity listing, ease-factor floor.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Ebbinghaus + SM-2 represent 140 years of evidence-grounded memory science. Closes the "is this knowledge still accurate?" question proactively. Auto-confirmation makes adoption painless — active codebases see almost no review burden; only neglected areas surface. Directly complements Phase 7.5 staleness scoring with a temporal nudge system.
+- ❌ **Cons**: Review fatigue if too many entities go stale at once. Mitigated by auto-confirmation and `--top N` limiting per-query surface. Adds 4-5 fields per entity record; small storage cost.
+
+---
+
+## 🛠️ Phase 20.23: Tool-Use Augmented Synthesis — ⏳ Planned (research-grade)
+
+**Research grounding**: **Toolformer** (Schick, Dwivedi-Yu, Dessì, Raileanu, Lomeli, Zettlemoyer, Cancedda, Scialom — Meta AI 2023 — *"Toolformer: Language Models Can Teach Themselves to Use Tools"*, NeurIPS 2023, arXiv:2302.04761, 1500+ citations). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022 — *"ReAct: Synergizing Reasoning and Acting in Language Models"*, ICLR 2023, 2000+ citations). **Gorilla** (Patil, Zhang, Wang, Gonzalez — UC Berkeley 2023 — arXiv:2305.15334). **LATS** (Zhou et al., ICML 2024). **Voyager** tool-use mechanics (Wang et al., NVIDIA TMLR 2024).
+
+**Layman's Terms**
+Today the Librarian synthesizes from the diff text + existing knowledge alone. Sometimes that's not enough — to truly understand a change, the Librarian needs to grep the codebase, run git blame, or query the language server. Phase 20.23 gives the Librarian tools: it can mid-synthesis call `grep`, `git_blame`, `read_file`, `ts_lookup_symbol`, etc., to ground its synthesis in concrete evidence rather than speculation. This is the Toolformer (Meta NeurIPS 2023) and ReAct (Princeton ICLR 2023) pattern.
+
+**Technical Terms**
+A tool-use layer for the Librarian. During synthesis, the LLM can emit structured tool-call requests that the Cortex runtime executes and returns results for the next reasoning step.
+
+Tool surface (initial set):
+
+- `grep(pattern, path?)` — repo-scoped grep, returns matching lines with file:line context.
+- `read_file(path, lines?)` — fetch specific lines from a source file.
+- `git_blame(path, line)` — git blame (author, date, commit).
+- `git_log(path, --since=)` — commit history for a path.
+- `ts_lookup_symbol(name)` — TypeScript Language Server symbol lookup (callers, definitions).
+- `ast_query(path, selector)` — AST query via tree-sitter (function signatures, class members).
+
+Pipeline:
+
+1. LLM receives diff + CURRENT CONTEXT + tool list.
+2. LLM emits one of: a synthesis OR a tool call (structured JSON).
+3. If tool call: Cortex runtime executes, returns result to LLM.
+4. LLM continues reasoning. Loop up to `CORTEX_TOOL_BUDGET=10` tool calls (default), then forced to synthesize.
+5. Final synthesis includes a `toolTrace[]` field with all tool calls and results — full traceability.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/tools/registry.ts` (tool definitions + sandboxed execution), new `src/tools/grep.ts`, `git.ts`, `lsp.ts`, `ast.ts`, modifications to `src/llm/client.ts` (multi-turn tool-loop synthesis).
+- **Design Pattern**: ReAct (Reason + Act) loop. The LLM alternates between reasoning and tool calls until it has enough grounded evidence to synthesize.
+- **Key Considerations**:
+  - Tool calls add latency per call (~50-500ms each). Bounded by `CORTEX_TOOL_BUDGET`.
+  - Tools are **read-only and sandboxed** — they cannot modify source files, commit changes, or run arbitrary commands. Listed tools are explicitly safe; the registry rejects unlisted tool names.
+  - Tool traces stored on synthesis events for audit and debugging. Users can see exactly which grep/blame/lookup grounded each synthesis.
+  - Tool calls are explicitly **not** mutations — synthesis remains the only path that writes to `.knowledge/`.
+
+**Definition of Ready (DoR)**
+
+- Phase 2 (LLM client) supports multi-turn function-calling (most modern providers do).
+- Optional: tree-sitter and TypeScript LSP available for the richer tools (gracefully degrades if absent).
+
+**Definition of Done (DoD)**
+
+- 6 baseline tools implemented and sandboxed.
+- Tool-loop synthesis works end-to-end (LLM → tool → result → LLM → synthesis).
+- Tool budget caps enforce termination.
+- `toolTrace[]` stored on each synthesis with calls + results.
+- `cortex synth-trace <event-id>` shows the tool trace.
+- Tests cover: each tool's correct execution, budget enforcement, sandbox refusal of non-listed tools, trace persistence.
+
+**Pros & Cons**
+
+- ✅ **Pros**: Toolformer (NeurIPS 2023) and ReAct (ICLR 2023) are foundational tool-use papers (combined 3500+ citations). Tools ground synthesis in concrete evidence — directly addresses hallucination. Tool traces are interpretable and auditable. The tool registry is extensible; users can add domain-specific tools without core modifications. Gorilla showed LLMs can learn 1000+ API calls — runway for far richer tool surfaces.
+- ❌ **Cons**: Multi-turn tool loops add latency (~5-10× single-shot for tool-heavy syntheses). Mitigated by tool budget caps and by activation only on slow path (Phase 20.15 System 2). LSP integration adds a dependency on a running TypeScript server; mitigated by treating it as optional with graceful degradation.
 
 ---
 
