@@ -71,11 +71,13 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
 | 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
 | 33.1  | Model Provider Registry & Cost-Tier Routing            | ⏳ Planned (enterprise)              |
+| 33.2  | Remote Operations & Mobile Status PWA                  | ⏳ Planned (enterprise)              |
 | —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
 | 40    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
 | 41    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
 | 42    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
 | 43    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
+| 43.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
 | 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
 | 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
 
@@ -5102,6 +5104,140 @@ A pluggable Provider Registry that decouples response generation from any specif
 
 ---
 
+## 📱 Phase 33.2: Remote Operations & Mobile Status PWA — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+Phase 33's deep bootstrap can take **2+ hours on a huge codebase**. Phase 20.17 sleep consolidation runs nightly. Phase 19 distillation training can run for many hours. Phase 20.9 community-build is a multi-call expensive pass. Today these long operations force you to babysit your laptop — you start the command, you wait, you watch the terminal, and if something goes wrong while you're away, you find out later (maybe too late, if the budget ran away). Phase 33.2 lets you kick off a long Cortex operation, walk away (or leave for the day), monitor live progress from your phone, get push-notified on completion / failure / budget-breach, and optionally abort / resume / refine from anywhere. It is a **focused remote-operation surface** — not a duplicate of Nexus-OS's real-time mission control, but the narrower thing Cortex actually needs.
+
+**Technical Terms**
+Four layers stacked on existing Cortex infrastructure (Phase 22 central server, Phase 26 audit, Phase 29 FinOps, Phase 31 analytics), no duplication:
+
+### 1. Secure Remote Tunnel
+
+Optional built-in tunneling exposes the Phase 22 central server's MCP-over-HTTP endpoint securely to the public internet:
+
+- **Cloudflare Tunnel** (recommended default) — zero-trust, no port forwarding, free for personal use, custom domains supported. One-command setup: `cortex remote enable --provider cloudflare --domain status.acme-eng.com`.
+- **Tailscale** (recommended for enterprises) — mesh VPN, identity-aware, integrates with Phase 25 SSO via Tailscale ACL groups.
+- **ngrok / Pinggy** (developer-friendly) — auth-tokened tunnels, fast setup for trial / personal use.
+- **Self-hosted reverse SSH tunnel** — full control for air-gapped or sovereign environments (Phase 27).
+- **No tunnel mode** (default) — Phase 22 central server stays local-network-only; no remote surface unless explicitly enabled.
+
+### 2. Generalized Long-Operation Status API
+
+Generalize the Phase 33 `bootstrap_progress` MCP resource into a single `operations` resource covering all long-running ops:
+
+```
+GET  /v1/ops                       — list all in-flight and recent operations
+GET  /v1/ops/<op-id>               — detailed status, progress, cost, ETA, logs
+POST /v1/ops/<op-id>/abort         — graceful abort
+POST /v1/ops/<op-id>/resume        — resume from checkpoint
+GET  /v1/ops/<op-id>/stream        — Server-Sent Events stream of progress events
+```
+
+Operation types covered:
+- `bootstrap` (Phase 33) — deep recursive bootstrap
+- `consolidate` (Phase 20.17) — sleep consolidation
+- `distill-train` (Phase 19) — distilled Librarian fine-tune
+- `communities-build` (Phase 20.9) — Leiden + per-community synthesis
+- `refine` (Phase 33 Phase E refinement loop)
+- `embed-rebuild` (Phase 18) — full embedding regeneration
+- `compliance-scan` (Phase 24) — scheduled framework-wide scans
+- `dlp-retroactive-scan` (Phase 26.1) — historical knowledge re-scan
+
+CLI mirror for terminal users:
+- `cortex op list [--active|--recent|--failed]`
+- `cortex op status <op-id>`
+- `cortex op stream <op-id>` (live progress in terminal)
+- `cortex op abort <op-id>`
+- `cortex op resume <op-id>`
+
+### 3. Push Notification Channels
+
+Configurable notification channels delivered on operation lifecycle events (`started`, `completed`, `failed`, `budget_warning`, `budget_breached`, `quality_below_threshold`, `paused_for_input`):
+
+- **Slack** via webhook (reuses Phase 28 integration when available)
+- **MS Teams** via webhook (reuses Phase 28)
+- **Email** via SMTP / SendGrid / SES
+- **Mobile push** via Web Push API (delivered to the PWA — see below)
+- **SMS** via Twilio (optional paid feature)
+- **PagerDuty** for critical failures in production deployments (reuses Phase 28)
+- **Custom webhook** for arbitrary HTTP POST destinations
+
+Notification policies per operation type in `cortex.notifications.yaml`:
+```yaml
+notifications:
+  bootstrap:
+    completed: [slack:#cortex-ops, mobile-push]
+    failed:    [slack:#cortex-ops, mobile-push, email:engineering-leads@acme.com]
+    budget_breached: [slack:#cortex-ops, mobile-push, sms:+1-555-CTO]
+  distill-train:
+    completed: [email:ml-team@acme.com]
+    failed:    [pagerduty:ml-platform]
+  dlp-retroactive-scan:
+    completed: [slack:#security]
+    findings_exceed_threshold: [slack:#security-incidents, pagerduty:security]
+```
+
+### 4. Cortex Mobile Status PWA
+
+Hosted at `status.<cortex-host>/` (typically `status.cortex.<your-org-domain>` via the tunnel). Lightweight Progressive Web App — installable to home screen, works offline (cached last state), respects Phase 25 SSO authentication.
+
+PWA surfaces (intentionally narrow):
+
+- **Operations list**: all in-flight ops with progress bars + ETA + cost burn + status badge
+- **Operation detail**: drill-in showing phase-by-phase progress (e.g., Phase 33's domain-by-domain bootstrap), live cost graph, quality scorecard preview when applicable
+- **Recent reports**: last 10 bootstrap reports (Phase 33), compliance reports (Phase 24), executive QBRs (Phase 31) — read-only render
+- **Audit log feed**: recent Phase 26 audit events filterable by actor / action / resource
+- **Cost dashboard**: today's / this week's / this month's spend (Phase 29 data), per-team breakdown
+- **Notification settings**: configure which events ping which channels (mirrors `cortex.notifications.yaml`)
+- **Operation control** (gated): abort / resume / refine require re-authentication via biometric (Touch ID / Face ID / Android biometric) or WebAuthn — destructive actions cannot be triggered by a stolen unlocked phone alone
+- **Read-only by default**: PWA defaults to read-only mode; control surfaces are opt-in via Phase 25 SSO grant + biometric pairing
+
+What the PWA explicitly does **not** show (these belong to Nexus, not Cortex):
+- ❌ Real-time IDE mirroring (no Ghost Bridge)
+- ❌ Real-time agent chat / agent-to-agent event bus
+- ❌ Visual code editor / file manipulation
+- ❌ Browser automation control
+- ❌ Mission-control style command terminal
+
+The Cortex PWA is **operation-status focused**, not full mission control. A Cortex + Nexus bundle customer (per the GTM section) installs both PWAs and gets both views — but neither product duplicates the other.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/remote/tunnel.ts` (Cloudflare / Tailscale / ngrok / SSH adapter), new `src/remote/operations.ts` (generalized long-op registry + lifecycle events), new `src/remote/notifications.ts` (pluggable channel adapters), new `src/cli/op.ts` (`cortex op list / status / stream / abort / resume`), new `src/cli/remote.ts` (`cortex remote enable / disable / status`), new package `cortex-status-pwa/` (the PWA itself — React SPA with service worker for offline cache). Phase 22 central server gains the `/v1/ops/*` endpoints and SSE stream.
+- **Design Pattern**: Operations as first-class entities (extends Phase 7 `log.jsonl` schema with `op:` event type). Lifecycle events fire via the audit stream (Phase 26) and notification channels subscribe to them. PWA is a thin reader over the existing central-server API surface — no new business logic, only presentation.
+- **Key Considerations**:
+  - **Tunnel security**: any remote tunnel is an attack surface. Default-off; opt-in with explicit consent; Phase 25 SSO required; Phase 26 audit on every tunnel-routed request; rate limits at the central server.
+  - **Mobile-optimized payloads**: API responses for the PWA are compressed and minimally-shaped (no full entity dumps, just status). Bandwidth-conscious for mobile users on cellular.
+  - **PWA offline behavior**: last-known state cached via service worker. Online reconnect resyncs. Conflicts (e.g., op aborted while user was offline) surface clearly.
+  - **Notification de-duplication**: same event fires only once per channel per operation; configurable cool-down per channel.
+
+**Definition of Ready (DoR)**
+
+- Phase 22 (central server with REST API) shipped.
+- Phase 25 (SSO) shipped — PWA auth depends on it.
+- Phase 26 (audit) shipped — operation events anchor here.
+- Phase 33 shipped (provides the most demanding long-op use case for validation).
+
+**Definition of Done (DoD)**
+
+- 4 tunnel providers (Cloudflare, Tailscale, ngrok, SSH) supported with `cortex remote enable / disable / status` CLI.
+- `/v1/ops/*` REST endpoints + SSE stream live.
+- 8 operation types instrumented (bootstrap, consolidate, distill-train, communities-build, refine, embed-rebuild, compliance-scan, dlp-retroactive-scan).
+- 6 notification channels (Slack, MS Teams, Email, Mobile Push, SMS, PagerDuty, custom webhook).
+- `cortex.notifications.yaml` schema and routing.
+- PWA installable to home screen, works offline, displays operation list + detail + cost + recent reports.
+- Biometric / WebAuthn re-auth for destructive PWA actions.
+- Phase 26 audit emits events for every remote API call AND every PWA action.
+- Tests cover: tunnel provider integration (mocked), op lifecycle events fire correctly, notification routing per channel, PWA offline behavior, biometric re-auth flow, audit emission for remote actions.
+
+**Pros & Cons**
+
+- ✅ **Pros**: **Eliminates the babysit-your-terminal problem** for long Cortex operations — the single largest UX pain on huge codebases. Mobile PWA delivers Cortex's value to the user wherever they are, not just where their laptop is. Push notifications mean budget breaches and quality regressions are caught in minutes, not at end-of-day. Cloudflare Tunnel + Tailscale options cover the spectrum from personal-developer to enterprise-network deployment. Generalized `op` API isn't just for bootstrap — it makes every long-running Cortex operation observable and controllable through a consistent surface, simplifying the user mental model. PWA scope is intentionally narrower than Nexus's mission control, so customers running both bundle products see clear, non-overlapping value.
+- ❌ **Cons**: Tunnels add real security surface — opt-in default and Phase 25 SSO mandatory mitigate. PWA introduces a frontend codebase to maintain (modest — a React SPA + service worker is well-understood territory). Notification channels are permanent integration surfaces (6 of them); mitigated by treating each as a thin adapter and by being able to deprecate niche ones if usage stays low. Biometric re-auth UX varies across mobile platforms (iOS Touch/Face ID vs Android biometric APIs vs WebAuthn) — testing matrix is non-trivial but bounded.
+
+---
+
 ## 🎯 Cortex vs. Nexus-OS — Product Line Strategy & Bundle GTM
 
 > [!IMPORTANT]
@@ -5149,24 +5285,39 @@ Sell each product separately for its standalone value; bundle them when the cust
 
 **The bundle is the natural upgrade path**: customers who buy Cortex first often add Nexus-OS when they hit "I have multiple AI agents running and no visibility." Customers who buy Nexus-OS first often add Cortex when they hit "my agents are smart but they keep re-explaining the codebase to themselves." The integration phases (40-45) below make the bundled experience meaningfully better than either product alone.
 
-### Roadmap Discipline
+### Roadmap Discipline — What Cortex Will and Will Not Absorb
 
-Cortex's roadmap will NOT absorb Nexus's:
-- Real-time CDP scraping (Block A of Nexus)
-- IDE adapter pattern (Block B of Nexus)
-- Agent-to-agent messaging mesh (Phase 17.2 of Nexus)
-- Mobile push notifications / PWA mission control (Phase 33.1/33.2 of Nexus)
-- Voice / glassmorphism / visual mirror UI
+This is the most important boundary in the two-product strategy. Several Nexus features look like they belong in Cortex on a first read; the careful distinction is below.
 
-These define Nexus-OS's distinct identity. Pulling them into Cortex blurs both products' positioning beyond recovery.
+#### Cortex will NOT absorb (these stay Nexus's identity):
 
-Cortex WILL absorb (Phases 40-45 below):
-- Per-agent memory partitioning (memory-side coordination of multiple agents — Cortex-native)
-- Multi-workspace unification (memory-side coordination of multiple projects — Cortex-native)
-- Memory federation protocol (how memories combine — Cortex-native)
-- Cognitive substrate observability (the memory analog of Nexus's dashboard — focused on knowledge, not real-time events)
+- **Real-time CDP visual scraping** (Nexus Block A) — sub-100ms IDE mirroring is action-time observability, not memory.
+- **IDE adapter pattern + per-IDE profile registry** (Nexus Block B) — Nexus's multi-IDE control plane is its core IP; Cortex's MCP integration in Phase 33 reaches IDEs for synthesis, not for live control.
+- **Real-time ephemeral agent event bus** (the *transport* layer of Nexus Phase 17.2) — sub-second, fire-and-forget, "FeatureDev start typing NOW" messages. Optimized for runtime action coordination at machine speed. Messages disappear after delivery — wrong shape for Cortex's persistent-memory model.
+- **Voice wake word / glassmorphism UI / visual mirror panel** (Nexus 33.x UX features) — these define Nexus's brand identity as a mission-control surface.
+- **Headless agent action runtime** (Nexus Phase 8.2) — long-running background agents performing actions on files / IDEs / browsers without human prompting. Cortex's daemon is observation-driven (it reacts to code changes); Nexus's headless runtime is goal-driven (it pursues objectives autonomously).
 
-The line: **memory orchestration is Cortex; action orchestration is Nexus.** Both products coordinate "many things at once," but in different dimensions.
+#### Cortex WILL absorb (memory-side analogues of Nexus capabilities — Phases 40-45 + 33.2 + 43.1):
+
+- **Per-agent memory partitioning** (Phase 41) — memory-side coordination of multiple agents on the same codebase. Each agent's private scratch + shared workspace memory + read-aliasing grants. Different from Nexus's real-time agent mesh: Cortex partitions are durable address spaces, not transient runtime processes.
+- **Multi-workspace knowledge graph unification** (Phase 42) — memory-side coordination of one developer's multiple projects. Cross-workspace queries with provenance. Different from Nexus's unified workspace view: Cortex's unification is semantic (entities correlated by meaning), not visual (Nexus shows the same IDE across workspaces).
+- **Memory federation protocol** (Phase 44) — formal protocol for how partitions combine, who can read what, conflict resolution. Different from Nexus's bus: Cortex's protocol is bilateral grants + signed envelopes, not a real-time message broker.
+- **Cognitive substrate observability** (Phase 45) — memory-side dashboard. Substrate map + partition inventory + conflict heatmap + federation grant map. Different from Nexus's mission control: Cortex's observatory shows knowledge state, not real-time event firehose.
+- **Persistent agent messaging substrate** (Phase 43.1) — agent-to-agent messaging *where every message is a first-class memory entity*. Messages live in partitions forever, queryable by sender/recipient/topic/timestamp/referenced-entity, audited via Phase 26, governable via Phase 25.1 grants. Different from Nexus's bus: Cortex's messaging is asynchronous (seconds-to-minutes latency), durable (never auto-deleted), and architecturally-anchored (messages can reference entities, partitions, syntheses).
+- **Long-running operation monitoring + mobile PWA** (Phase 33.2) — remote status surface for Cortex's long ops (bootstrap, consolidation, distillation, communities-build). Different from Nexus's mission-control PWA: Cortex's PWA is operation-status focused, not real-time agent activity focused. A bundled customer installs both PWAs and sees clear, non-overlapping value.
+
+#### The principle
+
+| Pattern in Nexus | Pattern in Cortex | Why both exist |
+|---|---|---|
+| Real-time event bus (ms latency, ephemeral, fire-and-forget) | Persistent messaging substrate (s-min latency, durable, queryable forever) | Action coordination vs. architectural coordination — different requirements, both legitimate |
+| Multi-IDE adapter control plane | Multi-workspace unified knowledge graph | Acting on many IDEs vs. remembering across many codebases — different axes |
+| Mission control PWA (live agent activity, IDE mirroring) | Operations status PWA (long-op progress, cost, reports) | Monitoring runtime activity vs. monitoring batch operations — different views into different systems |
+| Headless action runtime (background agents pursuing goals) | Daemon synthesis pipeline (background reaction to code changes) | Goal-driven autonomy vs. observation-driven memory — different intentions |
+
+The unifying principle: **anything where the primary artifact is a persistent memory entity → Cortex. Anything where the primary artifact is a transient event or action → Nexus.** Some capabilities have both faces (an agent message has both an event aspect and a memory aspect), and in those cases the two products provide complementary views — Nexus's event-aspect via its bus, Cortex's memory-aspect via its substrate. Customers running the bundle see both faces of the same underlying coordination.
+
+**One sentence rule of thumb**: *if you'd want to query it 6 months later, it's Cortex. If you'd want a sub-second alert, it's Nexus. If both, that's the bundle's job.*
 
 ---
 
@@ -5374,6 +5525,149 @@ A runtime orchestrator that dispatches synthesis requests to specialized Librari
 **Definition of Done**: agent registry schema; activation routing on incoming changes; per-agent partitions provisioned automatically; per-agent observability dashboard; cross-agent escalation via substrate.
 
 **Nexus-OS integration**: Cortex's agent mesh maps 1:1 to Nexus's agent mesh. The same agent identity is used in both — `security-librarian` in Cortex's partition registry is the same entity as `@SecurityLibrarian` in Nexus's agent mesh. Nexus dispatches actions to the agent; Cortex provides its memory.
+
+---
+
+### Phase 43.1: Persistent Agent Messaging Substrate — ⏳ Planned (extended vision)
+
+**Layman's Terms**
+Phase 41 gives agents private + shared memory. Phase 43 lets multiple specialized agents run on the same codebase. But how do agents actually **talk to each other?** Today they coordinate only by writing into the shared memory partition and hoping the other agent reads it — clumsy, indirect, easy to miss. Phase 43.1 adds explicit agent-to-agent messaging — but with a Cortex twist: **every message is a first-class persistent memory entity.** When `@SecurityLibrarian` asks `@PerformanceLibrarian` "did you consider the cache invalidation pattern in `PaymentService`?", that question and the answer become part of the project's permanent architectural memory — queryable forever, audited, governable, and surfaceable as "discussions about this entity" links on `[[PaymentService]]`. This is fundamentally different from Nexus's ephemeral real-time event bus: Cortex's messaging is for **architectural coordination preserved as memory**, not for **runtime action coordination at machine speed**.
+
+### The Key Distinction (Why Cortex Needs This Even With Nexus's Bus)
+
+| Property | **Nexus real-time event bus** | **Cortex persistent messaging substrate** |
+|---|---|---|
+| Latency | Sub-second | Seconds to minutes |
+| Lifetime | Ephemeral — disappears after delivery | Durable — persists forever unless archived |
+| Optimization target | Action coordination ("start typing NOW") | Architectural coordination ("what's your take on this auth design?") |
+| Queryability | Limited to recent window | Full history, by sender/recipient/topic/timestamp/referenced-entity |
+| Audit | Best-effort | First-class Phase 26 audit on every send/read |
+| Governance | Network-level | Per-partition Phase 25.1 federation grants |
+| Threading | None (flat event stream) | Conversation threads as queryable graphs |
+| Entity references | None | Messages can `[[reference]]` Cortex entities, partitions, syntheses |
+
+A customer running the bundle gets **both**: Nexus's bus for ephemeral runtime signals, Cortex's messaging for architectural conversations that matter long-term. Neither replaces the other.
+
+**Technical Terms**
+
+A messaging layer that lives entirely inside the substrate's partition model:
+
+- **Inbox model**: each agent has a dedicated partition at `substrate://workspace/<id>/messages/inbox/<agent-id>/`. Messages addressed to that agent are written there. Each message is a first-class memory entity following a `MessageRecord` schema.
+- **Message schema** (additive, lives alongside `EntityRecord`):
+  ```typescript
+  interface MessageRecord {
+    id: string;
+    threadId: string;          // for conversation threading
+    from: AgentIdentity;       // sender agent ID (or 'human:user@example.com')
+    to: AgentIdentity[];       // primary recipients (inbox writes)
+    cc: AgentIdentity[];       // copies (read-only awareness)
+    mentions: AgentIdentity[]; // @mentions in body trigger notifications
+    subject: string;
+    body: string;              // markdown; can contain [[entity-refs]] and [[partition-refs]]
+    refs: {                    // structured references parsed from body
+      entities: string[];      // entity names referenced
+      partitions: string[];    // partition addresses referenced
+      syntheses: string[];     // synthesis event IDs referenced
+      messages: string[];      // other messages (for explicit reply chains)
+    };
+    replyTo?: string;          // message ID this is a reply to
+    sentAt: string;
+    readBy: { agentId, timestamp }[];  // read receipts
+    priority: "normal" | "high" | "urgent";  // affects notification routing
+    archived: boolean;
+  }
+  ```
+- **Send semantics**:
+  - `cortex agent send --to <agent> --subject "..." --body "..." [--reply-to <msg-id>] [--cc <agent>...] [--priority urgent]`
+  - Programmatically via MCP `send_agent_message` tool — agents call this directly during their reasoning to ask another agent for input.
+- **Delivery**: messages written to recipient's inbox partition appear in their poll/subscribe stream. Three delivery models:
+  - **Polling**: `cortex agent inbox --since <timestamp>` — simplest, works offline
+  - **Long-poll** via MCP `messages_pending` resource — moderate latency, no infrastructure
+  - **SSE stream** from Phase 22 central server — lowest latency, requires central server
+- **@Mentions**: parsed from message body (`@agent-id` syntax). Mentioned agents get priority notification regardless of `to`/`cc` status (analogous to Slack/Discord @mention semantics). `@human` mentions route to the Phase 23 review queue.
+- **Threading**: messages with `replyTo` form conversation threads. `cortex agent thread <thread-id>` renders the full conversation. Threads are queryable as graphs — a long-running architectural discussion about `[[AuthService]]` is its own first-class artifact.
+- **Broadcast**: messages addressed to `broadcast` go to all agents in the workspace (analogous to Slack #general). Used sparingly for workspace-wide architectural announcements ("we just merged the auth migration; please refresh your understanding of the auth domain").
+- **Entity reference indexing**: when a message body contains `[[EntityName]]`, the substrate adds an index entry so the entity's "discussed-in" view surfaces all messages mentioning it. Phase 22 central server exposes this as `GET /v1/entities/<name>/discussions`.
+- **Permissions**: cross-tenant agents can be allowed/denied via Phase 25.1 federation grants. `cortex agent permissions deny --from-tenant <id>` blocks all inbound from that tenant.
+- **Persistence policy**: messages never auto-delete. Archive via `cortex agent archive --before <date>` moves to `messages/archive/` (still queryable, just out of the default view). Hard delete only via explicit admin command with Phase 26 audit.
+- **Audit**: every send, read, archive, delete emits a Phase 26 audit event with full message metadata. Compliance retention (Phase 24) applies to agent messages just as it applies to syntheses.
+- **Notification integration**: Phase 33.2 notification channels (Slack/Teams/email/mobile push) can deliver inbox summaries — e.g., "@PerformanceLibrarian has 3 unread messages from @SecurityLibrarian about auth refactor."
+- **Quality signal**: agents (or humans) with long unread message backlogs surface as "communication debt" in Phase 31 dashboards — a leading indicator of coordination breakdown.
+
+### Examples — What This Actually Looks Like
+
+**Cross-agent specialist consult** (during synthesis):
+```
+@SecurityLibrarian (synthesizing PaymentService auth integration) →
+   @PerformanceLibrarian:
+   "Subject: Token refresh debounce strategy
+   Body: I'm synthesizing the new auth integration in [[PaymentService]]. 
+   The current pattern calls refreshToken() per request — looks expensive 
+   to me. Did you analyze this in your last [[BillingService]] pass? 
+   Any pattern I should encode in the synthesis?"
+   
+@PerformanceLibrarian → @SecurityLibrarian (reply, ~30 seconds later):
+   "Subject: Re: Token refresh debounce strategy  
+   Body: Yes — I synthesized this exact concern in [[BillingService]] 
+   last week. The pattern is debounced refresh via shared promise 
+   (see [[TokenRefreshDebouncer]] entity). Recommend the same pattern 
+   for [[PaymentService]]. Reference: synthesis event 2026-05-12-1430-7f3a."
+```
+
+Six months later, a new engineer queries `[[PaymentService]]`. Among the entity's "discussed-in" links, this conversation surfaces — they understand why the debounce pattern exists, who suggested it, what previous service it came from.
+
+**Human consult** (Phase 23 review escalation):
+```
+@SecurityLibrarian → @human:cto@acme.com:
+   "Subject: Need decision on auth-payment coupling
+   Body: My synthesis of PR #4471 would re-introduce coupling between 
+   auth and payment domains that ADR-0019 explicitly resolved. 
+   Author has provided justification (see PR comments). I'm not 
+   confident this overrides ADR-0019. Need your call.
+   Refs: [[AuthFacade]], [[PaymentService]], ADR-0019, PR #4471
+   Priority: high"
+```
+
+This routes to the Phase 23 review queue, surfaces in Phase 33.2 mobile PWA notifications, audit-logged via Phase 26, and the CTO's decision becomes a permanent part of the architectural record.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/substrate/messaging.ts` (message routing + storage), `src/substrate/threading.ts` (conversation thread graph), `src/substrate/mentions.ts` (parser + notification trigger), new `src/cli/agent.ts` (`cortex agent send / inbox / thread / archive`), extensions to MCP server (new `send_agent_message`, `messages_pending` tools), extensions to Phase 22 central server (`/v1/agents/<id>/inbox`, `/v1/threads/<id>`, `/v1/entities/<name>/discussions`).
+- **Design Pattern**: **Messaging-as-memory**. Every message is an entity-shaped artifact in a dedicated partition. The messaging "feature" is a UI surface + delivery semantic over the existing partition model — no new persistence layer.
+- **Key Considerations**:
+  - **Volume management**: a chatty agent could fill another's inbox. Phase 29 FinOps tracks message volume per agent; Phase 26 audit logs let recipients identify spammers; `cortex agent permissions rate-limit --from <agent> --max 100/day` throttles.
+  - **Semantics of "delivery"**: messages are written to recipient partitions atomically; "delivery" is guaranteed by the substrate. "Read" is a separate signal (read receipts). Distinction matters for correctness audits.
+  - **Entity-link bidirectionality**: when a message references `[[EntityName]]`, the entity gains a back-reference. Maintained automatically; rebuilt on demand via `cortex substrate reindex-discussions`.
+  - **Cross-product integration with Nexus**: Nexus's real-time bus and Cortex's messaging substrate are complementary. Nexus emits an ephemeral event ("@PerformanceLibrarian responded"); Cortex stores the permanent record. A bundle customer's agents emit both: Nexus for "what's happening now," Cortex for "what got decided."
+
+### Definition of Ready (DoR)
+
+- Phase 41 (per-agent partitions) shipped.
+- Phase 43 (agent mesh runtime) shipped.
+- Phase 25.1 (federation grants) shipped for cross-tenant messaging.
+- Phase 26 (audit) shipped — message events anchor here.
+
+### Definition of Done (DoD)
+
+- `MessageRecord` schema additive in `state.json` partitions.
+- Inbox partition per agent at `substrate://workspace/<id>/messages/inbox/<agent-id>/`.
+- `cortex agent send / inbox / thread / archive / permissions` CLIs work.
+- MCP `send_agent_message` and `messages_pending` tools work.
+- @Mention parsing + priority notification routing.
+- Conversation threading via `replyTo` chain.
+- Broadcast messaging to `broadcast` partition.
+- Entity reference indexing — `GET /v1/entities/<name>/discussions` returns messages mentioning the entity.
+- Cross-tenant permission enforcement via Phase 25.1 grants.
+- Three delivery models (polling, long-poll, SSE) all functional.
+- Phase 26 audit emits events for send/read/archive/delete.
+- Phase 33.2 notification channels deliver inbox summaries.
+- Phase 31 dashboard surfaces "communication debt" indicator.
+- Tests cover: send/receive round-trip, threading graph integrity, @mention notification, broadcast delivery to all agents, entity reference indexing, cross-tenant permission enforcement, delivery-mode equivalence, audit emission, rate limiting.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Solves a real coordination gap** in the multi-agent architecture — agents can now have explicit architectural conversations, not just write into shared memory and hope. **Memory-mediated, not ephemeral**: every conversation about why-X-was-decided becomes permanent project memory, queryable forever — the highest-value architectural artifact possible. Entity reference bidirectionality means architectural decisions are linked from both directions (`[[AuthFacade]]` entity ↔ "9 messages discussing this"). Reuses existing substrate infrastructure (partitions, audit, federation grants) — no new persistence layer. Complements rather than competes with Nexus's bus: the two products serve different coordination needs and bundle customers get both.
+- ❌ **Cons**: Messaging volume could explode on chatty agent meshes; mitigated by rate limiting, archival, and Phase 29 FinOps tracking. Threading + reference indexing add query surface that needs careful indexing for performance at scale; mitigated by treating discussions index as a derived projection (rebuildable, not load-bearing). Cross-tenant messaging has the same security concerns as Phase 25.1 federation generally — same mitigation (bilateral grants, audit, mTLS).
 
 ---
 
