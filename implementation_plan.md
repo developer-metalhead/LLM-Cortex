@@ -62,6 +62,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
 | 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
 | 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
+| 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
 
 ---
 
@@ -3425,6 +3426,184 @@ A coordinated bundle of artifacts, processes, and external certifications that c
 
 ---
 
+## 🚀 Phase 33: Deep Recursive Bootstrap Ingest — ⏳ Planned (P0 — fixes production issue)
+
+> **Priority: P0.** This phase addresses a critical bootstrap quality issue observed in production on a real ~1800-file React/Redux/Keycloak codebase: the current bootstrap path produced only **4 entities** (AppEntry, AppRouter, ReduxStore, DesignSystem) and **3 concepts** (React Frontend Architecture, Redux State Pattern, Component-Driven UI), missing the entire `services/`, `hooks/`, redux slices, atomic components, utilities, and routing layers. The user had to manually re-prompt three times to extract any depth, and the result was still ~5 entities. Cortex's first-impression problem is severe and adoption-blocking on any non-trivial codebase. Phase 33 is the structural fix.
+
+### Production Observation
+
+On a real ~1800-file React project:
+
+| Bootstrap result | Entities | Concepts | Coverage |
+|---|---|---|---|
+| Auto (current) | 4 | 3 | ~0.2% of files mapped, ~10% of architectural domains |
+| After "deeper please" prompt × 3 | 5 | 5 | ~0.3% of files mapped, ~25% of architectural domains |
+| **Phase 33 target (depth=deep)** | **40-80** | **8-15** | **>40% of significant files mapped, 100% of architectural domains** |
+
+### Root Cause Analysis
+
+Five compounding defects in the current bootstrap path ([Post-Launch Fix #3](#) made it better but did not solve the underlying shallowness):
+
+1. **`listSourceFiles()` caps at 500 entries**. On a 1800-file project, 1300 files are silently invisible to the bootstrap synthesis. The cap exists to keep the prompt under a token budget, but it produces silent truncation with no user warning.
+2. **The LLM receives a file list, not file contents**. The bootstrap prompt is essentially "here are 500 filenames and a package.json — synthesize the architecture." The LLM pattern-matches on directory names (`auth/` → "Authentication Strategy") and `package.json` deps (`keycloak-js` → "Keycloak integration"). It cannot see the actual implementation — useQuery hooks, Redux slices, custom logic — because no source content is in the prompt.
+3. **Single-shot synthesis**. One LLM call asked to summarize an entire codebase produces necessarily shallow output. The model's natural compression to a single response is ~5-10 entities regardless of input size — adding more files to the prompt does not produce more entities, just slightly different shallow ones.
+4. **No recursive deepening**. There is no second pass to drill into the high-signal directories the first pass identified. The bootstrap finishes after one synthesis call.
+5. **No quality gates**. The bootstrap returns "success" with 4 entities on a 1800-file project. There is no programmatic check that says "this is suspiciously shallow — keep going."
+
+### Algorithm — Multi-Phase Recursive Bootstrap
+
+A five-phase pipeline replacing the current single-shot bootstrap. Each phase is independently testable, resumable, and budget-bounded.
+
+**Phase A — Skeleton Scan** (cheap, fast, no LLM)
+- Walk the **full** directory tree without the 500-cap. Build a per-directory profile: file count, total LOC, language mix, modification recency.
+- Build the **directory import graph** by parsing import statements across all files (regex-level, not full AST — fast and language-agnostic for the common languages). Edges weighted by import count.
+- Run community detection (Leiden, reused from Phase 20.9) on the directory import graph to identify **architectural domains** — e.g., `{ auth: src/auth/**, services: src/services/**, redux: src/redux/**, components.atoms: src/components/atoms/**, components.molecules: src/components/molecules/**, hooks: src/hooks/**, utils: src/utils/**, routes: src/routes/** }`.
+- Score each domain by **complexity signal** (file count × mean LOC × directory in-centrality).
+- Output: domain map + complexity-ranked domain list. Persisted to `.knowledge/.bootstrap/skeleton.json`.
+- Cost: **zero LLM calls**, completes in <5 seconds even on 1800 files.
+
+**Phase B — Per-Domain Deep Synthesis** (parallel, budget-controlled)
+- For each domain (in complexity order), do a focused LLM synthesis that **reads actual file contents**.
+- Per-domain context budget: top 10-20 most-central files in the domain (ranked by intra-domain import centrality), with **full file content** included up to a per-call token budget (default 30k input tokens).
+- For each domain, run a **domain-specialized prompt** — distinct from the general Librarian prompt. For example, the `redux/` domain prompt directs attention to slices, reducers, sagas, selectors, action creators; the `hooks/` domain prompt directs attention to `useQuery`/`useMutation`/custom hooks; the `components/` domain prompt directs attention to atomic-design layering.
+- Each domain produces 3-10 entities + 1-3 concepts with full relationships and evidence anchors.
+- Multiple domains synthesized in parallel (configurable parallelism, default 5; rate-limit aware).
+- Cost: bounded by `CORTEX_BOOTSTRAP_BUDGET_USD` (default $10). Per-domain cost surfaced live.
+
+**Phase C — Hot-Path Deepening** (drill into central entities)
+- Compute PageRank (reusing Phase 20.10's PPR implementation) on the partial entity graph from Phase B.
+- For top-N central entities (default 20), do another LLM pass that reads:
+  - The entity's full source file content
+  - All direct callers' content (clipped at 5 callers)
+  - All direct dependencies' content (clipped at 5 deps)
+- This pass refines the central entities — adds missing relationships, evidence anchors, descriptions of complex behavior (e.g., the user's example: `AppRouter`'s "Keycloak token refresh, layout rendering, Redux bootstrapping" detail emerges naturally from reading the actual file content).
+
+**Phase D — Cross-Domain Relationship Synthesis**
+- Final pass that identifies cross-domain relationships missed by per-domain synthesis.
+- LLM reads the **entity index** from Phases B+C (text only, not file content) plus a sample of cross-domain import statements.
+- Produces additional `[[CrossDomainEntity]] depends_on [[OtherDomainEntity]]` edges and `supports`/`derived_from` cross-references.
+
+**Phase E — Quality Gate Check & Auto-Refine**
+- Verify against per-domain DoD criteria (minimum entity count per domain proportional to file count, minimum evidence-anchor coverage, minimum relationship density).
+- If quality is below threshold for any domain, **auto-trigger a second Phase B pass for that domain** (budget permitting).
+- User-visible quality scorecard at the end: per-domain entity count, evidence coverage, relationship density, quality score (Phase 7.5).
+- If overall quality score < 0.5, emit a warning recommending `cortex bootstrap refine --domain <weakest-domain>`.
+
+### Resumability & Checkpointing
+
+- Bootstrap state persisted to `.knowledge/.bootstrap/progress.json` after every phase completion and every per-domain synthesis.
+- `cortex bootstrap resume` continues from the last checkpoint (skips completed phases/domains).
+- Daemon crash or Ctrl+C is safe — work-in-flight is not lost.
+- Each completed phase writes immutable artifacts (`skeleton.json`, `domain-<name>.json`, `hotpath.json`, `cross-domain.json`) for inspection and debugging.
+
+### CLI Surface
+
+- `cortex bootstrap` — interactive: shows estimated cost + projected entity count + per-phase plan, asks for confirmation.
+- `cortex bootstrap --depth shallow|standard|deep|exhaustive`:
+  - `shallow` — Phase A only (the current behavior, retained as the cheapest mode).
+  - `standard` — Phases A+B (default for projects ≤500 files).
+  - `deep` — Phases A+B+C (default for projects >500 files).
+  - `exhaustive` — Phases A+B+C+D+E (auto-refine until quality gates pass).
+- `cortex bootstrap --budget 10.00` — hard cap on total LLM spend. Bootstrap aborts at cap with a checkpoint saved.
+- `cortex bootstrap --parallelism 5` — concurrent domain syntheses.
+- `cortex bootstrap status` — progress UI for in-flight bootstrap (which domain is being processed, ETA, cost so far).
+- `cortex bootstrap resume` — continue from the last checkpoint.
+- `cortex bootstrap refine --domain <name>` — re-process a specific domain at deep mode (used when a domain's quality is observably low).
+- `cortex bootstrap quality-report` — per-domain quality scorecard.
+
+### MCP Integration
+
+`get_pending_changes` (the bootstrap entry point used by IDE-route ingestion) gains a `mode: "bootstrap-deep"` branch that returns a **multi-step plan** instead of a single prompt:
+
+```json
+{
+  "mode": "bootstrap-deep",
+  "plan": {
+    "domains": [...],
+    "phases": ["skeleton", "per-domain", "hot-path", "cross-domain", "quality-gate"],
+    "estimatedCostUSD": 3.20,
+    "estimatedEntityCount": 60
+  },
+  "currentStep": { "phase": "per-domain", "domain": "auth", "filesToRead": [...] },
+  "instructions": "..."
+}
+```
+
+The IDE-driven Librarian (Phase 4.5) runs each step, calls `save_synthesis` per step, and re-queries `get_pending_changes` for the next step. The result is end-to-end progress orchestrated through MCP without changing the existing tool surface.
+
+### Per-Domain Specialized Prompts
+
+A library of domain-recognition heuristics + specialized prompts shipped as data (`.knowledge/bootstrap-prompts/<domain-type>.md`):
+
+- `react.components.atoms` — Atomic design layer detection, prop interface extraction, styling system identification.
+- `react.components.molecules` / `organisms` / `templates` — Compositional patterns, slot patterns.
+- `react.hooks` — Custom hook detection, `useQuery`/`useMutation` patterns, hook dependencies.
+- `redux.slices` — Slice anatomy, reducer + action + selector triples.
+- `redux.sagas` — Saga effect patterns, generator composition.
+- `routing` — Route tree extraction, layout composition, guard patterns.
+- `services.api` — Endpoint mapping, request/response shape, error handling.
+- `services.auth` — Auth flows, token lifecycle, refresh patterns (the exact thing missed in the production example).
+- `utilities` — Utility function categorization, side-effect classification.
+- `config` — Config sources, feature flag mechanisms, environment dispatching.
+- `backend.express` / `backend.fastapi` / `backend.spring` / `backend.rails` — backend framework patterns.
+- `database.prisma` / `database.sqlalchemy` / `database.activerecord` — ORM patterns, schema extraction.
+
+Domain type is detected from directory structure + `package.json`/`pyproject.toml`/`go.mod` declared dependencies. Unknown domain types fall back to the general Librarian prompt.
+
+### Estimated Performance (target metrics for the production case)
+
+For the 1800-file React/Redux/Keycloak project from the production observation:
+
+| Phase | Time | LLM cost | Cumulative entities | Cumulative concepts |
+|---|---|---|---|---|
+| A — Skeleton | <5s | $0 | 0 | 0 |
+| B — Per-domain (deep) | ~3-5 min | $1-3 | 30-60 | 8-12 |
+| C — Hot-path deepening | ~2-3 min | $1-2 | 30-60 (refined) | 8-12 |
+| D — Cross-domain | ~1 min | ~$0.50 | 30-60 | 8-12 |
+| E — Quality gate | ~30s + retries | ~$0-1 | 40-80 | 10-15 |
+| **Total (exhaustive)** | **~6-10 min** | **$2.50-6.50** | **40-80** | **10-15** |
+
+Compared to current behavior on the same project: **30 seconds, $0.20, 4 entities, 3 concepts → user has to manually re-prompt 3+ times to get any usable result.** Phase 33 is **20× the cost for 15× the depth in one run** — and the result is actually usable as ground truth.
+
+### Architecture & System Design
+
+- **Core Components**: new `src/bootstrap/` package — `skeleton.ts` (directory walk + import graph + Leiden clustering), `synthesizer.ts` (per-domain synthesis orchestrator with parallelism + budget), `hotpath.ts` (PageRank + central-entity deepening), `crossdomain.ts` (cross-domain relationship pass), `qualitygate.ts` (DoD verification + auto-refine), `progress.ts` (checkpoint + resume), `prompts/` (domain-specialized prompts as data). New `src/cli/bootstrap.ts`. Modifications to `src/mcp/server.ts` to handle the `bootstrap-deep` multi-step mode.
+- **Design Pattern**: **Pipeline with checkpoints**. Each phase produces an immutable artifact consumed by the next. Failures at any phase preserve work done. Phase B is internally parallel (domains synthesized concurrently) but phases are sequential (B depends on A's domain map, C depends on B's entity graph, etc.).
+- **Key Considerations**:
+  - **Token budget management is critical** — Phase B can balloon if domains are large. Per-domain cap is enforced; oversized domains are sub-split by sub-directory before synthesis (mirrors Phase 14 clustering pattern).
+  - **Rate limit awareness** — concurrent domain syntheses respect the provider's rate limit. The orchestrator backs off on 429s and resumes.
+  - **Domain prompts are versioned data, not code** — community contributions for new domain types (Vue, Svelte, Spring Boot, etc.) ship as data files without code changes.
+  - **Deterministic-where-possible** — Phase A (skeleton) is fully deterministic. Phase B/C/D use temperature 0 for stable re-runs. Quality gate scoring is deterministic.
+  - **Existing bootstrap path is retained** as `--depth shallow` for users who want the current behavior (or for very small projects where deep is overkill).
+
+### Definition of Ready (DoR)
+
+- Phase 2 (LLM client) stable with rate-limit and retry handling.
+- Phase 14 (clustering) stable — Phase B reuses cluster-budget patterns.
+- Phase 20.9 (Leiden) stable — Phase A reuses community detection.
+- Phase 20.10 (PPR) stable — Phase C reuses PageRank.
+- Phase 13 (cost simulation) stable — bootstrap cost estimation reuses it.
+
+### Definition of Done (DoD)
+
+- `cortex bootstrap --depth deep` on the 1800-file reference project produces **≥40 entities and ≥10 concepts in one run**.
+- All major architectural domains covered (auth, state, routing, services, hooks, components-atoms, components-molecules, utilities, config) — verified by per-domain entity count ≥ 1.
+- Each entity has ≥1 evidence anchor (Phase 7).
+- Cross-domain relationships established (auth → services, components → hooks, routes → layouts).
+- Bootstrap is resumable across process restarts.
+- Per-domain quality scorecard visible.
+- `--budget` hard-cap is honored; bootstrap aborts cleanly at cap with checkpoint.
+- IDE-route bootstrap via MCP completes end-to-end via the multi-step `bootstrap-deep` mode.
+- ≥10 domain-specialized prompts shipped (React stack + 2-3 backend stacks).
+- Tests cover: skeleton scan correctness on synthetic 1000-file repo, per-domain synthesis token-budget enforcement, hot-path deepening PageRank correctness, cross-domain relationship extraction, quality-gate auto-refine, checkpoint resume after simulated crash, multi-step MCP orchestration.
+
+### Pros & Cons
+
+- ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes." The 5-phase pipeline is independently testable and resumable, so engineering risk is bounded. Domain-specialized prompts give Cortex a path to first-class support for any tech stack (Vue, Spring, Django, Rails, Go services, etc.) without core code changes. The quality gate + auto-refine loop means the bootstrap is **self-correcting** — if it produces a thin result, it tries harder until it doesn't.
+- ❌ **Cons**: 20× the LLM cost vs. the current shallow bootstrap ($2.50-6.50 vs. $0.20). Mitigated by `--budget` cap, transparent cost preview before execution, and `--depth shallow` retaining the old behavior for users who want cheap. Per-domain specialized prompts are a maintenance surface (each domain type is a prompt file that needs updating as ecosystems evolve); mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX but a dramatically better cold-start *outcome*; mitigated by the live progress UI showing per-domain ETA so the user understands the trade.
+
+---
+
 ## 🚫 Explicitly out of scope
 
 **Bi-directional source injection** (writing Cortex-generated comments back into `src/`) was proposed and **rejected**. It violates the read-only-source invariant declared in [CORTEX.md §2](CORTEX.md), creates watcher feedback loops, pollutes git history with machine-authored noise, and produces merge conflicts with developer comments. Cortex's authority over `.knowledge/` and its non-authority over `src/` is a load-bearing boundary, not an accident.
@@ -3509,3 +3688,4 @@ Three classes of issues surfaced after the first public release. v0.3.3 addresse
 | 1   | **STDOUT pollution — `invalid character 'â'`**          | `dotenv@17` (the version this project depends on) prints a "tip" message to STDOUT on every `config()` call. The MCP STDIO transport requires STDOUT to contain only JSON-RPC frames, so the tip line breaks every IDE that parses the stream.                                                                                | Added `quiet: true` to both `dotenv.config()` calls in [src/core/env.ts](src/core/env.ts). `pino-pretty` was also routed to STDERR (`destination: 2`) in [src/core/logger.ts](src/core/logger.ts) as defense-in-depth.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2   | **Antigravity setup not portable across projects**      | Antigravity prioritizes the global `~/.gemini/antigravity/mcp_config.json` over per-project `.antigravity/mcp_config.json`, so the previous per-project setup was silently ignored. Even when local won, every new project required a fresh setup, and entries with hardcoded `node_modules` paths broke on project switches. | [src/cli/setup.ts](src/cli/setup.ts) antigravity target now defaults to writing the **global** config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`, `env: { DOTENV_CONFIG_QUIET: "1" }`). `findProjectRoot()` resolves the active project from CWD at runtime — one global entry serves every project. A `--local` flag on `cortex setup` writes the per-project file instead. Pre-flight check verifies `cortex` is on PATH; aborts with an install hint if not.                                                                                                                                                                                       |
 | 3   | **Bootstrap ingestion documents Project Cortex itself** | Prompt-level guidance ("if index is empty, scan src/") was too weak — `get_pending_changes` still returned a git diff in the user prompt, and LLMs follow what's in front of them. The first diff is invariably "the user installed Cortex," so the first synthesis described Cortex's footprint instead of the user's app.   | Tool-level enforcement: `get_pending_changes` now calls `KnowledgeManager.isEmpty()` and branches. On empty: returns `mode: "bootstrap"` with a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) and `BOOTSTRAP_PROMPT_TEMPLATE` — **the git diff is intentionally absent from the payload**. The file list excludes the Cortex/IDE footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, `.cursor/`, `.vscode/`, etc.), test files (`tests/`, `*.test.*`, `*.spec.*`), and `node_modules`-class noise; includes `docs/`. Capped at 500 entries with a footer. Both ingest prompt files now branch on the `mode` field. |
+| 4   | **Bootstrap is too shallow on large codebases — produces ~5 entities on 1800-file projects** | Fix #3 prevents Cortex-self-documentation but doesn't make bootstrap deep. Three compounding issues remain: (a) the 500-file cap silently truncates large repos (1800 files → 1300 invisible); (b) the prompt receives a *file list*, not *file contents*, so the LLM pattern-matches on filenames instead of reading code; (c) it is a single-shot synthesis — one LLM call summarizing the entire repo naturally compresses to ~5 entities regardless of input size. Observed in production on a real ~1800-file React/Redux/Keycloak project: 4 entities, 3 concepts; user had to manually re-prompt 3+ times to extract any depth, and the result was still ~5 entities. | **Tactical (v0.3.4):** raise the 500-file cap to 2000, group the file list by top-level directory so the LLM at least sees structural hints, and tweak `BOOTSTRAP_PROMPT_TEMPLATE` to explicitly require ≥15 entities and ≥5 concepts as a minimum bar. **Strategic (Phase 33):** the proper fix is multi-phase recursive bootstrap with per-domain deep synthesis, hot-path deepening, cross-domain relationship pass, and quality-gate auto-refine — see [Phase 33: Deep Recursive Bootstrap Ingest](#-phase-33-deep-recursive-bootstrap-ingest----planned-p0--fixes-production-issue) for the full design. Phase 33 produces 40-80 entities and 10-15 concepts on the same 1800-file project in one run (~$2.50-6.50, ~6-10 minutes) vs. the current 4 entities for $0.20 in 30 seconds. |
