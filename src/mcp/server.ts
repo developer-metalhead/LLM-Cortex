@@ -29,6 +29,8 @@ import { buildGraph, toMermaid, toJson, buildImpactReport } from "../knowledge/g
 import { readQualityGate } from "../knowledge/quality.js";
 import { runExportGraph } from "../cli/export.js";
 import { compressResponse, resolveRefs } from "./compression.js";
+import { buildContextPack } from "../knowledge/packer.js";
+import { computeCostEstimate } from "../cli/test-cost.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -227,6 +229,22 @@ export class CortexMCPServer {
             { name: "audience", description: "Target audience: 'junior', 'senior', or 'domain-expert' (default: 'junior')", required: false },
             { name: "depth", description: "Detail level: 'quick' or 'thorough' (default: 'quick')", required: false }
           ]
+        },
+        {
+          name: "context",
+          description: "Build a token-bounded knowledge bundle and use it as the working knowledge source for this session.",
+          arguments: [
+            { name: "scope", description: "Entity or concept to focus the bundle around (optional — omit for full knowledge base)", required: false },
+            { name: "budget", description: "Token budget (default: 8000)", required: false },
+            { name: "depth", description: "Link traversal depth from scope entity (default: unlimited)", required: false },
+          ],
+        },
+        {
+          name: "test_cost",
+          description: "Estimate the token count and USD cost of the next Cortex sync without making any LLM calls.",
+          arguments: [
+            { name: "budget", description: "Optional USD ceiling to check against (e.g. 0.05)", required: false },
+          ],
         },
       ],
     }));
@@ -498,6 +516,43 @@ export class CortexMCPServer {
           ],
         };
       }
+      if (request.params.name === "context") {
+        const scope = request.params.arguments?.scope;
+        const budget = request.params.arguments?.budget ?? "8000";
+        const depth = request.params.arguments?.depth;
+        const scopePart = scope ? `, scope='${scope}'${depth ? `, depth=${depth}` : ""}` : "";
+        return {
+          description: "Build a context pack and use it as working knowledge for this session.",
+          messages: [{
+            role: "user",
+            content: {
+              type: "text",
+              text: [
+                `Call build_context_pack with budget=${budget}${scopePart}.`,
+                "Once you receive the pack, treat its contents as your authoritative knowledge source for this session.",
+                "Prefer the pack over calling read_knowledge_index or read_entity — it is already ranked by importance and fits the token budget.",
+                "If the user asks about something not covered in the pack, say so explicitly rather than silently falling back to source files.",
+              ].join(" "),
+            },
+          }],
+        };
+      }
+
+      if (request.params.name === "test_cost") {
+        const budget = request.params.arguments?.budget;
+        const budgetPart = budget ? ` with budget=${budget}` : "";
+        return {
+          description: "Estimate the cost of the next Cortex sync.",
+          messages: [{
+            role: "user",
+            content: {
+              type: "text",
+              text: `Call estimate_cost${budgetPart}. Present the results clearly: input tokens, output tokens, total tokens, and cost per provider. ${budget ? "Highlight whether the estimate is within or over the specified budget." : ""}`.trim(),
+            },
+          }],
+        };
+      }
+
       throw new Error(`Prompt not found: ${request.params.name}`);
     });
   }
@@ -926,6 +981,29 @@ export class CortexMCPServer {
                 items: { type: "string" },
                 description: "Array of hash strings from §ref:<hash>§ placeholders (just the hash part, without §ref: and §).",
               },
+            },
+          },
+        },
+        {
+          name: "build_context_pack",
+          description: "Build a token-bounded knowledge bundle optimised for AI context injection. Ranks entities by graph centrality (most-referenced first) so nothing important is buried, annotates low-quality entities with inline warnings, and hard-caps output at the token budget. Use this instead of read_knowledge_index when the knowledge base is large or when you need a focused slice — it guarantees the highest-signal content fits within the budget.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              budget: { type: "number", description: "Token budget (default: 8000)." },
+              scope: { type: "string", description: "Root entity or concept to focus the bundle around (optional — omit for full knowledge base)." },
+              depth: { type: "number", description: "Max link traversal depth from scope entity (default: unlimited)." },
+              format: { type: "string", enum: ["markdown", "json"], description: "Output format (default: markdown)." },
+            },
+          },
+        },
+        {
+          name: "estimate_cost",
+          description: "Estimate the token count and USD cost of the next Cortex sync — no LLM calls made. Returns input/output token estimates and per-provider costs for GPT-4o, Claude-3.5-Sonnet, and Gemini-1.5-Pro. Use this before running ingest to inform the user of expected cost, or to check whether a budget ceiling would be exceeded.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              budget: { type: "number", description: "Optional USD ceiling — response flags whether the estimate exceeds it (e.g. 0.05)." },
             },
           },
         },
@@ -1687,6 +1765,45 @@ export class CortexMCPServer {
 
         sections.push("---\nFor each entity above: if the staleness is real, re-ingest to update it. If the dependency changed but the entity is still accurate, call `refresh_stale_entities` to clear the flag.");
         return { content: [{ type: "text", text: sections.join("\n\n---\n\n") }] };
+      }
+
+      if (name === "build_context_pack") {
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }] };
+        }
+        const state = await this.knowledge.getState();
+        const budget = typeof (args as any)?.budget === "number" ? (args as any).budget : 8000;
+        const scope = (args as any)?.scope as string | undefined;
+        const depth = typeof (args as any)?.depth === "number" ? (args as any).depth : undefined;
+        const format = (args as any)?.format === "json" ? "json" as const : "markdown" as const;
+        const pack = buildContextPack(state, { budget, scope, depth, format });
+        const stats = pack.elided.length > 0
+          ? `\n\n---\n*Pack stats: ${pack.tokens}/${budget} tokens used. ${pack.elided.length} item(s) elided due to budget: ${pack.elided.join(", ")}*`
+          : `\n\n---\n*Pack stats: ${pack.tokens}/${budget} tokens used. All items included.*`;
+        return { content: [{ type: "text", text: pack.output + stats }] };
+      }
+
+      if (name === "estimate_cost") {
+        const estimate = await computeCostEstimate(this.projectRoot);
+        if (!estimate.hasDiff) {
+          return { content: [{ type: "text", text: "No pending changes since last sync. Estimated cost: $0.00." }] };
+        }
+        const budget = typeof (args as any)?.budget === "number" ? (args as any).budget as number : null;
+        const lines: string[] = [
+          `Estimated Input Tokens:  ~${estimate.inputTokens.toLocaleString()}`,
+          `Estimated Output Tokens: ~${estimate.outputTokens.toLocaleString()}`,
+          `Total Tokens:            ~${estimate.totalTokens.toLocaleString()}`,
+          ``,
+          `Cost per provider:`,
+          ...Object.entries(estimate.costs).map(([model, cost]) => `  ${model.padEnd(20)}: $${cost.toFixed(4)}`),
+        ];
+        if (budget !== null) {
+          lines.push(estimate.maxCost > budget
+            ? `\nBUDGET EXCEEDED: $${estimate.maxCost.toFixed(4)} > $${budget.toFixed(4)}`
+            : `\nWithin budget: $${estimate.maxCost.toFixed(4)} <= $${budget.toFixed(4)}`
+          );
+        }
+        return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
       throw new Error(`Unknown tool: ${name}`);
