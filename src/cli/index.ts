@@ -20,6 +20,7 @@ import { runLog } from "./log.js";
 import { runLint } from "./lint.js";
 import { runEvolution } from "./evolution.js";
 import { runGraph } from "./graph.js";
+import { runImpact, runDeps } from "./impact.js";
 import { runServe } from "../server/index.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
@@ -263,6 +264,32 @@ program
     } else {
       console.log("Usage: cortex export --spec | --graph [--scope <entity>] [--depth <n>]");
     }
+  });
+
+program
+  .command("impact <entity>")
+  .description("Show every entity that depends on <entity>, ranked by hop distance")
+  .option("-d, --depth <n>", "Max traversal depth (default: 10)", parseInt)
+  .option("--format <fmt>", "Output format: text (default) or json")
+  .option("--hypothetical <mode>", "Simulate a change: 'delete' shows what would break")
+  .action(async (entity, options) => {
+    await runImpact(projectRoot, entity, {
+      depth: options.depth,
+      format: options.format,
+      hypothetical: options.hypothetical,
+    });
+  });
+
+program
+  .command("deps <entity>")
+  .description("Show every entity that <entity> depends on, ranked by hop distance")
+  .option("-d, --depth <n>", "Max traversal depth (default: 10)", parseInt)
+  .option("--format <fmt>", "Output format: text (default) or json")
+  .action(async (entity, options) => {
+    await runDeps(projectRoot, entity, {
+      depth: options.depth,
+      format: options.format,
+    });
   });
 
 program

@@ -25,7 +25,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 10 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, **8** (Phase 8 verified 2026-05-19, 108/108 tests passing) |
+| ✅ Done | 11 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, **8**, **9** (Phase 9 verified 2026-05-19) |
 | 🚧 In Progress | 0 | — |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~24 | Phases 13-20.24, drive differentiation |
@@ -90,7 +90,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 
 | Order | Phase | Why this tier | Dependencies |
 |---|---|---|---|
-| 1 | **Phase 9** — Refactoring Impact Preview | "Before I make this change, what will break?" — high willingness to pay | Phase 6 ✓ |
+| 1 | **Phase 9** — Refactoring Impact Preview | "Before I make this change, what will break?" — high willingness to pay | Phase 6 ✓ | ✅ **Done 2026-05-19** |
 | 2 | **Phase 13** — Token Economics & Context Packs | Indie devs care about LLM bill; `cortex test-cost` is a $20/mo feature alone | Phase 8 (T1) |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
@@ -338,9 +338,11 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 
 **Sprint 1 progress: Phases 6 + 7 + 7.5 + 8 done (60% of sprint). Phase 5.6, 10, 33-MVP remaining (40%).**
 
+> Phase 9 (Impact Preview) shipped ahead of schedule in Sprint 1 (2026-05-19). `cortex impact`, `cortex deps`, `impact_analysis` MCP tool + prompts all live.
+
 ### Sprint 2 (Q2) — "Indie Pro Launch" → unlocks T2
 
-- Phase 9 (impact preview)
+- ✅ **Phase 9** (impact preview) — Done 2026-05-19
 - Phase 13 (cost packs)
 - Phase 14 (clustering)
 - Phase 16 (contradictions, research)
@@ -478,6 +480,7 @@ The foundation everything else builds on. No further work needed.
 - **Phase 7** — Audit & Traceability (log.jsonl + evidence + lint + evolution + secret redaction) · deps: 6 ✓ · ✅ **Done 2026-05-19**
 - **Phase 7.5** — Knowledge Quality Foundation (quality scoring + org-constraint DSL) · deps: 6 ✓, 7 ✓ · ✅ **Done 2026-05-19**
 - **Phase 8** — Visual & Browseable Knowledge Graph (cortex graph + cortex serve) · deps: 3 ✓ · ✅ **Done 2026-05-19**
+- **Phase 9** — Refactoring Impact Preview (`cortex impact`, `cortex deps`, `impact_analysis` MCP tool + prompts) · deps: 6 ✓, 7 ✓ · ✅ **Done 2026-05-19**
 
 ### Wave 1 — Start Immediately (only Wave 0 required)
 
@@ -490,7 +493,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 20.23** — Tool-Use Augmented Synthesis · deps: 2 ✓
 - **Phase 33-MVP** 🅼 — Stripped Deep Bootstrap · deps: 2 ✓ (full version waits for Wave 5-6)
 - ~~**Phase 7.5**~~ — moved to Wave 0 (✅ Done 2026-05-19)
-- **Phase 9** — Refactoring Impact Preview · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
+- ~~**Phase 9**~~ — moved to Wave 0 (✅ Done 2026-05-19)
 - **Phase 16** — Contradiction-Aware Retrieval · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
 - **Phase 18** — Architectural Embeddings · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
 - **Phase 20** — Intelligent Architectural Advisor · deps: 6 ✓
@@ -684,7 +687,7 @@ If you want to start a specific phase NOW and don't know what's blocking, find i
 |---|---|---|
 | **Phase 33-MVP** | 2 ✓ | Nothing — ship now |
 | **Phase 7.5** | 6 ✓, 7 ✓ | ✅ **Done 2026-05-19** |
-| **Phase 9 (Impact Preview)** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
+| **Phase 9 (Impact Preview)** | 6 ✓, 7 ✓ | ✅ **Done 2026-05-19** |
 | **Phase 16 (Contradictions)** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
 | **Phase 18 (Embeddings)** | 6 ✓, 7 ✓ | **Nothing — newly unblocked 2026-05-19; ship next** |
 | **Phase 26 (RBAC/Audit)** | 25 → 22 → 21 + 8 + 9 → 11, 7.5, 12, 9 → 6 ✓, 7 ✓ | 7.5, 9, 11, 12, 21, 22, 25 — T1-T3 (6 + 7 done) |
@@ -717,7 +720,8 @@ These can be slotted into any sprint where bandwidth allows — useful when bloc
 - **Phase 11** (only needs Phase 3 ✓) — ship in Wave 1
 - **Phase 20.23** (only needs Phase 2 ✓) — ship in Wave 1
 - **Phase 33-MVP** (only needs Phase 2 ✓) — **P0, ship in Wave 1**
-- **Phase 9, 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
+- ~~**Phase 9**~~ (✅ Done 2026-05-19)
+- **Phase 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
 
 If your team has spare cycles waiting on a long-running phase, these are the safe parallel options.
 
@@ -726,7 +730,7 @@ If your team has spare cycles waiting on a long-running phase, these are the saf
 ## Status of This Document
 
 - **Generated**: 2026-05-18 from `implementation_plan.md` (covering Phases 1 → 45 + all sub-phases + 6 Pro Modules)
-- **Last updated**: 2026-05-19 — Phase 7.5 marked ✅ Done (42/42 tests passing, vibecoder 5/5 verified on HomelyHub)
+- **Last updated**: 2026-05-19 — Phase 9 marked ✅ Done (`cortex impact`, `cortex deps`, `impact_analysis` MCP tool + prompts; Phase 8 table entry also corrected to ✅ Done)
 - **Strict source of truth**: phase definitions, DoR, DoD — see `implementation_plan.md`
 - **This document's job**: ordering + tier-mapping only; does not change phase semantics
 - **Refresh trigger**: any time a phase's status changes (✅ done, 🚧 in progress, ⏳ planned) or a new phase is added

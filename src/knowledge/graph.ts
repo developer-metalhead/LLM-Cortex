@@ -255,3 +255,84 @@ function mermaidArrow(kind: string): string {
 export function toJson(graph: KnowledgeGraph): string {
   return JSON.stringify(graph, null, 2);
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 9 — Impact & Deps traversal
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface ImpactEntry {
+  name: string;
+  hop: number;
+  qualityScore: number;
+  qualityColor: QualityColor;
+  lowQuality: boolean;   // quality < 0.5
+  isStale: boolean;
+  via?: string;          // relationship kind on the first-hop edge
+}
+
+export interface ImpactReport {
+  target: string;
+  direction: "inbound" | "outbound";
+  entries: ImpactEntry[];   // sorted by hop asc, then name asc
+  totalCount: number;
+}
+
+// inbound: who depends on `targetName` (for `cortex impact`)
+// outbound: what `targetName` depends on (for `cortex deps`)
+export function buildImpactReport(
+  graph: KnowledgeGraph,
+  targetName: string,
+  direction: "inbound" | "outbound",
+  depth = 10,
+): ImpactReport {
+  // Build directional adjacency: for inbound we traverse reverse edges
+  const adj = new Map<string, Array<{ neighbor: string; kind: string }>>();
+  for (const e of graph.edges) {
+    const [from, to] = direction === "inbound" ? [e.target, e.source] : [e.source, e.target];
+    if (!adj.has(from)) adj.set(from, []);
+    adj.get(from)!.push({ neighbor: to, kind: e.kind });
+  }
+
+  const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
+  if (!nodeMap.has(targetName)) {
+    return { target: targetName, direction, entries: [], totalCount: 0 };
+  }
+
+  const visited = new Map<string, number>(); // name → hop
+  const viaMap = new Map<string, string>();   // name → relationship kind (hop-1)
+  const queue: Array<{ id: string; hop: number }> = [{ id: targetName, hop: 0 }];
+
+  while (queue.length > 0) {
+    const { id, hop } = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.set(id, hop);
+    if (hop < depth) {
+      for (const { neighbor, kind } of adj.get(id) ?? []) {
+        if (!visited.has(neighbor)) {
+          queue.push({ id: neighbor, hop: hop + 1 });
+          if (hop === 0) viaMap.set(neighbor, kind);
+        }
+      }
+    }
+  }
+
+  const entries: ImpactEntry[] = [];
+  for (const [name, hop] of visited) {
+    if (name === targetName) continue;
+    const node = nodeMap.get(name);
+    if (!node) continue;
+    entries.push({
+      name,
+      hop,
+      qualityScore: node.qualityScore,
+      qualityColor: node.qualityColor,
+      lowQuality: node.qualityScore < 0.5,
+      isStale: node.isStale,
+      via: hop === 1 ? viaMap.get(name) : undefined,
+    });
+  }
+
+  entries.sort((a, b) => a.hop - b.hop || a.name.localeCompare(b.name));
+
+  return { target: targetName, direction, entries, totalCount: entries.length };
+}

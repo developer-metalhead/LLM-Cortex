@@ -24,7 +24,7 @@ import { loadCortexEnv } from "../core/env.js";
 import { AuditManager } from "../knowledge/audit.js";
 import { LintManager } from "../knowledge/lint.js";
 import { EvolutionManager } from "../knowledge/evolution.js";
-import { buildGraph, toMermaid, toJson } from "../knowledge/graph.js";
+import { buildGraph, toMermaid, toJson, buildImpactReport } from "../knowledge/graph.js";
 import { readQualityGate } from "../knowledge/quality.js";
 import { runExportGraph } from "../cli/export.js";
 
@@ -198,6 +198,23 @@ export class CortexMCPServer {
           arguments: [
             { name: "entity", description: "The entity to focus the subgraph around (e.g. BookingController, paymentUtils)", required: true },
             { name: "depth", description: "Max hops from entity (default: 2)", required: false },
+          ],
+        },
+        {
+          name: "impact",
+          description:
+            "Show every entity that depends on a given entity, ranked by hop distance. Use before refactoring to understand blast radius.",
+          arguments: [
+            { name: "entity", description: "The entity to analyse (e.g. AuthMiddleware, paymentUtils)", required: true },
+            { name: "hypothetical", description: "Set to 'delete' to simulate removing the entity and see what breaks", required: false },
+          ],
+        },
+        {
+          name: "deps",
+          description:
+            "Show every entity that a given entity depends on, ranked by hop distance (outbound traversal).",
+          arguments: [
+            { name: "entity", description: "The entity whose dependencies to list", required: true },
           ],
         },
       ],
@@ -407,6 +424,42 @@ export class CortexMCPServer {
               },
             },
           ],
+        };
+      }
+      if (request.params.name === "impact") {
+        const entity = request.params.arguments?.entity;
+        const hypothetical = request.params.arguments?.hypothetical;
+        if (!entity) {
+          return {
+            description: "Impact analysis — asks which entity to analyse.",
+            messages: [{ role: "user", content: { type: "text",
+              text: "Call read_knowledge_index to list available entities, then ask the user: 'Which entity should I run impact analysis on? (e.g. AuthMiddleware, paymentUtils)'. Once they reply, call the impact_analysis tool with that entity name.",
+            }}],
+          };
+        }
+        const hypoStr = hypothetical === "delete" ? `, hypothetical='delete'` : "";
+        return {
+          description: `Impact analysis for ${entity}`,
+          messages: [{ role: "user", content: { type: "text",
+            text: `Call the impact_analysis tool with entity='${entity}'${hypoStr}. Present the hop-ranked list of dependents with quality scores. If any entities are marked low-quality (⚠), note that the blast-radius prediction is less reliable for those.`,
+          }}],
+        };
+      }
+      if (request.params.name === "deps") {
+        const entity = request.params.arguments?.entity;
+        if (!entity) {
+          return {
+            description: "Dependency listing — asks which entity to analyse.",
+            messages: [{ role: "user", content: { type: "text",
+              text: "Call read_knowledge_index to list available entities, then ask the user: 'Which entity's outbound dependencies should I list?'. Once they reply, call the impact_analysis tool with that entity name and direction='outbound'.",
+            }}],
+          };
+        }
+        return {
+          description: `Outbound dependencies of ${entity}`,
+          messages: [{ role: "user", content: { type: "text",
+            text: `Call the impact_analysis tool with entity='${entity}', direction='outbound'. Present the hop-ranked list of dependencies.`,
+          }}],
         };
       }
       throw new Error(`Prompt not found: ${request.params.name}`);
@@ -754,6 +807,20 @@ export class CortexMCPServer {
               action: { type: "string", enum: ["accept", "reject"], description: "'accept' to mark as human-reviewed, 'reject' to clear the flag." },
               reviewer: { type: "string", description: "Optional reviewer name to record alongside the review." },
             },
+          },
+        },
+        {
+          name: "impact_analysis",
+          description: "Show every entity that depends on a given entity, ranked by hop distance. Use this BEFORE refactoring to understand blast radius. Set direction='outbound' to see what the entity depends on instead (same as `cortex deps`). Set hypothetical='delete' to simulate removing the entity and see what would break.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              entity: { type: "string", description: "The entity name to analyse." },
+              direction: { type: "string", enum: ["inbound", "outbound"], description: "'inbound' (default) = who depends on this entity; 'outbound' = what this entity depends on." },
+              depth: { type: "number", description: "Max traversal depth (default: 10)." },
+              hypothetical: { type: "string", enum: ["delete"], description: "Simulate deleting the entity — lists direct dependents that would break." },
+            },
+            required: ["entity"],
           },
         },
         {
@@ -1290,6 +1357,67 @@ export class CortexMCPServer {
           ? `✅ Marked '${entityName}' as human-reviewed${reviewer ? ` (reviewer: ${reviewer})` : ""}. Quality score updated immediately.`
           : `✅ Cleared human-review flag on '${entityName}'. Entity returns to unreviewed status.`;
         return { content: [{ type: "text", text: msg }] };
+      }
+
+      if (name === "impact_analysis") {
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }] };
+        }
+        const entity = args?.entity as string;
+        if (!entity) {
+          return { content: [{ type: "text", text: "Missing required argument: entity" }] };
+        }
+        const direction = (args?.direction as "inbound" | "outbound") ?? "inbound";
+        const depth = typeof args?.depth === "number" ? args.depth : 10;
+        const hypothetical = args?.hypothetical as string | undefined;
+
+        const state = await this.knowledge.getState();
+        const graph = buildGraph(state);
+        const report = buildImpactReport(graph, entity, direction, depth);
+
+        if (report.totalCount === 0) {
+          const msg = direction === "inbound"
+            ? `No dependents found for "${entity}". Safe to refactor freely.`
+            : `"${entity}" has no outbound dependencies.`;
+          return { content: [{ type: "text", text: msg }] };
+        }
+
+        if (hypothetical === "delete") {
+          const direct = report.entries.filter((e) => e.hop === 1);
+          const lines: string[] = [
+            `Hypothetical delete of: ${entity}`,
+            `⚠  ${report.totalCount} entities affected (${direct.length} direct breakage):`,
+            "",
+          ];
+          for (const e of direct) {
+            const badge = e.lowQuality ? " ⚠ low-quality" : "";
+            const stale = e.isStale ? " [STALE]" : "";
+            lines.push(`  Hop 1  ${e.name}  quality:${e.qualityScore.toFixed(2)}${badge}${stale}  via ${e.via ?? "depends_on"}`);
+          }
+          const indirect = report.entries.filter((e) => e.hop > 1);
+          if (indirect.length) {
+            lines.push(`\n  + ${indirect.length} indirect dependents at hop 2+`);
+          }
+          return { content: [{ type: "text", text: lines.join("\n") }] };
+        }
+
+        const label = direction === "inbound" ? "Impact report" : "Dependency report";
+        const lines: string[] = [`${label} for: ${entity}`, `Total: ${report.totalCount}`, ""];
+        let currentHop = -1;
+        for (const e of report.entries) {
+          if (e.hop !== currentHop) {
+            currentHop = e.hop;
+            const hopLabel = direction === "inbound"
+              ? (e.hop === 1 ? "Hop 1 (direct)" : `Hop ${e.hop}`)
+              : (e.hop === 1 ? "Direct dependencies" : `Hop ${e.hop} (transitive)`);
+            lines.push(hopLabel);
+          }
+          const badge = e.lowQuality ? " ⚠ low-quality" : "";
+          const stale = e.isStale ? " [STALE]" : "";
+          const via = e.via ? `  via ${e.via}` : "";
+          lines.push(`  ${e.name}  quality:${e.qualityScore.toFixed(2)}${badge}${stale}${via}`);
+        }
+        return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
       if (name === "graph") {
