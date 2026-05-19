@@ -1005,7 +1005,7 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
 
 ---
 
-## 🏅 Phase 7.5: Knowledge Quality & Enterprise Governance Foundation — ⏳ Planned
+## ✅ Phase 7.5: Knowledge Quality & Enterprise Governance Foundation — ✅ Done
 
 **Layman's Terms**
 Right now, Cortex treats all knowledge as equally trustworthy — a brand-new entity synthesized by the AI and a 6-month-old entity manually reviewed by a senior engineer look exactly the same. Phase 7.5 changes that. Every entity gets a visible quality signal derived entirely from observable facts: how old it is, whether its evidence still points to real code, whether it has open contradictions, and whether a human ever signed off on it. Separately, a new `cortex.constraints.yaml` file lets teams declare org-wide architectural rules ("the payment domain must never import from the legacy domain") that apply across every entity and every ingest — no longer just per-entity annotations in state.json. Together these two features make Cortex trustworthy enough to enforce as a team standard, not just use as a personal tool.
