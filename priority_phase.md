@@ -70,6 +70,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ✅ **Done 2026-05-19** |
 | 2.1 | **Phase 7.6** — Global Architectural Lessons & Retrospective Log | Centralized lessons.md dashboard to avoid repeating historical code errors | Phase 7.5 ✓ | ⏳ Planned |
 | 2.2 | **Phase 7.7** — Automated Technical Debt Register | Automatically logs architectural smells and constraint violations to DEBT.md | Phase 7.5 ✓ | ⏳ Planned |
+| 2.3 | **Phase 7.8** — Graph-Driven Review Advisories & Untested Hub Analysis | Auto-generated review questions for AI assistants to prevent fragile coupling | Phase 7.5 ✓, Phase 10 | ⏳ Planned |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
@@ -134,6 +135,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.5 | **Phase 12.6** — Local Command Interception Shims & Agent Rules | Intercept commands inside agent sessions via shims & rule injection | Phase 12.5 |
 | 2.6 | **Phase 12.7** — Smart Code Outliner & Signature-Only Reader | Strips code bodies to return outline view of files (JS, TS, Py, Go, Rs) | Phase 12.6 |
 | 2.7 | **Phase 12.8** — Log Deduplicator & Web Fetch Parser | Collapses identical log counts; cleans up curl HTML responses to MD | Phase 12.5 |
+| 2.8 | **Phase 12.9** — Architectural Graph Diffing | Graph diffing between commits/branches to show structural design changes | Phase 7 (T1), Phase 8 (T1) | ⏳ Planned |
 | 3 | **Phase 5.7** — Scheduled Operations & Cron Engine | Background scans, automated maintenance | Phase 5.6 (T1) |
 | 4 | **Phase 5.8** — Multi-Operator Session Coordination | When 2 devs use Cortex simultaneously, no conflicts | Phase 5.6 (T1), Phase 25 partial |
 | 4.1 | **Phase 5.9** — Shell Status Prompt Integration | Output quality score and savings in terminal prompt; cached for speed | Phase 5.6 (T1), Phase 13.2 |

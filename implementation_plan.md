@@ -25,6 +25,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
 | 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
+| 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
 | 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
@@ -41,6 +42,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 12.6  | Local Command Interception Shims & Agent Rules         | ⏳ Planned                           |
 | 12.7  | Smart Code Outliner & Signature-Only Reader            | ⏳ Planned                           |
 | 12.8  | Log Deduplicator & Web Fetch Parser                    | ⏳ Planned                           |
+| 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ✅ Done                              |
 | 13.1  | Dense & Raw Token-Reduction Projections                | ⏳ Planned                           |
 | 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ⏳ Planned                           |
@@ -1316,6 +1318,31 @@ Implement a debt compiler in the Knowledge Manager.
 
 ---
 
+## 🚨 Phase 7.8: Graph-Driven Review Advisories & Untested Hub Analysis — ⏳ Planned
+
+**Layman's Terms**
+Instead of just checking basic code style or linting rules, Cortex analyzes the shape of your dependency graph to find "untested hubs" (highly important files that lack test coverage) and "architectural surprises" (unexpected direct connections between isolated parts of the codebase). It uses this analysis to automatically generate tailored questions for your AI assistant to prevent it from introducing fragile coupling or breaking high-impact files.
+
+**Technical Terms**
+Implement structural graph metrics and review-time advisory prompts in the `OrgConstraintEvaluator` and a new `cortex review-advisory` CLI engine:
+- **Untested Hub Detector**: Cross-references PageRank centrality scores (from Phase 10) against entity relations. If a node is in the top 20% of centrality but has zero `called_by` or `depends_on` relationships with `*test*` or `*spec*` entities, flag it as an untested hub.
+- **Architectural Surprise (Unexpected Coupling) Detector**: Evaluates graph distance and community membership (Leiden communities from Phase 13.2). If a new relationship is synthesized that crosses two distinct, previously decoupled communities, flag a "surprise edge" warning.
+- **Advisory Generator**: Exposes a new MCP tool `get_review_advisories(diff)` that computes the blast radius of the diff (using Phase 6) and returns targeted warning prompts (e.g. "authController is a central hub. Verify routes.ts handles the new token error. No tests detected for authController").
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality & Constraints) and Phase 10 (Centrality ranking) are completed.
+
+**Definition of Done (DoD)**
+- `cortex lint` flags untested hubs and unexpected cross-community coupling as separate lint warnings.
+- The `get_review_advisories` MCP tool returns actionable, graph-derived review questions for any code diff.
+- Tests cover untested hub calculation and surprise coupling detection on a synthetic community graph.
+
+**Pros & Cons**
+- ✅ **Pros**: Leverages graph math to catch deep structural risks and test gaps that standard AST or static analysis tools miss.
+- ❌ **Cons**: Community-based surprise detection requires calibrating clustering thresholds to avoid false alerts in tightly coupled subsystems. Mitigated by keeping surprise warnings advisory only.
+
+---
+
 ## 🚨 Phase 7.9: Knowledge Garbage Collection & Archive Consolidation — ⏳ Planned
 
 **Layman's Terms**
@@ -1820,6 +1847,36 @@ Extend command minifiers in `cortex run` to handle data-heavy stream sources:
 **Pros & Cons**
 - ✅ **Pros**: Prevents massive token waste when agents fetch documentation via curl or tail error-heavy logs; simplifies parsing for the LLM.
 - ❌ **Cons**: Parsing arbitrary HTML responses can sometimes lose important structure like tabular layout headers. Mitigated by keeping raw response logs readable in the diagnostics cache folder.
+
+---
+
+## 🔗 Phase 12.9: Architectural Graph Diffing — ⏳ Planned
+
+**Layman's Terms**
+When you review a Pull Request, scanning line-by-line code changes can be overwhelming. Cortex can diff the architectural graph itself, showing you exactly which files, dependencies, and boundaries were added, removed, or compromised between your branch and the main codebase. This gives your AI (and you) a high-level map of the structural changes.
+
+**Technical Terms**
+Implement a command to compute differences between two architectural states:
+- **Command**: `cortex graph diff --target <commit-or-branch>` (defaults to comparing current HEAD to the base branch, e.g. `main` or `origin/main`).
+- **State Reconstruction**: Reconstructs the target graph from `log.jsonl` using the Phase 7 evolution log replay engine.
+- **Graph Diffing Engine**: Compares the two graphs node-by-node and edge-by-edge. Identifies:
+  - **Added/Deleted Entities**: New or removed modules/components.
+  - **Added/Deleted Edges**: New dependencies, calls, or contract mappings.
+  - **Boundary Violations**: Highlight if the changes introduced any new `org_constraint` failures.
+  - **Quality Score Delta**: Computes and flags entities whose quality score fell or rose (Phase 7.5).
+- **Format Options**: Supports Markdown format (clean, compact table summarizing changes) and Mermaid format (renders a visual flowchart where added edges are green and broken edges/violations are colored red).
+
+**Definition of Ready (DoR)**
+- Phase 7 (Audit Logs) and Phase 8 (Mermaid Visual Graph) are completed.
+
+**Definition of Done (DoD)**
+- `cortex graph diff --target main` outputs a structured Markdown diff of architectural changes.
+- Mermaid graph diff output correctly renders added/removed nodes and edges with quality-coded styling.
+- Tests verify graph diffing logic correctly flags added/removed relationships and quality changes.
+
+**Pros & Cons**
+- ✅ **Pros**: Provides an instant high-level overview of design changes in Pull Requests, reducing the cognitive load for human reviewers and the token footprint for AI reviewers.
+- ❌ **Cons**: Diffs can become large in PRs that perform wide-scale package renames. Mitigated by grouping changes by directory or module scope.
 
 ---
 
