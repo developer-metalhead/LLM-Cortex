@@ -24,6 +24,9 @@ import { loadCortexEnv } from "../core/env.js";
 import { AuditManager } from "../knowledge/audit.js";
 import { LintManager } from "../knowledge/lint.js";
 import { EvolutionManager } from "../knowledge/evolution.js";
+import { buildGraph, toMermaid, toJson } from "../knowledge/graph.js";
+import { readQualityGate } from "../knowledge/quality.js";
+import { runExportGraph } from "../cli/export.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -179,6 +182,24 @@ export class CortexMCPServer {
           description:
             "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
         },
+        {
+          name: "export_graph",
+          description:
+            "Export full architecture as ARCH_GRAPH.md (Mermaid, quality-colored nodes).",
+          arguments: [
+            { name: "scope", description: "Entity name to focus the export around (optional — omit for full graph)", required: false },
+            { name: "depth", description: "Max hops from scope entity (default: 2)", required: false },
+          ],
+        },
+        {
+          name: "export_graph_scoped",
+          description:
+            "Export a focused subgraph around one entity to ARCH_GRAPH_<entity>.md — use this to share just the payment, booking, or auth slice.",
+          arguments: [
+            { name: "entity", description: "The entity to focus the subgraph around (e.g. BookingController, paymentUtils)", required: true },
+            { name: "depth", description: "Max hops from entity (default: 2)", required: false },
+          ],
+        },
       ],
     }));
 
@@ -298,10 +319,62 @@ export class CortexMCPServer {
               content: {
                 type: "text",
                 text: [
-                  "Call the project-cortex:export tool.",
+                  "Call the project-cortex:export tool with type='spec'.",
                   "Report the output path of the generated ARCH_SPEC.md.",
                   "Briefly explain that the file contains the full dependency graph, architectural constraints, historical failed approaches, and conceptual patterns from the synthesized knowledge base — suitable for review, handoff, or onboarding.",
                 ].join(" "),
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "export_graph") {
+        const scope = request.params.arguments?.scope;
+        const depth = request.params.arguments?.depth;
+        const scopePart = scope ? `, scope='${scope}'${depth ? `, depth=${depth}` : ""}` : "";
+        const filePart = scope
+          ? `ARCH_GRAPH_${scope.replace(/[^A-Za-z0-9_-]/g, "_")}.md`
+          : "ARCH_GRAPH.md";
+        return {
+          description: "Export a Mermaid dependency diagram to a file.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Call the project-cortex:export tool with type='graph'${scopePart}. Report the output path of the generated ${filePart}.`,
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "export_graph_scoped") {
+        const entity = request.params.arguments?.entity;
+        const depth = request.params.arguments?.depth;
+        const depthPart = depth ? `, depth=${depth}` : "";
+        if (!entity) {
+          return {
+            description: "Export a focused subgraph — asks which entity to scope to.",
+            messages: [
+              {
+                role: "user",
+                content: {
+                  type: "text",
+                  text: "Call read_knowledge_index to list available entities, then ask the user: 'Which entity should I scope the graph export to? (e.g. BookingController, paymentUtils)'. Once they reply, call the project-cortex:export tool with type='graph' and scope set to their answer. Report the output path.",
+                },
+              },
+            ],
+          };
+        }
+        const filePart = `ARCH_GRAPH_${entity.replace(/[^A-Za-z0-9_-]/g, "_")}.md`;
+        return {
+          description: `Export scoped subgraph around ${entity}.`,
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Call the project-cortex:export tool with type='graph', scope='${entity}'${depthPart}. Report the output path of the generated ${filePart}.`,
               },
             },
           ],
@@ -347,6 +420,12 @@ export class CortexMCPServer {
           name: "get_cortex_status",
           description:
             "Check if Project Cortex is initialized in this project.",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "ingest",
+          description:
+            "Run the full Cortex ingest workflow: fetch all git diffs since the last sync, analyze the changes using the Librarian prompt, synthesize entities/concepts/warnings, then call save_synthesis with the result. If the response says 'No pending changes', stop. Otherwise follow the systemPrompt instructions, use the userPrompt to analyze the diff, produce a synthesis object matching outputSchema, and call save_synthesis.",
           inputSchema: { type: "object", properties: {} },
         },
         {
@@ -578,8 +657,25 @@ export class CortexMCPServer {
         {
           name: "export",
           description:
-            "Generate a comprehensive ARCH_SPEC.md from the project's synthesized knowledge.",
-          inputSchema: { type: "object", properties: {} },
+            "Export knowledge base artifacts. type='spec' (default) generates ARCH_SPEC.md — a full text description of every entity, concept, constraint, and failed approach. type='graph' generates ARCH_GRAPH.md — a Mermaid dependency diagram with quality-colored nodes. Both files are written to the project root.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              type: {
+                type: "string",
+                enum: ["spec", "graph"],
+                description: "'spec' (default) exports ARCH_SPEC.md, 'graph' exports ARCH_GRAPH.md (or ARCH_GRAPH_<scope>.md when scope is set)",
+              },
+              scope: {
+                type: "string",
+                description: "For type='graph': focus the export around this entity. Writes ARCH_GRAPH_<scope>.md instead of ARCH_GRAPH.md.",
+              },
+              depth: {
+                type: "number",
+                description: "For type='graph' with scope: max hops from scope entity (default: 2).",
+              },
+            },
+          },
         },
         {
           name: "refresh_stale_entities",
@@ -641,6 +737,37 @@ export class CortexMCPServer {
               entity: { type: "string", description: "Entity name exactly as in the index." }
             }
           }
+        },
+        {
+          name: "audit_quality",
+          description: "List all entities ranked by quality score ascending (lowest quality first). Shows per-dimension breakdown: evidenceFreshness, contradiction, staleness, age, humanReview. Entities below CORTEX_QUALITY_GATE (default 0.5) are flagged. Use this to find the weakest knowledge entries and decide which to re-ingest or human-review.",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "review_entity",
+          description: "Accept or reject a human review for an entity, directly affecting its quality score. 'accept' sets human_reviewed=true (boosts humanReview dimension from 0.7→1.0). 'reject' clears the flag. Use this after inspecting an entity with read_entity and confirming the synthesis is accurate.",
+          inputSchema: {
+            type: "object",
+            required: ["entity", "action"],
+            properties: {
+              entity: { type: "string", description: "Entity name exactly as it appears in the knowledge index." },
+              action: { type: "string", enum: ["accept", "reject"], description: "'accept' to mark as human-reviewed, 'reject' to clear the flag." },
+              reviewer: { type: "string", description: "Optional reviewer name to record alongside the review." },
+            },
+          },
+        },
+        {
+          name: "graph",
+          description: "Generate a Mermaid or JSON knowledge graph from the architectural memory. **Always call this tool** when asked for any architecture diagram, dependency map, module relationships, or 'show me what touches X' requests — even for focused/scoped views. Use the `scope` parameter to focus on a single entity (e.g. scope='BookingController' to see only booking-related nodes). Never draw a Mermaid diagram manually — Cortex has the real dependency edges with quality-colored nodes.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              scope: { type: "string", description: "Focus the subgraph around this entity name (bidirectional BFS from that node)." },
+              depth: { type: "number", description: "Max hops from scope entity (default: unlimited). Only used when scope is set." },
+              includeConcepts: { type: "boolean", description: "Include concept nodes in the graph (default: false)." },
+              format: { type: "string", enum: ["mermaid", "json"], description: "Output format: 'mermaid' (default) returns a Mermaid flowchart LR string; 'json' returns the raw KnowledgeGraph object." },
+            },
+          },
         },
       ],
     }));
@@ -750,15 +877,15 @@ export class CortexMCPServer {
       }
 
       if (name === "export") {
+        const type = (args as any)?.type ?? "spec";
+        if (type === "graph") {
+          const scope = (args as any)?.scope as string | undefined;
+          const depth = (args as any)?.depth as number | undefined;
+          const outputPath = await runExportGraph(this.projectRoot, { scope, depth });
+          return { content: [{ type: "text", text: `✅ Architecture graph exported to: ${outputPath}` }] };
+        }
         const outputPath = await this.knowledge.exportSpec();
-        return {
-          content: [
-            {
-              type: "text",
-              text: `✅ Architectural Specification exported to: ${outputPath}`,
-            },
-          ],
-        };
+        return { content: [{ type: "text", text: `✅ Architectural Specification exported to: ${outputPath}` }] };
       }
 
       if (name === "refresh_stale_entities") {
@@ -794,7 +921,7 @@ export class CortexMCPServer {
         return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
-      if (name === "get_pending_changes") {
+      if (name === "ingest" || name === "get_pending_changes") {
         // BOOTSTRAP PATH: when the knowledge base is empty, never send a diff —
         // the most recent commits are usually just the installation of Cortex
         // itself (.knowledge/, .antigravity/, etc.), which would poison the
@@ -968,6 +1095,8 @@ export class CortexMCPServer {
               "",
               "For purely conceptual questions (*what is X*, *how does Y work*), reading the index below is usually sufficient — skip the deep entity reads.",
               "",
+              "For any request involving an **architecture diagram, dependency map, module relationships, or 'what touches X'** — **always call `graph` (project-cortex MCP)** rather than drawing a diagram manually. Use the `scope` parameter to focus on a single entity (e.g. `scope: \"BookingController\"`). Never construct Mermaid syntax by hand — Cortex holds the authoritative dependency edges with quality-colored nodes.",
+              "",
               "---",
               "",
             ].join("\n");
@@ -1108,6 +1237,87 @@ export class CortexMCPServer {
             },
           ],
         };
+      }
+
+      if (name === "audit_quality") {
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }] };
+        }
+        const rows = await this.knowledge.listEntityQuality();
+        if (rows.length === 0) {
+          return { content: [{ type: "text", text: "No entities to evaluate. Knowledge base is empty." }] };
+        }
+        const gate = readQualityGate();
+        const below = rows.filter((r) => r.breakdown.score < gate);
+        const decileSize = Math.max(1, Math.floor(rows.length / 10));
+        const bottomDecile = new Set(rows.slice(0, decileSize).map((r) => r.name));
+        const lines: string[] = [`Quality audit — ${rows.length} entities · gate ${gate.toFixed(2)} · bottom decile flagged ⬇️\n`];
+        for (const row of rows) {
+          const b = row.breakdown;
+          const flag = bottomDecile.has(row.name) ? " ⬇️" : "";
+          const fail = b.score < gate ? " ❌" : "";
+          const source = row.sourceFile ? ` — \`${row.sourceFile}\`` : "";
+          lines.push(`${b.score.toFixed(2)}  ${row.name}${source}${flag}${fail}`);
+          lines.push(`       evidence ${b.evidenceFreshness.toFixed(2)} · contradictions ${b.contradiction.toFixed(2)} · staleness ${b.staleness.toFixed(2)} · age ${b.age.toFixed(2)} · human-review ${b.humanReview.toFixed(2)}`);
+        }
+        lines.push("");
+        if (below.length === 0) {
+          lines.push(`✅ All ${rows.length} entities meet the quality gate (${gate.toFixed(2)}).`);
+        } else {
+          lines.push(`❌ ${below.length}/${rows.length} entit${below.length === 1 ? "y is" : "ies are"} below the quality gate (${gate.toFixed(2)}).`);
+        }
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+      }
+
+      if (name === "review_entity") {
+        const entityName = (args as any)?.entity;
+        const action = (args as any)?.action;
+        const reviewer = (args as any)?.reviewer;
+        if (typeof entityName !== "string" || !entityName.trim()) {
+          return { content: [{ type: "text", text: "review_entity requires a non-empty 'entity' argument." }], isError: true };
+        }
+        if (action !== "accept" && action !== "reject") {
+          return { content: [{ type: "text", text: "review_entity requires 'action' to be 'accept' or 'reject'." }], isError: true };
+        }
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }], isError: true };
+        }
+        const result = await this.knowledge.setHumanReview(entityName, action === "accept", reviewer);
+        if (!result.ok) {
+          return { content: [{ type: "text", text: `❌ ${result.reason}` }], isError: true };
+        }
+        const msg = action === "accept"
+          ? `✅ Marked '${entityName}' as human-reviewed${reviewer ? ` (reviewer: ${reviewer})` : ""}. Quality score updated immediately.`
+          : `✅ Cleared human-review flag on '${entityName}'. Entity returns to unreviewed status.`;
+        return { content: [{ type: "text", text: msg }] };
+      }
+
+      if (name === "graph") {
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }] };
+        }
+        const state = await this.knowledge.getState();
+        const format = (args as any)?.format ?? "mermaid";
+        const scope = (args as any)?.scope;
+        const g = buildGraph(state, {
+          scope,
+          depth: (args as any)?.depth,
+          includeConcepts: !!(args as any)?.includeConcepts,
+        });
+        const raw = format === "json" ? toJson(g) : toMermaid(g);
+        let output = format === "json" ? raw : `\`\`\`mermaid\n${raw}\n\`\`\``;
+        // Auto-export the full graph to ARCH_GRAPH.md as a side effect (always full graph, concepts included)
+        if (!scope) {
+          try {
+            await runExportGraph(this.projectRoot);
+            if (format !== "json") {
+              output += `\n\n> 📄 Also saved to **ARCH_GRAPH.md** in your project root — open that file for the full rendered diagram (GitHub renders it with colors, or use \`cortex serve\` for the interactive viewer).`;
+            }
+          } catch {
+            // non-fatal — return value is still correct
+          }
+        }
+        return { content: [{ type: "text", text: output }] };
       }
 
       throw new Error(`Unknown tool: ${name}`);

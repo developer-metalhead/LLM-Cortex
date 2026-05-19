@@ -1111,7 +1111,7 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 
 ---
 
-## 🎨 Phase 8: Visual & Browseable Knowledge Graph — ⏳ Planned
+## ✅ Phase 8: Visual & Browseable Knowledge Graph — ✅ Done
 
 **Layman's Terms**
 The knowledge base already knows how everything connects. Phase 8 lets you _see_ it — a Mermaid diagram of your architecture, a local web UI you can click through to browse entities, and a graph that updates itself every time you sync. The dependency graph stops being a JSON file and becomes a map.

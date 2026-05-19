@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({deps: Object.keys\\(p.dependencies||{}\\), devDeps: Object.keys\\(p.devDependencies||{}\\)}, null, 2\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(ls \"c:\\\\Users\\\\kumsatwi\\\\Desktop\\\\StEp\\\\personalProject\\\\HomelyHub4march\")",
+      "Read(//c/Users/kumsatwi/Desktop/StEp/personalProject/HomelyHub4march/**)",
+      "Bash(node \"c:\\\\Users\\\\kumsatwi\\\\Desktop\\\\StEp\\\\personalProject\\\\LLM-Cortex\\\\dist\\\\cli\\\\index.js\" status)",
+      "Read(//c/Users/kumsatwi/AppData/Roaming/Claude/**)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\AnthropicClaude\" -Recurse -Filter \"claude.exe\" -ErrorAction SilentlyContinue | Select-Object FullName)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\HomelyHub4march"
+    ]
+  }
+}

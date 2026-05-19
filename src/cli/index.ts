@@ -13,12 +13,14 @@ import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
 import { runAuditStale, runAuditEvidence, runAuditQuality } from "./audit.js";
-import { runExportSpec } from "./export.js";
+import { runExportSpec, runExportGraph } from "./export.js";
 import { runReviewAccept, runReviewReject } from "./review.js";
 import { runHookInstall } from "./hook.js";
 import { runLog } from "./log.js";
 import { runLint } from "./lint.js";
 import { runEvolution } from "./evolution.js";
+import { runGraph } from "./graph.js";
+import { runServe } from "../server/index.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -214,14 +216,52 @@ program
   });
 
 program
+  .command("graph")
+  .description("Emit a Mermaid or JSON representation of the knowledge graph")
+  .option("-s, --scope <entity>", "Focus subgraph around this entity")
+  .option("-d, --depth <n>", "Max hops from scope (default: unlimited)", parseInt)
+  .option("-c, --include-concepts", "Include concept nodes")
+  .option("-f, --format <fmt>", "Output format: mermaid (default) or json", "mermaid")
+  .option("-o, --output <path>", "Write output to file instead of stdout")
+  .action(async (options) => {
+    const code = await runGraph(projectRoot, {
+      scope: options.scope,
+      depth: options.depth,
+      includeConcepts: !!options.includeConcepts,
+      format: options.format,
+      output: options.output,
+    });
+    process.exitCode = code;
+  });
+
+program
+  .command("serve")
+  .description("Start a local graph viewer (127.0.0.1 only by default)")
+  .option("-p, --port <n>", "Port to listen on (default: 7842)", parseInt)
+  .option("--host <host>", "Bind host (default: 127.0.0.1)")
+  .option("-c, --include-concepts", "Include concept nodes in the graph")
+  .action(async (options) => {
+    await runServe(projectRoot, {
+      port: options.port,
+      host: options.host,
+      includeConcepts: !!options.includeConcepts,
+    });
+  });
+
+program
   .command("export")
   .description("Export knowledge base")
   .option("--spec", "Export as ARCH_SPEC.md")
+  .option("--graph", "Export as ARCH_GRAPH.md (Mermaid dependency diagram)")
+  .option("-s, --scope <entity>", "Focus graph export around this entity (writes ARCH_GRAPH_<entity>.md)")
+  .option("-d, --depth <n>", "Max hops from scope (default: 2)", parseInt)
   .action(async (options) => {
     if (options.spec) {
       await runExportSpec(projectRoot);
+    } else if (options.graph) {
+      await runExportGraph(projectRoot, { scope: options.scope, depth: options.depth });
     } else {
-      console.log("Usage: cortex export --spec");
+      console.log("Usage: cortex export --spec | --graph [--scope <entity>] [--depth <n>]");
     }
   });
 

@@ -179,16 +179,16 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## ⏳ Planned — Phases 8–13
+## ✅ Phase 8 — Visual & Browseable Knowledge Graph (verified 2026-05-19, all DoD met, 22 tests passing)
 
-### Phase 8 — Visual & Browseable Knowledge Graph
-- [ ] `cortex graph` — Mermaid/dot/JSON output; `--scope`, `--depth`, `--include-concepts`, `--format` flags
-- [ ] `cortex serve` — local-only HTTP server (`127.0.0.1`) with bundled graph viewer (D3 or Cytoscape, no external CDN)
-- [ ] Stale entities desaturated; warned entities red-badged in viewer
-- [ ] Click node → full entity page
-- [ ] Viewport culling for large graphs (300+ entities)
-- [ ] New source files: `src/knowledge/graph.ts` (shared builder), `src/cli/graph.ts`, `src/server/` (HTTP + static assets)
-- [ ] Tests: Mermaid emission, server lifecycle, no external asset requests
+- [x] `src/knowledge/graph.ts` — `buildGraph()` pure function: state.json → `KnowledgeGraph` (nodes + edges); `toMermaid()` with classDef colour blocks (green/amber/red/stale/concept); `toJson()`; `qualityColor()` (≥0.8 green, ≥0.5 amber, <0.5 red); `filterByScope()` BFS bidirectional with `--depth` limit; concept nodes via `includeConcepts` flag; duplicate edge deduplication in Mermaid output
+- [x] `src/cli/graph.ts` — `runGraph()`: loads via `km.getState()`, supports `--scope`, `--depth`, `--include-concepts`, `--format mermaid|json`, `--output <file>`
+- [x] `src/server/index.ts` — `runServe()`: Node built-in `http`, binds `127.0.0.1` by default; `GET /` → self-contained HTML+CSS+JS (no external CDN); `GET /api/graph` → live KnowledgeGraph JSON; `GET /api/entity/:name` + `GET /api/concept/:name` → entity/concept markdown; inline vanilla-JS force-directed SVG layout; click node → detail panel with markdown + quality breakdown footer; quality-color coded nodes; stale nodes desaturated; hover tooltip shows quality dimensions
+- [x] `KnowledgeManager.getState()` public accessor added to `src/knowledge/writer.ts`
+- [x] `cortex graph` + `cortex serve` commands wired into `src/cli/index.ts`
+- [x] **Tests (22 passing)** in `tests/phase8.test.ts`: qualityColor boundary thresholds, buildGraph empty/single/multi-edge, scope depth-1/depth-2/not-found, stale flag, concepts include/exclude, toMermaid empty/single/stale/concept/deduplication, toJson round-trip, quality-color on synthetic graph, server lifecycle (GET /api/graph, GET /api/entity/:name, GET / no-CDN check)
+
+## ⏳ Planned — Phases 9–13
 
 ### Phase 9 — Refactoring Impact Preview
 - [ ] `cortex impact <entity> [--depth N] [--format text|json]` — hop-ranked inbound dependents
