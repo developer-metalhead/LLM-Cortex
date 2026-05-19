@@ -68,6 +68,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 |---|---|---|---|---|
 | 1 | **Phase 7** — Audit & Traceability | Trust ground truth: users see what Cortex changed and why | Required by 7.5, 16, 18, 20.x, 26 | ✅ **Done 2026-05-19** |
 | 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ✅ **Done 2026-05-19** |
+| 2.1 | **Phase 7.6** — Global Architectural Lessons & Retrospective Log | Centralized lessons.md dashboard to avoid repeating historical code errors | Phase 7.5 ✓ | ⏳ Planned |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
@@ -272,6 +273,7 @@ These phases drive **defensibility, hiring brand, and PR** rather than direct re
 
 - Phase 20.2 (Bug Hotspot Prediction)
 - Phase 20.5 (ADR + C4 + Conway analysis)
+- Phase 20.5.1 (Automated ADR Engine)
 - Phase 20.7 (Mem0 per-developer memory)
 - Phase 20.13 (VOYAGER skill library — required by Pro Module 3)
 - Phase 20.14 (Pearl Causal Analysis)
@@ -322,6 +324,7 @@ If you want to maximize ARR-unlocked per engineering-hour, prioritize these:
 | **Phase 20.19 (Knowledge Editing ROME/MEMIT)** | Specialized; ship when customers report "re-synthesis shifts unrelated details" pain |
 | **Phase 20.21 (Episodic-Semantic Consolidation)** | Theoretically beautiful but limited immediate customer-visible value |
 | **Phase 20.5 (ADR + C4 + Conway)** | Documentation generation; ship if a specific customer asks |
+| **Phase 20.5.1 (Automated ADR Engine)** | Automated creation of architecture records from constraint edits |
 | **Phase 39 (Voice Mode — from Nexus)** | Not absorbed into Cortex; remains a future Pro Module if commercial demand emerges |
 
 ---
@@ -497,6 +500,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 5.6** — Daemon Watchdog & Self-Healing · deps: 5 ✓
 - ~~**Phase 8**~~ — moved to Wave 0 (✅ Done 2026-05-19)
 - **Phase 8.1** — Live Graph Stream · deps: 8 ✓
+- **Phase 7.6** — Global Architectural Lessons & Retrospective Log · deps: 7.5 ✓
 - **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
@@ -507,7 +511,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 16** — Contradiction-Aware Retrieval · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
 - **Phase 18** — Architectural Embeddings · deps: 6 ✓, 7 ✓ (was Wave 3; now unblocked)
 - **Phase 20** — Intelligent Architectural Advisor · deps: 6 ✓
-- **Phase 20.5** — ADR + C4 + Conway · deps: 8, 7 ✓ (still waiting on 8)
+- **Phase 20.5** — ADR + C4 + Conway · deps: 8 ✓, 7 ✓
 - **Phase 20.7** — Mem0 Personalized Memory · deps: 4 ✓, 7 ✓
 - **Phase 20.12** — Temporal Knowledge Graph · deps: 7 ✓
 - **Phase 20.14** — Pearl Causal Analysis · deps: 6 ✓, 7 ✓
@@ -521,6 +525,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 12** — Git & CI Integration · deps: 6 ✓
 - **Phase 13** — Token Economics & Context Packs · deps: 8, 10
 - **Phase 17.1** — Multi-Model Architectural Debate · deps: 33.1
+- **Phase 20.5.1** — Automated ADR Engine · deps: 20.5
 - **Phase 20.6** — MemGPT Hierarchical Memory Tiering · deps: 4 ✓, 8, 10
 - **Phase 20.1** — Architecture Simulation · deps: 8, 6 ✓
 
@@ -737,6 +742,7 @@ These can be slotted into any sprint where bandwidth allows — useful when bloc
 - **Phase 33-MVP** (only needs Phase 2 ✓) — **P0, ship in Wave 1**
 - **Phase 9.1** (only needs Phase 9 ✓) — ship in Wave 1
 - ~~**Phase 9**~~ (✅ Done 2026-05-19)
+- **Phase 7.6** (only needs Phase 7.5 ✓) — ship in Wave 1
 - **Phase 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
 
 If your team has spare cycles waiting on a long-running phase, these are the safe parallel options.

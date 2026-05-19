@@ -20,6 +20,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
+| 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
+| 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
@@ -41,6 +43,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.3  | Design Pattern Suggestion                              | ⏳ Planned                           |
 | 20.4  | Evolutionary Architecture Fitness Functions            | ⏳ Planned                           |
 | 20.5  | Architecture Documentation Generation                  | ⏳ Planned                           |
+| 20.5.1| Automated ADR (Architectural Decision Records) Engine  | ⏳ Planned                           |
 | 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
 | 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
 | 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
@@ -1191,6 +1194,33 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 
 ---
 
+## 🎲 Phase 7.6: Global Architectural Lessons & Retrospective Log — ⏳ Planned
+
+**Layman's Terms**
+When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` markdown view and command. You can also log global, codebase-wide architectural lessons that aren't tied to a single file.
+
+**Technical Terms**
+Implement a global lessons aggregator in the Knowledge Manager.
+- **Aggregation**: Collects all `failedApproaches` across all synthesized entities from `state.json`.
+- **Manual Logs**: Exposes a CLI command `cortex lessons log --summary "..." --reason "..."` to record a global codebase-wide architectural lesson saved under `.knowledge/lessons.jsonl`.
+- **Output Emitter**: Compiles these into a unified report `.knowledge/LESSONS.md` during sync, showing chronological failures, reasons, and target mitigations.
+
+**Definition of Ready (DoR)**
+- Phase 7 and Phase 7.5 are completed.
+- `state.json` schema supports `failedApproaches[]` correctly.
+
+**Definition of Done (DoD)**
+- `cortex lessons` command displaying chronological list of all entity-level and global failed approaches/lessons.
+- `cortex lessons log` command for manual global entries.
+- Unified `.knowledge/LESSONS.md` automatically compiled during sync.
+- Tests covering aggregation, manual entry persistence, and compilation correctness.
+
+**Pros & Cons**
+- ✅ **Pros**: Surfaces codebase anti-patterns and retrospects in a single searchable document, preventing AI assistants and developers from repeating historical mistakes.
+- ❌ **Cons**: Requires manual input for global lessons (although entity-level failed approaches are auto-synthesized).
+
+---
+
 ## ✅ Phase 8: Visual & Browseable Knowledge Graph — ✅ Done
 
 **Layman's Terms**
@@ -2122,6 +2152,33 @@ Three non-mutating documentation generation surfaces over `state.json` and `log.
 
 - ✅ **Pros**: ADR generation closes the "decisions live in Slack" problem — every architectural decision that touched code gets a stub document automatically, reducing the manual ADR maintenance burden. C4 diagrams from a live graph are always current without a separate drawing tool. Conway's Law analysis is the closest Cortex comes to CodeScene's team coupling feature — without any cloud dependency. All three surfaces are read-only projections; zero risk of polluting the canonical knowledge store.
 - ❌ **Cons**: ADR stubs require human editing to be valuable — auto-generated ADRs without review are noise. Mitigated by the stub marker and skip-on-existing behavior that forces a human decision before commit. Conway analysis requires CODEOWNERS — teams without it get coupling data only. C4 Level 3 diagrams can be overwhelming for highly-connected entities; mitigated by a `--max-depth 1` flag.
+
+---
+
+## 📐 Phase 20.5.1: Automated ADR (Architectural Decision Records) Engine — ⏳ Planned
+
+**Layman's Terms**
+Instead of developers manually writing and updating design decision markdown files, Cortex automatically logs key changes to constraints, patterns, and boundaries as structured Architectural Decision Records. When you change an architectural constraint in `cortex.constraints.json`, Cortex generates a new ADR documenting the change, the reasoning, and the impact.
+
+**Technical Terms**
+Extend Phase 20.5 with an automated ADR generation engine.
+- **Trigger**: Detects changes to `cortex.constraints.json`, custom entity contracts, or major dependency structure (high-centrality entities).
+- **Synthesis**: Runs a specialized prompt asking the Librarian to synthesize a standard ADR (following MADR or template format) based on the git diff, containing: Context (Why), Decision (What changed), and Consequences (Impact).
+- **Storage**: Appends/writes the ADRs to `.knowledge/decisions/adr-XXXX.md` and updates a central `.knowledge/decisions/README.md` index.
+
+**Definition of Ready (DoR)**
+- Phase 20.5 is completed.
+- `state.json` tracks core dependencies and centrality scores.
+
+**Definition of Done (DoD)**
+- Changes to core constraints or high-centrality entities automatically trigger a background ADR draft.
+- Drafts are saved in MADR format under `.knowledge/decisions/` with clear metadata (date, author, status: proposed/accepted).
+- Central ADR directory index (`README.md`) is kept updated.
+- Tests verify that mutating a constraint file successfully generates a structured ADR file.
+
+**Pros & Cons**
+- ✅ **Pros**: Standardizes and automates design decision tracking, preserving architectural rationale in the repo.
+- ❌ **Cons**: Might generate too many minor stubs for rapid config changes; mitigated by grouping logic and thresholding based on centrality delta.
 
 ---
 
