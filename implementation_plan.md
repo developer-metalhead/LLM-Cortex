@@ -19,7 +19,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
-| 10    | Onboarding & Guided Reading                            | ⏳ Planned                           |
+| 10    | Onboarding & Guided Reading                            | 🚧 In Progress                       |
 | 11    | Monorepo Federation                                    | ⏳ Planned                           |
 | 12    | Git & CI Integration                                   | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ⏳ Planned                           |
@@ -1152,7 +1152,7 @@ Two complementary surfaces over the existing `state.json` graph — no new data,
 
 ---
 
-## 🔮 Phase 9: Refactoring Impact Preview — ⏳ Planned
+## ✅ Phase 9: Refactoring Impact Preview — ✅ Done
 
 **Layman's Terms**
 Phase 6 tells you what _did_ break when you mutated an entity. Phase 9 tells you what _would_ break before you start. Run `cortex impact AuthMiddleware` and see every entity that depends on it, ranked by directness, before you write a single line of refactor.
@@ -1193,7 +1193,7 @@ The inverse of Phase 6's blast-radius propagation. Where Phase 6 reacts to an `a
 
 ---
 
-## 🎓 Phase 10: Onboarding & Guided Reading — ⏳ Planned
+## 🎓 Phase 10: Onboarding & Guided Reading — 🚧 In Progress
 
 **Layman's Terms**
 A new developer clones the repo. Today, they spend a week reading code to figure out what matters. With Phase 10, they run `cortex onboard` and get a structured reading path: "Start here, then this, then this — here's why each one matters and how they connect."

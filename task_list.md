@@ -198,16 +198,18 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] Reuses `src/knowledge/graph.ts` from Phase 8 (no duplicate traversal code)
 - [x] `cortex impact` + `cortex deps` wired into `src/cli/index.ts`
 
-## ⏳ Planned — Phases 10–13
+## 🚧 In Progress — Phase 10 (Onboarding & Guided Reading)
 
 ### Phase 10 — Onboarding & Guided Reading
-- [ ] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding.md` with ordered reading path
+- [/] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding.md` with ordered reading path
 - [ ] Centrality scoring (PageRank, damping 0.85, over `depends_on`/`called_by`/`parent_of` edges)
 - [ ] Parent-summary concepts — auto-emitted for directories with ≥5 entities; `kind: "parent_of"` edges
 - [ ] `cortex find --type entity|concept|parent "<query>"` — substring+token match over `state.json` + `evidence[].content`
 - [ ] MCP `onboard` prompt
 - [ ] New source files: `src/knowledge/onboarding.ts`, `src/cli/onboard.ts`, `src/cli/find.ts`
 - [ ] Tests: empty-base graceful fail, centrality ranking, parent-summary threshold, `cortex find` ordering
+
+## ⏳ Planned — Phases 11–13
 
 ### Phase 11 — Monorepo Federation
 - [ ] `cortex init --monorepo` — auto-detect pnpm/yarn/turbo workspaces; scaffold `.cortex/workspaces.json`
