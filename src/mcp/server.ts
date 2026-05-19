@@ -138,10 +138,13 @@ export class CortexMCPServer {
     text: string,
   ): Promise<Array<{ type: "text"; text: string }>> {
     try {
+      const { getBrevityLevel } = await import("../knowledge/brevity.js");
+      const brevity = getBrevityLevel(this.projectRoot);
       const { tokens: sourceTokens, fileCount } = await this.getSourceStats();
       const responseTokens = Math.round(text.length / 4);
       const saved = Math.max(0, sourceTokens - responseTokens);
-      if (saved < 500) return [{ type: "text", text }];
+      const threshold = brevity !== "off" ? 0 : 500;
+      if (saved <= threshold) return [{ type: "text", text }];
       const savedFmt =
         saved >= 1000 ? `~${(saved / 1000).toFixed(1)}k` : `~${saved}`;
       const footer = `\n\n---\n*Cortex saved ${savedFmt} tokens — synthesized knowledge instead of scanning ${fileCount} source files*`;
@@ -244,6 +247,20 @@ export class CortexMCPServer {
           description: "Generates a formal, structured cost audit report of the next sync.",
           arguments: [
             { name: "budget", description: "Optional USD ceiling to check against (e.g. 0.05)", required: false },
+          ],
+        },
+        {
+          name: "compress",
+          description: "Compress a specific rules or markdown file on disk to save tokens permanently.",
+          arguments: [
+            { name: "file", description: "The repo-relative path to the file to compress (e.g. CLAUDE.md or .cursorrules)", required: true },
+          ],
+        },
+        {
+          name: "brevity",
+          description: "Configure or check the active token-saving brevity level (off, lite, ultra).",
+          arguments: [
+            { name: "level", description: "The active brevity level to set (off, lite, ultra)", required: false },
           ],
         },
       ],
@@ -567,13 +584,78 @@ export class CortexMCPServer {
         };
       }
 
+      if (request.params.name === "compress") {
+        const file = request.params.arguments?.file;
+        if (!file) {
+          return {
+            description: "Compress a file — asks which file to compress.",
+            messages: [{ role: "user", content: { type: "text", 
+              text: "Ask the user: 'Which file would you like to permanently compress on disk? (e.g. CLAUDE.md)' and wait for their reply. Once they reply, reload the compress prompt with the file argument."
+            }}],
+          };
+        }
+        return {
+          description: `Compress ${file} to save tokens permanently.`,
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: [
+                  `You are about to permanently compress the file '${file}' on disk using the Cortex Brevity Engine.`,
+                  "",
+                  "STEP 1 — Check if the file exists.",
+                  "Read or check the file using your native filesystem tools to confirm it is present in the workspace.",
+                  "",
+                  "STEP 2 — Propose and run the CLI compression command.",
+                  "Using your terminal command execution tool, execute:",
+                  `  cortex compress "${file}" --inplace`,
+                  "",
+                  "STEP 3 — Verify the compression.",
+                  "Read the file again to verify that standard prose fluff was removed and code blocks remain intact.",
+                  "",
+                  "STEP 4 — Show stats.",
+                  "Propose and run the CLI command 'cortex stats' to fetch the cumulative token and dollar savings. Report the stats back to the user.",
+                ].join("\n"),
+              },
+            },
+          ],
+        };
+      }
+
+      if (request.params.name === "brevity") {
+        const level = request.params.arguments?.level;
+        if (!level) {
+          return {
+            description: "Set the active brevity level — asks which level to set.",
+            messages: [{ role: "user", content: { type: "text", 
+              text: "Ask the user: 'Which brevity level would you like to configure? (off, lite, ultra)' and briefly explain the difference. Wait for their reply, then reload the brevity prompt with their choice."
+            }}],
+          };
+        }
+        return {
+          description: `Configure dynamic brevity level to ${level}`,
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Set the dynamic brevity level of the workspace to '${level}'. Call the 'configure_brevity' tool with level='${level}'. Once complete, verify that the configuration successfully saved, and explain what features this level enables (e.g., dynamic response minification, compressed tool descriptions, telegraphic ingestion instructions).`,
+              },
+            },
+          ],
+        };
+      }
+
       throw new Error(`Prompt not found: ${request.params.name}`);
     });
   }
 
   private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      const { getBrevityLevel, COMPRESSED_TOOL_DESCRIPTIONS } = await import("../knowledge/brevity.js");
+      const brevity = getBrevityLevel(this.projectRoot);
+      const tools = [
         {
           name: "get_cortex_status",
           description:
@@ -1021,11 +1103,52 @@ export class CortexMCPServer {
             },
           },
         },
-      ],
-    }));
+        {
+          name: "configure_brevity",
+          description: "Configure the active brevity level for the Cortex context (off, lite, ultra).",
+          inputSchema: {
+            type: "object",
+            required: ["level"],
+            properties: {
+              level: {
+                type: "string",
+                enum: ["off", "lite", "ultra"],
+                description: "The active brevity level. 'off' disables compression. 'lite' enables dynamic response minification. 'ultra' enables maximum telegraphic compression + system prompt instructions.",
+              },
+            },
+          },
+        },
+        {
+          name: "compress",
+          description: "Compress one or more Markdown (.md) files or directories on disk in-place to strip prose fluff and save tokens. Path can be a single file (e.g. '.knowledge/entities/Auth.md') or a directory (e.g. '.knowledge').",
+          inputSchema: {
+            type: "object",
+            required: ["path"],
+            properties: {
+              path: {
+                type: "string",
+                description: "The repo-relative path to the file or directory to compress (e.g. '.knowledge').",
+              },
+            },
+          },
+        },
+      ];
+      if (brevity === "lite" || brevity === "ultra") {
+        for (const t of tools) {
+          if (COMPRESSED_TOOL_DESCRIPTIONS[t.name]) {
+            t.description = COMPRESSED_TOOL_DESCRIPTIONS[t.name];
+          }
+        }
+      }
+      return { tools };
+    });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
+      const { getBrevityLevel, minifyProse } = await import("../knowledge/brevity.js");
+      const brevity = getBrevityLevel(this.projectRoot);
+
+      const executeHandler = async () => {
+        const { name, arguments: args } = request.params;
 
       if (name === "get_cortex_status") {
         const knowledgeExists = await this.knowledge.exists();
@@ -1055,6 +1178,77 @@ export class CortexMCPServer {
                 null,
                 2,
               ),
+            },
+          ],
+        };
+      }
+
+      if (name === "configure_brevity") {
+        const level = (args as any)?.level;
+        if (level !== "off" && level !== "lite" && level !== "ultra") {
+          return {
+            content: [{ type: "text", text: "configure_brevity requires a 'level' of 'off', 'lite', or 'ultra'." }],
+            isError: true,
+          };
+        }
+        const configPath = path.join(this.projectRoot, "cortex.json");
+        let config: any = {};
+        try {
+          const raw = await fs.readFile(configPath, "utf-8");
+          config = JSON.parse(raw);
+        } catch {
+          // ignore, start fresh
+        }
+        config.brevity = level;
+        await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ Dynamic Brevity Level successfully configured to: **${level}** in cortex.json. All subsequent MCP responses and tool descriptions will automatically adapt!`,
+            },
+          ],
+        };
+      }
+
+      if (name === "compress") {
+        const targetPath = (args as any)?.path;
+        if (typeof targetPath !== "string" || !targetPath.trim()) {
+          return {
+            content: [{ type: "text", text: "compress requires a non-empty 'path' argument." }],
+            isError: true,
+          };
+        }
+
+        const { runCompress } = await import("../cli/compress.js");
+
+        // Capture console.log and console.error outputs
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        const logs: string[] = [];
+        console.log = (...msgs: any[]) => {
+          logs.push(msgs.map(m => String(m)).join(" "));
+        };
+        console.error = (...msgs: any[]) => {
+          logs.push(`[ERROR] ` + msgs.map(m => String(m)).join(" "));
+        };
+
+        try {
+          await runCompress(this.projectRoot, targetPath, { inplace: true });
+        } catch (err: any) {
+          logs.push(`[ERROR] Failed to run compression: ${err.message}`);
+        } finally {
+          console.log = originalLog;
+          console.error = originalError;
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: logs.join("\n"),
             },
           ],
         };
@@ -1211,6 +1405,11 @@ export class CortexMCPServer {
       }
 
       if (name === "ingest" || name === "get_pending_changes") {
+        let systemPrompt = LIBRARIAN_SYSTEM_PROMPT;
+        if (brevity === "ultra") {
+          systemPrompt += "\n\nCRITICAL: Output MUST be extremely terse, telegraphic, and dense. Strip all conversational filler, preambles, and polite transitions. Keep descriptions and summaries direct, compact, and completely focused on key architectural facts.";
+        }
+
         // BOOTSTRAP PATH: when the knowledge base is empty, never send a diff —
         // the most recent commits are usually just the installation of Cortex
         // itself (.knowledge/, .antigravity/, etc.), which would poison the
@@ -1228,7 +1427,7 @@ export class CortexMCPServer {
                 text: JSON.stringify(
                   {
                     mode: "bootstrap",
-                    systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
+                    systemPrompt: systemPrompt,
                     userPrompt: prompt,
                     outputSchema: {
                       summary:
@@ -1298,7 +1497,7 @@ export class CortexMCPServer {
               text: JSON.stringify(
                 {
                   mode: "incremental",
-                  systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
+                  systemPrompt: systemPrompt,
                   userPrompt: prompt,
                   staleEntities: staleEntities.map((e) => ({
                     name: e.name,
@@ -1385,6 +1584,9 @@ export class CortexMCPServer {
               "For purely conceptual questions (*what is X*, *how does Y work*), reading the index below is usually sufficient — skip the deep entity reads.",
               "",
               "For any request involving an **architecture diagram, dependency map, module relationships, or 'what touches X'** — **always call `graph` (project-cortex MCP)** rather than drawing a diagram manually. Use the `scope` parameter to focus on a single entity (e.g. `scope: \"BookingController\"`). Never construct Mermaid syntax by hand — Cortex holds the authoritative dependency edges with quality-colored nodes.",
+              "",
+              "### MANDATORY: Always Output Brevity Statistics",
+              "If brevity mode is active (the tool response contains a `📉 Cortex Brevity Stats` section), you MUST always preserve, copy, and append this exact statistics block at the very bottom of your final response to the user so they can track their token savings. Do not hide, truncate, or prune it.",
               "",
               "---",
               "",
@@ -1828,8 +2030,50 @@ export class CortexMCPServer {
       }
 
       throw new Error(`Unknown tool: ${name}`);
-    });
-  }
+    };
+
+    const response = await executeHandler();
+    if ((brevity === "lite" || brevity === "ultra") && response && Array.isArray(response.content)) {
+      const { estimateTokens } = await import("../knowledge/packer.js");
+      for (const item of response.content) {
+        if (item.type === "text" && item.text) {
+          const originalText = item.text;
+          const minified = minifyProse(originalText);
+          
+          const originalTokens = estimateTokens(originalText);
+          const minifiedTokens = estimateTokens(minified);
+          const saved = Math.max(0, originalTokens - minifiedTokens);
+          
+          // Retrieve cumulative token savings from knowledge state!
+          let cumulativeSavingsStr = "";
+          let savedTokens = 0;
+          let tokenReduction = "0.0";
+          try {
+            const state = await this.knowledge.getState();
+            const stats = state.brevityStats || {
+              originalTokens: 0,
+              compressedTokens: 0,
+            };
+            savedTokens = Math.max(0, stats.originalTokens - stats.compressedTokens);
+            tokenReduction = stats.originalTokens > 0 
+              ? ((savedTokens / stats.originalTokens) * 100).toFixed(1) 
+              : "0.0";
+          } catch {
+            // ignore
+          }
+
+          const percent = originalTokens > 0 ? ((saved / originalTokens) * 100).toFixed(1) : "0.0";
+          item.text = minified + `\n\n---\n📉 **Cortex Brevity Stats:**\n- **This Call:** Saved **${saved} tokens** (${percent}% reduction)\n- **Cumulative Workspace Savings:** Saved **${savedTokens.toLocaleString()} tokens** (${tokenReduction}% reduction)`;
+
+          this.knowledge.recordBrevitySavings(originalText, minified).catch((err: any) => {
+            console.error(`[Cortex] Failed to record brevity savings: ${err.message}`);
+          });
+        }
+      }
+    }
+    return response;
+  });
+}
 
   async start() {
     const transport = new StdioServerTransport();

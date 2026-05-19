@@ -44,6 +44,14 @@ type KnowledgeState = {
   version: number;
   entities: Record<string, EntityRecord>;
   concepts: Record<string, ConceptRecord>;
+  brevityStats?: {
+    compressedFilesCount: number;
+    originalBytes: number;
+    compressedBytes: number;
+    originalTokens: number;
+    compressedTokens: number;
+    usdSaved: number;
+  };
 };
 
 function safeFilename(name: string): string {
@@ -304,6 +312,7 @@ export class KnowledgeManager {
         version: STATE_VERSION,
         entities: parsed.entities || {},
         concepts: parsed.concepts || {},
+        brevityStats: parsed.brevityStats,
       };
 
       // Auto-migrate legacy links to relationships
@@ -1013,6 +1022,44 @@ export class KnowledgeManager {
 
     await fs.writeFile(outputPath, content, "utf-8");
     return outputPath;
+  }
+
+  async recordBrevitySavings(originalText: string, compressedText: string, isFile = false): Promise<void> {
+    if (!originalText || !compressedText) return;
+    const originalBytes = Buffer.byteLength(originalText, "utf8");
+    const compressedBytes = Buffer.byteLength(compressedText, "utf8");
+
+    const { estimateTokens } = await import("./packer.js");
+    const originalTokens = estimateTokens(originalText);
+    const compressedTokens = estimateTokens(compressedText);
+
+    const diffBytes = Math.max(0, originalBytes - compressedBytes);
+    const diffTokens = Math.max(0, originalTokens - compressedTokens);
+
+    const usdSaved = (diffTokens * 3.50) / 1_000_000;
+
+    const state = await this.readState();
+    if (!state.brevityStats) {
+      state.brevityStats = {
+        compressedFilesCount: 0,
+        originalBytes: 0,
+        compressedBytes: 0,
+        originalTokens: 0,
+        compressedTokens: 0,
+        usdSaved: 0,
+      };
+    }
+
+    if (isFile) {
+      state.brevityStats.compressedFilesCount += 1;
+    }
+    state.brevityStats.originalBytes += originalBytes;
+    state.brevityStats.compressedBytes += compressedBytes;
+    state.brevityStats.originalTokens += originalTokens;
+    state.brevityStats.compressedTokens += compressedTokens;
+    state.brevityStats.usdSaved += usdSaved;
+
+    await this.writeState(state);
   }
 }
 

@@ -9,7 +9,7 @@ function ask(rl: readline.Interface, question: string): Promise<string> {
 
 export async function runConfig(
   projectRoot: string,
-  options: { provider?: string; model?: string; mode?: string }
+  options: { provider?: string; model?: string; mode?: string; brevity?: string }
 ): Promise<void> {
   loadCortexEnv(projectRoot);
   const envPath = path.join(projectRoot, ".env");
@@ -34,9 +34,25 @@ export async function runConfig(
   if (options.provider) config["CORTEX_PROVIDER"] = options.provider;
   if (options.model) config["CORTEX_MODEL"] = options.model;
   if (options.mode) config["INGESTION_MODE"] = options.mode;
+  if (options.brevity) {
+    if (options.brevity !== "lite" && options.brevity !== "ultra" && options.brevity !== "off") {
+      console.error("  Error: Brevity must be 'lite', 'ultra', or 'off'.");
+      process.exit(1);
+    }
+    config["CORTEX_BREVITY_LEVEL"] = options.brevity;
+    
+    const cortexJsonPath = path.join(projectRoot, "cortex.json");
+    let cortexJson: Record<string, any> = {};
+    try {
+      const parsed = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+      cortexJson = parsed;
+    } catch {}
+    cortexJson.brevity = options.brevity;
+    await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+  }
 
   // Interactive mode if no flags
-  if (!options.provider && !options.model && !options.mode) {
+  if (!options.provider && !options.model && !options.mode && !options.brevity) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     console.log("\n  Project Cortex — Configuration Editor\n");
 
@@ -48,6 +64,24 @@ export async function runConfig(
 
     const modeInput = await ask(rl, `  Mode [${config["INGESTION_MODE"] || "auto"}]: `);
     if (modeInput.trim()) config["INGESTION_MODE"] = modeInput.trim();
+
+    const brevityInput = await ask(rl, `  Brevity Level [off|lite|ultra] [${config["CORTEX_BREVITY_LEVEL"] || "off"}]: `);
+    if (brevityInput.trim()) {
+      const val = brevityInput.trim();
+      if (val === "lite" || val === "ultra" || val === "off") {
+        config["CORTEX_BREVITY_LEVEL"] = val;
+        const cortexJsonPath = path.join(projectRoot, "cortex.json");
+        let cortexJson: Record<string, any> = {};
+        try {
+          const parsed = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+          cortexJson = parsed;
+        } catch {}
+        cortexJson.brevity = val;
+        await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+      } else {
+        console.warn("  Warning: Invalid brevity level ignored.");
+      }
+    }
 
     rl.close();
   }
