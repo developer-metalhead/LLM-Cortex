@@ -19,19 +19,32 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
 | 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
+| 5.9   | Shell Status Prompt Integration & Statusline Badge     | ⏳ Planned                           |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
 | 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
+| 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
+| 10.2  | Smart Rule File Patching & Marker-Fenced Injection     | ⏳ Planned                           |
 | 11    | Monorepo Federation                                    | ⏳ Planned                           |
 | 12    | Git & CI Integration                                   | ⏳ Planned                           |
-| 13    | Token Economics & Context Packs                        | ⏳ Planned                           |
+| 12.2  | Git Pre-Commit Guardrail Hooks                         | ⏳ Planned                           |
+| 12.3  | Architecturally Aware Commit Generation                | ⏳ Planned                           |
+| 12.4  | Diagnostic Run Buffer & Tee Recovery                   | ⏳ Planned                           |
+| 12.5  | Terminal Command Output Minifier                      | ⏳ Planned                           |
+| 12.6  | Local Command Interception Shims & Agent Rules         | ⏳ Planned                           |
+| 12.7  | Smart Code Outliner & Signature-Only Reader            | ⏳ Planned                           |
+| 12.8  | Log Deduplicator & Web Fetch Parser                    | ⏳ Planned                           |
+| 13    | Token Economics & Context Packs                        | ✅ Done                              |
+| 13.1  | Dense & Raw Token-Reduction Projections                | ⏳ Planned                           |
+| 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ⏳ Planned                           |
+| 13.3  | Token & Cost Savings Ledger & Analytics                | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
@@ -48,6 +61,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.5.1| Automated ADR (Architectural Decision Records) Engine  | ⏳ Planned                           |
 | 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
 | 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
+| 20.7.1| Cross-Agent Workspace State Synchronization            | ⏳ Planned                           |
 | 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
 | 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
 | 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
@@ -847,6 +861,31 @@ Inspired by Nexus Phase 33.3 (Session Leadership & Concurrency Control). A leade
 
 ---
 
+## 💻 Phase 5.9: Shell Status Prompt Integration & Statusline Badge — ⏳ Planned
+
+**Layman's Terms**
+See the health of your codebase and how much money you've saved on AI tokens directly inside your terminal prompt or status bar. Cortex provides prompt integration hooks for shells like Zsh, Bash, and PowerShell. A lightweight status badge updates in real time, letting you keep track of your architecture score and outstanding warning counts without having to type any commands.
+
+**Technical Terms**
+Implement shell prompt status integrations and custom statusline metrics.
+- **Prompt Emitter**: Add a CLI command `cortex prompt-status` that outputs a lightweight, configurable, single-line colorized status string (e.g. `[CORTEX 🧠 94% | ⚠️ 2 | 💰 $14.20]`).
+- **Latency Bounding**: Cache prompt status metrics inside `.knowledge/prompt_status.cache` to satisfy shell prompt responsiveness constraints (<10ms CLI runtime). Avoid file-system walks or heavy git queries during execution; read strictly from the cached state.
+- **Dynamic Hooks**: Expose installer scripts/instructions `cortex install-prompt [zsh|bash|powershell]` that inject prompt wrapper functions (`precmd` in Zsh, `PS1` in Bash, or custom prompt functions in PowerShell).
+
+**Definition of Ready (DoR)**
+- Phase 5 (CLI Polish & Daemonization) and Phase 13.2 (Brevity Engine) are completed.
+
+**Definition of Done (DoD)**
+- `cortex prompt-status` prints a formatted statusline in <10ms from the cached state.
+- `cortex install-prompt --zsh` generates valid shell configuration blocks.
+- Tests verify cache read fallback, status formatting rules, and latency limits.
+
+**Pros & Cons**
+- ✅ **Pros**: Seamless, ambient developer awareness of codebase health; gamifies documentation quality and token savings directly inside the terminal.
+- ❌ **Cons**: Incorrectly configured shell prompt hooks can cause shell latency or styling errors. Mitigated by keeping prompt output under 10ms and using standard ANSI color sequences.
+
+---
+
 ## ✅ Phase 6: Active Guardrail — Constraints & Blast-Radius Analysis — ✅ Done
 
 ### Phase 6 Execution Plan
@@ -1277,6 +1316,32 @@ Implement a debt compiler in the Knowledge Manager.
 
 ---
 
+## 🚨 Phase 7.9: Knowledge Garbage Collection & Archive Consolidation — ⏳ Planned
+
+**Layman's Terms**
+Prevent your AI's memory from getting cluttered with obsolete code that you deleted or refactored months ago. Cortex automatically scans the knowledge folder, sweeps old/unused entity files into a single compressed archive file (`.knowledge/ARCHIVE.md`), and removes them from the active index. This keeps your active workspace tiny and cheap to query, while still saving the history in case the AI needs to look it up later.
+
+**Technical Terms**
+Implement an automated garbage collection (GC) utility in the `KnowledgeManager`.
+- **Pruning Trigger**: Runs as a post-sync hook when file-count limits are reached or on explicit invocation (`cortex gc`).
+- **Relevance Evaluation**: Identifies candidate entities that have high staleness, 0% quality score, zero inbound dependencies (silos), and whose source files no longer exist.
+- **Archive Compression**: Deletes individual entity markdown files from `.knowledge/entities/` and appends their contents to a single structured `.knowledge/archive.jsonl` or `ARCHIVE.md` file.
+- **Lazy Resurrection**: If a future git diff re-introduces the entity name, Cortex automatically checks the archive, resurrects the historical context, and updates it instead of starting from scratch.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality Evaluator) and Phase 7.7 (Debt Register) are completed.
+
+**Definition of Done (DoD)**
+- `cortex gc` executes, moving qualifying entities to `.knowledge/ARCHIVE.md` and reducing active index size.
+- Integration tests verify that archived entities are elided from active `read_knowledge_index` payloads, saving context tokens.
+- Verification that referencing an archived entity in a new diff successfully pulls it out of the archive and reinstates it as an active entity.
+
+**Pros & Cons**
+- ✅ **Pros**: Permanently curbs index bloat in large repositories; reduces active context cost by up to 30% for legacy codebases.
+- ❌ **Cons**: Archiving rules must be conservative to avoid sweeping active entities that are temporarily disconnected. Mitigated by checking local Git file existence first.
+
+---
+
 ## ✅ Phase 8: Visual & Browseable Knowledge Graph — ✅ Done
 
 **Layman's Terms**
@@ -1451,6 +1516,36 @@ A new synthesis _output mode_ — no schema changes, no new data, just a differe
 
 ---
 
+## 🎓 Phase 10.2: Smart Rule File Patching & Marker-Fenced Injection — ⏳ Planned
+
+**Layman's Terms**
+AI assistants like Cursor, Claude Code, and GitHub Copilot read local rules files (e.g. `.cursorrules`, `GEMINI.md`, or `.claudecoderc`) to learn how to behave. Instead of overwriting these files and erasing your custom instructions, Cortex dynamically updates a small, marker-fenced block inside them on every sync. It injects the latest index, quality stats, and brevity instructions, while leaving your custom rules untouched.
+
+**Technical Terms**
+Implement a target-agnostic rule patching utility in the `IDESetupLayer`.
+- **Target Files**: Scans the workspace root for `.cursorrules`, `GEMINI.md`, `CLAUDE.md`, `.windsurfrules`, and `.copilotinstructions`.
+- **Marker Syntax**: Injects and updates blocks bounded by `<!-- cortex-begin -->` and `<!-- cortex-end -->` comments.
+- **Payload Generation**: Renders a compact, brevity-compliant representation of:
+  - Location of `.knowledge/` and how to read the index.
+  - Active organizational constraints.
+  - Current quality metrics (overall average and count of low-quality files).
+  - Selected `CORTEX_BREVITY_LEVEL` directive block.
+- **Preservation**: Parses the rest of the file using a simple split-and-replace algorithm to ensure all user-defined instructions outside the marker blocks are preserved byte-for-byte.
+
+**Definition of Ready (DoR)**
+- Phase 10 (Onboarding & Guided Reading) and Phase 13.2 (Brevity Engine) are completed.
+
+**Definition of Done (DoD)**
+- On `cortex sync`, if any of the target rule files exist, they are patched with the marker block.
+- A new CLI flag `cortex rules --inject` initializes files that don't exist yet with the marker block.
+- Integration tests verify that manual edits inside the file but outside the markers are preserved after subsequent syncs, and that incorrect marker formatting fails gracefully.
+
+**Pros & Cons**
+- ✅ **Pros**: Connects Cortex's live memory stream seamlessly with standard editor configurations without risk of data loss.
+- ❌ **Cons**: Rules files formats vary slightly by editor; mitigated by using clean Markdown structures inside the comments that all standard IDEs interpret correctly.
+
+---
+
 ## 🗂️ Phase 11: Monorepo Federation — ⏳ Planned
 
 **Layman's Terms**
@@ -1511,6 +1606,7 @@ Three integration points:
    - Stale entities introduced (Phase 6) — surface only, do not block
    - Link to the rendered Mermaid graph diff (Phase 8) if available
    - **PR-Level Community Conflict Mapping**: Warning section highlighting when parallel PRs target or depend on the same modular graph communities, alerting the team to concurrent merge-order and blast-radius risks.
+   - **Line-Level PR Review Comments**: Beyond the global summary, the action publishes inline review comments directly on the lines of the PR diff that trigger architectural warnings, quality drops, or constraint violations (e.g. `⚠️ L45: Imported 'backend/internal' violating constraint 'mustNotImport: backend/internal/**'`).
 
    The action uses the MCP route — it runs `cortex mcp` against the PR's checkout and calls `get_pending_changes` / `save_synthesis` against a CI-only LLM key configured in repo secrets.
 
@@ -1546,6 +1642,184 @@ Three integration points:
 
 - ✅ **Pros**: Cortex graduates from an individual tool to a team gate. Architectural review at PR time is the highest-leverage place to catch drift — before it lands, while context is still fresh.
 - ❌ **Cons**: CI integration adds operational surface (secrets management, billing for the CI LLM key, comment-spam risk). Hooks can frustrate developers if they fail noisily on small changes. Mitigated by making both opt-in and surfacing clear escape hatches (`--no-verify` works, with a logged warning to `.knowledge/`).
+
+---
+
+## 🔗 Phase 12.2: Git Pre-Commit Guardrail Hooks — ⏳ Planned
+
+**Layman's Terms**
+Catch coding mistakes and design contract violations _before_ you even commit them to your repository history. Cortex automatically registers a git pre-commit hook that checks your changes. If you violate module boundaries or let the quality of your documentation drop below the line, the hook alerts you and pauses the commit, ensuring bad practices never enter the main branch.
+
+**Technical Terms**
+Implement git-hook integration in `src/cli/hooks.ts` that configures a `.git/hooks/pre-commit` script.
+- **Hook Execution**: During git commit, the hook runs `cortex lint --errors-only` and `cortex audit-quality --gate`.
+- **Commit Gating**: If any `error`-severity custom constraint is violated, or if the code changes drop the quality score of the affected entities below `CORTEX_QUALITY_GATE`, it terminates with exit code `1`, blocking the commit.
+- **Bypassing**: Supports git's native `--no-verify` flag to allow developers to bypass the gate in emergencies, logging the bypass warning to the local log trail.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality DSL) and Phase 12 (Git & CI Integration) are completed.
+
+**Definition of Done (DoD)**
+- `cortex install-hooks --pre-commit` successfully writes the pre-commit script.
+- Verification that committing a code change that violates `cortex.constraints.json` is blocked with exit code `1` and a clear error report.
+- Verification that `--no-verify` successfully overrides the hook and writes a bypass log entry.
+
+**Pros & Cons**
+- ✅ **Pros**: Short-circuits architectural mistakes locally before they reach CI or pull requests.
+- ❌ **Cons**: Can frustrate developers with blocking gates on small changes. Mitigated by restricting failure triggers strictly to `error` severity levels and allowing simple bypass flags.
+
+---
+
+## 🔗 Phase 12.3: Architecturally Aware Commit Generation — ⏳ Planned
+
+**Layman's Terms**
+Let Cortex write your git commit messages. Because Cortex already understands your architectural changes, it can generate standard conventional commit messages (e.g. `feat(auth): ...`) that focus on *why* the changes were made to the architecture, saving you time and keeping git history clean.
+
+**Technical Terms**
+Implement standard conventional commit generation in `src/cli/commit.ts`.
+- **Command**: `cortex commit-msg [--dry-run]` or `cortex commit`.
+- **Diff Parsing**: Invokes `getPendingDiff()` to scan unstaged and staged files.
+- **Context Injection**: Passes the current diff along with the list of impacted entities and relationships from the last known Knowledge Graph state.
+- **Commit Pattern**: The Librarian prompt is directed to emit a standard Conventional Commit format (type, scope, subject ≤50 chars, detailed body explaining the architectural "Why" over the syntactic "What").
+- **Dry-run**: In dry-run mode, prints the proposed commit message to standard output. In standard mode, runs `git commit -m "<proposed_msg>"` directly.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality DSL) and Phase 12 (Git & CI Integration) are completed.
+
+**Definition of Done (DoD)**
+- `cortex commit-msg` generates a compliant conventional commit message based on local diffs.
+- Generated commit messages correctly specify the affected entity as the scope (e.g. `refactor(authController): ...`).
+- Tests verify commit pattern formatting, scope accuracy, and correct execution of dry-run options.
+
+**Pros & Cons**
+- ✅ **Pros**: Automates clean, descriptive commit messages rooted in real architectural impact, promoting better team commit histories.
+- ❌ **Cons**: Relying fully on LLM generations can sometimes require manual edits for minor formatting preferences. Mitigated by allowing the user to review/edit the generated message before completing the commit.
+
+---
+
+## 🔗 Phase 12.4: Diagnostic Run Buffer & Tee Recovery — ⏳ Planned
+
+**Layman's Terms**
+When you run tests or build commands that fail, they often print thousands of lines of errors, filling up your AI's context and costing you money. Cortex's run command writes the full output to a local diagnostics file, showing the AI only a tiny, high-level summary of what failed, with a link to read the full logs on demand.
+
+**Technical Terms**
+Intercept commands run via `cortex run -- <cmd>`.
+- **Log Buffering (Teeing)**: If the standard output of the command exceeds a threshold (default: 4KB) or the command exits with a non-zero exit code, write the complete raw output to `.knowledge/diagnostics/<command>_<timestamp>.log`.
+- **Summarized Payload**: Return only a token-efficient truncated summary of the failure (e.g., first and last 25 lines, or filtered compile/test failure patterns) alongside the location of the raw log file.
+- **MCP Tooling**: Expose a `read_diagnostic_log(hash)` tool enabling agents to pull specific slices of the full log on demand, preventing immediate context window bloat.
+
+**Definition of Ready (DoR)**
+- Phase 12 (Git & CI Integration) and Phase 13 (Token Economics) are completed.
+
+**Definition of Done (DoD)**
+- `cortex run -- <cmd>` executes commands and writes full outputs to `.knowledge/diagnostics/` on failure/large size.
+- Returns to the caller a minified summary block containing a pointer to the diagnostics file.
+- Tests verify stdout/stderr captures, threshold splitting, and `read_diagnostic_log` tool resolution.
+
+**Pros & Cons**
+- ✅ **Pros**: Keeps the agent's context window extremely clean on failure cascades; prevents massive spending spikes caused by compiling/test runner output dump loops.
+- ❌ **Cons**: Requires the agent to make a second tool call to fetch raw logs if the initial summary is insufficient. Mitigated by ensuring the default summary includes standard compiler/test traceback formats.
+
+---
+
+## 🔗 Phase 12.5: Terminal Command Output Minifier — ⏳ Planned
+
+**Layman's Terms**
+AI assistants frequently run commands like `git diff`, `git status`, and `npm test` inside your terminal. These print boilerplate lines that waste AI tokens. Cortex provides a wrapper command that automatically cleans up this output, grouping errors by file and stripping out unnecessary progress bars or repetitive test successes.
+
+**Technical Terms**
+Implement command-specific output minifiers inside `src/cli/run.ts`.
+- **Command Interceptors**: Detect and wrap common command classes:
+  - `git status`: Collapses verbose descriptions into a dense, directory-grouped file count summary.
+  - `git diff`: Condenses diff blocks to method signature changes or line ranges, stripping out unchanged chunks and indentation noise.
+  - `npm test` / `jest` / `cargo test`: Collapses successful test assertions, leaving only failing suites and stack traces.
+  - `json`: When viewing/reading large JSON configurations (like `package.json` or config files), minifies the output to a structural schema tree (keys and data types, skipping large array arrays or deep primitive values).
+- **Parsing Engine**: A rules-based stream transformer that strips progress indicators, coloring escape codes, and recurring success boilerplate before outputting.
+
+**Definition of Ready (DoR)**
+- Phase 12.4 (Diagnostic Run Buffer) is completed.
+
+**Definition of Done (DoD)**
+- Intercepted commands output >= 60% fewer tokens than raw shell outputs while preserving technical accuracy.
+- `cortex run -- git status` prints a minified structure.
+- Tests cover parsers for Git status, Git diffs, Jest, and cargo test outputs.
+
+**Pros & Cons**
+- ✅ **Pros**: Huge token and speed savings for agent terminal executions; increases the agent's attention span by stripping terminal filler.
+- ❌ **Cons**: Regex/rules-based output parsers can drift if tool CLI formats change; mitigated by failing back to raw stdout/stderr if parsing throws or fails to match.
+
+---
+
+## 🔗 Phase 12.6: Local Command Interception Shims & Agent Rules — ⏳ Planned
+
+**Layman's Terms**
+You shouldn't have to remember to run `cortex run` manually. Cortex can install temporary, local shims (like mock commands or shell overrides) that automatically intercept and minify command outputs whenever your AI agent runs a terminal command. It also configures files like `.cursorrules` or `.clinerules` so the AI knows how to fetch compressed outputs natively.
+
+**Technical Terms**
+Implement automated command interception and AI-specific config hooks:
+- **Local Path Shims**: `cortex init-hooks --shims` creates a directory at `.knowledge/shims/` containing lightweight shell executables (e.g. `git`, `npm`, `cargo`) that check if an agent environment variable is present (such as `CLAUDE_CODE`, `VSCODE_PID`, or `TERM_PROGRAM=vscode`). If present, they pass arguments transparently to `cortex run -- <cmd>`; otherwise, they fall back to the user's system binaries.
+- **Rule Injection Templates**: Automatically patches project-scoped agent files (e.g. `.cursorrules`, `.windsurfrules`, `.clinerules`) to include standardized instruction headers telling the agent to prepend commands with `cortex run --` or reference `.knowledge/shims/` in its environment.
+
+**Definition of Ready (DoR)**
+- Phase 12.5 (Terminal Command Output Minifier) is completed.
+
+**Definition of Done (DoD)**
+- Shims successfully intercept commands like `git status` and transparently apply minification in agent sessions without modifying global shell paths.
+- Execution of shims falls back to standard behavior outside of AI agent terminals.
+- Verification that rules are correctly appended to `.cursorrules` or `.clinerules` during initialization.
+
+**Pros & Cons**
+- ✅ **Pros**: Seamless, zero-effort token savings across all agent operations without requiring the developer to prefix commands manually.
+- ❌ **Cons**: Modifying local executable precedence in the PATH of the terminal session requires agent environment variable detection that might occasionally be bypassed in non-standard shells. Mitigated by keeping shims isolated and safe-failing back to standard binaries.
+
+---
+
+## 🔗 Phase 12.7: Smart Code Outliner & Signature-Only Reader — ⏳ Planned
+
+**Layman's Terms**
+When you ask your AI assistant to read a file, it reads all the detailed code lines. If it only needs to know what functions or classes exist in that file, reading all the internal implementation details is a waste of tokens. Cortex's signature-only mode strips the bodies of functions and methods, returning a clean outline of class definitions, interfaces, imports, and exports.
+
+**Technical Terms**
+Implement a file reading minification mode `cortex read <file> --signatures-only` (or `--aggressive` verbosity level).
+- **Outliner Engine**: Build `src/knowledge/outliner.ts` to parse file contents.
+- **AST/Regex Parser**: Support JavaScript, TypeScript, Python, Rust, and Go. Strips function and method bodies (braced blocks `{ ... }`, indented blocks under `def`, function blocks), leaving class hierarchies, exports, method signatures, return types, parameters, and comments intact.
+- **MCP Integration**: Expose an optional `signaturesOnly: boolean` parameter to the `read_entity` and `read_concept` MCP tools to request only their structural interface metadata.
+
+**Definition of Ready (DoR)**
+- Phase 12.6 (Local Command Interception Shims) is completed.
+
+**Definition of Done (DoD)**
+- `cortex read <file> --signatures-only` outputs only structural code declarations.
+- Verified >= 50% token size reduction on large codebase files (e.g. controllers or service modules) while retaining interface contracts.
+- Tests verify outliner parses typescript classes, python function declarations, and rust structs accurately.
+
+**Pros & Cons**
+- ✅ **Pros**: Massive token savings for files containing large function bodies that the AI does not need to modify but only needs to reference for method shapes.
+- ❌ **Cons**: Building reliable parsers for all supported languages can require solid AST rules. Mitigated by utilizing fast parser libraries or falling back gracefully to standard full-body reads on syntax failure.
+
+---
+
+## 🔗 Phase 12.8: Log Deduplicator & Web Fetch Parser — ⏳ Planned
+
+**Layman's Terms**
+If a server log repeats the same error message 500 times, or if a curl request downloads a massive HTML page with progress bars, it can overwhelm your AI. Cortex's wrapper intercepts these, collapsing repeated log lines with a count (e.g. "Error connecting [x500]") and converting raw HTML web pages into readable Markdown summaries.
+
+**Technical Terms**
+Extend command minifiers in `cortex run` to handle data-heavy stream sources:
+- **Log Deduplicator**: Intercepts outputs of logging commands (such as `docker logs`, `kubectl logs`, or general tail commands). Buffers output lines to group adjacent identical lines or highly repetitive stack traces, emitting a single compressed line with a count suffix: `[x50 duplicate lines collapsed: <log_text>]`.
+- **Web Fetch Interceptor**: Wraps `curl` and `wget` executions. Filters out download progress bars from stderr. Parses HTML responses to clean, readable Markdown text using an internal parser, truncating responses above a threshold (default: 6KB) and writing the raw output to the diagnostics directory.
+
+**Definition of Ready (DoR)**
+- Phase 12.7 (Smart Code Outliner) is completed.
+
+**Definition of Done (DoD)**
+- `cortex run -- docker logs <container>` returns a deduplicated log output.
+- `cortex run -- curl <url>` outputs stripped Markdown of the web page with progress indications removed.
+- Tests verify log deduplication collapses matching strings and curl wrapping handles raw html conversion.
+
+**Pros & Cons**
+- ✅ **Pros**: Prevents massive token waste when agents fetch documentation via curl or tail error-heavy logs; simplifies parsing for the LLM.
+- ❌ **Cons**: Parsing arbitrary HTML responses can sometimes lose important structure like tabular layout headers. Mitigated by keeping raw response logs readable in the diagnostics cache folder.
 
 ---
 
@@ -1598,6 +1872,67 @@ Three small, self-contained surfaces over the existing knowledge — no new data
 
 - ✅ **Pros**: Makes Cortex's "compounding context" exportable — a knowledge base that can leave the project root and travel with you. Pre-flight cost simulation closes the last surprise vector for users on paid APIs. Response compression amortizes the per-tool-call token cost across an agent's session, which is exactly where heavy MCP usage today bleeds tokens.
 - ❌ **Cons**: Each surface is small but they accrue surface area. Mitigated by keeping them strictly read-side projections — none touch the canonical writer. Token-cost estimation is necessarily approximate; document the heuristic and refuse to over-promise. Reference compression adds complexity to the MCP server that only benefits high-volume sessions — the default budget is intentionally conservative so low-volume sessions pay no overhead.
+
+---
+
+## 💸 Phase 13.2: Cortex Brevity Engine & Telegraphic Memory Compression — ⏳ Planned
+
+**Layman's Terms**
+Save up to 50% of your AI token costs by stripping out prose fluff, introductory greetings, and redundant explanations from Cortex's generated files. This "telegraphic" mode writes compact, high-density instructions directly to `GEMINI.md` and onboarding guides. Code paths, file names, and syntax structures are preserved with 100% accuracy, giving your AI maximum context at half the price.
+
+**Technical Terms**
+Implement a "Brevity Engine" containing:
+1. **Telegraphic Memory Compiler (`cortex compress <file>`)**: A parser that minifies Markdown files (e.g. `GEMINI.md` and `.knowledge/onboarding_*.md`) by applying a set of brevity transformations:
+   - Removes conversational filler (e.g. "In order to...", "Please make sure to...", "It is important that...").
+   - Simplifies sentences into dense, telegraphic fragments (e.g. "Do X to resolve Y").
+   - Preserves 100% of code blocks, file links, backticked paths, and UML/Mermaid sections.
+2. **Telegraphic Knowledge Synthesis**: When `CORTEX_BREVITY_LEVEL` is set to `ultra`, the Librarian's system prompt instructions (for `cortex ingest`) are altered dynamically to instruct the LLM to write all entity definitions, interfaces, behaviors, and relationships in a terse, telegraphic, bulleted style. This saves up to 50% of the tokens stored in the raw `.knowledge/` workspace files, permanently reducing downstream cost for every subsequent indexing and reading tool.
+3. **Terse MCP Payload mode (`CORTEX_BREVITY_LEVEL`)**: Expose a configuration flag (`lite` | `ultra` | `off`). When active, minifies schema descriptions of MCP tools and formats tool returns (e.g. search, lint, audit results) to be highly dense and compact.
+4. **Brevity Telemetry & Savings Register (`cortex stats`)**: Compute and log the token difference between standard (uncompressed) returns/files and their minified equivalents. Save these savings metrics to `state.json` so users can query their dollar savings.
+
+**Definition of Ready (DoR)**
+- Phase 13 (Token Economics) and Phase 10 (Onboarding) are completed.
+
+**Definition of Done (DoD)**
+- `cortex compress <file>` compiles a markdown file to a minified version, proving >= 40% token reduction while retaining all code references.
+- Environment variable `CORTEX_BREVITY_LEVEL` and config option in `cortex.json` are honored across all MCP tool descriptions and returns.
+- Integration tests verify that minified `GEMINI.md` and minified MCP responses preserve 100% of target paths, contracts, and links.
+- `cortex stats` displays the cumulative tokens and USD saved through reference compression and brevity transformations.
+
+**Pros & Cons**
+- ✅ **Pros**: Dramatically reduces both input and output token consumption across all developer sessions; makes instructions faster for LLMs to read.
+- ❌ **Cons**: Extremely terse explanations might occasionally feel cryptic for human developers who read `GEMINI.md` directly. Mitigated by keeping telegraphic mode fully opt-in via configuration.
+
+---
+
+## 💸 Phase 13.3: Token & Cost Savings Ledger & Analytics — ⏳ Planned
+
+**Layman's Terms**
+Keep track of exactly how much money and how many tokens Cortex has saved you. Running `cortex savings` shows a daily graph of token reductions from smart caching, compressed MCP outputs, and output minification, complete with actual dollar savings based on your AI provider.
+
+**Technical Terms**
+Implement a persistent local ledger to audit token and monetary savings.
+- **Persistent Ledger**: Appends transactional savings entries to `.knowledge/savings_ledger.jsonl`.
+- **Instrumentation points**:
+  - Ingest bypasses: saved tokens = `raw_diff_size - compressed_synthesis_size`.
+  - MCP reference compression: saved tokens = sum of lengths of referenced blocks swapped for `§ref:<hash>§`.
+  - `cortex run` minification: saved tokens = `raw_stdout_tokens - minified_output_tokens`.
+- **Financial Calculation**: Multiplies token delta against static, configurable pricing schemas per model provider in `cortex.json`.
+- **CLI Commands**:
+  - `cortex savings`: Prints a formatted table summarizing daily, weekly, and lifetime metrics.
+  - `cortex savings --graph`: Emits an ASCII chart mapping token savings over the last 30 days.
+
+**Definition of Ready (DoR)**
+- Phase 13.2 (Brevity Engine) is completed.
+
+**Definition of Done (DoD)**
+- Transactional ledger updates on every compression/minification occurrence.
+- `cortex savings` successfully reads the ledger and displays correct aggregated token/USD figures.
+- Tests verify calculation correctness across all provider types and handles malformed ledger entries.
+
+**Pros & Cons**
+- ✅ **Pros**: Quantifies the real-world value of running Cortex; highlights optimizations in response size and command interceptions.
+- ❌ **Cons**: Modest storage and file-write overhead for appending to the log ledger; mitigated by keeping entries short and performing local non-blocking writes.
 
 ---
 
@@ -2339,6 +2674,31 @@ MCP integration: when `get_pending_changes` is called by an IDE running as the d
 
 - ✅ **Pros**: First-class personalization — the AI assistant knows you, not just your team. Reduces re-explaining context: "I'm working on the payment subsystem this week" is captured once and surfaced automatically. The local-first, gitignored storage sidesteps the privacy concerns that block enterprise adoption of shared memory tools. Mem0's ADD/UPDATE/DELETE/NOOP pattern means preferences don't accumulate as cruft — explicit override is detected.
 - ❌ **Cons**: Per-developer state introduces a new sync surface (your laptop vs. your work machine) that Cortex does not bridge. Mitigated by documenting that personal memory is per-machine and recommending `cortex remember` for important preferences. The ADD/UPDATE/DELETE/NOOP decision adds an LLM call per `cortex remember` — bounded but non-zero cost.
+
+---
+
+## 👤 Phase 20.7.1: Cross-Agent Workspace State Synchronization — ⏳ Planned
+
+**Layman's Terms**
+If you have Cursor open in one window, Claude Code in another terminal, and a Cline chat in the sidebar, they don't know what each other is doing. This leads to them overwriting each other's work or editing the same files in different ways. Cortex solves this by maintaining a shared workspace board. When an agent starts a task, it reports it to Cortex. When another agent asks for context, Cortex alerts it: "Cursor is currently editing userController.ts to implement login limits. Please coordinate."
+
+**Technical Terms**
+Expose a real-time session state synchronization protocol via the Cortex daemon and MCP Server.
+- **Shared State Schema**: Stored in memory (daemon runtime) or fallback `.knowledge/workspace_sync.json` (gitignored). Contains active agent sessions, focus file paths, active terminal commands, and current goals.
+- **Real-Time Registration**: MCP client tools dynamically register the agent's active session state (e.g. on every `get_pending_changes` or `read_knowledge_index` call, the client passes its agent ID, current file, and target task).
+- **Cross-Agent Warning Injector**: When any agent calls `get_pending_changes`, the response pre-injects a `workspaceConflicts` warnings array detailing active lock scopes or concurrent tasks on the same graph neighborhood.
+
+**Definition of Ready (DoR)**
+- Phase 5 (CLI Polish & Daemonization) and Phase 20.7 (Personalized Memory) are completed.
+
+**Definition of Done (DoD)**
+- Dynamic registration of agent workspace states via the MCP server.
+- Verification that when Agent A registers an active task on `src/auth/` and Agent B requests context, Agent B's return payload contains a conflict alert.
+- CLI command `cortex workspace status` prints the list of active agents, their active files, and tasks.
+
+**Pros & Cons**
+- ✅ **Pros**: Eliminates race conditions and redundant edits in multi-agent workflows; connects isolated IDE chats.
+- ❌ **Cons**: Relies on IDE agents providing their context during MCP calls. Mitigated by auto-deriving focus files from the IDE's roots list notifications and recently modified git files.
 
 ---
 

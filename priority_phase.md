@@ -73,6 +73,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
+| 5.1 | **Phase 10.2** — Smart Rule File Patching | Automatically inject index location and brevity instructions in .cursorrules | Phase 10 ✓, Phase 13.2 |
 | 6 | **Phase 4.6** — Developer API & Client SDKs | Programmatic client access for custom workflows, scripts, and hooks | Unlocks automation | ⏳ Planned |
 | 6.1 | **Phase 4.8** — Persona-Specific MCP Prompts | Exposes filtered graph views and design rules matching target AI personas | Phase 7.5 ✓ | ⏳ Planned |
 
@@ -99,6 +100,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2 | **Phase 13** — Token Economics & Context Packs | Indie devs care about LLM bill; `cortex test-cost` is a $20/mo feature alone | Phase 8 (T1) | ✅ **Done 2026-05-19** |
 | 2.1 | **Phase 3.1** — LLM Caching Store | Sub-second cached response and zero-token consumption for identical prompts | Phase 3 ✓ | ⏳ Planned |
 | 2.2 | **Phase 8.1** — Live Graph Stream | Live WebSocket graph updates and transitions in the browser web UI | Phase 8 ✓ | ⏳ Planned |
+| 2.3 | **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression | Save up to 50% token cost by minifying Gemini.md and onboarding docs | Phase 13 ✓ | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
 | 4.1 | **Phase 4.7** — OpenAI-Compatible REST Gateway | Proxy local RAG queries to any standard OpenAI-compatible client | Phase 33.1 | ⏳ Planned |
@@ -125,8 +127,16 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 |---|---|---|---|
 | 1 | **Phase 11** — Monorepo Federation | Same git repo, multiple workspaces — common startup setup | Phase 3 ✓ |
 | 2 | **Phase 12** — Git & CI Integration | PR comment with Cortex insights; CI gate; critical for team workflow | Phase 6 ✓, Phase 7 (T1) |
+| 2.1 | **Phase 12.2** — Git Pre-Commit Guardrail Hooks | Run lint/audit on commit; block on error constraints or quality drops | Phase 12 |
+| 2.2 | **Phase 12.3** — Architecturally Aware Commit Generation | Conventional Commit generation based on changed entities and why | Phase 12 |
+| 2.3 | **Phase 12.4** — Diagnostic Run Buffer & Tee Recovery | Capture raw logs on command failure; return compact summaries | Phase 12 |
+| 2.4 | **Phase 12.5** — Terminal Command Output Minifier | Smart token-filtering for terminal commands (git, npm test, etc) | Phase 12.4 |
+| 2.5 | **Phase 12.6** — Local Command Interception Shims & Agent Rules | Intercept commands inside agent sessions via shims & rule injection | Phase 12.5 |
+| 2.6 | **Phase 12.7** — Smart Code Outliner & Signature-Only Reader | Strips code bodies to return outline view of files (JS, TS, Py, Go, Rs) | Phase 12.6 |
+| 2.7 | **Phase 12.8** — Log Deduplicator & Web Fetch Parser | Collapses identical log counts; cleans up curl HTML responses to MD | Phase 12.5 |
 | 3 | **Phase 5.7** — Scheduled Operations & Cron Engine | Background scans, automated maintenance | Phase 5.6 (T1) |
 | 4 | **Phase 5.8** — Multi-Operator Session Coordination | When 2 devs use Cortex simultaneously, no conflicts | Phase 5.6 (T1), Phase 25 partial |
+| 4.1 | **Phase 5.9** — Shell Status Prompt Integration | Output quality score and savings in terminal prompt; cached for speed | Phase 5.6 (T1), Phase 13.2 |
 | 5 | **Phase 21** — Polyrepo Federation | Separate git repos, shared knowledge — common team setup | Phase 11, Phase 7.5 (T1), Phase 12 |
 | 6 | **Phase 22** — Central Knowledge Server | Org-wide single source of truth; the "real" team product | Phase 21, Phase 8 (T1), Phase 9 (T2) |
 | 7 | **Phase 23** — Human-in-the-Loop Review | Senior dev signs off on AI-generated knowledge | Phase 7.5 (T1), Phase 12 |
@@ -240,6 +250,7 @@ These phases drive **defensibility, hiring brand, and PR** rather than direct re
 | 1 | **Phase 16** — Contradiction-Aware Retrieval | Resolves "the docs are wrong" failure mode; required by 20.x | Phase 6 ✓, Phase 7 (T1) |
 | 2 | **Phase 18** — Architectural Embeddings | Required by 19, 30, 41.x; "cortex similar" is a T2 feature | Phase 6 ✓, Phase 7 (T1) |
 | 3 | **Phase 15** — CI Feedback Signal Loop | CI quality dimension on entities | Phase 12 (T3), Phase 7 (T1) |
+| 4 | **Phase 7.9** — Knowledge Garbage Collection & Archive Consolidation | Keeps index size minimal and prevents context window bloat | Phase 7.5 ✓ |
 
 **Research wave 2** (advanced cognitive features):
 
@@ -277,12 +288,14 @@ These phases drive **defensibility, hiring brand, and PR** rather than direct re
 - Phase 20.5 (ADR + C4 + Conway analysis)
 - Phase 20.5.1 (Automated ADR Engine)
 - Phase 20.7 (Mem0 per-developer memory)
+- Phase 20.7.1 (Cross-Agent Workspace State Synchronization)
 - Phase 20.13 (VOYAGER skill library — required by Pro Module 3)
 - Phase 20.14 (Pearl Causal Analysis)
 - Phase 20.17 (Sleep Consolidation)
 - Phase 20.19 (ROME/MEMIT Surgical Editing)
 - Phase 20.21 (Tulving Episodic-Semantic)
 - Phase 20.22 (Ebbinghaus Spaced Repetition)
+- Phase 13.3 (Token & Cost Savings Ledger & Analytics)
 
 ---
 
@@ -505,6 +518,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 7.6** — Global Architectural Lessons & Retrospective Log · deps: 7.5 ✓
 - **Phase 7.7** — Automated Technical Debt Register · deps: 7.5 ✓
 - **Phase 4.8** — Persona-Specific MCP Prompts · deps: 7.5 ✓
+- **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression · deps: 13 ✓
 - **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
@@ -749,6 +763,7 @@ These can be slotted into any sprint where bandwidth allows — useful when bloc
 - **Phase 7.6** (only needs Phase 7.5 ✓) — ship in Wave 1
 - **Phase 7.7** (only needs Phase 7.5 ✓) — ship in Wave 1
 - **Phase 4.8** (only needs Phase 7.5 ✓) — ship in Wave 1
+- **Phase 13.2** (only needs Phase 13 ✓) — ship in Wave 1
 - **Phase 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
 
 If your team has spare cycles waiting on a long-running phase, these are the safe parallel options.
