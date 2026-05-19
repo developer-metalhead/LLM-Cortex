@@ -27,6 +27,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
 | 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
 | 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
+| 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
@@ -47,6 +48,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.1  | Dense & Raw Token-Reduction Projections                | ⏳ Planned                           |
 | 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ⏳ Planned                           |
 | 13.3  | Token & Cost Savings Ledger & Analytics                | ⏳ Planned                           |
+| 13.4  | API Budget Gating & Runaway Safeguards                | ⏳ Planned                           |
+| 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ⏳ Planned                           |
+| 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
@@ -1369,6 +1373,32 @@ Implement an automated garbage collection (GC) utility in the `KnowledgeManager`
 
 ---
 
+## 🛡️ Phase 7.10: Sensitive Data & API Secret Sanitization Guardrail — ⏳ Planned
+
+**Layman's Terms**
+Keep your private API keys, passwords, and tokens out of your public git history. Before Cortex sends code changes to your AI assistant or saves descriptions inside the `.knowledge/` folder, it scans them for sensitive secrets (like AWS keys, database passwords, or auth tokens) and automatically redacts them. This keeps your shared knowledge base secure and compliant.
+
+**Technical Terms**
+Integrate a high-performance regex-based scanning and redaction pipeline inside the Knowledge Ingestion layer (`IngestionEngine` / `Librarian` synthesis handler):
+- **Secret Scanner**: Runs a suite of Shannon entropy and pattern matching regexes (targeting `authorization`, `api_key`, `token`, `password`, `secret`, `jwt`, `private_key`, `aws_access_key_id`, etc.) against all pending git diffs, files under synthesis, and evidence snippets.
+- **Redaction Filter**: Replaces any matched credential substring with a generic `[REDACTED]` token prior to LLM submission, and strips secrets from the raw text used to generate the evidence block in `state.json`.
+- **Compliance Check**: If a hardcoded secret is found in a file, registers a high-severity `cortex.constraints` warning in `state.json`, highlighting the file name to the developer.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality & Constraints) is completed.
+- Ingestion engine has a clean hook structure before sending diffs to the Librarian.
+
+**Definition of Done (DoD)**
+- Ingesting a diff with mock AWS keys or JWT secrets replaces all instances with `[REDACTED]` in `state.json` and the sent LLM prompt.
+- The secret scan warning is logged to `warnings[]` in `state.json` and surfaces in `cortex lint`.
+- Tests cover matching patterns for common credential schemas (JWTs, AWS credentials, generic password keys) and verify no false positives on regular code strings.
+
+**Pros & Cons**
+- ✅ **Pros**: Crucial enterprise guardrail; prevents accidental leakage of API credentials and keys to the `.knowledge/` folder, which is typically committed to the repository.
+- ❌ **Cons**: Regex checks add a minor millisecond latency during ingestion. Mitigated by restricting scanning to text files and diff inputs.
+
+---
+
 ## ✅ Phase 8: Visual & Browseable Knowledge Graph — ✅ Done
 
 **Layman's Terms**
@@ -1990,6 +2020,82 @@ Implement a persistent local ledger to audit token and monetary savings.
 **Pros & Cons**
 - ✅ **Pros**: Quantifies the real-world value of running Cortex; highlights optimizations in response size and command interceptions.
 - ❌ **Cons**: Modest storage and file-write overhead for appending to the log ledger; mitigated by keeping entries short and performing local non-blocking writes.
+
+---
+
+## 💸 Phase 13.4: API Budget Gating & Runaway Safeguards — ⏳ Planned
+
+**Layman's Terms**
+Protect your wallet from runaway AI loops. If your editor or terminal agent goes into a loop calling Cortex over and over, it could drain your API account. Phase 13.4 lets you set a hard cap on session costs or the number of LLM syncs allowed per hour. Once crossed, Cortex blocks subsequent calls until you reset it.
+
+**Technical Terms**
+Implement a session-based usage tracker and gatekeeper:
+- **Usage Store**: Volatile session tracking file `.knowledge/.session_usage.json` containing timestamped sync costs and invocation counters.
+- **Configurable Limits**: Read `max_session_cost_usd` and `max_sync_calls_per_hour` limits from the environment or `.cortexrc`.
+- **Pre-flight Enforcement**: Intercept synthesis triggers. If limits are violated, abort with a clean budget-exceeded error before initiating the LLM call.
+
+**Definition of Ready (DoR)**
+- Phase 13.3 (Savings Ledger) is completed.
+
+**Definition of Done (DoD)**
+- Synthesizing after crossing the threshold fails and does not make an LLM call.
+- Budget warnings are logged and displayed in the terminal.
+- Tests verify correct gating behavior under simulated budget constraints.
+
+**Pros & Cons**
+- ✅ **Pros**: Important safety net for autonomous or looped agent sessions.
+- ❌ **Cons**: Needs to be configured correctly to avoid blocking legitimate developer syncs during large refactoring sessions.
+
+---
+
+## 💸 Phase 13.5: Fuzzy Levenshtein & RRF Search Ranker — ⏳ Planned
+
+**Layman's Terms**
+Make searching your architecture robust to typos and spelling mistakes. If you search for "useEfect" or "authContrller", Cortex uses fuzzy matching (calculating how close spelling is) and merges the results with exact term matches using Reciprocal Rank Fusion (RRF). The result is that the right files appear at the top, even if you make a typo.
+
+**Technical Terms**
+Implement a dual-strategy search ranker in `src/knowledge/find.ts` without database dependencies:
+- **Dual Ranking Strategy**:
+  1. Token/Substring matching (exact matches, word starts, substring overlaps).
+  2. Levenshtein Distance matching (evaluates character edit distance for query terms against entity/concept names).
+- **RRF Merger**: Merge the results of both ranked lists using Reciprocal Rank Fusion (RRF) formula: `RRF_Score = sum(1 / (60 + rank_in_strategy))`.
+- **Typo Correction**: Auto-correct highly likely typo matches (Levenshtein distance <= 2) before displaying search previews.
+
+**Definition of Ready (DoR)**
+- The base `FindManager` is fully tested and verified.
+
+**Definition of Done (DoD)**
+- Searching for `authContrller` successfully ranks the `AuthController` entity at the top.
+- RRF calculations are verified with a deterministic unit test.
+- Tests check that Levenshtein distance matching does not degrade sub-millisecond search performance for typical workspace sizes.
+
+**Pros & Cons**
+- ✅ **Pros**: Greatly improves developer search experience under MCP; makes agent retrieval tolerant of minor typos in queries.
+- ❌ **Cons**: Slight CPU cost for calculating Levenshtein edit distance on large node trees. Mitigated by filtering candidate lists by length and character prefixes first.
+
+---
+
+## 💸 Phase 13.6: Proximity Reranking & Smart Snippets — ⏳ Planned
+
+**Layman's Terms**
+When you search for multiple words (like "auth token"), Cortex boosts the rank of files where those words appear close to each other. It also updates the search preview to show a text window directly around the match, rather than just showing the beginning of the file's description.
+
+**Technical Terms**
+Upgrade query scoring and preview extraction in `src/knowledge/find.ts`:
+- **Proximity Score**: Add a score bonus if multiple query terms appear within a 5-word window of each other in the entity description or evidence.
+- **Smart Snippets**: Instead of truncating descriptions from the beginning, extract a 120-character text window centered around the first matching term, prefixed/suffixed with `...` if truncated.
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (RRF Ranker) is completed.
+
+**Definition of Done (DoD)**
+- Multi-term searches boost adjacent-term results over scattered occurrences.
+- Search result previews display the text surrounding the matching search terms.
+- Tests cover proximity calculations and snippet boundary checks.
+
+**Pros & Cons**
+- ✅ **Pros**: High readability for search results; aligns MCP returns with standard search engine behaviors.
+- ❌ **Cons**: Slightly more complex string parsing logic. Mitigated by keeping matching algorithms pure and performant.
 
 ---
 

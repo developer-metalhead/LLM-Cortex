@@ -9,8 +9,8 @@
 If you have limited bandwidth, ship in this order. Each tier's revenue ceiling depends on the prior tiers being live:
 
 1. **T0 — Production-Critical** (P0 bug fixes): `33-MVP` *(✅ Phase 6 already complete)*
-2. **T1 — Free Tier** (drives adoption, $0 ARPU): ✅ `7` done → `7.5` → `5.6` → `8` → `10`
-3. **T2 — Indie Pro** ($10-50/mo): `9` → `13` → `14` → `33.1` → `33-Full` → `33.2`
+2. **T1 — Free Tier** (drives adoption, $0 ARPU): ✅ `7` done → `7.5` → `7.10` → `5.6` → `8` → `10`
+3. **T2 — Indie Pro** ($10-50/mo): `9` → `13` → `13.3` → `13.4` → `13.5` → `13.6` → `14` → `33.1` → `33-Full` → `33.2`
 4. **T3 — Team/Startup** ($500/seat, 5-50 seats): `11` → `12` → `21` → `22` → `23` → `28` → `30`
 5. **T4 — Mid-Market** ($1500/seat, 50-500 seats): `25` → `26` → `26.1` → `26.3` → `29` → `31` → `32.1`
 6. **T5 — Enterprise** ($100K-$1M ACV): `24` → `27` → `26.2` → `26.4` → `29.1` → `29.2` → `25.1` → `32` → `32.2`
@@ -71,6 +71,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.1 | **Phase 7.6** — Global Architectural Lessons & Retrospective Log | Centralized lessons.md dashboard to avoid repeating historical code errors | Phase 7.5 ✓ | ⏳ Planned |
 | 2.2 | **Phase 7.7** — Automated Technical Debt Register | Automatically logs architectural smells and constraint violations to DEBT.md | Phase 7.5 ✓ | ⏳ Planned |
 | 2.3 | **Phase 7.8** — Graph-Driven Review Advisories & Untested Hub Analysis | Auto-generated review questions for AI assistants to prevent fragile coupling | Phase 7.5 ✓, Phase 10 | ⏳ Planned |
+| 2.4 | **Phase 7.10** — Sensitive Data & API Secret Sanitization Guardrail | Scans and redacts credentials before LLM ingestion and local storage | Phase 7.5 ✓ | ⏳ Planned |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
@@ -102,6 +103,10 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.1 | **Phase 3.1** — LLM Caching Store | Sub-second cached response and zero-token consumption for identical prompts | Phase 3 ✓ | ⏳ Planned |
 | 2.2 | **Phase 8.1** — Live Graph Stream | Live WebSocket graph updates and transitions in the browser web UI | Phase 8 ✓ | ⏳ Planned |
 | 2.3 | **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression | Save up to 50% token cost by minifying Gemini.md and onboarding docs | Phase 13 ✓ | ⏳ Planned |
+| 2.4 | **Phase 13.3** — Token & Cost Savings Ledger & Analytics | Tracks exact cache hits and compressed tokens saved to show ROI statistics | Phase 13 ✓ | ⏳ Planned |
+| 2.5 | **Phase 13.4** — API Budget Gating & Runaway Safeguards | Hard limits on session spending and sync count to avoid API budget draining | Phase 13.3 | ⏳ Planned |
+| 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 | ⏳ Planned |
+| 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
 | 4.1 | **Phase 4.7** — OpenAI-Compatible REST Gateway | Proxy local RAG queries to any standard OpenAI-compatible client | Phase 33.1 | ⏳ Planned |
@@ -521,6 +526,8 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 7.7** — Automated Technical Debt Register · deps: 7.5 ✓
 - **Phase 4.8** — Persona-Specific MCP Prompts · deps: 7.5 ✓
 - **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression · deps: 13 ✓
+- **Phase 7.10** — Sensitive Data & API Secret Sanitization Guardrail · deps: 7.5 ✓
+- **Phase 13.3** — Token & Cost Savings Ledger & Analytics · deps: 13 ✓
 - **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
@@ -544,6 +551,8 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 5.8** — Multi-Operator Session Coordination · deps: 5.6 (full version needs 25)
 - **Phase 12** — Git & CI Integration · deps: 6 ✓
 - **Phase 13** — Token Economics & Context Packs · deps: 8, 10
+- **Phase 13.4** — API Budget Gating & Runaway Safeguards · deps: 13.3
+- **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker · deps: 10
 - **Phase 17.1** — Multi-Model Architectural Debate · deps: 33.1
 - **Phase 20.5.1** — Automated ADR Engine · deps: 20.5
 - **Phase 20.6** — MemGPT Hierarchical Memory Tiering · deps: 4 ✓, 8, 10
@@ -552,6 +561,7 @@ These can be picked up today; no planned phase needs to land first.
 ### Wave 3 — After 8, 10, 12 are also done (now slim — most of original Wave 3 promoted to Wave 1/2)
 
 - **Phase 15** — CI Feedback Signal Loop · deps: 12, 7 ✓
+- **Phase 13.6** — Proximity Reranking & Smart Snippets · deps: 13.5
 
 ### Wave 4 — Mid-Tier Features & Second Research Wave
 
