@@ -301,25 +301,25 @@ export class CortexMCPServer {
                 text: [
                   "Run the audit-and-heal workflow. Do not stop at reporting — finish the cycle so the knowledge base ends in a synchronized state.",
                   "",
-                  "STEP 1 — List stale entities.",
-                  "Call project-cortex:audit. Each entity returned is stale because a dependency it tracks via depends_on or called_by was updated after this entity's last refine. That is the blast radius of recent changes.",
+                  "STEP 1 — Gather stale entities with full context.",
+                  "Call smart_audit. It returns every stale entity bundled with its full entity page and inbound blast-radius in one shot. No separate read_entity calls needed.",
                   "",
                   "STEP 2 — Verify each stale entity.",
-                  "For every name in the audit result, call read_entity(name) to load its full layered page (Role / Interface / Behavior / Wiring). Then read the current source for that entity AND for the dependency that triggered the staleness. Ask:",
+                  "For each entity in the smart_audit result, read the current source for that entity AND for the dependency that triggered the staleness. Ask:",
                   "  (a) Does the entity's ## Behavior or ## Interface section still match the code?",
                   "  (b) Has the upstream change broken any documented invariant, contract, or constraint?",
                   "  (c) Are any [[WikiLinks]] in ## Wiring now wrong (target renamed, removed, or signature changed)?",
                   "",
                   "STEP 3 — Classify each entity into one of two buckets:",
-                  "  • VERIFIED-CLEAN — the dependency moved but this entity's documented role, contracts, and wiring are still accurate. Nothing in its description needs to change. The stale flag is a false positive from blast-radius fan-out.",
-                  "  • NEEDS-UPDATE — the entity's description, relationships, or constraints are now incorrect because of the upstream change. The knowledge needs to be re-synthesized.",
+                  "  • VERIFIED-CLEAN — the dependency moved but this entity's documented role, contracts, and wiring are still accurate. The stale flag is a false positive from blast-radius fan-out.",
+                  "  • NEEDS-UPDATE — the entity's description, relationships, or constraints are now incorrect because of the upstream change.",
                   "",
                   "STEP 4 — Heal the knowledge base.",
-                  "For the VERIFIED-CLEAN bucket: call refresh_stale_entities with all their names in a single call. This clears the staleSince flag without touching their descriptions.",
-                  "For the NEEDS-UPDATE bucket: call save_synthesis with action: 'update' for each, emitting the corrected layered description, relationships, and (if relevant) constraints / failedApproaches. Re-synthesis automatically clears the stale flag for the entities included.",
+                  "For the VERIFIED-CLEAN bucket: call refresh_stale_entities with all their names in a single call.",
+                  "For the NEEDS-UPDATE bucket: call save_synthesis with action: 'update' for each, emitting the corrected description, relationships, and constraints.",
                   "",
                   "STEP 5 — Report.",
-                  "Summarize for the user: which entities you refreshed, which you re-synthesized (and what specifically you changed in each), and any drift that surfaced. End by stating the current stale count is now zero — or, if any new staleness was propagated by your re-syntheses, note the next-iteration plan.",
+                  "Summarize: which entities you refreshed, which you re-synthesized and what changed, and any drift surfaced. End by stating the current stale count.",
                 ].join("\n"),
               },
             },
@@ -409,18 +409,16 @@ export class CortexMCPServer {
                 text: [
                   "Before you touch any source file, run the Cortex pre-flight check:",
                   "",
-                  "1. Call read_knowledge_index. Treat its output as ground truth about what already exists.",
-                  "2. Identify the entity (or absence) that matches the task:",
-                  "   - Implementing something new → search the index for similar entities. If one exists, prefer extending it over creating a parallel implementation.",
-                  "   - Modifying or fixing something → find the entity by name or sourceFile.",
-                  "3. For the target entity, call read_entity and read its Wiring section. Every [[WikiLink]] in Wiring is a downstream consumer that may break if you change the entity's behavior or shape.",
-                  "4. If modifying or fixing an existing entity, call impact_analysis with direction='inbound' on that entity. This is mandatory — do not skip it. Present the full hop-ranked blast-radius before writing any code. If any hop-1 dependents exist, state which ones face immediate breakage risk.",
-                  "5. For any concept the entity Implements, call read_concept. The concept describes the invariant the entity is supposed to uphold — violate it and you introduce drift.",
-                  "6. Only NOW open source files. By this point you know: what exists, what depends on it, and what rules apply.",
+                  "If MODIFYING or FIXING an existing entity:",
+                  "  Call before_change(entity=<name>). It returns in one shot: the entity's full page, the complete inbound blast-radius, and any concept invariants. Present the blast-radius to the user before writing any code.",
                   "",
-                  "Output before writing code: a one-paragraph plan stating (a) which entities you will touch, (b) the full blast radius from step 4, (c) which invariants apply. Then proceed.",
+                  "If IMPLEMENTING something new:",
+                  "  1. Call read_knowledge_index to check if a similar entity already exists. If one does, prefer extending it over creating a parallel implementation.",
+                  "  2. If the new code will depend on an existing entity, call before_change(entity=<that dependency>) to understand its contracts before wiring into it.",
                   "",
-                  "If the knowledge base is empty or the relevant entity is missing, say so explicitly and recommend running /ingest first.",
+                  "Output before writing code: a one-paragraph plan stating (a) which entities you will touch, (b) the blast radius for any entity being modified, (c) which invariants apply.",
+                  "",
+                  "If the knowledge base is empty or the relevant entity is missing, say so explicitly and recommend running ingest first.",
                 ].join("\n"),
               },
             },
@@ -651,7 +649,7 @@ export class CortexMCPServer {
         {
           name: "read_knowledge_index",
           description:
-            "Reads the project's architectural memory — entities, concepts, source paths, and their relationships. **Call this BEFORE writing new code** (to find reusable patterns and avoid duplicate implementations), **before modifying existing code** (to see what depends on it — breaking a dependent you didn't know about is the #1 way to introduce regressions), **before fixing a bug** (to understand the invariants you might violate), and **before explaining code** (the synthesized description is denser than re-reading source). Use Grep/Read on raw source only AFTER you've established what already exists here. Skipping this step on a non-trivial codebase task means re-deriving knowledge that's already been synthesized — wasted tokens and missed context.",
+            "**ALWAYS call this first — before reading any source file, before modifying any code, before fixing any bug, before answering any question about the codebase.** This is the architectural memory of the project. It tells you what exists, what depends on what, and what invariants apply — in a fraction of the tokens it would take to re-derive from source. Skipping this step means re-deriving knowledge that is already synthesized. Do NOT open source files before calling this.",
           inputSchema: { type: "object", properties: {} },
         },
         {
@@ -835,6 +833,25 @@ export class CortexMCPServer {
               includeConcepts: { type: "boolean", description: "Include concept nodes in the graph (default: false)." },
               format: { type: "string", enum: ["mermaid", "json"], description: "Output format: 'mermaid' (default) returns a Mermaid flowchart LR string; 'json' returns the raw KnowledgeGraph object." },
             },
+          },
+        },
+        {
+          name: "before_change",
+          description: "Pre-flight bundle for any modify, refactor, rename, or delete task. Call this INSTEAD of calling read_entity + impact_analysis separately. Returns in one shot: the entity's full page (Role/Interface/Behavior/Wiring), the complete inbound blast-radius (all dependents ranked by hop), and any concept invariants the entity implements. Use this before touching any existing entity — it gives you everything needed to assess risk and plan safely.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              entity: { type: "string", description: "The entity you are about to modify, refactor, rename, or delete." },
+            },
+            required: ["entity"],
+          },
+        },
+        {
+          name: "smart_audit",
+          description: "Enhanced audit that returns stale entities bundled with their full entity pages and inbound blast-radius — everything needed to triage and fix staleness in one call. Use instead of calling audit + read_entity + impact_analysis separately.",
+          inputSchema: {
+            type: "object",
+            properties: {},
           },
         },
       ],
@@ -1302,7 +1319,7 @@ export class CortexMCPServer {
           content: [
             {
               type: "text",
-              text: `Project root manually updated to: ${newPath}. Knowledge Manager re-initialized.`,
+              text: `Project root manually updated to: ${newPath}. Knowledge Manager re-initialized. Now retry the tool call that failed (e.g. before_change, impact_analysis, smart_audit).`,
             },
           ],
         };
@@ -1453,6 +1470,100 @@ export class CortexMCPServer {
           }
         }
         return { content: [{ type: "text", text: output }] };
+      }
+
+      if (name === "before_change") {
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }] };
+        }
+        const entity = (args as any)?.entity as string;
+        if (!entity) {
+          return { content: [{ type: "text", text: "Missing required argument: entity" }] };
+        }
+
+        const sections: string[] = [`# Pre-flight report: ${entity}\n> Blast-radius is already bundled below — do NOT call impact_analysis or read_entity separately.\n`];
+
+        // 1 — Entity page
+        const entityBody = await this.knowledge.readEntity(entity);
+        if (entityBody === null) {
+          const state = await this.knowledge.getState();
+          const entityCount = Object.keys(state.entities).length;
+          const rootWarning = entityCount === 0
+            ? ` ⚠ Knowledge base appears empty at ${this.projectRoot} — this likely means the project root is wrong. Call set_project_root with the correct path, then retry before_change.`
+            : ` Available entities: ${Object.keys(state.entities).join(", ")}`;
+          return { content: [{ type: "text", text: `No entity named "${entity}" found.${rootWarning}` }] };
+        }
+        sections.push("## Entity\n" + entityBody);
+
+        // 2 — Inbound blast radius
+        const state = await this.knowledge.getState();
+        const graph = buildGraph(state);
+        const report = buildImpactReport(graph, entity, "inbound", 10);
+        if (report.totalCount === 0) {
+          sections.push("## Blast radius\nNo inbound dependents — safe to modify freely.");
+        } else {
+          const lines: string[] = [`## Blast radius (${report.totalCount} dependents)\n`];
+          let currentHop = -1;
+          for (const e of report.entries) {
+            if (e.hop !== currentHop) {
+              currentHop = e.hop;
+              lines.push(e.hop === 1 ? "**Hop 1 — direct (immediate breakage risk)**" : `**Hop ${e.hop}**`);
+            }
+            const badge = e.lowQuality ? " ⚠ low-quality" : "";
+            const stale = e.isStale ? " [STALE]" : "";
+            const via = e.via ? `  via ${e.via}` : "";
+            lines.push(`- ${e.name}  quality:${e.qualityScore.toFixed(2)}${badge}${stale}${via}`);
+          }
+          sections.push(lines.join("\n"));
+        }
+
+        // 3 — Concept invariants (relationships targeting a known concept)
+        const entityData = state.entities[entity];
+        const conceptNames = Object.keys(state.concepts);
+        const linkedConcepts = (entityData?.relationships ?? [])
+          .map(r => r.target)
+          .filter(t => conceptNames.includes(t));
+        if (linkedConcepts.length > 0) {
+          sections.push("## Concept invariants");
+          for (const c of linkedConcepts) {
+            const conceptBody = await this.knowledge.readConcept(c);
+            if (conceptBody) sections.push(`### ${c}\n${conceptBody}`);
+          }
+        }
+
+        return { content: [{ type: "text", text: sections.join("\n\n---\n\n") }] };
+      }
+
+      if (name === "smart_audit") {
+        if (!(await this.knowledge.exists())) {
+          return { content: [{ type: "text", text: "Knowledge base not initialized. Run `cortex init` first." }] };
+        }
+
+        const stale = await this.knowledge.getStaleEntities();
+
+        if (stale.length === 0) {
+          return { content: [{ type: "text", text: "No stale entities found. Knowledge base is up to date." }] };
+        }
+
+        const state = await this.knowledge.getState();
+        const graph = buildGraph(state);
+        const sections: string[] = [`# Smart audit — ${stale.length} stale entities\n`];
+
+        for (const entry of stale) {
+          const entitySections: string[] = [`## ${entry.name} (stale since ${entry.staleSince})`];
+          const body = await this.knowledge.readEntity(entry.name);
+          if (body) entitySections.push(body);
+          const report = buildImpactReport(graph, entry.name, "inbound", 5);
+          if (report.totalCount > 0) {
+            entitySections.push(`**Blast radius:** ${report.totalCount} dependents — ${report.entries.filter(e => e.hop === 1).map(e => e.name).join(", ")} are direct.`);
+          } else {
+            entitySections.push("**Blast radius:** No dependents.");
+          }
+          sections.push(entitySections.join("\n\n"));
+        }
+
+        sections.push("---\nFor each entity above: if the staleness is real, re-ingest to update it. If the dependency changed but the entity is still accurate, call `refresh_stale_entities` to clear the flag.");
+        return { content: [{ type: "text", text: sections.join("\n\n---\n\n") }] };
       }
 
       throw new Error(`Unknown tool: ${name}`);
