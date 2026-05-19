@@ -37,6 +37,7 @@ export async function runStatus(projectRoot: string): Promise<void> {
   let lastSync = "Never";
   let staleCount = 0;
   let evidenceDriftCount = 0;
+  let lowQualityCount = 0;
   if (exists) {
     try {
       lastSync = fs.readFileSync(path.join(projectRoot, ".knowledge", ".last_sync_commit"), "utf-8").trim();
@@ -49,6 +50,12 @@ export async function runStatus(projectRoot: string): Promise<void> {
     try {
       const am = new AuditManager(projectRoot);
       evidenceDriftCount = await am.getEvidenceDriftCount();
+    } catch {
+      // ignore
+    }
+    try {
+      // Phase 7.5 — entities under the configurable quality gate (CORTEX_QUALITY_GATE).
+      lowQualityCount = await km.getLowQualityCount();
     } catch {
       // ignore
     }
@@ -72,6 +79,7 @@ export async function runStatus(projectRoot: string): Promise<void> {
   Last Sync: ${lastSync}
   Stale Entities: ${staleCount}
   Evidence Drift: ${evidenceDriftCount}
+  Low Quality:    ${lowQualityCount}
 
   [Daemon]
   ${lockLine}

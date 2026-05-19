@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { OrgConstraintEvaluator, EvaluatableEntity } from "./org-constraints.js";
 
 export interface LintResult {
   rule: string;
@@ -217,6 +218,44 @@ export class LintManager {
           message: `Disconnected knowledge silo detected with ${c.size} entities: ${Array.from(c).slice(0, 3).join(", ")}${c.size > 3 ? "..." : ""}`,
         });
       }
+    }
+
+    // Phase 7.5 — org-constraint violations surfaced as a separate rule
+    // category. Failures of either severity are emitted; `error`-severity
+    // violations don't reach this layer at save-time (saveSynthesis rejects
+    // those), but lint runs over the current persisted state so it catches
+    // anything that pre-dated the constraint file OR was loaded externally.
+    try {
+      const orgEvaluator = OrgConstraintEvaluator.load(this.projectRoot);
+      if (orgEvaluator) {
+        const evaluatable: Record<string, EvaluatableEntity> = {};
+        for (const [name, entity] of Object.entries<any>(entities)) {
+          evaluatable[name] = {
+            sourceFile: entity.sourceFile,
+            relationships: entity.relationships,
+            evidence: entity.evidence,
+            constraints: entity.constraints,
+            tags: entity.tags,
+          };
+        }
+        const violations = orgEvaluator.evaluateAll(evaluatable);
+        for (const v of violations) {
+          results.push({
+            rule: "org_constraint",
+            severity: v.severity,
+            entity: v.entity,
+            message: `[${v.constraintId}] ${v.reason}${v.description ? ` (${v.description})` : ""}`,
+          });
+        }
+      }
+    } catch (err: any) {
+      // Constraint file present but malformed — surface as a lint warning
+      // rather than aborting the whole lint pass.
+      results.push({
+        rule: "org_constraint",
+        severity: "warning",
+        message: `Failed to load cortex.constraints.json: ${err.message}`,
+      });
     }
 
     return results;
