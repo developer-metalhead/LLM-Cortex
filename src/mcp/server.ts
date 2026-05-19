@@ -217,6 +217,14 @@ export class CortexMCPServer {
             { name: "entity", description: "The entity whose dependencies to list", required: true },
           ],
         },
+        {
+          name: "onboard",
+          description: "Generate a tailored onboarding tour of the codebase architecture.",
+          arguments: [
+            { name: "audience", description: "Target audience: 'junior', 'senior', or 'domain-expert' (default: 'junior')", required: false },
+            { name: "depth", description: "Detail level: 'quick' or 'thorough' (default: 'quick')", required: false }
+          ]
+        },
       ],
     }));
 
@@ -459,6 +467,22 @@ export class CortexMCPServer {
           messages: [{ role: "user", content: { type: "text",
             text: `Call the impact_analysis tool with entity='${entity}', direction='outbound'. Present the hop-ranked list of dependencies.`,
           }}],
+        };
+      }
+      if (request.params.name === "onboard") {
+        const audience = (request.params.arguments?.audience || "junior") as any;
+        const depth = (request.params.arguments?.depth || "quick") as any;
+        return {
+          description: "Generate a tailored onboarding tour of the codebase architecture",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Run the onboard guide generator. Audience: ${audience}, Depth: ${depth}. Call the cortex_onboard tool to compile the guide.`,
+              },
+            },
+          ],
         };
       }
       throw new Error(`Prompt not found: ${request.params.name}`);
@@ -854,6 +878,29 @@ export class CortexMCPServer {
             properties: {},
           },
         },
+        {
+          name: "cortex_onboard",
+          description: "Generate a tailored, PageRank-centrality prioritized onboarding guide for a given audience and depth.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              audience: { type: "string", enum: ["junior", "senior", "domain-expert"], description: "Target audience (default: 'junior')" },
+              depth: { type: "string", enum: ["quick", "thorough"], description: "walkthrough depth (default: 'quick')" }
+            }
+          }
+        },
+        {
+          name: "cortex_find",
+          description: "Perform category-scoped sub-millisecond search across active knowledge (entities, concepts, parents) with exact name priority.",
+          inputSchema: {
+            type: "object",
+            required: ["query"],
+            properties: {
+              query: { type: "string", description: "Search query string" },
+              type: { type: "string", enum: ["entity", "concept", "parent", "all"], description: "Category filter (default: 'all')" }
+            }
+          }
+        },
       ],
     }));
 
@@ -1004,6 +1051,42 @@ export class CortexMCPServer {
         }
         if (lines.length === 0) lines.push("No entities were refreshed.");
         return { content: [{ type: "text", text: lines.join("\n") }] };
+      }
+      if (name === "cortex_onboard") {
+        const audience = ((args as any)?.audience || "junior") as "junior" | "senior" | "domain-expert";
+        const depth = ((args as any)?.depth || "quick") as "quick" | "thorough";
+        const { OnboardingManager } = await import("../knowledge/onboarding.js");
+        const om = new OnboardingManager(this.knowledge);
+        const guide = await om.generateOnboarding({ audience, depth });
+        return {
+          content: [{ type: "text", text: guide }],
+        };
+      }
+
+      if (name === "cortex_find") {
+        const query = (args as any)?.query;
+        const type = ((args as any)?.type || "all") as "entity" | "concept" | "parent" | "all";
+        if (typeof query !== "string" || !query.trim()) {
+          return {
+            content: [{ type: "text", text: "cortex_find requires a non-empty 'query' string parameter." }],
+            isError: true,
+          };
+        }
+        const { FindManager } = await import("../knowledge/find.js");
+        const fm = new FindManager(this.knowledge);
+        const results = await fm.find(type, query);
+        if (results.length === 0) {
+          return {
+            content: [{ type: "text", text: "No matches found." }],
+          };
+        }
+        const lines = results.map(r => {
+          const typeLabel = r.type === "parent" ? "📁 parent" : r.type === "concept" ? "💡 concept" : "📄 entity";
+          return `* [[${r.name}]] (${typeLabel})\n  ${r.preview}`;
+        });
+        return {
+          content: [{ type: "text", text: `Found ${results.length} matches:\n\n` + lines.join("\n\n") }],
+        };
       }
 
       if (name === "ingest" || name === "get_pending_changes") {

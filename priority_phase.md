@@ -487,7 +487,7 @@ The foundation everything else builds on. No further work needed.
 These can be picked up today; no planned phase needs to land first.
 
 - **Phase 5.6** — Daemon Watchdog & Self-Healing · deps: 5 ✓
-- **Phase 8** — Visual Knowledge Graph · deps: 3 ✓
+- ~~**Phase 8**~~ — moved to Wave 0 (✅ Done 2026-05-19)
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
 - **Phase 20.23** — Tool-Use Augmented Synthesis · deps: 2 ✓
@@ -620,10 +620,10 @@ These can be picked up today; no planned phase needs to land first.
 
 | Wave | Phases ready | Cumulative count | Tier(s) unlocked |
 |---|---|---|---|
-| 0 | **9 (done — incl. 6, 7, 7.5 verified 2026-05-19)** | 9 | T0 partially achieved |
-| 1 | 15 new (most of original Wave 3 promoted here) | 23 | T0 (via 33-MVP) + most of T1 features |
-| 2 | 6 new | 29 | T1 complete; T2 starts |
-| 3 | 1 new | 30 | research feedback loop |
+| 0 | **11 (done — incl. 6, 7, 7.5, 8, 9 verified 2026-05-19)** | 11 | T0 partially achieved |
+| 1 | 13 new (most of original Wave 3 promoted here) | 24 | T0 (via 33-MVP) + most of T1 features |
+| 2 | 6 new | 30 | T1 complete; T2 starts |
+| 3 | 1 new | 31 | research feedback loop |
 | 4 | 9 new | 40 | T2 / research wave 1 |
 | 5 | 8 new | 48 | T3 base; research wave 2 |
 | 6 | 5 new | 53 | T3 features; 33-Full |
