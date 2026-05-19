@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -27,6 +28,7 @@ import { EvolutionManager } from "../knowledge/evolution.js";
 import { buildGraph, toMermaid, toJson, buildImpactReport } from "../knowledge/graph.js";
 import { readQualityGate } from "../knowledge/quality.js";
 import { runExportGraph } from "../cli/export.js";
+import { compressResponse, resolveRefs } from "./compression.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -42,6 +44,7 @@ export class CortexMCPServer {
   // that launch MCP servers from their own install directory, not the user's
   // workspace).
   private projectRootExplicit: boolean;
+  private readonly sessionId = randomUUID();
 
   constructor(
     projectRoot: string,
@@ -911,6 +914,21 @@ export class CortexMCPServer {
             }
           }
         },
+        {
+          name: "resolve_refs",
+          description: "Resolve one or more `§ref:<hash>§` placeholders returned by read_knowledge_index, read_entity, or read_concept in a long session. When the same content block appears multiple times, Cortex replaces repeated occurrences with a short hash reference to save tokens. Call this to expand those references back to their original text.",
+          inputSchema: {
+            type: "object",
+            required: ["refs"],
+            properties: {
+              refs: {
+                type: "array",
+                items: { type: "string" },
+                description: "Array of hash strings from §ref:<hash>§ placeholders (just the hash part, without §ref: and §).",
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -1333,9 +1351,19 @@ export class CortexMCPServer {
         };
       }
 
+      if (name === "resolve_refs") {
+        const refs = (args as any)?.refs;
+        if (!Array.isArray(refs) || refs.some((r) => typeof r !== "string")) {
+          return { content: [{ type: "text", text: "resolve_refs requires a 'refs' string array." }], isError: true };
+        }
+        const resolved = resolveRefs(refs, this.sessionId);
+        return { content: [{ type: "text", text: JSON.stringify(resolved, null, 2) }] };
+      }
+
       if (name === "read_knowledge_index") {
         const content = await this.knowledge.getKnowledgeSummary();
-        return { content: await this.withSavings(content) };
+        const compressed = compressResponse(content, this.sessionId, true);
+        return { content: await this.withSavings(compressed) };
       }
 
       if (name === "read_entity") {
@@ -1364,7 +1392,8 @@ export class CortexMCPServer {
           };
         }
         const withGuidance = body + `\n\n> **Pre-modification:** If you are about to modify or delete \`${entityName}\`, call \`impact_analysis(entity="${entityName}", direction="inbound")\` first and present the blast-radius to the user before writing any code.`;
-        return { content: await this.withSavings(withGuidance) };
+        const compressed = compressResponse(withGuidance, this.sessionId, true);
+        return { content: await this.withSavings(compressed) };
       }
 
       if (name === "read_concept") {
@@ -1392,7 +1421,7 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: await this.withSavings(body) };
+        return { content: await this.withSavings(compressResponse(body, this.sessionId, true)) };
       }
 
       if (name === "set_project_root") {
