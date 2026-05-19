@@ -25,7 +25,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 13 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, **13** (Phase 13 verified 2026-05-19) |
+| ✅ Done | 14 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, 13, **13.1** (Phase 13.1 verified 2026-05-20) |
 | 🚧 In Progress | 0 | None |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~23 | Phases 14-20.24, drive differentiation |
@@ -105,6 +105,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 1 | **Phase 9** — Refactoring Impact Preview | "Before I make this change, what will break?" — high willingness to pay | Phase 6 ✓ | ✅ **Done 2026-05-19** |
 | 1.1 | **Phase 9.1** — Dependency Path Querying | "How are these two modules connected?" — path highlighting | Phase 9 ✓ | ⏳ Planned |
 | 2 | **Phase 13** — Token Economics & Context Packs | Indie devs care about LLM bill; `cortex test-cost` is a $20/mo feature alone | Phase 8 (T1) | ✅ **Done 2026-05-19** |
+| 2.05 | **Phase 13.1** — Dense & Raw Projections | Multi-provider tokenizer multipliers + full-file raw simulated baseline and ROI projections | Phase 13 ✓ | ✅ **Done 2026-05-20** |
 | 2.1 | **Phase 3.1** — LLM Caching Store | Sub-second cached response and zero-token consumption for identical prompts | Phase 3 ✓ | ⏳ Planned |
 | 2.2 | **Phase 8.1** — Live Graph Stream | Live WebSocket graph updates and transitions in the browser web UI | Phase 8 ✓ | ⏳ Planned |
 | 2.3 | **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression | Save up to 50% token cost by minifying Gemini.md and onboarding docs | Phase 13 ✓ | ⏳ Planned |

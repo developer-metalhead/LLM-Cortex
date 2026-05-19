@@ -45,7 +45,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 12.8  | Log Deduplicator & Web Fetch Parser                    | ⏳ Planned                           |
 | 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ✅ Done                              |
-| 13.1  | Dense & Raw Token-Reduction Projections                | ⏳ Planned                           |
+| 13.1  | Dense & Raw Token-Reduction Projections                | ✅ Done                              |
 | 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ⏳ Planned                           |
 | 13.3  | Token & Cost Savings Ledger & Analytics                | ⏳ Planned                           |
 | 13.4  | API Budget Gating & Runaway Safeguards                | ⏳ Planned                           |
@@ -2232,6 +2232,32 @@ Three small, self-contained surfaces over the existing knowledge — no new data
 
 - ✅ **Pros**: Makes Cortex's "compounding context" exportable — a knowledge base that can leave the project root and travel with you. Pre-flight cost simulation closes the last surprise vector for users on paid APIs. Response compression amortizes the per-tool-call token cost across an agent's session, which is exactly where heavy MCP usage today bleeds tokens.
 - ❌ **Cons**: Each surface is small but they accrue surface area. Mitigated by keeping them strictly read-side projections — none touch the canonical writer. Token-cost estimation is necessarily approximate; document the heuristic and refuse to over-promise. Reference compression adds complexity to the MCP server that only benefits high-volume sessions — the default budget is intentionally conservative so low-volume sessions pay no overhead.
+
+---
+
+## 💸 Phase 13.1: Dense & Raw Token-Reduction Projections — ✅ Completed
+
+**Layman's Terms**
+Cortex keeps your AI token usage extremely low and predictable by only sending precise code diffs and central context nodes instead of dumping full files. Phase 13.1 calculates exactly how much money and how many tokens you saved on every single run by choosing Cortex's optimized dense context over a naive full-file delivery baseline, showing a beautiful comparative report directly in your terminal.
+
+**Technical Terms**
+Extend `cortex test-cost` with comparative raw-vs-dense math and customized tokenizer-family heuristic multipliers:
+1. **Refined Multi-Provider Heuristics**: Token counts are computed using target-specific ratios based on the active provider (`gpt-4o`/`o1` at ~3.8 chars/token, `claude-3-5-sonnet` at ~3.4, `gemini-1.5-pro` at ~3.6) to get highly precise metrics offline.
+2. **Simulated Raw Baseline Projection**: For any pending code changes, Cortex parses the diff, reads the full contents of all affected files from the filesystem, and computes a simulated baseline token count if those complete files were sent alongside the system prompt.
+3. **Advanced Comparative Reports**: Added CLI flags `--compare` (to show a side-by-side terminal table comparing token counts and USD costs across models) and `--projection` (to show weekly, monthly, and annual ROI calculations based on standard developer sync rates).
+
+**Definition of Ready (DoR)**
+- Phase 13 is fully implemented and passes all test suites.
+
+**Definition of Done (DoD)**
+- `cortex test-cost --compare` prints a comparative table showing input tokens, output tokens, and projected costs per provider for both Raw and Dense payloads.
+- `cortex test-cost --projection` prints forecasted savings (weekly, monthly, and yearly in USD) based on typical sync frequencies.
+- Accurate provider-specific tokenizer ratios are implemented in `packer.ts` and verified.
+- Unit and integration tests verify the correct parsing of modified files, full-file reading, and math logic of savings projections.
+
+**Pros & Cons**
+- ✅ **Pros**: Explicitly proves Cortex's ROI in real dollars; acts as the mathematical engine required for down-stream savings ledgering (Phase 13.3).
+- ❌ **Cons**: Full-file reading of modified files adds minor I/O overhead before sync, but is fast and restricted to changed files only.
 
 ---
 

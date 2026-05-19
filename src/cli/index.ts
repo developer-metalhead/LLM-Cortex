@@ -341,6 +341,9 @@ program
   .command("test-cost")
   .description("Estimate token + dollar cost for next sync (no LLM calls made)")
   .option("--budget <usd>", "USD ceiling — exits 1 if estimate exceeds it (e.g. 0.05)")
+  .option("--compare", "Print side-by-side Raw vs Dense payload and cost comparison")
+  .option("--projection", "Print weekly, monthly, and yearly ROI projections based on typical sync frequencies")
+  .option("--runs-per-day <count>", "Average runs/syncs per day for projections", "5")
   .action(async (options) => {
     await runTestCost(projectRoot, options);
   });
