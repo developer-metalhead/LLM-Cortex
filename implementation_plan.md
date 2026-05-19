@@ -14,6 +14,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 4.5   | Dual-Route IDE Integration                             | ✅ Done (added beyond original plan) |
 | 4.6   | Developer API & Client SDKs                            | ⏳ Planned                           |
 | 4.7   | OpenAI-Compatible REST Gateway                         | ⏳ Planned                           |
+| 4.8   | Persona-Specific MCP Prompts                           | ⏳ Planned                           |
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
@@ -22,6 +23,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
+| 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
@@ -387,6 +389,34 @@ Implement an OpenAI-compatible REST server within the Cortex daemon listening on
 **Pros & Cons**
 - ✅ **Pros**: Seamless integration with IDE extensions and terminals that do not natively support MCP (e.g. Cursor, Aider). Zero setup required for standard OpenAI SDKs.
 - ❌ **Cons**: Introducing a proxy layer adds a latency overhead (typically 100-300ms) for the local retrieval step before proxying.
+
+---
+
+## 🎭 Phase 4.8: Persona-Specific MCP Prompts — ⏳ Planned
+
+**Layman's Terms**
+Introduce specialized expert AI personas (like Architect, Security Analyst, QA Engineer, or Refactoring Boy Scout) into your workspace. When you activate a persona, Cortex automatically filters the knowledge base, injecting only the highly relevant design contracts, security rules, test files, or dependency cycle warnings, so your assistant stays focused on specific standards without flooding its context window.
+
+**Technical Terms**
+Implement a suite of persona-based MCP Prompts inside the `CortexMCPServer` wrapper.
+- **Architect Persona**: Generates a prompt containing high-centrality entities, custom concepts, active `cortex.constraints.json` rules, and failed approaches.
+- **Security Persona**: Generates a prompt focused on security-tagged entities (e.g. auth strategies, crypto helpers), raw secret checks, and warnings related to data flow vulnerabilities.
+- **QA Persona**: Generates a prompt emphasizing lowest-quality entities, missing evidence scopes, test files (`*.test.*`), and verification commands.
+- **Refactor Persona**: Generates a prompt detailing structural linter warnings (cycles, silos, god modules) and target entities for cleanup.
+- **Prompt Registration**: Exposes standard MCP Prompts (e.g. `cortex_persona_architect`) allowing clients to dynamically request targeted context.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality DSL) and Phase 7.7 (Debt Register) are completed.
+- MCP Server schema supports prompt listing and resolution.
+
+**Definition of Done (DoD)**
+- Four distinct MCP Prompts (`cortex_persona_architect`, `cortex_persona_security`, `cortex_persona_qa`, `cortex_persona_refactor`) are exposed by `CortexMCPServer`.
+- Prompt parameters support specifying a target directory or file scope.
+- Integration tests verify that each persona retrieves and formats its corresponding subset of context correctly.
+
+**Pros & Cons**
+- ✅ **Pros**: Dramatically reduces context consumption by filtering for specific requirements; improves AI compliance with specialized coding standards.
+- ❌ **Cons**: Relies on accurate categorizations/tags in the knowledge graph; mitigated by default-mapping based on centrality, test patterns, and lint errors.
 
 ---
 
@@ -1218,6 +1248,32 @@ Implement a global lessons aggregator in the Knowledge Manager.
 **Pros & Cons**
 - ✅ **Pros**: Surfaces codebase anti-patterns and retrospects in a single searchable document, preventing AI assistants and developers from repeating historical mistakes.
 - ❌ **Cons**: Requires manual input for global lessons (although entity-level failed approaches are auto-synthesized).
+
+---
+
+## 📝 Phase 7.7: Automated Technical Debt Register — ⏳ Planned
+
+**Layman's Terms**
+Instead of code smells and architectural debt being scattered across random `// TODO` comments or ignored until they cause a production outage, Cortex automatically compiles all system warnings, quality drops, cyclic dependencies, and custom constraint violations into a centralized Technical Debt Register (`.knowledge/DEBT.md`) on every sync, offering teams a clear dashboard of structural decay.
+
+**Technical Terms**
+Implement a debt compiler in the Knowledge Manager.
+- **Aggregation**: Collects all active `warnings[]` from `state.json`, `org_constraint` violations from constraint checks, structural linter flags (orphans, silos, cycles, god modules), and entities below `CORTEX_QUALITY_GATE`.
+- **Ranking**: Computes a "Debt Priority Score" based on entity centrality, severity of violation (errors vs warnings), and quality decay.
+- **Output Emitter**: Compiles these into `.knowledge/DEBT.md` sorted by priority. Each entry points to the source file, lists the specific violation/drift, and outputs an actionable remediation recipe.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 and Phase 7.6 are completed.
+- Linter modules (`silo`, `cycle`, `orphan`, `god_module`) and quality metrics are fully exposed.
+
+**Definition of Done (DoD)**
+- Unified `.knowledge/DEBT.md` is compiled automatically during sync.
+- A new CLI command `cortex debt` prints active debt items ordered by priority score.
+- Tests verify correct compilation, ranking logic, and that resolving a violation automatically removes it from the register.
+
+**Pros & Cons**
+- ✅ **Pros**: Surfaces hidden architectural decay dynamically; provides an actionable backlog for refactoring sprints.
+- ❌ **Cons**: Can generate noise if rules are configured too strictly; mitigated by severity levels and filtering thresholds.
 
 ---
 

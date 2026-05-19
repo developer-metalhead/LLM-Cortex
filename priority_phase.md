@@ -69,10 +69,12 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 1 | **Phase 7** — Audit & Traceability | Trust ground truth: users see what Cortex changed and why | Required by 7.5, 16, 18, 20.x, 26 | ✅ **Done 2026-05-19** |
 | 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ✅ **Done 2026-05-19** |
 | 2.1 | **Phase 7.6** — Global Architectural Lessons & Retrospective Log | Centralized lessons.md dashboard to avoid repeating historical code errors | Phase 7.5 ✓ | ⏳ Planned |
+| 2.2 | **Phase 7.7** — Automated Technical Debt Register | Automatically logs architectural smells and constraint violations to DEBT.md | Phase 7.5 ✓ | ⏳ Planned |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
 | 6 | **Phase 4.6** — Developer API & Client SDKs | Programmatic client access for custom workflows, scripts, and hooks | Unlocks automation | ⏳ Planned |
+| 6.1 | **Phase 4.8** — Persona-Specific MCP Prompts | Exposes filtered graph views and design rules matching target AI personas | Phase 7.5 ✓ | ⏳ Planned |
 
 **Why this order**: 7 → 7.5 because quality scoring builds on audit. 5.6 in parallel (no deps). 8 → 10 because onboarding consumes the graph.
 
@@ -501,6 +503,8 @@ These can be picked up today; no planned phase needs to land first.
 - ~~**Phase 8**~~ — moved to Wave 0 (✅ Done 2026-05-19)
 - **Phase 8.1** — Live Graph Stream · deps: 8 ✓
 - **Phase 7.6** — Global Architectural Lessons & Retrospective Log · deps: 7.5 ✓
+- **Phase 7.7** — Automated Technical Debt Register · deps: 7.5 ✓
+- **Phase 4.8** — Persona-Specific MCP Prompts · deps: 7.5 ✓
 - **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
@@ -743,6 +747,8 @@ These can be slotted into any sprint where bandwidth allows — useful when bloc
 - **Phase 9.1** (only needs Phase 9 ✓) — ship in Wave 1
 - ~~**Phase 9**~~ (✅ Done 2026-05-19)
 - **Phase 7.6** (only needs Phase 7.5 ✓) — ship in Wave 1
+- **Phase 7.7** (only needs Phase 7.5 ✓) — ship in Wave 1
+- **Phase 4.8** (only needs Phase 7.5 ✓) — ship in Wave 1
 - **Phase 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
 
 If your team has spare cycles waiting on a long-running phase, these are the safe parallel options.
