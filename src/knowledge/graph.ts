@@ -117,11 +117,15 @@ export function buildGraph(
     }
   }
 
+  // Filter edges whose target has no node (e.g. concept targets when includeConcepts=false)
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const filteredEdges = edges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
+
   if (options.scope) {
-    return filterByScope({ nodes, edges }, options.scope, options.depth ?? Infinity);
+    return filterByScope({ nodes, edges: filteredEdges }, options.scope, options.depth ?? 2);
   }
 
-  return { nodes, edges };
+  return { nodes, edges: filteredEdges };
 }
 
 // BFS from scope node, bidirectional, up to `depth` hops.

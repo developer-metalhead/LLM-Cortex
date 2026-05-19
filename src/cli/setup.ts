@@ -136,6 +136,8 @@ Skipping this risks duplicating implementations, breaking unknown dependents, an
 
 For purely conceptual questions (*what is X*, *how does Y work*), reading the index below is usually sufficient — skip the deep entity reads.
 
+For any request involving an **architecture diagram, dependency map, module relationships, or 'what touches X'** — **always call \`graph\` (project-cortex MCP)** rather than drawing a diagram manually. Use the \`scope\` parameter to focus on a single entity (e.g. \`scope: "BookingController"\`). Never construct Mermaid syntax by hand — Cortex holds the authoritative dependency edges with quality-colored nodes.
+
 ---
 
 # Project Cortex: Knowledge Index

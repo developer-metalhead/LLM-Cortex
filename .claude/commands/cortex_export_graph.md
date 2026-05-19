@@ -1,0 +1,1 @@
+Call the `export` tool from the `project-cortex` MCP server with `type='graph'`. Report the output path of the generated `ARCH_GRAPH.md`. Mention that the diagram uses `flowchart LR` with quality-colored nodes (green ≥ 0.8, amber ≥ 0.5, red < 0.5) and renders on GitHub or via `cortex serve` for the interactive live view.

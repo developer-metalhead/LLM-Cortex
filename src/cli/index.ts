@@ -13,7 +13,7 @@ import { runRead } from "./read.js";
 import { CortexMCPServer } from "../mcp/server.js";
 import { loadCortexEnv } from "../core/env.js";
 import { runAuditStale, runAuditEvidence, runAuditQuality } from "./audit.js";
-import { runExportSpec } from "./export.js";
+import { runExportSpec, runExportGraph } from "./export.js";
 import { runReviewAccept, runReviewReject } from "./review.js";
 import { runHookInstall } from "./hook.js";
 import { runLog } from "./log.js";
@@ -252,11 +252,16 @@ program
   .command("export")
   .description("Export knowledge base")
   .option("--spec", "Export as ARCH_SPEC.md")
+  .option("--graph", "Export as ARCH_GRAPH.md (Mermaid dependency diagram)")
+  .option("-s, --scope <entity>", "Focus graph export around this entity (writes ARCH_GRAPH_<entity>.md)")
+  .option("-d, --depth <n>", "Max hops from scope (default: 2)", parseInt)
   .action(async (options) => {
     if (options.spec) {
       await runExportSpec(projectRoot);
+    } else if (options.graph) {
+      await runExportGraph(projectRoot, { scope: options.scope, depth: options.depth });
     } else {
-      console.log("Usage: cortex export --spec");
+      console.log("Usage: cortex export --spec | --graph [--scope <entity>] [--depth <n>]");
     }
   });
 
