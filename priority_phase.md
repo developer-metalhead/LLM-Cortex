@@ -25,10 +25,10 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 12 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, **10** (Phase 10 verified 2026-05-19) |
+| ✅ Done | 13 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, **13** (Phase 13 verified 2026-05-19) |
 | 🚧 In Progress | 0 | None |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
-| ⏳ Planned — Research-Grade | ~24 | Phases 13-20.24, drive differentiation |
+| ⏳ Planned — Research-Grade | ~23 | Phases 14-20.24, drive differentiation |
 | ⏳ Planned — Enterprise | ~17 | Phases 22-32 family |
 | ⏳ Planned — Extended Vision | ~10 | Phases 40-45 family (Cortex+Nexus bundle) |
 | ⏳ Pro Add-On Modules | 6 | Productized as separate SKUs |
@@ -71,6 +71,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
+| 6 | **Phase 4.6** — Developer API & Client SDKs | Programmatic client access for custom workflows, scripts, and hooks | Unlocks automation | ⏳ Planned |
 
 **Why this order**: 7 → 7.5 because quality scoring builds on audit. 5.6 in parallel (no deps). 8 → 10 because onboarding consumes the graph.
 
@@ -91,9 +92,14 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | Order | Phase | Why this tier | Dependencies |
 |---|---|---|---|
 | 1 | **Phase 9** — Refactoring Impact Preview | "Before I make this change, what will break?" — high willingness to pay | Phase 6 ✓ | ✅ **Done 2026-05-19** |
-| 2 | **Phase 13** — Token Economics & Context Packs | Indie devs care about LLM bill; `cortex test-cost` is a $20/mo feature alone | Phase 8 (T1) |
+| 1.1 | **Phase 9.1** — Dependency Path Querying | "How are these two modules connected?" — path highlighting | Phase 9 ✓ | ⏳ Planned |
+| 2 | **Phase 13** — Token Economics & Context Packs | Indie devs care about LLM bill; `cortex test-cost` is a $20/mo feature alone | Phase 8 (T1) | ✅ **Done 2026-05-19** |
+| 2.1 | **Phase 3.1** — LLM Caching Store | Sub-second cached response and zero-token consumption for identical prompts | Phase 3 ✓ | ⏳ Planned |
+| 2.2 | **Phase 8.1** — Live Graph Stream | Live WebSocket graph updates and transitions in the browser web UI | Phase 8 ✓ | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
+| 4.1 | **Phase 4.7** — OpenAI-Compatible REST Gateway | Proxy local RAG queries to any standard OpenAI-compatible client | Phase 33.1 | ⏳ Planned |
+| 4.2 | **Phase 17.1** — Multi-Model Architectural Debate | Structured 3-turn AI design debate for pattern critique and consensus | Phase 33.1 | ⏳ Planned |
 | 5 | **Phase 33-Full** — upgrade Bootstrap MVP to use Phase 14, 20.9, 20.10 | Better entity count + quality on the same dollar | Phase 14, 20.9, 20.10 |
 | 6 | **Phase 33.2** — Remote Operations & Mobile PWA | Monitor long bootstraps from phone; push notifications | Phase 22 partial, Phase 25 partial |
 | 7 | **Phase 20.1** — Architecture Simulation | `cortex simulate remove <entity>` — unique cool feature, viral demo | Phase 8 (T1), Phase 6 |
@@ -343,7 +349,7 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 ### Sprint 2 (Q2) — "Indie Pro Launch" → unlocks T2
 
 - ✅ **Phase 9** (impact preview) — Done 2026-05-19
-- Phase 13 (cost packs)
+- ✅ **Phase 13** (token economics & context packs) — Done 2026-05-19
 - Phase 14 (clustering)
 - Phase 16 (contradictions, research)
 - Phase 18 (embeddings, research)
@@ -486,8 +492,12 @@ The foundation everything else builds on. No further work needed.
 
 These can be picked up today; no planned phase needs to land first.
 
+- **Phase 3.1** — LLM Caching Store · deps: 3 ✓
+- **Phase 4.6** — Developer API & Client SDKs · deps: 4.5 ✓
 - **Phase 5.6** — Daemon Watchdog & Self-Healing · deps: 5 ✓
 - ~~**Phase 8**~~ — moved to Wave 0 (✅ Done 2026-05-19)
+- **Phase 8.1** — Live Graph Stream · deps: 8 ✓
+- **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
 - **Phase 20.23** — Tool-Use Augmented Synthesis · deps: 2 ✓
@@ -505,10 +515,12 @@ These can be picked up today; no planned phase needs to land first.
 
 ### Wave 2 — After Wave 1
 
+- **Phase 4.7** — OpenAI-Compatible REST Gateway · deps: 33.1
 - **Phase 5.7** — Scheduled Operations & Cron Engine · deps: 5.6 (full version needs 26 + 33.2)
 - **Phase 5.8** — Multi-Operator Session Coordination · deps: 5.6 (full version needs 25)
 - **Phase 12** — Git & CI Integration · deps: 6 ✓
 - **Phase 13** — Token Economics & Context Packs · deps: 8, 10
+- **Phase 17.1** — Multi-Model Architectural Debate · deps: 33.1
 - **Phase 20.6** — MemGPT Hierarchical Memory Tiering · deps: 4 ✓, 8, 10
 - **Phase 20.1** — Architecture Simulation · deps: 8, 6 ✓
 
@@ -714,12 +726,16 @@ Verified pairs that look suspicious but resolve correctly:
 
 These can be slotted into any sprint where bandwidth allows — useful when blocked on critical-path phases:
 
+- **Phase 3.1** (only needs Phase 3 ✓) — ship in Wave 1
+- **Phase 4.6** (only needs Phase 4.5 ✓) — ship in Wave 1
 - **Phase 5.6** (only needs Phase 5 ✓) — ship in Wave 1
 - **Phase 8** (only needs Phase 3 ✓) — ship in Wave 1
+- **Phase 8.1** (only needs Phase 8 ✓) — ship in Wave 1
 - **Phase 10** (only needs Phase 3 ✓) — ship in Wave 1
 - **Phase 11** (only needs Phase 3 ✓) — ship in Wave 1
 - **Phase 20.23** (only needs Phase 2 ✓) — ship in Wave 1
 - **Phase 33-MVP** (only needs Phase 2 ✓) — **P0, ship in Wave 1**
+- **Phase 9.1** (only needs Phase 9 ✓) — ship in Wave 1
 - ~~**Phase 9**~~ (✅ Done 2026-05-19)
 - **Phase 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
 

@@ -26,7 +26,6 @@ import { runOnboard } from "./onboard.js";
 import { runFind } from "./find.js";
 import { runContextBuild } from "./context.js";
 import { runTestCost } from "./test-cost.js";
-
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;

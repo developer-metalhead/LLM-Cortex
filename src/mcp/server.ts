@@ -518,8 +518,22 @@ export class CortexMCPServer {
       }
       if (request.params.name === "context") {
         const scope = request.params.arguments?.scope;
-        const budget = request.params.arguments?.budget ?? "8000";
+        const budget = request.params.arguments?.budget;
         const depth = request.params.arguments?.depth;
+        
+        if (!budget) {
+          return {
+            description: "Build a context pack — asks for budget and scope.",
+            messages: [{
+              role: "user",
+              content: {
+                type: "text",
+                text: "Ask the user: 'What token budget (e.g. 3000, 8000) and focus scope (optional entity or concept name) would you like to use for your context pack?' Explain that this compiles a centrality-ranked, budget-bounded knowledge pack. Wait for their reply, then call build_context_pack with their choices."
+              }
+            }]
+          };
+        }
+        
         const scopePart = scope ? `, scope='${scope}'${depth ? `, depth=${depth}` : ""}` : "";
         return {
           description: "Build a context pack and use it as working knowledge for this session.",

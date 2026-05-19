@@ -9,8 +9,11 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 1     | Ingestion & Monitoring Foundation                      | ✅ Done                              |
 | 2     | LLM Synthesis Engine                                   | ✅ Done                              |
 | 3     | Knowledge Storage & Cost Control                       | ✅ Done                              |
+| 3.1   | LLM Caching Store                                      | ⏳ Planned                           |
 | 4     | MCP Server Integration                                 | ✅ Done                              |
 | 4.5   | Dual-Route IDE Integration                             | ✅ Done (added beyond original plan) |
+| 4.6   | Developer API & Client SDKs                            | ⏳ Planned                           |
+| 4.7   | OpenAI-Compatible REST Gateway                         | ⏳ Planned                           |
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
@@ -18,7 +21,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
+| 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
+| 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
 | 11    | Monorepo Federation                                    | ⏳ Planned                           |
 | 12    | Git & CI Integration                                   | ⏳ Planned                           |
@@ -27,6 +32,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
 | 17    | Active Disambiguation via Self-Consistency             | ⏳ Planned (research-grade)          |
+| 17.1  | Multi-Model Architectural Debate                       | ⏳ Planned                           |
 | 18    | Architectural Embeddings (Typed-Graph + Text Hybrid)   | ⏳ Planned (research-grade)          |
 | 19    | Librarian Distillation                                 | ⏳ Planned (research-grade)          |
 | 20    | Intelligent Architectural Advisor                      | ⏳ Planned                           |
@@ -210,6 +216,26 @@ Implement a dual-mode ingestion pipeline (Auto/Manual). In Manual mode, file dif
 
 ---
 
+## 💾 Phase 3.1: LLM Caching Store — ⏳ Planned
+
+**Layman's Terms**
+When the AI is running checks or analyzing code, it often asks the same questions or evaluates the same rules. Instead of paying for the same LLM requests over and over, Phase 3.1 introduces a smart local cache. If the code and prompt haven't changed, Cortex uses the cached response instantly without costing any tokens.
+
+**Technical Terms**
+Implement a file-based or SQLite-based local prompt cache with a configurable Time-To-Live (TTL) and Least Recently Used (LRU) eviction policy.
+
+- **Storage**: Cache entries are keyed by the SHA-256 hash of the complete prompt payload (including system prompt, context files, and diff) and stored under `~/.cortex/cache/` or `.knowledge/.cache/`.
+- **TTL & Eviction**: Configurable TTL (default 5 minutes) and automatic eviction of old cache entries (default max 100 entries) to prevent unbounded growth.
+- **Bypass**: Support a `--force` flag on CLI/sync to bypass the cache and force a fresh LLM call.
+
+**Definition of Done (DoD)**
+- Syntheses or checks with identical prompt hashes are served from cache in <10ms.
+- Cache respects configurable TTL and evicts old entries when crossing the threshold.
+- CLI command `cortex cache clear` or flag `--force` successfully invalidates/bypasses the cache.
+- Tests cover cache hit/miss, TTL expiration, and eviction limits.
+
+---
+
 ## 🔌 Phase 4: MCP Server Integration (The Mouth) — ✅ Done
 
 **Layman's Terms**
@@ -307,6 +333,60 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 
 ---
 
+## 🔌 Phase 4.6: Developer API & Client SDKs — ⏳ Planned
+
+**Layman's Terms**
+Makes it easy to programmatically query Cortex from your own scripts, CI pipeline, or terminal hacks. We're publishing lightweight client libraries for Node.js and Python that let you fetch entities, check quality scores, and perform impact analysis with simple, single-line functions.
+
+**Technical Terms**
+Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`) and Python (`projectcortex-sdk`).
+- **Communication**: The SDKs communicate with the local running Cortex daemon over a standardized REST API or local JSON-RPC socket.
+- **Features**: Single-line helpers like `cortex.readEntity('AuthMiddleware')`, `cortex.getImpact('User')`, `cortex.getQuality('PaymentService')`, and `cortex.runLint()`.
+- **Use Cases**: Developers can use these SDKs to write custom git hooks, pre-commit scripts, or documentation generators.
+
+**Definition of Ready (DoR)**
+- Phase 4.5 is shipped.
+- Daemon REST API endpoints are stabilized.
+
+**Definition of Done (DoD)**
+- Official JS/TS client package (`@projectcortex/sdk`) and Python client package (`projectcortex-sdk`) built and tested.
+- SDKs can successfully connect to the local daemon and execute read/impact/quality operations.
+- Documentation and code examples included in `README.md`.
+- Tests cover offline/error recovery, API timeouts, and payload verification.
+
+**Pros & Cons**
+- ✅ **Pros**: Standardizes programmatic access to Cortex, unlocking custom automation for team setups.
+- ❌ **Cons**: Multiplies library maintenance across two ecosystems (NPM/PyPI).
+
+---
+
+## 🔌 Phase 4.7: OpenAI-Compatible REST Gateway — ⏳ Planned
+
+**Layman's Terms**
+Turn Cortex into a local AI gateway. If you use a tool like Cursor, Aider, or another coding assistant that doesn't support MCP yet, you can point it to Cortex's local address instead. Cortex acts as a smart proxy—it intercepts queries, automatically injects relevant codebase architecture context, and forwards them to your preferred LLM.
+
+**Technical Terms**
+Implement an OpenAI-compatible REST server within the Cortex daemon listening on `localhost:3210`.
+- **Endpoint**: Implement `/v1/chat/completions` and `/v1/embeddings` standard endpoints.
+- **RAG Augmentation**: The gateway parses incoming prompt messages, runs a fast semantic search over the local architectural index (`state.json` / embeddings), injects the matching architectural context into the system message, and proxies the query to the primary model provider.
+- **Compatibility**: Any standard OpenAI client library or IDE configuration (e.g. Cursor OpenAI endpoint override) can point to `http://localhost:3210/v1` to get a Cortex-aware assistant.
+
+**Definition of Ready (DoR)**
+- Phase 33.1 (Model Provider Registry) is completed (required to route and proxy queries to multiple backends).
+- Semantic search or graph indexing endpoints are stable.
+
+**Definition of Done (DoD)**
+- REST server exposes `/v1/chat/completions` and `/v1/embeddings` matching the OpenAI API specification.
+- Incoming chat queries are dynamically augmented with matching architectural entities and concepts.
+- Custom OpenAI-compatible clients (e.g., Aider, python-openai SDK) can connect, stream responses, and receive context-rich completions.
+- Tests cover endpoint routing, context injection correctness, streaming response proxying, and error handling.
+
+**Pros & Cons**
+- ✅ **Pros**: Seamless integration with IDE extensions and terminals that do not natively support MCP (e.g. Cursor, Aider). Zero setup required for standard OpenAI SDKs.
+- ❌ **Cons**: Introducing a proxy layer adds a latency overhead (typically 100-300ms) for the local retrieval step before proxying.
+
+---
+
 ## ⚙️ Phase 5: CLI Polish & Daemonization (The Operations) — ✅ Done
 
 **Layman's Terms**
@@ -384,7 +464,7 @@ Cortex runs a lot of background processes — the file watcher, the LLM client, 
 A supervisor process that monitors every running Cortex component via heartbeats and applies per-component recovery strategies on detected failure:
 
 **Components monitored**:
-- **Sync watcher** (`cortex watch`) — file system change detection loop
+- **Sync watcher** (`cortex watch`) — Background file system change detection loop (e.g. via `chokidar`). Watches project files, runs incremental Tier 1 (local AST) syncs upon save to keep `state.json` fresh, and triggers LLM Librarian synthesis under Phase 20.23 logic for semantic updates.
 - **MCP server** (STDIO or HTTP) — IDE connection endpoint
 - **LLM provider connections** — per-provider liveness via lightweight health pings (Phase 33.1 registry)
 - **File watcher subsystem** — inotify/FSEvents/ReadDirectoryChanges handle health
@@ -1152,6 +1232,32 @@ Two complementary surfaces over the existing `state.json` graph — no new data,
 
 ---
 
+## 💾 Phase 8.1: Live Graph Stream (WebSocket) — ⏳ Planned
+
+**Layman's Terms**
+When you edit code in your editor, you shouldn't have to manually refresh the browser graph to see the changes. Phase 8.1 adds a live WebSocket connection to the browser graph. As soon as you save a file and Cortex's watcher finishes ingestion, the graph dynamically transitions and highlights the updated nodes in real time.
+
+**Technical Terms**
+Implement a lightweight read-only WebSocket endpoint at `ws://127.0.0.1:<port>/ws` inside the server launched by `cortex serve`.
+- **Event Streaming**: The file watcher and the ingestion sync pipeline broadcast graph diff events (e.g. `node_added`, `node_updated`, `node_deleted`, `edge_added`, `edge_deleted`) over the WebSocket to all connected browser clients.
+- **Dynamic UI Transitions**: The frontend graph viewer (Cytoscape/D3) listens to these events and applies smooth layout recalculations and micro-animations to highlight modified paths, flashing updated nodes to indicate a successful sync.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+- Daemon watcher execution hooks are stable.
+
+**Definition of Done (DoD)**
+- Local HTTP server supports upgrading connections to WebSockets at `/ws`.
+- Graph diff events are automatically pushed to clients upon successful file-watch ingestions.
+- Web UI transitions and animates changes dynamically without reloading the browser page.
+- Tests cover WebSocket client connections, state synchronization on connect, and correct broadcast of mutation events.
+
+**Pros & Cons**
+- ✅ **Pros**: High-fidelity, real-time feedback for developers during coding sessions. Wow factor for local graph demo.
+- ❌ **Cons**: Running a WebSocket loop uses slight CPU/memory overhead in the daemon background.
+
+---
+
 ## ✅ Phase 9: Refactoring Impact Preview — ✅ Done
 
 **Layman's Terms**
@@ -1190,6 +1296,25 @@ The inverse of Phase 6's blast-radius propagation. Where Phase 6 reacts to an `a
 
 - ✅ **Pros**: Closes the loop with Phase 6. Together they form a full guardrail: Phase 9 informs the refactor, Phase 6 enforces it. The hypothetical-delete mode is especially valuable for code archaeology — "can I delete this old helper?" becomes a one-command query.
 - ❌ **Cons**: Graph quality depends on link-quality in synthesis. If the Librarian under-links, impact analysis under-reports. Mitigated by Phase 6's CURRENT CONTEXT injection, which already pushes the LLM to link aggressively.
+
+---
+
+## 🗺️ Phase 9.1: Dependency Path Querying — ⏳ Planned
+
+**Layman's Terms**
+When refactoring, you often want to know how two distant parts of the codebase depend on each other. If you mutate Entity A, does it impact Entity B, and if so, through what path of dependencies? Phase 9.1 introduces the `cortex path` command to calculate and explain the exact chain of connections between any two modules.
+
+**Technical Terms**
+Expose a BFS-based pathfinding query over the relationship graph in `state.json`.
+
+- **CLI**: `cortex path <source> <target>` — returns the shortest sequence of typed dependency edges (hops) connecting `<source>` to `<target>`.
+- **MCP**: `get_dependency_path(source, target)` tool — returns the array of dependency hops, enabling IDE agents to trace indirect coupling before coding.
+
+**Definition of Done (DoD)**
+- `cortex path <source> <target>` returns the shortest path of typed edges in <50ms.
+- `get_dependency_path` MCP tool is registered and returns matching path details.
+- Pathfinding handles cycles, missing nodes, and disconnected components gracefully.
+- Tests cover cyclic pathfinding, disconnected source/target, and correct edge-hop ordering.
 
 ---
 
@@ -1289,9 +1414,9 @@ Cortex becomes monorepo-aware. The CLI gains a workspace concept; `cortex init` 
 Right now, Cortex runs on your machine and the AI uses it. Phase 12 wires it into the team workflow: a pre-push hook that ensures `.knowledge/` is up to date before code ships, and a GitHub Action that comments on PRs with the architectural diff — "this PR adds 2 entities, mutates 1, and triggers 1 drift warning."
 
 **Technical Terms**
-Two integration points:
+Three integration points:
 
-1. **Local git hooks**: `cortex install-hooks` writes a pre-push hook that runs `cortex sync` (manual mode) or verifies `.last_sync_commit == HEAD` (auto mode), failing the push if synthesis is pending. Optional `--strict` mode also fails on un-acknowledged Phase 6 warnings.
+1. **Local git hooks**: `cortex install-hooks` writes a pre-push hook that runs `cortex sync` (manual mode) or verifies `.last_sync_commit == HEAD` (auto mode), failing the push if synthesis is pending. Optional `--strict` mode also fails on un-acknowledged Phase 6 warnings. Additionally, it registers a custom git union-merge driver in `.git/config` and `.gitattributes` for `.knowledge/state.json` to automatically merge parallel graph edits and prevent merge conflict markers.
 
 2. **CI surface (GitHub Action)**: a published action `developer-metalhead/cortex-action@v1` that, on a PR, runs `cortex sync --dry-run` against the PR branch and posts a sticky comment:
    - Entities created / updated / deleted (diff vs base branch's `.knowledge/`)
@@ -1299,12 +1424,15 @@ Two integration points:
    - Constraint violations (Phase 6) — these block the PR
    - Stale entities introduced (Phase 6) — surface only, do not block
    - Link to the rendered Mermaid graph diff (Phase 8) if available
+   - **PR-Level Community Conflict Mapping**: Warning section highlighting when parallel PRs target or depend on the same modular graph communities, alerting the team to concurrent merge-order and blast-radius risks.
 
    The action uses the MCP route — it runs `cortex mcp` against the PR's checkout and calls `get_pending_changes` / `save_synthesis` against a CI-only LLM key configured in repo secrets.
 
+3. **Piped Diagnostics CLI (`cortex diagnose`)**: Enables piping compiler/build output directly to the CLI (e.g. `npm run build 2>&1 | cortex diagnose`). Cortex parses compilation, linting, or type errors from `stdin`, correlates the referenced files and symbols with the knowledge graph's entities/constraints, and outputs localized architectural diagnoses and GoF/SOLID refactoring paths.
+
 **Architecture & System Design**
 
-- **Core Components**: new `src/cli/hooks.ts` (install/uninstall hook scripts), a separate published GitHub Action repo, modifications to `cortex sync` to support `--dry-run` (compute synthesis but don't write).
+- **Core Components**: new `src/cli/hooks.ts` (install/uninstall hook scripts), new `src/cli/diagnose.ts` (stdin parser and error matching engine), a separate published GitHub Action repo, modifications to `cortex sync` to support `--dry-run` (compute synthesis but don't write).
 - **Design Pattern**: Defense in depth. Local hooks catch issues before push; CI catches them before merge. Neither replaces the other.
 - **Key Considerations**:
   - Hooks must be **opt-in**. Never modify `.git/hooks` without explicit `cortex install-hooks`.
@@ -1320,12 +1448,13 @@ Two integration points:
 
 **Definition of Done (DoD)**
 
-- `cortex install-hooks` and `cortex uninstall-hooks` cleanly add/remove pre-push hooks.
+- `cortex install-hooks` and `cortex uninstall-hooks` cleanly add/remove pre-push hooks and union-merge driver configurations.
 - `cortex sync --dry-run` produces a structured report without writing.
+- `cortex diagnose` command correctly parses standard compile outputs (e.g. TypeScript, ESLint) from `stdin` and matches them to entities/constraints.
 - GitHub Action published, documented, and exercised on a real repo.
-- Sticky PR comment renders correctly with synthesis diff + warnings + constraint violations.
+- Sticky PR comment renders correctly with synthesis diff + warnings + constraint violations + PR community conflict warnings.
 - **Phase 7.5 strengthening:** GitHub Action gains an optional `quality-gate` input (0.0–1.0 threshold). When set, the action computes the mean quality score across all entities touched by the PR and fails CI if the score drops below the threshold. PR comment includes a "Quality delta" row: `⬆ +0.02 (from 0.81 → 0.83)` or `⬇ -0.05 (from 0.76 → 0.71) — below threshold 0.75 ❌`. Org-constraint violations from Phase 7.5's `cortex.constraints.yaml` surface as a separate CI failure category.
-- Tests cover: hook install/uninstall idempotency, dry-run output shape, CI integration smoke test, quality-gate threshold pass/fail, org-constraint CI reporting.
+- Tests cover: hook install/uninstall idempotency, union-merge driver correctness, dry-run output shape, CI integration smoke test, quality-gate threshold pass/fail, org-constraint CI reporting, `cortex diagnose` stdin parsing and matching accuracy.
 
 **Pros & Cons**
 
@@ -1334,7 +1463,7 @@ Two integration points:
 
 ---
 
-## 💸 Phase 13: Token Economics & Context Packs — ⏳ Planned
+## 💸 Phase 13: Token Economics & Context Packs — ✅ Completed
 
 **Layman's Terms**
 Cortex is already cheap because it sends diffs, not whole files. Phase 13 turns "cheap" into "predictable." You can export a token-perfect knowledge bundle for any other tool, see what a sync would cost _before_ you run it, and the MCP server stops repeating itself when an agent asks the same question twice in a row.
@@ -1527,7 +1656,7 @@ Promote `warnings[]` (today a per-log-entry free-form string array) into a first
 Sometimes the AI is sure about what a code change means; sometimes it's guessing. Today Cortex treats both the same — it just writes down whatever the AI said. Phase 17 makes Cortex sample the AI's synthesis multiple times at the same input and check whether the answers agree. When they agree, it commits silently. When they disagree, it surfaces a short structured question — _"Did this change introduce `[[OAuth2Strategy]]` or modify the existing `[[JWTStrategy]]`?"_ — and waits for an answer before persisting. The user (or an IDE agent) picks one; Cortex commits with that choice. The "confidence" signal is structural inter-sample agreement, not an LLM-emitted number.
 
 **Technical Terms**
-Implement self-consistency sampling (Wang et al., 2022 — _Self-Consistency Improves Chain of Thought Reasoning in Language Models_) as a synthesis-quality signal. For each synthesis call, sample the Librarian _N_ times (default _N=3_) at non-zero temperature, structurally diff the outputs, and route by inter-sample agreement:
+Implement self-consistency sampling (Wang et al., 2022 — _Self-Consistency Improves Chain of Thought Reasoning in Language Models_) as a synthesis-quality signal. For each synthesis call, sample the Librarian _N_ times (default _N=3_) at non-zero temperature, structurally diff the outputs, and route by inter-sample agreement. Supports multi-model consensus verification checks: when running in multi-provider mode, queries are routed to two different providers (e.g. Claude and Gemini) and cross-verified via a consensus checker to calculate a confidence score (0-100%) and resolve discrepancy before committing.
 
 - **Full agreement** (all _N_ samples produce equivalent entity sets and equivalent action verbs per entity): commit silently. This is the dominant case on routine diffs.
 - **Partial agreement** (≥⌈_N/2_⌉ samples agree on the entity-level structure but disagree on action verbs or descriptions): commit the majority result and append a typed `samplingDivergence` event to `log.jsonl` for later review.
@@ -1568,6 +1697,33 @@ A disambiguation question is a structured object — `{ id, file, summary, optio
 
 - ✅ **Pros**: Self-consistency is well-validated in the literature as a quality signal and is calibration-free — it requires no model-emitted confidence. Surfaces low-confidence syntheses for human input _exactly_ where input is most useful, without forcing review on the ~95% of syntheses where the model is consistent. Provides a clean experimental surface: _what fraction of disagreement cases, on real corpora, correspond to genuine architectural ambiguity vs LLM noise?_ That measurement is publishable.
 - ❌ **Cons**: _N×_ token cost on every synthesis call. Mitigated by opt-in env-var gating and by Phase 14 clustering reducing per-synthesis size. Disambiguation queue can grow unbounded if the user ignores it — mitigated by overflow refusal and surfacing the count in `cortex status`.
+
+---
+
+## 💬 Phase 17.1: Multi-Model Architectural Debate — ⏳ Planned
+
+**Layman's Terms**
+When you make a significant design change, different models might disagree on the best pattern or potential pitfalls. The `cortex debate <entity>` command lets you run a mini-debate between two different AI models (like Claude and Gemini). They trade design arguments back and forth, identify hidden issues in your code, and output a consensus report with the best path forward.
+
+**Technical Terms**
+Implement a multi-model architectural debate command: `cortex debate <entity-name | file-path>`.
+- **Orchestration**: The command queries the Model Provider Registry (Phase 33.1) to pick two distinct model providers (e.g., Anthropic Claude and OpenAI GPT-4o) with different training data/biases.
+- **Round-Robin Debate**: The system orchestrates a 3-turn structured debate between the models. Model A drafts an analysis of the entity's architecture and design patterns; Model B critiques it and points out hidden dependencies or code smells; Model A responds; and finally, both contribute to generating a unified, high-quality consensus suggestion report.
+- **Output**: The consensus suggestion is saved to `.knowledge/suggestions/debates/<entity>.md` and displayed to the user via the CLI.
+
+**Definition of Ready (DoR)**
+- Phase 33.1 (Model Provider Registry) is completed.
+- CLI argument parsing framework is stable.
+
+**Definition of Done (DoD)**
+- `cortex debate` CLI command successfully spawns and manages a multi-provider round-robin debate.
+- Output consensus Markdown report is generated with clear sections: Arguments, Critiques, and Consensus Trade-Offs.
+- Supports configuring debate depth (e.g. `--turns N`).
+- Tests cover debate orchestration, prompt formatting, state handling, and error/timeout handling.
+
+**Pros & Cons**
+- ✅ **Pros**: Leverages multi-model perspective diversity to surface architectural blind spots that a single provider might miss.
+- ❌ **Cons**: Higher token consumption due to multiple round-robin LLM calls.
 
 ---
 
@@ -1826,6 +1982,7 @@ Each suggestion output:
 3. Concrete entity-level suggestion: which entity to introduce, which edges to redirect.
 4. Cortex constraint scaffold: a Phase 6 constraint entry encoding the target graph shape post-refactor, so `cortex lint` would pass after the refactor is implemented.
 5. Confidence flag: `high` (pattern maps cleanly), `medium` (multiple patterns apply — user picks), `low` (heuristic is speculative).
+6. Advisory Refactoring Patch (Diff): An inline file patch/diff suggesting code-level changes (healing) that can be applied to decouple files, extract patterns, or fulfill constraints.
 
 CLI: `cortex suggest pattern [--entity <name> | --anti-pattern <type> | --all]`
 MCP tool: `get_pattern_suggestions(entity?)` for IDE surface.
@@ -1833,9 +1990,10 @@ MCP tool: `get_pattern_suggestions(entity?)` for IDE surface.
 **Architecture & System Design**
 
 - **Core Components**: new `src/advisor/patterns.ts` (anti-pattern → pattern mapping table, pure data), new `src/advisor/suggester.ts` (instantiate entity-specific suggestion from lint issue + graph context), additions to `src/cli/suggest.ts` (`pattern` subcommand), new MCP tool in `src/mcp/server.ts`.
-- **Design Pattern**: Rule-table with context-aware instantiation. The mapping table is pure YAML/data; the suggester instantiates each rule against the entity's actual graph neighborhood. An optional LLM-assisted path (behind `CORTEX_SUGGEST_LLM=true`) generates human-readable suggestion text; the default path is LLM-free.
+- **Design Pattern**: Rule-table with context-aware instantiation. The mapping table is pure YAML/data; the suggester instantiates each rule against the entity's actual graph neighborhood. An optional LLM-assisted path (behind `CORTEX_SUGGEST_LLM=true`) generates human-readable suggestion text and the advisory code patch; the default path is LLM-free.
 - **Key Considerations**:
-  - Pattern suggestions are **never automatically applied**. They are written to `.knowledge/suggestions/` (Phase 20's isolation), never to `state.json` or `src/`. Surface-don't-act applies fully.
+  - Pattern suggestions and healing patches are **never automatically applied** to the user's source files by Cortex itself (preserving the read-only memory boundary). They are written to `.knowledge/suggestions/` (Phase 20's isolation), never to `state.json` or `src/`. Surface-don't-act applies fully.
+  - Suggested advisory patches are designed to be consumed by the active IDE agent or user, who carries out the write/healing action.
   - The constraint scaffold is a suggestion, not an enforced constraint — users copy it into `cortex.constraints.yaml` manually if they want to enforce the target shape.
 
 **Definition of Ready (DoR)**
@@ -5944,7 +6102,8 @@ A pluggable Provider Registry that decouples response generation from any specif
   reasoning:                     # Phase 20.18 ToT
     primary: anthropic:claude-opus-4-7
   ```
-- **Cost-tier fallback**: when a primary fails (rate limit, outage, quota), the registry walks the fallback chain in order. Every fallback emits a Phase 26 audit event so customers see when degradation occurred.
+- **Cost-tier fallback**: when a primary fails (rate limit, outage, quota), the registry walks the fallback chain in order. Integrates smart rate limit detection (429s) and expired session tracking to trigger auto-recovery and fallback. Every fallback emits a Phase 26 audit event so customers see when degradation occurred.
+- **Smart Provider Selection & Routing**: Staggers parallel provider requests to prevent local UI/Daemon freezes. Automatically routes specialized sub-tasks based on provider strengths (e.g., complex coding and pattern audits to Anthropic Claude, general web/schema research tasks to Perplexity, and fast enumeration to local Ollama).
 - **Health-checked routing**: `ProviderRegistry.healthCheck(id)` returns `{ reachable, latencyMs, models[] }`; routing skips unhealthy providers until they recover.
 - **`cortex providers list`**: shows all registered providers with health, available models, cost tier, capabilities.
 - **`cortex providers test <id>`**: synthetic-prompt round-trip latency test.

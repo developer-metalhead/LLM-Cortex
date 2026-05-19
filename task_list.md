@@ -4,7 +4,7 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## ✅ Done — Phases 1–7.5 (verified against source + 81/81 tests passing)
+## ✅ Done — Phases 1–10, 13 (verified against source + 122/122 tests passing)
 
 ### Phase 1 — Ingestion & Monitoring Foundation
 - [x] `src/core/watcher.ts` — chokidar with 3s debounce, `.gitignore` via `ignore` package, hard-coded ignores (`.git`, `.knowledge`, `node_modules`, `dist`)
@@ -208,7 +208,16 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] New source files: `src/knowledge/onboarding.ts`, `src/cli/onboard.ts`, `src/cli/find.ts`
 - [x] Tests (14 passing in `tests/phase10.test.ts`): empty-base graceful fail, centrality ranking, parent-summary threshold, `cortex find` ordering, demotions, etc.
 
-## ⏳ Planned — Phases 11–13
+## ✅ Phase 13 — Token Economics & Context Packs (verified 2026-05-19, all DoD met, 5 tests passing)
+
+- [x] `cortex context build --budget <tokens> --scope <entity> --depth N --format markdown|json` — builds centrality-ranked, budget-bounded knowledge pack
+- [x] `cortex test-cost [--budget <usd>]` — offline multi-provider token and USD cost simulation
+- [x] Session-scoped MCP response compression — LRU-cached compression replacing repeated blocks with `§ref:<hash>§`
+- [x] `resolve_refs` MCP tool — single-roundtrip client-side reference hydration
+- [x] New source files: `src/knowledge/packer.ts`, `src/cli/context.ts`, `src/cli/test-cost.ts`, `src/mcp/compression.ts`
+- [x] Tests (5 passing in `tests/phase13.test.ts`): character-count heuristic, greedy budget constraints, markdown and JSON formatting, compression caching, and ref hydration.
+
+## ⏳ Planned — Phases 11–12
 
 ### Phase 11 — Monorepo Federation
 - [ ] `cortex init --monorepo` — auto-detect pnpm/yarn/turbo workspaces; scaffold `.cortex/workspaces.json`
@@ -222,12 +231,6 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [ ] `cortex sync --dry-run` — structured report without writing
 - [ ] GitHub Action `developer-metalhead/cortex-action@v1` — sticky PR comment with entity diff + constraint violations (CI fail) + warnings (comment only)
 - [ ] New source files: `src/cli/hooks.ts`; separate published action repo
-
-### Phase 13 — Token Economics & Context Packs
-- [ ] `cortex context build --budget <tokens> --scope <entity> --depth N --format markdown|json`
-- [ ] `cortex test-cost [--budget <usd>]` — offline token + dollar estimate, no LLM calls
-- [ ] Session-scoped MCP response compression — `§ref:<hash>§` + `resolve_refs(refs[])` MCP tool; 256KB LRU cache
-- [ ] New source files: `src/knowledge/packer.ts`, `src/cli/context.ts`, `src/cli/test-cost.ts`, `src/mcp/compression.ts`
 
 ---
 
