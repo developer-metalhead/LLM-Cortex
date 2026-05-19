@@ -25,7 +25,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 9 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, **7.5** (Phase 7.5 verified 2026-05-19, 81/81 tests passing) |
+| ✅ Done | 10 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, **8** (Phase 8 verified 2026-05-19, 108/108 tests passing) |
 | 🚧 In Progress | 0 | — |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~24 | Phases 13-20.24, drive differentiation |
@@ -69,7 +69,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 1 | **Phase 7** — Audit & Traceability | Trust ground truth: users see what Cortex changed and why | Required by 7.5, 16, 18, 20.x, 26 | ✅ **Done 2026-05-19** |
 | 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ✅ **Done 2026-05-19** |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
-| 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ⏳ Planned |
+| 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ⏳ Planned |
 
 **Why this order**: 7 → 7.5 because quality scoring builds on audit. 5.6 in parallel (no deps). 8 → 10 because onboarding consumes the graph.
@@ -336,7 +336,7 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 
 **Outcome**: Free tier becomes genuinely useful. Adoption begins.
 
-**Sprint 1 progress: Phases 6 + 7 + 7.5 done (50% of sprint). Phase 5.6, 8, 10, 33-MVP remaining (50%).**
+**Sprint 1 progress: Phases 6 + 7 + 7.5 + 8 done (60% of sprint). Phase 5.6, 10, 33-MVP remaining (40%).**
 
 ### Sprint 2 (Q2) — "Indie Pro Launch" → unlocks T2
 
@@ -477,6 +477,7 @@ The foundation everything else builds on. No further work needed.
 - **Phase 6** — Active Guardrail (Constraints + Blast-Radius + Failed Approaches + save_concept) · deps: 5 ✓ · ✅ **Done 2026-05-19**
 - **Phase 7** — Audit & Traceability (log.jsonl + evidence + lint + evolution + secret redaction) · deps: 6 ✓ · ✅ **Done 2026-05-19**
 - **Phase 7.5** — Knowledge Quality Foundation (quality scoring + org-constraint DSL) · deps: 6 ✓, 7 ✓ · ✅ **Done 2026-05-19**
+- **Phase 8** — Visual & Browseable Knowledge Graph (cortex graph + cortex serve) · deps: 3 ✓ · ✅ **Done 2026-05-19**
 
 ### Wave 1 — Start Immediately (only Wave 0 required)
 

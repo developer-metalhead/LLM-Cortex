@@ -780,6 +780,11 @@ export class KnowledgeManager {
     return computeQuality(entity);
   }
 
+  // Phase 8 — expose raw state for the graph builder (read-only projection).
+  async getState(): Promise<KnowledgeState> {
+    return this.readState();
+  }
+
   // Phase 7.5 — list every entity with its quality breakdown, sorted by score
   // ascending. Used by cortex audit quality to surface the bottom decile.
   async listEntityQuality(): Promise<Array<{ name: string; sourceFile?: string; breakdown: QualityBreakdown }>> {

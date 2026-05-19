@@ -19,6 +19,8 @@ import { runHookInstall } from "./hook.js";
 import { runLog } from "./log.js";
 import { runLint } from "./lint.js";
 import { runEvolution } from "./evolution.js";
+import { runGraph } from "./graph.js";
+import { runServe } from "../server/index.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -210,6 +212,39 @@ program
       format: options.format,
       replay: !!options.replay,
       at: options.at,
+    });
+  });
+
+program
+  .command("graph")
+  .description("Emit a Mermaid or JSON representation of the knowledge graph")
+  .option("-s, --scope <entity>", "Focus subgraph around this entity")
+  .option("-d, --depth <n>", "Max hops from scope (default: unlimited)", parseInt)
+  .option("-c, --include-concepts", "Include concept nodes")
+  .option("-f, --format <fmt>", "Output format: mermaid (default) or json", "mermaid")
+  .option("-o, --output <path>", "Write output to file instead of stdout")
+  .action(async (options) => {
+    const code = await runGraph(projectRoot, {
+      scope: options.scope,
+      depth: options.depth,
+      includeConcepts: !!options.includeConcepts,
+      format: options.format,
+      output: options.output,
+    });
+    process.exitCode = code;
+  });
+
+program
+  .command("serve")
+  .description("Start a local graph viewer (127.0.0.1 only by default)")
+  .option("-p, --port <n>", "Port to listen on (default: 7842)", parseInt)
+  .option("--host <host>", "Bind host (default: 127.0.0.1)")
+  .option("-c, --include-concepts", "Include concept nodes in the graph")
+  .action(async (options) => {
+    await runServe(projectRoot, {
+      port: options.port,
+      host: options.host,
+      includeConcepts: !!options.includeConcepts,
     });
   });
 
