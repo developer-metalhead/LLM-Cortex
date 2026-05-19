@@ -217,6 +217,14 @@ export class CortexMCPServer {
             { name: "entity", description: "The entity whose dependencies to list", required: true },
           ],
         },
+        {
+          name: "onboard",
+          description: "Generate a tailored onboarding tour of the codebase architecture.",
+          arguments: [
+            { name: "audience", description: "Target audience: 'junior', 'senior', or 'domain-expert' (default: 'junior')", required: false },
+            { name: "depth", description: "Detail level: 'quick' or 'thorough' (default: 'quick')", required: false }
+          ]
+        },
       ],
     }));
 
@@ -459,6 +467,32 @@ export class CortexMCPServer {
           messages: [{ role: "user", content: { type: "text",
             text: `Call the impact_analysis tool with entity='${entity}', direction='outbound'. Present the hop-ranked list of dependencies.`,
           }}],
+        };
+      }
+      if (request.params.name === "onboard") {
+        const audience = request.params.arguments?.audience;
+        const depth = request.params.arguments?.depth;
+        
+        if (!audience || !depth) {
+          return {
+            description: "Generate a tailored onboarding tour — asks for audience and depth.",
+            messages: [{ role: "user", content: { type: "text", 
+              text: "Ask the user: 'Which audience (junior, senior, domain-expert) and depth (quick, thorough) would you like for your onboarding tour?' Briefly explain the differences. Wait for their reply, then call the cortex_onboard tool with their choices." 
+            }}],
+          };
+        }
+        
+        return {
+          description: `Generate a tailored onboarding tour for ${audience} (${depth})`,
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Run the onboard guide generator. Audience: ${audience}, Depth: ${depth}. Call the cortex_onboard tool to compile the guide. DO NOT use read_knowledge_index or read_entity for this task — you must use cortex_onboard. Once you receive the markdown guide from the tool, you MUST write it directly to a file named '.knowledge/onboarding_${audience}_${depth}.md' in the workspace using your file-writing tool (e.g. write_to_file) to ensure it is successfully synced to the user's physical repository.`,
+              },
+            },
+          ],
         };
       }
       throw new Error(`Prompt not found: ${request.params.name}`);
@@ -854,6 +888,29 @@ export class CortexMCPServer {
             properties: {},
           },
         },
+        {
+          name: "cortex_onboard",
+          description: "Generate a tailored, PageRank-centrality prioritized onboarding guide for a given audience and depth. Use this INSTEAD of read_knowledge_index when the user asks for an architectural tour, summary, or onboarding guide. If the user has not explicitly chosen an audience and depth, do not guess. Ask them to choose before calling this tool. IMPORTANT: Once you receive the guide, you MUST write it directly to a file named '.knowledge/onboarding_[audience]_[depth].md' using your own file-writing tool (e.g. write_to_file) to ensure it is successfully synced to the user's physical workspace.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              audience: { type: "string", enum: ["junior", "senior", "domain-expert"], description: "Target audience (default: 'junior')" },
+              depth: { type: "string", enum: ["quick", "thorough"], description: "walkthrough depth (default: 'quick')" }
+            }
+          }
+        },
+        {
+          name: "cortex_find",
+          description: "Perform category-scoped sub-millisecond search across active knowledge (entities, concepts, parents) with exact name priority. Use this INSTEAD of grep or read_knowledge_index when the user asks to find specific concepts or logic.",
+          inputSchema: {
+            type: "object",
+            required: ["query"],
+            properties: {
+              query: { type: "string", description: "Search query string" },
+              type: { type: "string", enum: ["entity", "concept", "parent", "all"], description: "Category filter (default: 'all')" }
+            }
+          }
+        },
       ],
     }));
 
@@ -1004,6 +1061,43 @@ export class CortexMCPServer {
         }
         if (lines.length === 0) lines.push("No entities were refreshed.");
         return { content: [{ type: "text", text: lines.join("\n") }] };
+      }
+      if (name === "cortex_onboard") {
+        const audience = ((args as any)?.audience || "junior") as "junior" | "senior" | "domain-expert";
+        const depth = ((args as any)?.depth || "quick") as "quick" | "thorough";
+        const { OnboardingManager } = await import("../knowledge/onboarding.js");
+        const om = new OnboardingManager(this.knowledge);
+        const guide = await om.generateOnboarding({ audience, depth });
+        const output = `Successfully exported to .knowledge/onboarding_${audience}_${depth}.md\n\n${guide}`;
+        return {
+          content: [{ type: "text", text: output }],
+        };
+      }
+
+      if (name === "cortex_find") {
+        const query = (args as any)?.query;
+        const type = ((args as any)?.type || "all") as "entity" | "concept" | "parent" | "all";
+        if (typeof query !== "string" || !query.trim()) {
+          return {
+            content: [{ type: "text", text: "cortex_find requires a non-empty 'query' string parameter." }],
+            isError: true,
+          };
+        }
+        const { FindManager } = await import("../knowledge/find.js");
+        const fm = new FindManager(this.knowledge);
+        const results = await fm.find(type, query);
+        if (results.length === 0) {
+          return {
+            content: [{ type: "text", text: "No matches found." }],
+          };
+        }
+        const lines = results.map(r => {
+          const typeLabel = r.type === "parent" ? "📁 parent" : r.type === "concept" ? "💡 concept" : "📄 entity";
+          return `* [[${r.name}]] (${typeLabel})\n  ${r.preview}`;
+        });
+        return {
+          content: [{ type: "text", text: `Found ${results.length} matches:\n\n` + lines.join("\n\n") }],
+        };
       }
 
       if (name === "ingest" || name === "get_pending_changes") {

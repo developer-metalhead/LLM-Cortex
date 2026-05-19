@@ -26,7 +26,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 | Bucket | Count | Notes |
 |---|---|---|
 | ✅ Done | 11 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, **8**, **9** (Phase 9 verified 2026-05-19) |
-| 🚧 In Progress | 0 | — |
+| 🚧 In Progress | 1 | Phase 10 (Onboarding & Guided Reading) |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~24 | Phases 13-20.24, drive differentiation |
 | ⏳ Planned — Enterprise | ~17 | Phases 22-32 family |
@@ -70,7 +70,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ✅ **Done 2026-05-19** |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
-| 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ⏳ Planned |
+| 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | 🚧 In Progress |
 
 **Why this order**: 7 → 7.5 because quality scoring builds on audit. 5.6 in parallel (no deps). 8 → 10 because onboarding consumes the graph.
 
@@ -331,12 +331,12 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 - ✅ **Phase 7.5 — COMPLETE (verified 2026-05-19, 42/42 Phase 7.5 tests passing)**
 - Phase 33-MVP (stripped Deep Bootstrap)
 - Phase 5.6 (watchdog)
-- Phase 8 (visual graph)
-- Phase 10 (onboarding)
+- ✅ **Phase 8 — COMPLETE (verified 2026-05-19, 22/22 Phase 8 tests passing)**
+- 🚧 **Phase 10 (onboarding) — IN PROGRESS**
 
 **Outcome**: Free tier becomes genuinely useful. Adoption begins.
 
-**Sprint 1 progress: Phases 6 + 7 + 7.5 + 8 done (60% of sprint). Phase 5.6, 10, 33-MVP remaining (40%).**
+**Sprint 1 progress: Phases 6 + 7 + 7.5 + 8 + 9 done (70% of sprint). Phase 10 in progress. Phase 5.6, 33-MVP remaining.**
 
 > Phase 9 (Impact Preview) shipped ahead of schedule in Sprint 1 (2026-05-19). `cortex impact`, `cortex deps`, `impact_analysis` MCP tool + prompts all live.
 
@@ -487,7 +487,7 @@ The foundation everything else builds on. No further work needed.
 These can be picked up today; no planned phase needs to land first.
 
 - **Phase 5.6** — Daemon Watchdog & Self-Healing · deps: 5 ✓
-- **Phase 8** — Visual Knowledge Graph · deps: 3 ✓
+- ~~**Phase 8**~~ — moved to Wave 0 (✅ Done 2026-05-19)
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
 - **Phase 20.23** — Tool-Use Augmented Synthesis · deps: 2 ✓
@@ -620,10 +620,10 @@ These can be picked up today; no planned phase needs to land first.
 
 | Wave | Phases ready | Cumulative count | Tier(s) unlocked |
 |---|---|---|---|
-| 0 | **9 (done — incl. 6, 7, 7.5 verified 2026-05-19)** | 9 | T0 partially achieved |
-| 1 | 15 new (most of original Wave 3 promoted here) | 23 | T0 (via 33-MVP) + most of T1 features |
-| 2 | 6 new | 29 | T1 complete; T2 starts |
-| 3 | 1 new | 30 | research feedback loop |
+| 0 | **11 (done — incl. 6, 7, 7.5, 8, 9 verified 2026-05-19)** | 11 | T0 partially achieved |
+| 1 | 13 new (most of original Wave 3 promoted here) | 24 | T0 (via 33-MVP) + most of T1 features |
+| 2 | 6 new | 30 | T1 complete; T2 starts |
+| 3 | 1 new | 31 | research feedback loop |
 | 4 | 9 new | 40 | T2 / research wave 1 |
 | 5 | 8 new | 48 | T3 base; research wave 2 |
 | 6 | 5 new | 53 | T3 features; 33-Full |

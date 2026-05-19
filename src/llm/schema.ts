@@ -40,6 +40,7 @@ export const SynthesisSchema = z.object({
   concepts: z.array(z.object({
     name: z.string(),
     description: z.string(),
+    relationships: z.array(RelationshipSchema).optional(),
     failedApproaches: z.array(FailedApproachSchema).max(10).optional(),
   })),
   warnings: z.array(z.string()),

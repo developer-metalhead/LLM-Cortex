@@ -98,6 +98,7 @@ The \`### CURRENT CONTEXT\` section contains **full descriptions** of every exis
 **Concept** = an abstract pattern, strategy, or system that spans multiple entities.
 - Has no single code home; it's a design decision or shared invariant.
 - Examples: \`Authentication Strategy\`, \`Event Sourcing\`, \`Multi-Tenant Isolation\`, \`Retry Policy\`.
+- **Parent-Summary Concepts (Module Summaries)**: When a directory contains >= 5 synthesized entities, you MUST emit a parent-summary concept keyed by the directory path (e.g. \`src/auth/\`) with \`relationships[]\` of kind \`parent_of\` pointing at each child entity. Provide a high-level summary of the module's role in ~3 sentences in its description.
 - Concepts only appear when a *real architectural pattern* is visible. Don't invent concepts to seem thorough.
 
 If you're unsure whether something is an entity or concept, ask: *"Can I point at a single file for this?"* Yes → entity. No → concept.

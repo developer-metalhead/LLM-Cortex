@@ -35,6 +35,7 @@ type EntityRecord = {
 
 type ConceptRecord = {
   description: string;
+  relationships?: Relationship[];
   failedApproaches?: FailedApproach[];
   lastRefined: string;
 };
@@ -94,6 +95,10 @@ export class KnowledgeManager {
   constructor(rootDir: string) {
     this.projectRoot = rootDir;
     this.knowledgeDir = path.join(rootDir, ".knowledge");
+  }
+
+  get projectRootPath(): string {
+    return this.projectRoot;
   }
 
   async exists(): Promise<boolean> {
@@ -555,10 +560,52 @@ export class KnowledgeManager {
       const existing = state.concepts[concept.name];
       state.concepts[concept.name] = {
         description: concept.description,
+        relationships: concept.relationships ?? existing?.relationships,
         failedApproaches: concept.failedApproaches ?? existing?.failedApproaches,
         lastRefined: timestamp,
       };
       await this.renderConceptFile(concept.name, state.concepts[concept.name]);
+    }
+
+    // Auto-emit parent summaries for directories with >= 5 entities
+    // And cleanup old parent summaries that dropped below 5 entities
+    const dirGroups: Record<string, string[]> = {};
+    for (const [name, entity] of Object.entries(state.entities)) {
+      if (entity.sourceFile) {
+        const dir = path.dirname(entity.sourceFile).replace(/\\/g, "/") + "/";
+        if (dir && dir !== "./" && dir !== "." && dir !== "/") {
+          if (!dirGroups[dir]) dirGroups[dir] = [];
+          dirGroups[dir].push(name);
+        }
+      }
+    }
+
+    for (const [conceptName, concept] of Object.entries(state.concepts)) {
+      if (conceptName.endsWith("/") && concept.relationships?.some(r => r.kind === "parent_of")) {
+        const childEntities = dirGroups[conceptName];
+        if (!childEntities || childEntities.length < 5) {
+          delete state.concepts[conceptName];
+          const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeFilename(conceptName)}.md`);
+          try { await fs.unlink(conceptPath); } catch {}
+        }
+      }
+    }
+    for (const [dir, childEntities] of Object.entries(dirGroups)) {
+      if (childEntities.length >= 5) {
+        const conceptName = dir;
+        const existing = state.concepts[conceptName];
+        const newRels: Relationship[] = childEntities.map(child => ({
+          target: child,
+          kind: "parent_of"
+        }));
+        state.concepts[conceptName] = {
+          description: existing?.description ?? `Parent summary for the \`${dir}\` module directory.`,
+          relationships: newRels,
+          failedApproaches: existing?.failedApproaches,
+          lastRefined: timestamp
+        };
+        await this.renderConceptFile(conceptName, state.concepts[conceptName]);
+      }
     }
 
     // Write state.json FIRST — it's the canonical store. If a subsequent log
@@ -651,7 +698,12 @@ export class KnowledgeManager {
       failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
     }
 
-    const content = `# Concept: ${name}\n\n${record.description}\n${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
+    let relsLine = "";
+    if (record.relationships?.length) {
+      relsLine = "\n### Relationships\n" + record.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n") + "\n";
+    }
+
+    const content = `# Concept: ${name}\n\n${record.description}\n${relsLine}${failedApproachesLine}\n---\n*Last Refined: ${record.lastRefined}*\n`;
     await fs.writeFile(conceptPath, content);
   }
 
@@ -669,27 +721,13 @@ export class KnowledgeManager {
     const existing = state.concepts[concept.name];
     state.concepts[concept.name] = {
       description: concept.description,
+      relationships: concept.relationships ?? existing?.relationships,
       // Same merge semantics as saveSynthesis: undefined preserves prior value.
       failedApproaches: concept.failedApproaches ?? existing?.failedApproaches,
       lastRefined: timestamp,
     };
 
-    // Relationships passed to save_concept are rendered into the file directly
-    // but not stored in state — ConceptRecord doesn't carry relationships.
-    // Render manually here rather than via renderConceptFile so the
-    // relationships line is included.
-    const safeName = safeFilename(concept.name);
-    const conceptPath = path.join(this.knowledgeDir, "concepts", `${safeName}.md`);
-    const relsLine = concept.relationships?.length
-      ? concept.relationships.map((r) => `- **${r.kind}:** [[${r.target}]]`).join("\n")
-      : "_(none)_";
-    const record = state.concepts[concept.name];
-    let failedApproachesLine = "";
-    if (record.failedApproaches?.length) {
-      failedApproachesLine = "\n### Failed Approaches\n" + record.failedApproaches.map((fa) => `- **${fa.summary}**: ${fa.reason}`).join("\n") + "\n";
-    }
-    const content = `# Concept: ${concept.name}\n\n${record.description}\n\n### Relationships\n${relsLine}\n${failedApproachesLine}\n---\n*Last Refined: ${timestamp}*\n`;
-    await fs.writeFile(conceptPath, content);
+    await this.renderConceptFile(concept.name, state.concepts[concept.name]);
 
     await this.writeState(state);
     await this.updateIndex();
@@ -719,37 +757,97 @@ export class KnowledgeManager {
     const conceptNames = Object.keys(state.concepts).sort();
     const entityNames = Object.keys(state.entities).sort();
 
+    // Identify parent summaries
+    const parentSummaries = conceptNames.filter(name => {
+      const c = state.concepts[name];
+      return name.endsWith("/") || (c.relationships && c.relationships.some(r => r.kind === "parent_of"));
+    });
+
+    const regularConcepts = conceptNames.filter(name => !parentSummaries.includes(name));
+
+    // Keep track of which entities are rendered as children of parent summaries
+    const childEntities = new Set<string>();
+    for (const pName of parentSummaries) {
+      const c = state.concepts[pName];
+      if (c.relationships) {
+        for (const r of c.relationships) {
+          if (r.kind === "parent_of") {
+            childEntities.add(r.target);
+          }
+        }
+      }
+    }
+
     let content = `# Project Cortex: Knowledge Index\n\n`;
     content += `*Auto-generated. Read this first. Use \`read_entity\` / \`read_concept\` to drill into any name below.*\n\n`;
 
     content += `## Core Concepts\n\n`;
-    if (conceptNames.length === 0) {
+    if (regularConcepts.length === 0) {
       content += `_No concepts yet._\n\n`;
     } else {
-      for (const name of conceptNames) {
+      for (const name of regularConcepts) {
         const c = state.concepts[name];
-        content += `### [[${name}]]\n${c.description}\n\n`;
+        let rels = "";
+        if (c.relationships?.length) {
+          rels = `\n_Relationships:_ ${c.relationships.map((r) => `[[${r.target}]]`).join(", ")}`;
+        }
+        content += `### [[${name}]]\n${c.description}${rels}\n\n`;
       }
     }
 
     content += `## Active Entities\n\n`;
-    if (entityNames.length === 0) {
-      content += `_No entities yet._\n\n`;
-    } else {
-      for (const name of entityNames) {
+    
+    // Render parent summaries first!
+    if (parentSummaries.length > 0) {
+      content += `### Module Summaries\n\n`;
+      for (const pName of parentSummaries) {
+        const c = state.concepts[pName];
+        content += `#### [[${pName}]]\n${c.description}\n`;
+        
+        // Render child clusters
+        const children = (c.relationships || [])
+          .filter(r => r.kind === "parent_of" && state.entities[r.target])
+          .map(r => r.target)
+          .sort();
+          
+        if (children.length > 0) {
+          content += `\n_Child Entities:_\n`;
+          for (const child of children) {
+            const e = state.entities[child];
+            const source = e.sourceFile ? ` — \`${e.sourceFile}\`` : "";
+            const stale = e.staleSince ? ` **[STALE]**` : "";
+            const breakdown = computeQuality(e);
+            const quality = ` ▸ quality: ${formatScore(breakdown.score)}`;
+            const indexSummary = extractRoleSection(e.description);
+            content += `- **[[${child}]]**${source}${quality}${stale}\n  ${indexSummary.replace(/\n/g, "\n  ")}\n`;
+          }
+          content += `\n`;
+        } else {
+          content += `_No tracked child entities._\n\n`;
+        }
+      }
+    }
+
+    // Render other independent entities
+    const independentEntities = entityNames.filter(name => !childEntities.has(name));
+    if (independentEntities.length > 0) {
+      if (parentSummaries.length > 0) {
+        content += `### Independent Entities\n\n`;
+      }
+      for (const name of independentEntities) {
         const e = state.entities[name];
         const source = e.sourceFile ? ` — \`${e.sourceFile}\`` : "";
         const rels = e.relationships.length
           ? `\n_Relationships:_ ${e.relationships.map((r) => `[[${r.target}]]`).join(", ")}`
           : "";
         const stale = e.staleSince ? ` **[STALE]**` : "";
-        // Phase 7.5 quality badge — derived, never persisted. Same call site
-        // for every entity so the formula stays consistent with audit + MCP.
         const breakdown = computeQuality(e);
         const quality = ` ▸ quality: ${formatScore(breakdown.score)}`;
         const indexSummary = extractRoleSection(e.description);
         content += `### [[${name}]]${source}${quality}${stale}\n${indexSummary}${rels}\n\n`;
       }
+    } else if (entityNames.length === 0) {
+      content += `_No entities yet._\n\n`;
     }
 
     await fs.writeFile(path.join(this.knowledgeDir, "index.md"), content);

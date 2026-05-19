@@ -22,6 +22,8 @@ import { runEvolution } from "./evolution.js";
 import { runGraph } from "./graph.js";
 import { runImpact, runDeps } from "./impact.js";
 import { runServe } from "../server/index.js";
+import { runOnboard } from "./onboard.js";
+import { runFind } from "./find.js";
 
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
@@ -297,6 +299,23 @@ program
   .description("Install Git pre-commit hook to remind about architectural sync")
   .action(async () => {
     await runHookInstall(projectRoot);
+  });
+
+program
+  .command("onboard")
+  .description("Generate a tailored onboarding tour of the codebase architecture")
+  .option("-a, --audience <audience>", "Target audience: 'junior', 'senior', or 'domain-expert' (default: 'junior')")
+  .option("-d, --depth <depth>", "Detail level: 'quick' or 'thorough' (default: 'quick')")
+  .action(async (options) => {
+    await runOnboard(projectRoot, options);
+  });
+
+program
+  .command("find <query>")
+  .description("Perform category-scoped sub-millisecond search across active knowledge")
+  .option("-t, --type <type>", "Limit search to 'entity', 'concept', 'parent', or 'all' (default: 'all')")
+  .action(async (query, options) => {
+    await runFind(projectRoot, query, options);
   });
 
 program.parse();
