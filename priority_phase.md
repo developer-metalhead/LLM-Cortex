@@ -9,9 +9,9 @@
 If you have limited bandwidth, ship in this order. Each tier's revenue ceiling depends on the prior tiers being live:
 
 1. **T0 — Production-Critical** (P0 bug fixes): `33-MVP` *(✅ Phase 6 already complete)*
-2. **T1 — Free Tier** (drives adoption, $0 ARPU): ✅ `7` done → `7.5` → `7.10` → `5.6` → `8` → `10`
-3. **T2 — Indie Pro** ($10-50/mo): `9` → `13` → `13.3` → `13.4` → `13.5` → `13.6` → `14` → `33.1` → `33-Full` → `33.2`
-4. **T3 — Team/Startup** ($500/seat, 5-50 seats): `11` → `12` → `21` → `22` → `23` → `28` → `30`
+2. **T1 — Free Tier** (drives adoption, $0 ARPU): ✅ `7` done → `7.5` → `7.10` → `5.6` → `8` → `10` → `10.2` → `10.3` → `10.4` → `10.5` → `10.6` → `10.7`
+3. **T2 — Indie Pro** ($10-50/mo): `9` → `13` → `13.3` → `13.4` → `13.5` → `13.6` → `13.7` → `14` → `33.1` → `33-Full` → `33.2`
+4. **T3 — Team/Startup** ($500/seat, 5-50 seats): `11` → `12` → `12.10` → `12.11` → `12.12` → `12.13` → `12.14` → `21` → `22` → `23` → `28` → `30`
 5. **T4 — Mid-Market** ($1500/seat, 50-500 seats): `25` → `26` → `26.1` → `26.3` → `29` → `31` → `32.1`
 6. **T5 — Enterprise** ($100K-$1M ACV): `24` → `27` → `26.2` → `26.4` → `29.1` → `29.2` → `25.1` → `32` → `32.2`
 7. **T6 — Cortex Pro Add-Ons** (separate paid SKUs): Pro Modules 1-6 (in customer-demand order)
@@ -75,7 +75,12 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
 | 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
-| 5.1 | **Phase 10.2** — Smart Rule File Patching | Automatically inject index location and brevity instructions in .cursorrules | Phase 10 ✓, Phase 13.2 |
+| 5.1 | **Phase 10.2** — Smart Rule File Patching | Automatically inject index location and brevity instructions in .cursorrules | Phase 10 ✓, Phase 13.2 | ⏳ Planned |
+| 5.2 | **Phase 10.3** — Zero-Token Startup & AI Ignore Scaffolding | Configure ignore files to prevent auto-loading `.knowledge/` at startup | Phase 10 ✓ | ⏳ Planned |
+| 5.3 | **Phase 10.4** — Managed `CLAUDE.md` & AI Rules Orchestration | Create/patch `CLAUDE.md` to guide AI on using MCP tools and commands | Phase 10.3 | ⏳ Planned |
+| 5.4 | **Phase 10.5** — Attention-Curve Rule Reordering & Position Optimization | Relocates critical rules (MUST, NEVER) to high-attention zones of files | Phase 10.4 | ⏳ Planned |
+| 5.5 | **Phase 10.6** — Compaction-Safe Decision Anchoring & Continuity Breadcrumbs | Injects active tasks and last 3 decisions into startup prompt pointers | Phase 10.3 | ⏳ Planned |
+| 5.6 | **Phase 10.7** — Rules File Size Guardrail & Auto-Splitting | Emits lint warning when rules exceed 200 lines and splits into on-demand files | Phase 10.4 | ⏳ Planned |
 | 6 | **Phase 4.6** — Developer API & Client SDKs | Programmatic client access for custom workflows, scripts, and hooks | Unlocks automation | ⏳ Planned |
 | 6.1 | **Phase 4.8** — Persona-Specific MCP Prompts | Exposes filtered graph views and design rules matching target AI personas | Phase 7.5 ✓ | ⏳ Planned |
 
@@ -107,6 +112,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.5 | **Phase 13.4** — API Budget Gating & Runaway Safeguards | Hard limits on session spending and sync count to avoid API budget draining | Phase 13.3 | ⏳ Planned |
 | 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 | ⏳ Planned |
 | 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | ⏳ Planned |
+| 2.8 | **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression | Intercepts file reads to return diffs and skeletons (Delta Mode & Structure Map) | Phase 10.3 | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
 | 4.1 | **Phase 4.7** — OpenAI-Compatible REST Gateway | Proxy local RAG queries to any standard OpenAI-compatible client | Phase 33.1 | ⏳ Planned |
@@ -141,6 +147,11 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.6 | **Phase 12.7** — Smart Code Outliner & Signature-Only Reader | Strips code bodies to return outline view of files (JS, TS, Py, Go, Rs) | Phase 12.6 |
 | 2.7 | **Phase 12.8** — Log Deduplicator & Web Fetch Parser | Collapses identical log counts; cleans up curl HTML responses to MD | Phase 12.5 |
 | 2.8 | **Phase 12.9** — Architectural Graph Diffing | Graph diffing between commits/branches to show structural design changes | Phase 7 (T1), Phase 8 (T1) | ⏳ Planned |
+| 2.9 | **Phase 12.10** — Baseline-Driven Quality Gates | Gates PR merges against checked-in quality baseline thresholds in CI/CD | Phase 7.5 (T1), Phase 12 | ⏳ Planned |
+| 2.10 | **Phase 12.11** — Architectural Changelog Generator | Generates high-level structural logs between tags for release docs | Phase 7 (T1), Phase 12 | ⏳ Planned |
+| 2.11 | **Phase 12.12** — Automated MCP Compliance & Live Integration Suite | CI-runnable JSON-RPC compliance tests verifying tool/resource schema | Phase 12 | ⏳ Planned |
+| 2.12 | **Phase 12.13** — Architecturally Aware Commit Scope Linting | Extends commitlint to block commits using non-existent scope entities | Phase 7.5 (T1), Phase 12.3 | ⏳ Planned |
+| 2.13 | **Phase 12.14** — Agent Token-Use Discovery & Anti-Pattern Auditor | Scans past session transcripts for tool-bypass/waste behaviors | Phase 12.6, Phase 13 | ⏳ Planned |
 | 3 | **Phase 5.7** — Scheduled Operations & Cron Engine | Background scans, automated maintenance | Phase 5.6 (T1) |
 | 4 | **Phase 5.8** — Multi-Operator Session Coordination | When 2 devs use Cortex simultaneously, no conflicts | Phase 5.6 (T1), Phase 25 partial |
 | 4.1 | **Phase 5.9** — Shell Status Prompt Integration | Output quality score and savings in terminal prompt; cached for speed | Phase 5.6 (T1), Phase 13.2 |
@@ -530,6 +541,8 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 13.3** — Token & Cost Savings Ledger & Analytics · deps: 13 ✓
 - **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
+- **Phase 10.3** — Zero-Token Startup & AI Ignore Scaffolding · deps: 10 ✓
+- **Phase 10.6** — Compaction-Safe Decision Anchoring & Continuity Breadcrumbs · deps: 10.3 ✓
 - **Phase 11** — Monorepo Federation · deps: 3 ✓
 - **Phase 20.23** — Tool-Use Augmented Synthesis · deps: 2 ✓
 - **Phase 33-MVP** 🅼 — Stripped Deep Bootstrap · deps: 2 ✓ (full version waits for Wave 5-6)
@@ -553,6 +566,10 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 13** — Token Economics & Context Packs · deps: 8, 10
 - **Phase 13.4** — API Budget Gating & Runaway Safeguards · deps: 13.3
 - **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker · deps: 10
+- **Phase 10.4** — Managed `CLAUDE.md` & AI Rules Orchestration · deps: 10.3
+- **Phase 10.5** — Attention-Curve Rule Reordering & Position Optimization · deps: 10.4
+- **Phase 10.7** — Rules File Size Guardrail & Auto-Splitting · deps: 10.4
+- **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression · deps: 10.3
 - **Phase 17.1** — Multi-Model Architectural Debate · deps: 33.1
 - **Phase 20.5.1** — Automated ADR Engine · deps: 20.5
 - **Phase 20.6** — MemGPT Hierarchical Memory Tiering · deps: 4 ✓, 8, 10
@@ -560,6 +577,11 @@ These can be picked up today; no planned phase needs to land first.
 
 ### Wave 3 — After 8, 10, 12 are also done (now slim — most of original Wave 3 promoted to Wave 1/2)
 
+- **Phase 12.10** — Baseline-Driven Quality Gates · deps: 7.5 ✓, 12
+- **Phase 12.11** — Architectural Changelog Generator · deps: 7 ✓, 12
+- **Phase 12.12** — Automated MCP Compliance & Live Integration Suite · deps: 12
+- **Phase 12.13** — Architecturally Aware Commit Scope Linting · deps: 7.5 ✓, 12.3
+- **Phase 12.14** — Agent Token-Use Discovery & Anti-Pattern Auditor · deps: 12.6, 13
 - **Phase 15** — CI Feedback Signal Loop · deps: 12, 7 ✓
 - **Phase 13.6** — Proximity Reranking & Smart Snippets · deps: 13.5
 

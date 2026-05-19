@@ -1603,6 +1603,132 @@ Implement a target-agnostic rule patching utility in the `IDESetupLayer`.
 
 ---
 
+## 🎓 Phase 10.3: Zero-Token Startup & AI Ignore Scaffolding — ⏳ Planned
+
+**Layman's Terms**
+When an AI assistant (like Claude Code, Cursor, or Copilot) starts up, it reads and indexes files in your project. If you have a large architectural knowledge base under `.knowledge/`, the AI reads all of it immediately — burning thousands of tokens before you even type your first line of code. Phase 10.3 automatically configures your AI's ignore files (`.claudeignore`, `.cursorignore`, `.copilotignore`, `.windsurfignore`, and `.cfignore`) to keep `.knowledge/` out of the startup index. Because the Cortex MCP server runs locally, the AI can still read any entity or concept on demand via MCP tools at zero startup cost.
+
+**Technical Terms**
+- **Ignore Scaffolder**: During `cortex init` or `cortex setup`, automatically inspect the project root and look for:
+  - `.claudeignore` (Claude Code)
+  - `.cursorignore` (Cursor)
+  - `.copilotignore` (GitHub Copilot)
+  - `.windsurfignore` (Windsurf)
+  - `.cfignore` (Cline / Continue)
+  - `.gitignore` (standard fallback)
+- **Ignore Ingestion**: If these files exist or are initialized, append `.knowledge/` (and `.cortex/` / `cortex.log` if applicable) to them.
+- **MCP Pass-Through**: Ensure the local `CortexMCPServer` bypasses the ignore logic (which it does naturally since it reads the filesystem directly rather than going through the editor's file API), allowing the AI to query files inside `.knowledge/` on demand while paying 0 tokens during startup auto-indexing.
+
+**Definition of Ready (DoR)**
+- Phase 10.2 (Smart Rule File Patching) is completed.
+
+**Definition of Done (DoD)**
+- Running `cortex init` or `cortex setup` automatically detects active IDE folders and populates the respective ignore files with `.knowledge/` and related folders.
+- Testing verifies that the ignore entries are appended cleanly without duplicating existing lines.
+
+**Pros & Cons**
+- ✅ **Pros**: Keeps startup footprint minimal (~0 tokens for metadata) while maintaining 100% on-demand coverage via MCP.
+- ❌ **Cons**: Direct manual inspection of the `.knowledge/` files inside the editor might be hidden unless explicitly searched or configured in display settings.
+
+---
+
+## 🎓 Phase 10.4: Managed `CLAUDE.md` & AI Rules Orchestration — ⏳ Planned
+
+**Layman's Terms**
+Claude Code and other tools look for a `CLAUDE.md` file at session startup to learn the commands, build patterns, and design rules for the repository. Phase 10.4 auto-generates or updates `CLAUDE.md` (and related rules files) to teach the AI how to use Project Cortex. It instructs the AI to query the `project-cortex` MCP tools *first* when asked architectural questions instead of wasting tokens by grep-searching source files, and lists common commands (like `cortex status` or `cortex ingest`) for easy developer reference.
+
+**Technical Terms**
+- **`CLAUDE.md` Manager**: A module inside `IDESetupLayer` that handles creating and updating `CLAUDE.md`.
+- **Command Indexing**: Formats and exposes common commands (`npm run dev`, `npm test`, `cortex ingest`, `cortex status`) in the standard `CLAUDE.md` layout.
+- **MCP Instructions Injection**: Injects instructions directing the assistant to:
+  * Call `read_knowledge_index` first before doing any global file scans.
+  * Use `before_change` before writing code or modifying structures.
+  * Run `cortex ingest` or `/ingest_cortex` after modifying files.
+- **Telegraphic / Brevity Constraints**: Integrates with the Brevity Engine (Phase 13.2) to specify the expected token-optimized output style.
+
+**Definition of Ready (DoR)**
+- Phase 10.3 (Zero-Token Startup) is completed.
+
+**Definition of Done (DoD)**
+- Running `cortex init` or `cortex setup` generates a compliant `CLAUDE.md` in the project root if one does not exist, or updates it with the Project Cortex marker block.
+- Standard IDE commands list is parsed and injected.
+
+**Pros & Cons**
+- ✅ **Pros**: Seamlessly guides external AI agents to use the optimized Cortex pathways without manual intervention.
+- ❌ **Cons**: Requires keeping the generated `CLAUDE.md` in sync with standard project command scripts.
+
+---
+
+## 🎓 Phase 10.5: Attention-Curve Rule Reordering & Position Optimization — ⏳ Planned
+
+**Layman's Terms**
+AI models read text like humans do: they remember the beginning and the end of a document very well, but they often forget details sitting in the middle (known as the U-shaped attention curve). Phase 10.5 analyzes your repository rules files (like `CLAUDE.md` and `.cursorrules`) and automatically reorganizes them. It detects critical directives containing warning keywords like MUST, NEVER, and ALWAYS, and shifts them to the high-attention zones (the top and bottom 15% of the file) while placing less critical context in the middle. This keeps the AI highly compliant with your constraints.
+
+**Technical Terms**
+- **Attention Curve Scorer**: Evaluates the text layout of rule files (`CLAUDE.md`, `.cursorrules`) and maps instructions onto a percentage position (0% to 100%).
+- **Rule Classifier**: Extracts specific rules based on imperative keywords (MUST, MUST NOT, NEVER, ALWAYS, REQUIRED) and assigns priority scores.
+- **Dynamic Reordering**: Moves high-priority rules out of the "attention valley" (the 30% to 70% middle segment of the file) and groups them near the top (0% to 15%) or the bottom (85% to 100%) of their respective sections.
+- **Integrity Guard**: Ensures section headings and custom comments are not broken during reordering by parsing rule files as block-based trees.
+
+**Definition of Ready (DoR)**
+- Phase 10.4 (Rules Orchestration) is completed.
+
+**Definition of Done (DoD)**
+- A new command `cortex rules --optimize` parses `CLAUDE.md` and `.cursorrules`, relocates critical rules out of the 30-70% attention zone, and writes back the reordered rules.
+- Tests verify that reordering does not lose or corrupt any instructions, and successfully optimizes rule positioning.
+
+**Pros & Cons**
+- ✅ **Pros**: Greatly increases instruction adherence for long rules files without adding any token cost.
+- ❌ **Cons**: Modifies file layout which might surprise developers who expect rules to remain in the exact order they wrote them. Mitigated by keeping original copies backed up.
+
+---
+
+## 🎓 Phase 10.6: Compaction-Safe Decision Anchoring & Continuity Breadcrumbs — ⏳ Planned
+
+**Layman's Terms**
+When a long conversation with an AI assistant goes on, the chat history eventually fills up, forcing the AI to compact/summarize the chat. When this happens, the AI often forgets key architectural decisions you made, leading to mistakes later. Phase 10.6 automatically injects a short, permanent list of critical decisions and active tasks (compiled locally from the Cortex log) right back into the assistant's startup prompt. This acts as a set of "continuity breadcrumbs" so the AI instantly knows the exact state of the project even after a compaction or crash.
+
+**Technical Terms**
+- **Decision Extractor**: Reads `cortex.log` and active synthesis entries to identify marked design decisions ("chose X because Y").
+- **Anchored Context Hook**: Modifies the `inject-knowledge` hook in `setup.ts` to append a compact `[Session Continuity Pointer]` block to the context.
+- **Compaction Digest**: Stores a 1-sentence summary of the last 3 architectural decisions and active tasks (from `.knowledge/task.md` or equivalent) as an immutable system prompt rule, protecting them from compaction summarization pruning.
+
+**Definition of Ready (DoR)**
+- Phase 10.3 (Zero-Token Startup) is completed.
+
+**Definition of Done (DoD)**
+- The pre-tool hook injects the most recent 3 decisions and active task statuses from the project logs.
+- The model successfully references the breadcrumbs after simulation of context compaction.
+
+**Pros & Cons**
+- ✅ **Pros**: Eradicates "context drift" where models forget design directions across long coding sessions.
+- ❌ **Cons**: Burns a tiny token overhead (around 150-250 tokens) to carry the active breadcrumbs.
+
+---
+
+## 🎓 Phase 10.7: Rules File Size Guardrail & Auto-Splitting — ⏳ Planned
+
+**Layman's Terms**
+AI assistants read rule files like `CLAUDE.md` and `.cursorrules` in their entirety when starting a session. If these files get too long (e.g. over 200 lines), the AI might silently ignore the end of the file, or waste thousands of tokens on every single turn. Phase 10.7 adds a checker to Cortex. If your rule files exceed 200 lines, Cortex alerts you with a warning during code updates. It can also automatically split your rules, moving detailed development guidelines into smaller topic files (like `.cortex/rules/styling.md`) and instructing the AI to read them only when it is actually editing those files.
+
+**Technical Terms**
+- **Rule Size Scanner**: Measures the line count and token weight of rule files (`CLAUDE.md`, `.cursorrules`, etc.).
+- **Truncation Warning**: Emits an architectural lint warning if a rule file exceeds 200 lines (the common threshold where models start suffering from recall degradation or truncation).
+- **Rule Splitting Engine**: Extracts long guidelines into topic-specific rules files under `.cortex/rules/` and replaces the verbose inline text in `CLAUDE.md` with dynamic reference hooks (e.g., "For styling guidelines, run `cortex rule read styling`").
+
+**Definition of Ready (DoR)**
+- Phase 10.4 (Rules Orchestration) is completed.
+
+**Definition of Done (DoD)**
+- `cortex lint` emits a warning when `CLAUDE.md` or `.cursorrules` exceeds 200 lines.
+- `cortex rules --split` extracts sections into `.cortex/rules/` and references them in the main rules files.
+
+**Pros & Cons**
+- ✅ **Pros**: Keeps rule file context footprints minimal and prevents silent truncation of rules.
+- ❌ **Cons**: Splitting rules requires the AI agent to follow dynamic links, which adds a minor hop when the rules are needed.
+
+---
+
 ## 🗂️ Phase 11: Monorepo Federation — ⏳ Planned
 
 **Layman's Terms**
@@ -1761,7 +1887,10 @@ When you run tests or build commands that fail, they often print thousands of li
 
 **Technical Terms**
 Intercept commands run via `cortex run -- <cmd>`.
-- **Log Buffering (Teeing)**: If the standard output of the command exceeds a threshold (default: 4KB) or the command exits with a non-zero exit code, write the complete raw output to `.knowledge/diagnostics/<command>_<timestamp>.log`.
+- **Log Buffering (Teeing)**: If the standard output of the command exceeds a configurable threshold (default: 4KB) or the command exits with a non-zero exit code, write the complete raw output to `.knowledge/diagnostics/<command>_<timestamp>.log`.
+- **Hybrid Sandbox + Compact Thresholding**:
+  - `TS_COMPACT_INLINE_THRESHOLD` (default: 4KB): Outputs below this are returned inline. Outputs above this return a minified summary block while writing the full output to the diagnostics directory.
+  - `TS_COMPACT_TINY_THRESHOLD` (default: 256B): Outputs smaller than this bypass diagnostics teeing entirely to eliminate I/O overhead for trivial commands.
 - **Summarized Payload**: Return only a token-efficient truncated summary of the failure (e.g., first and last 25 lines, or filtered compile/test failure patterns) alongside the location of the raw log file.
 - **MCP Tooling**: Expose a `read_diagnostic_log(hash)` tool enabling agents to pull specific slices of the full log on demand, preventing immediate context window bloat.
 
@@ -1770,6 +1899,7 @@ Intercept commands run via `cortex run -- <cmd>`.
 
 **Definition of Done (DoD)**
 - `cortex run -- <cmd>` executes commands and writes full outputs to `.knowledge/diagnostics/` on failure/large size.
+- Hybrid mode behaves correctly according to `TS_COMPACT_INLINE_THRESHOLD` and `TS_COMPACT_TINY_THRESHOLD` environment variables.
 - Returns to the caller a minified summary block containing a pointer to the diagnostics file.
 - Tests verify stdout/stderr captures, threshold splitting, and `read_diagnostic_log` tool resolution.
 
@@ -1786,6 +1916,7 @@ AI assistants frequently run commands like `git diff`, `git status`, and `npm te
 
 **Technical Terms**
 Implement command-specific output minifiers inside `src/cli/run.ts`.
+- **Compound Command Chain Splitting**: Intercepts chained commands (e.g. `cd src && npm test` or `export ENV=test && jest`). The parser tokenizes the command sequence (splitting by `&&`, `||`, and `;`), extracts the last meaningful target command segment (such as `npm test` or `jest`), and routes its stdout to the corresponding specific output minifier. Bails gracefully on complex subshells, loops, and heredocs.
 - **Command Interceptors**: Detect and wrap common command classes:
   - `git status`: Collapses verbose descriptions into a dense, directory-grouped file count summary.
   - `git diff`: Condenses diff blocks to method signature changes or line ranges, stripping out unchanged chunks and indentation noise.
@@ -1799,7 +1930,8 @@ Implement command-specific output minifiers inside `src/cli/run.ts`.
 **Definition of Done (DoD)**
 - Intercepted commands output >= 60% fewer tokens than raw shell outputs while preserving technical accuracy.
 - `cortex run -- git status` prints a minified structure.
-- Tests cover parsers for Git status, Git diffs, Jest, and cargo test outputs.
+- Compound command splitting successfully extracts and routes target commands within `&&` / `;` chains.
+- Tests cover parsers for Git status, Git diffs, Jest, and cargo test outputs, as well as compound chain splitting.
 
 **Pros & Cons**
 - ✅ **Pros**: Huge token and speed savings for agent terminal executions; increases the agent's attention span by stripping terminal filler.
@@ -1815,6 +1947,11 @@ You shouldn't have to remember to run `cortex run` manually. Cortex can install 
 **Technical Terms**
 Implement automated command interception and AI-specific config hooks:
 - **Local Path Shims**: `cortex init-hooks --shims` creates a directory at `.knowledge/shims/` containing lightweight shell executables (e.g. `git`, `npm`, `cargo`) that check if an agent environment variable is present (such as `CLAUDE_CODE`, `VSCODE_PID`, or `TERM_PROGRAM=vscode`). If present, they pass arguments transparently to `cortex run -- <cmd>`; otherwise, they fall back to the user's system binaries.
+- **Pre-Execution Command Rewriter**: Intercepts bare commands typed by the agent and automatically rewrites them to denser variants before shell execution:
+  - `git status` -> `git status --porcelain=v2 --branch` (for structured, dense status output).
+  - `tsc` -> `tsc --pretty false` (to disable verbose terminal styling and formatting).
+  - `pytest` -> `pytest -q --tb=line` (for compact, line-by-line test failures).
+  - Matches 10 safe pre-defined rules, failing safe if the command contains pipes, custom flag combinations, or redirection operators.
 - **Rule Injection Templates**: Automatically patches project-scoped agent files (e.g. `.cursorrules`, `.windsurfrules`, `.clinerules`) to include standardized instruction headers telling the agent to prepend commands with `cortex run --` or reference `.knowledge/shims/` in its environment.
 
 **Definition of Ready (DoR)**
@@ -1822,6 +1959,7 @@ Implement automated command interception and AI-specific config hooks:
 
 **Definition of Done (DoD)**
 - Shims successfully intercept commands like `git status` and transparently apply minification in agent sessions without modifying global shell paths.
+- Pre-execution command rewriting matches and replaces configured command patterns safely.
 - Execution of shims falls back to standard behavior outside of AI agent terminals.
 - Verification that rules are correctly appended to `.cursorrules` or `.clinerules` during initialization.
 
@@ -1907,6 +2045,141 @@ Implement a command to compute differences between two architectural states:
 **Pros & Cons**
 - ✅ **Pros**: Provides an instant high-level overview of design changes in Pull Requests, reducing the cognitive load for human reviewers and the token footprint for AI reviewers.
 - ❌ **Cons**: Diffs can become large in PRs that perform wide-scale package renames. Mitigated by grouping changes by directory or module scope.
+
+---
+
+## 🔗 Phase 12.10: Baseline-Driven Quality Gates — ⏳ Planned
+
+**Layman's Terms**
+In a CI/CD pipeline, you don't want to block development just because an existing legacy file is poorly documented. Instead, you only want to make sure your Pull Request doesn't make the codebase *worse* or degrade the structure. Phase 12.10 introduces a "quality baseline" file. When you set up your CI, Cortex compares your PR's architectural quality against this baseline. If the overall quality score drops by more than 5% or a modified file's score drops by more than 15%, the build fails, guaranteeing quality never decays over time.
+
+**Technical Terms**
+- **Baseline Generator**: `cortex quality baseline --save` writes the current workspace's average quality score and per-entity scores to `.knowledge/quality-baseline.json`.
+- **Quality Gate Evaluator**: `cortex quality check --baseline <file> [--threshold-overall 0.05] [--threshold-entity 0.15]` performs comparison logic.
+  - Computes the percentage change in overall average quality. If it degrades beyond the threshold, it exits with status `1`.
+  - Scans newly touched or modified entities. If any single entity's quality score drops more than the entity-specific threshold, it flags the entity and exits with status `1`.
+- **CI Integration**: Integrates directly with the `cortex-action` GitHub Action as a PR-blocking gate.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality DSL) and Phase 12 (Git & CI Integration) are completed.
+
+**Definition of Done (DoD)**
+- CLI commands `cortex quality baseline` and `cortex quality check` are fully implemented.
+- `cortex quality check` correctly returns exit code `1` and prints detailed regression reports upon threshold violation.
+- Tests cover baseline generation, comparison arithmetic, mock regressions, and threshold compliance.
+
+**Pros & Cons**
+- ✅ **Pros**: Enforces continuous improvement of architecture without penalizing teams for historical debt.
+- ❌ **Cons**: Baseline files must be checked into git and updated as refactorings occur, similar to lockfiles or coverage baselines.
+
+---
+
+## 🔗 Phase 12.11: Architectural Changelog Generator — ⏳ Planned
+
+**Layman's Terms**
+Standard release notes generators look at git commits to list files modified. Cortex's changelog tool looks at the *architecture* of your codebase. It inspects the history log to tell you exactly how the design of your codebase evolved between releases—listing new components added, interfaces updated, and design patterns adopted—giving your team a clear, high-level structural history of every version release.
+
+**Technical Terms**
+- **Command**: `cortex changelog --since-tag <tag-or-commit> [--format markdown|json]`
+- **Log Processor**: Reads the `log.jsonl` from the target point to current HEAD.
+- **Structural Grouping**: Categorizes updates into:
+  - **New Design Components**: Newly introduced entities.
+  - **Interface Modifications**: Changed contracts or relationship edges.
+  - **Design Invariants**: Custom constraints resolved or introduced.
+- **Notification Integration**: Formats the output for simple integration into release scripts and Slack/Discord announcement channels.
+
+**Definition of Ready (DoR)**
+- Phase 7 (Audit Logs) and Phase 12 (Git & CI Integration) are completed.
+
+**Definition of Done (DoD)**
+- `cortex changelog` CLI command is fully functional.
+- The command successfully accepts git tags or commits as start references.
+- Output formats (Markdown/JSON) are tested and verified for correct categorizations of entities, contracts, and quality improvements.
+
+**Pros & Cons**
+- ✅ **Pros**: Connects code-level release processes directly to design-level changelogs, raising architectural visibility for developers and stakeholders.
+- ❌ **Cons**: Relies on clean commit-tag history to resolve start boundaries; falls back to time-based boundaries if tags are not resolvable.
+
+---
+
+## 🔗 Phase 12.12: Automated MCP Compliance & Live Integration Suite — ⏳ Planned
+
+**Layman's Terms**
+When you develop or deploy an MCP server, you want to be sure it complies perfectly with the Model Context Protocol rules and doesn't break when new tools or features are added. Phase 12.12 creates an automated integration test suite that spawns a live Cortex MCP server process, sends real protocol requests, and verifies that the tools, formats, and schemas work perfectly. This ensures your AI assistants never experience connection failures or crash loops during development.
+
+**Technical Terms**
+- **Process Spawner Test Runner**: A script (`npm run test:mcp-compliance`) that spins up the Model Context Protocol server in a separate process.
+- **Protocol Schema Validator**: Sends standardized JSON-RPC 2.0 payloads to the stdin/stdout streams to exercise the full MCP lifecycle:
+  - `tools/list`: Checks schema and fields of all exposed tool declarations.
+  - `tools/call`: Executes each tool with valid/invalid parameter shapes to confirm schema output compliance.
+  - `resources/list` & `resources/read`: Verifies resource retrieval and URI template resolution.
+- **CI Pipeline Integration**: Wired as an integration-test step (`npm run test:mcp-compliance`) in the CI/CD workflow to prevent merging breaking protocol changes.
+
+**Definition of Ready (DoR)**
+- Phase 12 (Git & CI Integration) is completed.
+
+**Definition of Done (DoD)**
+- Automated script `npm run test:mcp-compliance` is executable and tests the entire JSON-RPC surface of the MCP server.
+- Verifies output validation using standard JSON schemas matching the Model Context Protocol specification.
+- Test runner runs in the CI pipeline on pull requests.
+
+**Pros & Cons**
+- ✅ **Pros**: Guarantees protocol compliance and shields IDE clients from runtime MCP parser failures and schema drifts.
+- ❌ **Cons**: Spawning external server processes in tests requires careful port/lifecycle management to prevent zombie processes.
+
+---
+
+## 🔗 Phase 12.13: Architecturally Aware Commit Scope Linting — ⏳ Planned
+
+**Layman's Terms**
+Teams often use tools like `commitlint` to force developers to write clear commits (like `feat(auth): add OAuth`). However, developers often write vague or incorrect scopes (like `feat(fixes): edit`). Phase 12.13 links your commit linter directly to Project Cortex. When you commit, it checks the scope of your commit message against the actual entities in your architecture. If you commit `feat(AuthService): add OAuth` and `AuthService` exists, it passes; if you use a fake scope, it suggests the closest valid entity name.
+
+**Technical Terms**
+- **Commitlint Plugin Hook**: A plugin/config script for standard commit linters (e.g. `commitlint.config.js`) that imports the local Cortex knowledge manager.
+- **Scope Index Matcher**: Resolves the commit message scope (the text in parentheses) against the list of active entities and concepts in the `.knowledge/` database.
+- **Validation Rules**:
+  - If the commit message type is `chore` or `ci`, allows standard config scopes.
+  - If the type is `feat`, `fix`, or `refactor`, requires the scope to match a synthesized entity, parent directory, or concept.
+  - If unmatched, performs a Levenshtein distance check (reusing the Phase 13 ranker) to suggest the correct architectural scope to the developer.
+
+**Definition of Ready (DoR)**
+- Phase 7.5 (Quality DSL) and Phase 12.3 (Architecturally Aware Commit Generation) are completed.
+
+**Definition of Done (DoD)**
+- Commit lint hook successfully queries the local index and blocks commits with invalid architectural scopes.
+- Prints helpful correction suggestions when a developer misspells a scope.
+- Tests verify validation logic across matched, unmatched, and config-exempt scopes.
+
+**Pros & Cons**
+- ✅ **Pros**: Enforces structural discipline in git history, making sure every commit is accurately indexed against the architectural components it alters.
+- ❌ **Cons**: Can block trivial commits if developers aren't familiar with entity naming. Mitigated by allowing customizable list exemptions for non-code scopes (e.g. `deps`, `docs`).
+
+---
+
+## 🔗 Phase 12.14: Agent Token-Use Discovery & Anti-Pattern Auditor — ⏳ Planned
+
+**Layman's Terms**
+When using AI agents, developers often waste thousands of tokens because the agent does things inefficiently—like reading a massive file using terminal commands instead of the specialized Cortex tool. Phase 12.14 adds a command that scans your past AI conversations and tells you exactly how many tokens were wasted, flagging bad habits (like native terminal overrides, consecutive searches, and reading without context) and helping you optimize your rules.
+
+**Technical Terms**
+- **Command**: `cortex discover [--project <path>] [--format markdown|json|adoption]`
+- **Transcript Parser**: Scans local agent session logs (e.g., `.claude/projects/*/*.jsonl` or `.knowledge/logs/*.jsonl` files) for token-wasting anti-patterns:
+  - **Tool-bypass chains**: Where the agent runs native commands (`cat`, `grep`, `find`) on source code files instead of querying the Cortex MCP tools (`read_entity`, `cortex_find`).
+  - **Read->Grep->Read sequences**: Repetitive file read/grep combinations that bypass the central index.
+  - **Stray edits**: Code writes executed without fetching the corresponding entity context first.
+- **Reporting Engine**: Emits a token efficiency score, the TS-vs-native tool usage ratio, and concrete recommendations for updating `.cursorrules` or `.clinerules` to correct agent behavior.
+
+**Definition of Ready (DoR)**
+- Phase 12.6 (Local Command Interception Shims) and Phase 13 (Token Economics) are completed.
+
+**Definition of Done (DoD)**
+- `cortex discover` scans transcripts and correctly identifies/reports target anti-pattern occurrences.
+- Generates markdown-formatted adoption reports with sparklines or token savings trend percentages.
+- Tests cover parser match rules against mock session JSONL transcripts.
+
+**Pros & Cons**
+- ✅ **Pros**: Identifies invisible context-bloat and high-cost behavior, enabling developers to iteratively prune their agent prompts and rules.
+- ❌ **Cons**: Relying on parsing third-party agent log paths requires handling minor JSONL format differences between different CLI tools (Claude Code vs Cursor).
 
 ---
 
@@ -2096,6 +2369,31 @@ Upgrade query scoring and preview extraction in `src/knowledge/find.ts`:
 **Pros & Cons**
 - ✅ **Pros**: High readability for search results; aligns MCP returns with standard search engine behaviors.
 - ❌ **Cons**: Slightly more complex string parsing logic. Mitigated by keeping matching algorithms pure and performant.
+
+---
+
+## 💸 Phase 13.7: Hooks-Based Smart Read Cache & AST Skeleton Delta Compression — ⏳ Planned
+
+**Layman's Terms**
+During a coding session, the AI reads the same source code files over and over again to check things. Reading a large file multiple times eats up thousands of tokens. Phase 13.7 intercepts file-reading commands inside the AI assistant. If the AI asks to read a file it has already seen in the current session and the file hasn't changed, Cortex returns a tiny skeleton (imports, class structures, and function signatures) instead of the full code. If the file has changed, Cortex returns a unified diff showing only what changed. This slashes token usage on re-reads by up to 95%.
+
+**Technical Terms**
+- **Read Cache Hook**: Integrates into the `PreToolUse` hook (e.g., `inject-knowledge.js`) to intercept file-reading operations (`view_file`, `cat`, etc.).
+- **AST Skeleton Parser**: For JS, TS, and Python files, generates a lightweight abstract syntax tree (AST) skeleton (imports, class definitions, method signatures, exports, and JSDoc blocks) on the first read. On subsequent reads in the same session of an unchanged file, returns this skeleton instead of the full source.
+- **Delta Diffing Engine**: On re-read of a modified file, computes a unified diff and returns only the diff lines, preventing full-file re-transmission.
+- **Bypass Safeguards**: Re-reads fall back to full file transfers if the diff exceeds a threshold (e.g., 1,500 characters) or if the model requests a full bypass.
+
+**Definition of Ready (DoR)**
+- Phase 10.3 (Zero-Token Startup) is completed.
+
+**Definition of Done (DoD)**
+- File read operations from hooked AI clients are intercepted and successfully optimized with skeletons or unified diffs for cached items.
+- Token reduction reaches at least 80% on simulated code file re-reads.
+- Performance tests confirm that delta generation adds negligible processing latency (<15ms).
+
+**Pros & Cons**
+- ✅ **Pros**: Substantial token savings during iterative file editing; fits directly inside existing Claude Code hooks.
+- ❌ **Cons**: AI must be able to work off of structural summaries and diffs. If the AI needs full implementation details, it must trigger a bypass read.
 
 ---
 
