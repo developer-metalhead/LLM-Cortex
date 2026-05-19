@@ -188,16 +188,17 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] `cortex graph` + `cortex serve` commands wired into `src/cli/index.ts`
 - [x] **Tests (22 passing)** in `tests/phase8.test.ts`: qualityColor boundary thresholds, buildGraph empty/single/multi-edge, scope depth-1/depth-2/not-found, stale flag, concepts include/exclude, toMermaid empty/single/stale/concept/deduplication, toJson round-trip, quality-color on synthetic graph, server lifecycle (GET /api/graph, GET /api/entity/:name, GET / no-CDN check)
 
-## ⏳ Planned — Phases 9–13
+## ✅ Phase 9 — Refactoring Impact Preview (verified 2026-05-19, all DoD met)
 
-### Phase 9 — Refactoring Impact Preview
-- [ ] `cortex impact <entity> [--depth N] [--format text|json]` — hop-ranked inbound dependents
-- [ ] `cortex deps <entity>` — outbound dependency traversal
-- [ ] `cortex impact <entity> --hypothetical delete` — simulate removal
-- [ ] `impact_analysis(name, depth?)` MCP tool
-- [ ] Reuses `src/knowledge/graph.ts` from Phase 8
-- [ ] New source files: `src/cli/impact.ts`
-- [ ] Tests: hop ranking, hypothetical mode, empty-dependency, cyclic-link safety
+- [x] `buildImpactReport(graph, entity, direction, depth)` in `src/knowledge/graph.ts` — directional BFS (inbound = who depends on entity; outbound = what entity depends on); groups by hop, annotates quality score + lowQuality badge + via relationship kind
+- [x] `cortex impact <entity> [--depth N] [--format text|json] [--hypothetical delete]` — hop-ranked inbound dependents; hypothetical-delete mode lists direct breakage ([src/cli/impact.ts](src/cli/impact.ts))
+- [x] `cortex deps <entity> [--depth N] [--format json]` — outbound dependency traversal ([src/cli/impact.ts](src/cli/impact.ts))
+- [x] `impact_analysis` MCP tool registered with `entity`, `direction`, `depth`, `hypothetical` args ([src/mcp/server.ts](src/mcp/server.ts))
+- [x] MCP prompts: `impact` (inbound, optional hypothetical) + `deps` (outbound) — interactive when entity arg omitted, direct when provided
+- [x] Reuses `src/knowledge/graph.ts` from Phase 8 (no duplicate traversal code)
+- [x] `cortex impact` + `cortex deps` wired into `src/cli/index.ts`
+
+## ⏳ Planned — Phases 10–13
 
 ### Phase 10 — Onboarding & Guided Reading
 - [ ] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding.md` with ordered reading path

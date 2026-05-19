@@ -17,8 +17,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
-| 8     | Visual & Browseable Knowledge Graph                    | ⏳ Planned                           |
-| 9     | Refactoring Impact Preview                             | ⏳ Planned                           |
+| 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
+| 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 10    | Onboarding & Guided Reading                            | ⏳ Planned                           |
 | 11    | Monorepo Federation                                    | ⏳ Planned                           |
 | 12    | Git & CI Integration                                   | ⏳ Planned                           |

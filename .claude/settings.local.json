@@ -11,7 +11,8 @@
       "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\AnthropicClaude\" -Recurse -Filter \"claude.exe\" -ErrorAction SilentlyContinue | Select-Object FullName)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\HomelyHub4march"
+      "c:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\HomelyHub4march",
+      "C:\\Users\\kumsatwi\\.claude\\commands"
     ]
   }
 }
