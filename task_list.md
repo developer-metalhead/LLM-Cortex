@@ -217,6 +217,15 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] New source files: `src/knowledge/packer.ts`, `src/cli/context.ts`, `src/cli/test-cost.ts`, `src/mcp/compression.ts`
 - [x] Tests (5 passing in `tests/phase13.test.ts`): character-count heuristic, greedy budget constraints, markdown and JSON formatting, compression caching, and ref hydration.
 
+## ✅ Phase 13.1 — Dense & Raw Token-Reduction Projections (verified 2026-05-20, all DoD met, 2 tests passing)
+
+- [x] **Refined Tokenizer Heuristics** — implemented provider-specific character-to-token divisor ratios in `src/knowledge/packer.ts` (GPT-4o: 3.8, Claude: 3.4, Gemini: 3.6).
+- [x] **Simulated Raw Baseline Projection** — added file-system parsing in `src/cli/test-cost.ts` to scan git diffs, read full-file content of changed files, and compute baseline token counts.
+- [x] **Comparative CLI Tables** — implemented `cortex test-cost --compare` to output side-by-side terminal comparison of Raw vs Dense costs.
+- [x] **ROI Financial Forecasts** — implemented `cortex test-cost --projection` supporting customizable frequency overrides (`--runs-per-day <count>`, defaulting to 5) to project annual dollar savings.
+- [x] **MCP Integration** — integrated savings comparisons directly in `estimate_cost` Tool returns, and aligned MCP Prompt (`estimate_cost`) registration to generate beautifully structured formal reports.
+- [x] **Tests (2 passing)** in `tests/phase13_1.test.ts` covering character multipliers, raw context accumulation, and CLI routing logic.
+
 ## ⏳ Planned — Phases 11–12
 
 ### Phase 11 — Monorepo Federation
