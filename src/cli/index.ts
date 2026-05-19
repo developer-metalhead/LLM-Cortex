@@ -28,6 +28,7 @@ import { runContextBuild } from "./context.js";
 import { runTestCost } from "./test-cost.js";
 import { runCompress } from "./compress.js";
 import { runStats } from "./stats.js";
+import { runSavings } from "./savings.js";
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;
@@ -366,6 +367,14 @@ program
   .description("Display cumulative token and financial savings from Cortex Brevity Engine")
   .action(async () => {
     await runStats(projectRoot);
+  });
+
+program
+  .command("savings")
+  .description("Display detailed token and financial savings ledger analytics")
+  .option("-g, --graph", "Display rolling 30-day savings ASCII chart")
+  .action(async (options) => {
+    await runSavings(projectRoot, options);
   });
 
 program.parse();

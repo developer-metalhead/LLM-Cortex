@@ -263,6 +263,13 @@ export class CortexMCPServer {
             { name: "level", description: "The active brevity level to set (off, lite, ultra)", required: false },
           ],
         },
+        {
+          name: "savings",
+          description: "Display cumulative token and cost savings ledger analytics.",
+          arguments: [
+            { name: "graph", description: "Set to 'true' to render the rolling 30-day savings ASCII chart instead of the summary table", required: false }
+          ]
+        },
       ],
     }));
 
@@ -644,6 +651,35 @@ export class CortexMCPServer {
               },
             },
           ],
+        };
+      }
+
+      if (request.params.name === "savings") {
+        const graphArg = request.params.arguments?.graph;
+        if (graphArg === undefined || graphArg === null || graphArg === "") {
+          return {
+            description: "Display cumulative token and cost savings ledger analytics — asks for graph or normal view.",
+            messages: [{
+              role: "user",
+              content: {
+                type: "text",
+                text: "Ask the user: 'Would you like to view the **normal** metrics table or the rolling 30-day chronological **graph** of your cost savings?' and wait for their response. Once they reply, reload the savings prompt with the appropriate graph argument ('true' or 'false').",
+              },
+            }],
+          };
+        }
+
+        const graph = graphArg === "true";
+        const graphPart = graph ? " with graph=true" : "";
+        return {
+          description: "Display cumulative token and cost savings ledger analytics.",
+          messages: [{
+            role: "user",
+            content: {
+              type: "text",
+              text: `Call the 'get_savings' tool${graphPart}. Present the resulting metrics table or ASCII chronological graph beautifully formatted in markdown so the user can see their total ROI and category details. Explicitly inform the user that this full savings report has been automatically exported to 'ARCH_SAVINGS.md' in their project root for their convenience.`,
+            },
+          }],
         };
       }
 
@@ -1132,6 +1168,19 @@ export class CortexMCPServer {
             },
           },
         },
+        {
+          name: "get_savings",
+          description: "Retrieve cumulative token and cost savings ledger metrics. Displays total ROI, reduction ratio, counts, and savings totals per category. Optionally renders a rolling 30-day chronological bar chart. NOTE: This tool automatically exports 'ARCH_SAVINGS.md' to the project root when called; you should always inform the user that this file was successfully generated.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              graph: {
+                type: "boolean",
+                description: "If true, renders the rolling 30-day chronological bar chart instead of the summary table.",
+              },
+            },
+          },
+        },
       ];
       if (brevity === "lite" || brevity === "ultra") {
         for (const t of tools) {
@@ -1210,6 +1259,32 @@ export class CortexMCPServer {
             },
           ],
         };
+      }
+
+      if (name === "get_savings") {
+        const graph = (args as any)?.graph === true;
+        const { getSavingsReport } = await import("../cli/savings.js");
+        try {
+          const report = await getSavingsReport(this.projectRoot, { graph, stripAnsi: true });
+          return {
+            content: [
+              {
+                type: "text",
+                text: report,
+              },
+            ],
+          };
+        } catch (error: any) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Failed to retrieve savings: ${error.message}`,
+              },
+            ],
+            isError: true,
+          };
+        }
       }
 
       if (name === "compress") {
@@ -1657,6 +1732,29 @@ export class CortexMCPServer {
       if (name === "read_knowledge_index") {
         const content = await this.knowledge.getKnowledgeSummary();
         const compressed = compressResponse(content, this.sessionId, true);
+        
+        // Ledger reference compression tracking
+        const originalTokens = Math.round(content.length / 4);
+        const compressedTokens = Math.round(compressed.length / 4);
+        const saved = Math.max(0, originalTokens - compressedTokens);
+        if (saved > 0) {
+          import("../knowledge/ledger.js").then(({ appendTransaction, calculateSavedUsd }) => {
+            const provider = process.env.CORTEX_PROVIDER || "openai";
+            const model = process.env.CORTEX_MODEL || "gpt-4o";
+            const savedUsd = calculateSavedUsd(saved, provider, this.projectRoot);
+            return appendTransaction(this.projectRoot, {
+              category: "reference_compression",
+              provider,
+              model,
+              originalTokens,
+              denseTokens: compressedTokens,
+              savedTokens: saved,
+              savedUsd,
+              details: "Compressed read_knowledge_index response",
+            });
+          }).catch(() => {});
+        }
+
         return { content: await this.withSavings(compressed) };
       }
 
@@ -1687,6 +1785,29 @@ export class CortexMCPServer {
         }
         const withGuidance = body + `\n\n> **Pre-modification:** If you are about to modify or delete \`${entityName}\`, call \`impact_analysis(entity="${entityName}", direction="inbound")\` first and present the blast-radius to the user before writing any code.`;
         const compressed = compressResponse(withGuidance, this.sessionId, true);
+
+        // Ledger reference compression tracking
+        const originalTokens = Math.round(withGuidance.length / 4);
+        const compressedTokens = Math.round(compressed.length / 4);
+        const saved = Math.max(0, originalTokens - compressedTokens);
+        if (saved > 0) {
+          import("../knowledge/ledger.js").then(({ appendTransaction, calculateSavedUsd }) => {
+            const provider = process.env.CORTEX_PROVIDER || "openai";
+            const model = process.env.CORTEX_MODEL || "gpt-4o";
+            const savedUsd = calculateSavedUsd(saved, provider, this.projectRoot);
+            return appendTransaction(this.projectRoot, {
+              category: "reference_compression",
+              provider,
+              model,
+              originalTokens,
+              denseTokens: compressedTokens,
+              savedTokens: saved,
+              savedUsd,
+              details: `Compressed read_entity (name: ${entityName}) response`,
+            });
+          }).catch(() => {});
+        }
+
         return { content: await this.withSavings(compressed) };
       }
 
@@ -1715,7 +1836,31 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: await this.withSavings(compressResponse(body, this.sessionId, true)) };
+        const compressed = compressResponse(body, this.sessionId, true);
+
+        // Ledger reference compression tracking
+        const originalTokens = Math.round(body.length / 4);
+        const compressedTokens = Math.round(compressed.length / 4);
+        const saved = Math.max(0, originalTokens - compressedTokens);
+        if (saved > 0) {
+          import("../knowledge/ledger.js").then(({ appendTransaction, calculateSavedUsd }) => {
+            const provider = process.env.CORTEX_PROVIDER || "openai";
+            const model = process.env.CORTEX_MODEL || "gpt-4o";
+            const savedUsd = calculateSavedUsd(saved, provider, this.projectRoot);
+            return appendTransaction(this.projectRoot, {
+              category: "reference_compression",
+              provider,
+              model,
+              originalTokens,
+              denseTokens: compressedTokens,
+              savedTokens: saved,
+              savedUsd,
+              details: `Compressed read_concept (name: ${conceptName}) response`,
+            });
+          }).catch(() => {});
+        }
+
+        return { content: await this.withSavings(compressed) };
       }
 
       if (name === "set_project_root") {
@@ -2068,6 +2213,27 @@ export class CortexMCPServer {
           this.knowledge.recordBrevitySavings(originalText, minified).catch((err: any) => {
             console.error(`[Cortex] Failed to record brevity savings: ${err.message}`);
           });
+
+          // Ledger logging
+          if (saved > 0) {
+            import("../knowledge/ledger.js").then(({ appendTransaction, calculateSavedUsd }) => {
+              const provider = process.env.CORTEX_PROVIDER || "openai";
+              const model = process.env.CORTEX_MODEL || "gpt-4o";
+              const savedUsd = calculateSavedUsd(saved, provider, this.projectRoot);
+              return appendTransaction(this.projectRoot, {
+                category: "brevity_transformation",
+                provider,
+                model,
+                originalTokens,
+                denseTokens: minifiedTokens,
+                savedTokens: saved,
+                savedUsd,
+                details: `Compressed tool '${name}' response via minifyProse`,
+              });
+            }).catch((err: any) => {
+              console.error(`[Cortex] Failed to record brevity ledger transaction: ${err.message}`);
+            });
+          }
         }
       }
     }
