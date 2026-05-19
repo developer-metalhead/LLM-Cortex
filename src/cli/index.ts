@@ -26,6 +26,8 @@ import { runOnboard } from "./onboard.js";
 import { runFind } from "./find.js";
 import { runContextBuild } from "./context.js";
 import { runTestCost } from "./test-cost.js";
+import { runCompress } from "./compress.js";
+import { runStats } from "./stats.js";
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;
@@ -98,6 +100,7 @@ program
   .option("-p, --provider <provider>", "LLM provider (openai, anthropic, google, local)")
   .option("-m, --model <model>", "LLM model ID")
   .option("-i, --mode <mode>", "Ingestion mode (auto, manual)")
+  .option("-b, --brevity <level>", "Brevity level (off, lite, ultra)")
   .action(async (options) => {
     await runConfig(projectRoot, options);
   });
@@ -346,6 +349,23 @@ program
   .option("--runs-per-day <count>", "Average runs/syncs per day for projections", "5")
   .action(async (options) => {
     await runTestCost(projectRoot, options);
+  });
+
+program
+  .command("compress")
+  .description("Telegraphically compress a markdown file to save tokens")
+  .argument("<file>", "Path to markdown file to compress")
+  .option("-o, --output <path>", "Output path for the compressed file")
+  .option("-i, --inplace", "Overwrite the file in-place")
+  .action(async (file, options) => {
+    await runCompress(projectRoot, file, options);
+  });
+
+program
+  .command("stats")
+  .description("Display cumulative token and financial savings from Cortex Brevity Engine")
+  .action(async () => {
+    await runStats(projectRoot);
   });
 
 program.parse();
