@@ -25,8 +25,8 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 11 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, **8**, **9** (Phase 9 verified 2026-05-19) |
-| 🚧 In Progress | 1 | Phase 10 (Onboarding & Guided Reading) |
+| ✅ Done | 12 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, **10** (Phase 10 verified 2026-05-19) |
+| 🚧 In Progress | 0 | None |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~24 | Phases 13-20.24, drive differentiation |
 | ⏳ Planned — Enterprise | ~17 | Phases 22-32 family |
@@ -70,7 +70,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2 | **Phase 7.5** — Knowledge Quality Foundation | Quality scoring + org-constraint DSL — even free users get quality signal | Required by 21, 23, 24, 26.2 | ✅ **Done 2026-05-19** |
 | 3 | **Phase 5.6** — Daemon Watchdog & Self-Healing | Free tier reliability — daemon doesn't silently die | Required by 5.7, 5.8 | ⏳ Planned |
 | 4 | **Phase 8** — Visual Knowledge Graph | First "wow" demo for new users; Mermaid graph rendering | Required by 13, 22, 33.2 | ✅ **Done 2026-05-19** |
-| 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | 🚧 In Progress |
+| 5 | **Phase 10** — Onboarding & Guided Reading | "What does this codebase do?" answer — for new hires + new users | Required by 13 | ✅ **Done 2026-05-19** |
 
 **Why this order**: 7 → 7.5 because quality scoring builds on audit. 5.6 in parallel (no deps). 8 → 10 because onboarding consumes the graph.
 
@@ -332,11 +332,11 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 - Phase 33-MVP (stripped Deep Bootstrap)
 - Phase 5.6 (watchdog)
 - ✅ **Phase 8 — COMPLETE (verified 2026-05-19, 22/22 Phase 8 tests passing)**
-- 🚧 **Phase 10 (onboarding) — IN PROGRESS**
+- ✅ **Phase 10 — COMPLETE (verified 2026-05-19, 14/14 Phase 10 tests passing)**
 
 **Outcome**: Free tier becomes genuinely useful. Adoption begins.
 
-**Sprint 1 progress: Phases 6 + 7 + 7.5 + 8 + 9 done (70% of sprint). Phase 10 in progress. Phase 5.6, 33-MVP remaining.**
+**Sprint 1 progress: Phases 6 + 7 + 7.5 + 8 + 9 + 10 done (85% of sprint). Phase 5.6, 33-MVP remaining.**
 
 > Phase 9 (Impact Preview) shipped ahead of schedule in Sprint 1 (2026-05-19). `cortex impact`, `cortex deps`, `impact_analysis` MCP tool + prompts all live.
 

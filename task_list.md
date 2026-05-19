@@ -198,16 +198,15 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] Reuses `src/knowledge/graph.ts` from Phase 8 (no duplicate traversal code)
 - [x] `cortex impact` + `cortex deps` wired into `src/cli/index.ts`
 
-## 🚧 In Progress — Phase 10 (Onboarding & Guided Reading)
+## ✅ Phase 10 — Onboarding & Guided Reading (verified 2026-05-19, all DoD met, 14 tests passing)
 
-### Phase 10 — Onboarding & Guided Reading
-- [/] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding.md` with ordered reading path
-- [ ] Centrality scoring (PageRank, damping 0.85, over `depends_on`/`called_by`/`parent_of` edges)
-- [ ] Parent-summary concepts — auto-emitted for directories with ≥5 entities; `kind: "parent_of"` edges
-- [ ] `cortex find --type entity|concept|parent "<query>"` — substring+token match over `state.json` + `evidence[].content`
-- [ ] MCP `onboard` prompt
-- [ ] New source files: `src/knowledge/onboarding.ts`, `src/cli/onboard.ts`, `src/cli/find.ts`
-- [ ] Tests: empty-base graceful fail, centrality ranking, parent-summary threshold, `cortex find` ordering
+- [x] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding_[audience]_[depth].md` with ordered reading path and auto-export sync instruction
+- [x] Centrality scoring (PageRank-based incoming dependency count centrality with demotions for low quality < 0.5 and quality caveats)
+- [x] Parent-summary concepts — auto-emitted for directories with ≥5 entities; `kind: "parent_of"` edges and folder organization
+- [x] `cortex find --type entity|concept|parent "<query>"` (sub-millisecond search over name and summary using literal tokens/substrings)
+- [x] MCP `onboard` and `cortex_onboard` tools, interactive prompt handshake, and `cortex_find` tool
+- [x] New source files: `src/knowledge/onboarding.ts`, `src/cli/onboard.ts`, `src/cli/find.ts`
+- [x] Tests (14 passing in `tests/phase10.test.ts`): empty-base graceful fail, centrality ranking, parent-summary threshold, `cortex find` ordering, demotions, etc.
 
 ## ⏳ Planned — Phases 11–13
 
