@@ -1,6 +1,6 @@
 {
   "name": "projectcortex",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "description": "The Autonomous Brain for your codebase — compiled architectural knowledge for AI-assisted development.",
   "main": "dist/index.js",
