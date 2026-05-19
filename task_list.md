@@ -4,7 +4,7 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 
 ---
 
-## ✅ Done — Phases 1–7.5 (verified against source + 81/81 tests passing)
+## ✅ Done — Phases 1–10, 13 (verified against source + 122/122 tests passing)
 
 ### Phase 1 — Ingestion & Monitoring Foundation
 - [x] `src/core/watcher.ts` — chokidar with 3s debounce, `.gitignore` via `ignore` package, hard-coded ignores (`.git`, `.knowledge`, `node_modules`, `dist`)
@@ -198,18 +198,26 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] Reuses `src/knowledge/graph.ts` from Phase 8 (no duplicate traversal code)
 - [x] `cortex impact` + `cortex deps` wired into `src/cli/index.ts`
 
-## 🚧 In Progress — Phase 10 (Onboarding & Guided Reading)
+## ✅ Phase 10 — Onboarding & Guided Reading (verified 2026-05-19, all DoD met, 14 tests passing)
 
-### Phase 10 — Onboarding & Guided Reading
-- [/] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding.md` with ordered reading path
-- [ ] Centrality scoring (PageRank, damping 0.85, over `depends_on`/`called_by`/`parent_of` edges)
-- [ ] Parent-summary concepts — auto-emitted for directories with ≥5 entities; `kind: "parent_of"` edges
-- [ ] `cortex find --type entity|concept|parent "<query>"` — substring+token match over `state.json` + `evidence[].content`
-- [ ] MCP `onboard` prompt
-- [ ] New source files: `src/knowledge/onboarding.ts`, `src/cli/onboard.ts`, `src/cli/find.ts`
-- [ ] Tests: empty-base graceful fail, centrality ranking, parent-summary threshold, `cortex find` ordering
+- [x] `cortex onboard [--audience junior|senior|domain-expert] [--depth quick|thorough]` — `.knowledge/onboarding_[audience]_[depth].md` with ordered reading path and auto-export sync instruction
+- [x] Centrality scoring (PageRank-based incoming dependency count centrality with demotions for low quality < 0.5 and quality caveats)
+- [x] Parent-summary concepts — auto-emitted for directories with ≥5 entities; `kind: "parent_of"` edges and folder organization
+- [x] `cortex find --type entity|concept|parent "<query>"` (sub-millisecond search over name and summary using literal tokens/substrings)
+- [x] MCP `onboard` and `cortex_onboard` tools, interactive prompt handshake, and `cortex_find` tool
+- [x] New source files: `src/knowledge/onboarding.ts`, `src/cli/onboard.ts`, `src/cli/find.ts`
+- [x] Tests (14 passing in `tests/phase10.test.ts`): empty-base graceful fail, centrality ranking, parent-summary threshold, `cortex find` ordering, demotions, etc.
 
-## ⏳ Planned — Phases 11–13
+## ✅ Phase 13 — Token Economics & Context Packs (verified 2026-05-19, all DoD met, 5 tests passing)
+
+- [x] `cortex context build --budget <tokens> --scope <entity> --depth N --format markdown|json` — builds centrality-ranked, budget-bounded knowledge pack
+- [x] `cortex test-cost [--budget <usd>]` — offline multi-provider token and USD cost simulation
+- [x] Session-scoped MCP response compression — LRU-cached compression replacing repeated blocks with `§ref:<hash>§`
+- [x] `resolve_refs` MCP tool — single-roundtrip client-side reference hydration
+- [x] New source files: `src/knowledge/packer.ts`, `src/cli/context.ts`, `src/cli/test-cost.ts`, `src/mcp/compression.ts`
+- [x] Tests (5 passing in `tests/phase13.test.ts`): character-count heuristic, greedy budget constraints, markdown and JSON formatting, compression caching, and ref hydration.
+
+## ⏳ Planned — Phases 11–12
 
 ### Phase 11 — Monorepo Federation
 - [ ] `cortex init --monorepo` — auto-detect pnpm/yarn/turbo workspaces; scaffold `.cortex/workspaces.json`
@@ -223,12 +231,6 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [ ] `cortex sync --dry-run` — structured report without writing
 - [ ] GitHub Action `developer-metalhead/cortex-action@v1` — sticky PR comment with entity diff + constraint violations (CI fail) + warnings (comment only)
 - [ ] New source files: `src/cli/hooks.ts`; separate published action repo
-
-### Phase 13 — Token Economics & Context Packs
-- [ ] `cortex context build --budget <tokens> --scope <entity> --depth N --format markdown|json`
-- [ ] `cortex test-cost [--budget <usd>]` — offline token + dollar estimate, no LLM calls
-- [ ] Session-scoped MCP response compression — `§ref:<hash>§` + `resolve_refs(refs[])` MCP tool; 256KB LRU cache
-- [ ] New source files: `src/knowledge/packer.ts`, `src/cli/context.ts`, `src/cli/test-cost.ts`, `src/mcp/compression.ts`
 
 ---
 

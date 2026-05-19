@@ -24,7 +24,8 @@ import { runImpact, runDeps } from "./impact.js";
 import { runServe } from "../server/index.js";
 import { runOnboard } from "./onboard.js";
 import { runFind } from "./find.js";
-
+import { runContextBuild } from "./context.js";
+import { runTestCost } from "./test-cost.js";
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;
@@ -316,6 +317,32 @@ program
   .option("-t, --type <type>", "Limit search to 'entity', 'concept', 'parent', or 'all' (default: 'all')")
   .action(async (query, options) => {
     await runFind(projectRoot, query, options);
+  });
+
+program
+  .command("context")
+  .description("Export a token-bounded knowledge bundle for AI context injection")
+  .argument("<subcommand>", "Subcommand: build")
+  .option("--budget <tokens>", "Token budget (default: 8000)")
+  .option("-s, --scope <entity>", "Root entity/concept to focus the bundle around")
+  .option("-d, --depth <n>", "Link traversal depth from scope entity")
+  .option("-f, --format <fmt>", "Output format: markdown (default) or json")
+  .option("-o, --output <path>", "Write bundle to file instead of stdout")
+  .action(async (subcommand, options) => {
+    if (subcommand === "build") {
+      await runContextBuild(projectRoot, options);
+    } else {
+      console.log(`Unknown subcommand: ${subcommand}. Try: cortex context build`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("test-cost")
+  .description("Estimate token + dollar cost for next sync (no LLM calls made)")
+  .option("--budget <usd>", "USD ceiling — exits 1 if estimate exceeds it (e.g. 0.05)")
+  .action(async (options) => {
+    await runTestCost(projectRoot, options);
   });
 
 program.parse();
