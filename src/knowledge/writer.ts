@@ -311,7 +311,8 @@ export class KnowledgeManager {
       }
 
       return state;
-    } catch {
+    } catch (err: any) {
+      console.error(`[Cortex] readState failed (root: ${this.knowledgeDir}): ${err?.message ?? err}`);
       return emptyState();
     }
   }

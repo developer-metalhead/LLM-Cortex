@@ -414,10 +414,11 @@ export class CortexMCPServer {
                   "   - Implementing something new → search the index for similar entities. If one exists, prefer extending it over creating a parallel implementation.",
                   "   - Modifying or fixing something → find the entity by name or sourceFile.",
                   "3. For the target entity, call read_entity and read its Wiring section. Every [[WikiLink]] in Wiring is a downstream consumer that may break if you change the entity's behavior or shape.",
-                  "4. For any concept the entity Implements, call read_concept. The concept describes the invariant the entity is supposed to uphold — violate it and you introduce drift.",
-                  "5. Only NOW open source files. By this point you know: what exists, what depends on it, and what rules apply.",
+                  "4. If modifying or fixing an existing entity, call impact_analysis with direction='inbound' on that entity. This is mandatory — do not skip it. Present the full hop-ranked blast-radius before writing any code. If any hop-1 dependents exist, state which ones face immediate breakage risk.",
+                  "5. For any concept the entity Implements, call read_concept. The concept describes the invariant the entity is supposed to uphold — violate it and you introduce drift.",
+                  "6. Only NOW open source files. By this point you know: what exists, what depends on it, and what rules apply.",
                   "",
-                  "Output before writing code: a one-paragraph plan stating (a) which entities you will touch, (b) which dependents could be affected, (c) which invariants apply. Then proceed.",
+                  "Output before writing code: a one-paragraph plan stating (a) which entities you will touch, (b) the full blast radius from step 4, (c) which invariants apply. Then proceed.",
                   "",
                   "If the knowledge base is empty or the relevant entity is missing, say so explicitly and recommend running /ingest first.",
                 ].join("\n"),
@@ -451,7 +452,7 @@ export class CortexMCPServer {
           return {
             description: "Dependency listing — asks which entity to analyse.",
             messages: [{ role: "user", content: { type: "text",
-              text: "Call read_knowledge_index to list available entities, then ask the user: 'Which entity's outbound dependencies should I list?'. Once they reply, call the impact_analysis tool with that entity name and direction='outbound'.",
+              text: "Call read_knowledge_index to list available entities. Then ask the user: 'Which entity\\'s outbound dependencies should I list? (e.g. [pick 3-4 entity names from the index])'. Populate those examples with real names from the index output. Once they reply, call the impact_analysis tool with that entity name and direction='outbound'.",
             }}],
           };
         }
@@ -1251,7 +1252,8 @@ export class CortexMCPServer {
             isError: true,
           };
         }
-        return { content: await this.withSavings(body) };
+        const withGuidance = body + `\n\n> **Pre-modification:** If you are about to modify or delete \`${entityName}\`, call \`impact_analysis(entity="${entityName}", direction="inbound")\` first and present the blast-radius to the user before writing any code.`;
+        return { content: await this.withSavings(withGuidance) };
       }
 
       if (name === "read_concept") {
@@ -1376,10 +1378,15 @@ export class CortexMCPServer {
         const report = buildImpactReport(graph, entity, direction, depth);
 
         if (report.totalCount === 0) {
+          const entityCount = Object.keys(state.entities).length;
+          const noEntities = entityCount === 0;
           const msg = direction === "inbound"
             ? `No dependents found for "${entity}". Safe to refactor freely.`
             : `"${entity}" has no outbound dependencies.`;
-          return { content: [{ type: "text", text: msg }] };
+          const warning = noEntities
+            ? `\n\n⚠ Warning: knowledge base appears empty (0 entities loaded from ${this.projectRoot}). This may indicate a wrong project root. Call \`get_cortex_status\` to verify, or use \`set_project_root\` to correct the path.`
+            : "";
+          return { content: [{ type: "text", text: msg + warning }] };
         }
 
         if (hypothetical === "delete") {
