@@ -325,7 +325,7 @@ export class OnboardingManager {
     md += `*End of tour. Happy coding! Run \`cortex find\` to search scoped components dynamically.*`;
 
     // Save output file in .knowledge
-    const onboardingPath = path.join(this.manager["knowledgeDir"], "onboarding.md");
+    const onboardingPath = path.join(this.manager["knowledgeDir"], `onboarding_${options.audience}_${options.depth}.md`);
     await fs.writeFile(onboardingPath, md, "utf8");
 
     return md;

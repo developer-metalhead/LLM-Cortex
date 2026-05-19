@@ -470,16 +470,26 @@ export class CortexMCPServer {
         };
       }
       if (request.params.name === "onboard") {
-        const audience = (request.params.arguments?.audience || "junior") as any;
-        const depth = (request.params.arguments?.depth || "quick") as any;
+        const audience = request.params.arguments?.audience;
+        const depth = request.params.arguments?.depth;
+        
+        if (!audience || !depth) {
+          return {
+            description: "Generate a tailored onboarding tour — asks for audience and depth.",
+            messages: [{ role: "user", content: { type: "text", 
+              text: "Ask the user: 'Which audience (junior, senior, domain-expert) and depth (quick, thorough) would you like for your onboarding tour?' Briefly explain the differences. Wait for their reply, then call the cortex_onboard tool with their choices." 
+            }}],
+          };
+        }
+        
         return {
-          description: "Generate a tailored onboarding tour of the codebase architecture",
+          description: `Generate a tailored onboarding tour for ${audience} (${depth})`,
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: `Run the onboard guide generator. Audience: ${audience}, Depth: ${depth}. Call the cortex_onboard tool to compile the guide.`,
+                text: `Run the onboard guide generator. Audience: ${audience}, Depth: ${depth}. Call the cortex_onboard tool to compile the guide. DO NOT use read_knowledge_index or read_entity for this task — you must use cortex_onboard. Once you receive the markdown guide from the tool, you MUST write it directly to a file named '.knowledge/onboarding_${audience}_${depth}.md' in the workspace using your file-writing tool (e.g. write_to_file) to ensure it is successfully synced to the user's physical repository.`,
               },
             },
           ],
@@ -880,7 +890,7 @@ export class CortexMCPServer {
         },
         {
           name: "cortex_onboard",
-          description: "Generate a tailored, PageRank-centrality prioritized onboarding guide for a given audience and depth.",
+          description: "Generate a tailored, PageRank-centrality prioritized onboarding guide for a given audience and depth. Use this INSTEAD of read_knowledge_index when the user asks for an architectural tour, summary, or onboarding guide. If the user has not explicitly chosen an audience and depth, do not guess. Ask them to choose before calling this tool. IMPORTANT: Once you receive the guide, you MUST write it directly to a file named '.knowledge/onboarding_[audience]_[depth].md' using your own file-writing tool (e.g. write_to_file) to ensure it is successfully synced to the user's physical workspace.",
           inputSchema: {
             type: "object",
             properties: {
@@ -891,7 +901,7 @@ export class CortexMCPServer {
         },
         {
           name: "cortex_find",
-          description: "Perform category-scoped sub-millisecond search across active knowledge (entities, concepts, parents) with exact name priority.",
+          description: "Perform category-scoped sub-millisecond search across active knowledge (entities, concepts, parents) with exact name priority. Use this INSTEAD of grep or read_knowledge_index when the user asks to find specific concepts or logic.",
           inputSchema: {
             type: "object",
             required: ["query"],
@@ -1058,8 +1068,9 @@ export class CortexMCPServer {
         const { OnboardingManager } = await import("../knowledge/onboarding.js");
         const om = new OnboardingManager(this.knowledge);
         const guide = await om.generateOnboarding({ audience, depth });
+        const output = `Successfully exported to .knowledge/onboarding_${audience}_${depth}.md\n\n${guide}`;
         return {
-          content: [{ type: "text", text: guide }],
+          content: [{ type: "text", text: output }],
         };
       }
 

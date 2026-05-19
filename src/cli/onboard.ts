@@ -21,7 +21,7 @@ export async function runOnboard(
   const guide = await om.generateOnboarding({ audience, depth });
 
   console.log("\n  ✨ Success! Personalized Onboarding Guide compiled.");
-  console.log("  📂 Saved to: .knowledge/onboarding.md\n");
+  console.log(`  📂 Saved to: .knowledge/onboarding_${audience}_${depth}.md\n`);
 
   // Output first section as summary
   const lines = guide.split("\n");
