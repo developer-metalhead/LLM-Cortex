@@ -240,8 +240,8 @@ export class CortexMCPServer {
           ],
         },
         {
-          name: "test_cost",
-          description: "Estimate the token count and USD cost of the next Cortex sync without making any LLM calls.",
+          name: "estimate_cost",
+          description: "Generates a formal, structured cost audit report of the next sync.",
           arguments: [
             { name: "budget", description: "Optional USD ceiling to check against (e.g. 0.05)", required: false },
           ],
@@ -552,11 +552,11 @@ export class CortexMCPServer {
         };
       }
 
-      if (request.params.name === "test_cost") {
+      if (request.params.name === "estimate_cost") {
         const budget = request.params.arguments?.budget;
         const budgetPart = budget ? ` with budget=${budget}` : "";
         return {
-          description: "Estimate the cost of the next Cortex sync.",
+          description: "Generates a formal, structured cost audit report of the next sync.",
           messages: [{
             role: "user",
             content: {
@@ -1811,6 +1811,13 @@ export class CortexMCPServer {
           `Cost per provider:`,
           ...Object.entries(estimate.costs).map(([model, cost]) => `  ${model.padEnd(20)}: $${cost.toFixed(4)}`),
         ];
+        if (estimate.savingsTokens > 0) {
+          lines.push(
+            ``,
+            `📉 Cortex Token Savings:`,
+            `  Reduced input context by ${estimate.savingsTokens.toLocaleString()} tokens (${estimate.savingsPercentage.toFixed(1)}% savings vs Raw baseline of ${estimate.rawInputTokens.toLocaleString()} tokens)`
+          );
+        }
         if (budget !== null) {
           lines.push(estimate.maxCost > budget
             ? `\nBUDGET EXCEEDED: $${estimate.maxCost.toFixed(4)} > $${budget.toFixed(4)}`

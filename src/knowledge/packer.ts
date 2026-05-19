@@ -14,8 +14,19 @@ export interface ContextPackResult {
 }
 
 // Industry-standard simple heuristic for code tokenization without heavy libraries
-export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 3.5);
+export function estimateTokens(text: string, provider?: string): number {
+  let divisor = 3.5;
+  if (provider) {
+    const p = provider.toLowerCase();
+    if (p === "openai" || p.includes("gpt") || p.includes("o1") || p.includes("o3")) {
+      divisor = 3.8;
+    } else if (p === "anthropic" || p.includes("claude")) {
+      divisor = 3.4;
+    } else if (p === "google" || p.includes("gemini")) {
+      divisor = 3.6;
+    }
+  }
+  return Math.ceil(text.length / divisor);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
