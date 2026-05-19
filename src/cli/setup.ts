@@ -33,6 +33,18 @@ function getMCPEntry(projectRoot: string) {
   };
 }
 
+// Global Claude Code entry — no --project-root so the server auto-detects the
+// active workspace. Written to ~/.claude.json so one entry covers every project.
+function getGlobalClaudeCodeMCPEntry() {
+  const nodePath = process.execPath;
+  const scriptPath = fileURLToPath(import.meta.url);
+  const entryPath = path.join(path.dirname(scriptPath), "index.js");
+  return {
+    command: nodePath,
+    args: [entryPath, "mcp"],
+  };
+}
+
 // Project-agnostic entry — relies on `cortex` being on PATH (global install)
 // and on the IDE setting CWD to the active workspace when launching the MCP
 // server. Used for the global Antigravity config so one entry serves every
@@ -63,7 +75,8 @@ async function writeJsonFile(filePath: string, data: Record<string, any>) {
 // invokes `cortex` directly, so without a global install the MCP server will
 // silently fail to launch.
 async function isCortexOnPath(): Promise<boolean> {
-  const cmd = process.platform === "win32" ? "where cortex" : "command -v cortex";
+  const cmd =
+    process.platform === "win32" ? "where cortex" : "command -v cortex";
   try {
     const { stdout } = await execAsync(cmd);
     return stdout.trim().length > 0;
@@ -73,7 +86,10 @@ async function isCortexOnPath(): Promise<boolean> {
 }
 
 const home = process.env.HOME || process.env.USERPROFILE || "";
-const appData = process.env.APPDATA || path.join(home, "Library", "Application Support");
+const appData =
+  process.env.APPDATA || path.join(home, "Library", "Application Support");
+const localAppData =
+  process.env.LOCALAPPDATA || path.join(home, "AppData", "Local");
 const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
 
 // Inline fallback for the PreToolUse hook script — used when the package-level
@@ -280,7 +296,8 @@ function getAntigravityConfigPath(local: boolean, projectRoot: string): string {
 // %APPDATA%\Zed\settings.json on Windows.
 // MCP servers live under the "context_servers" key (not "mcpServers").
 function getZedConfigPath(): string {
-  if (process.platform === "win32") return path.join(appData, "Zed", "settings.json");
+  if (process.platform === "win32")
+    return path.join(appData, "Zed", "settings.json");
   return path.join(xdgConfig, "zed", "settings.json");
 }
 
@@ -293,11 +310,23 @@ function getClineConfigPath(): string {
       : process.platform === "win32"
         ? path.join(appData, "Code", "User")
         : path.join(xdgConfig, "Code", "User");
-  return path.join(codeUser, "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json");
+  return path.join(
+    codeUser,
+    "globalStorage",
+    "saoudrizwan.claude-dev",
+    "settings",
+    "cline_mcp_settings.json",
+  );
 }
 
-function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarget[] {
-  const antigravityConfigPath = getAntigravityConfigPath(!!options.local, projectRoot);
+function getIDETargets(
+  projectRoot: string,
+  options: SetupOptions = {},
+): IDETarget[] {
+  const antigravityConfigPath = getAntigravityConfigPath(
+    !!options.local,
+    projectRoot,
+  );
 
   return [
     {
@@ -315,12 +344,17 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         config.hooks.PreToolUse = config.hooks.PreToolUse || [];
         const hookMatcher = "Read|Grep";
         const alreadyRegistered = config.hooks.PreToolUse.some(
-          (h: any) => h.matcher === hookMatcher
+          (h: any) => h.matcher === hookMatcher,
         );
         if (!alreadyRegistered) {
           config.hooks.PreToolUse.push({
             matcher: hookMatcher,
-            hooks: [{ type: "command", command: "node .claude/hooks/inject-knowledge.js" }],
+            hooks: [
+              {
+                type: "command",
+                command: "node .claude/hooks/inject-knowledge.js",
+              },
+            ],
           });
         }
 
@@ -328,7 +362,9 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         config.hooks.Stop = config.hooks.Stop || [];
         const stopCommand = "node .claude/hooks/cortex-savings-footer.js";
         const stopAlreadyRegistered = config.hooks.Stop.some(
-          (h: any) => Array.isArray(h.hooks) && h.hooks.some((c: any) => c?.command === stopCommand)
+          (h: any) =>
+            Array.isArray(h.hooks) &&
+            h.hooks.some((c: any) => c?.command === stopCommand),
         );
         if (!stopAlreadyRegistered) {
           config.hooks.Stop.push({
@@ -340,7 +376,9 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         config.hooks.UserPromptSubmit = config.hooks.UserPromptSubmit || [];
         const routerCommand = "node .claude/hooks/cortex-router.js";
         const routerAlreadyRegistered = config.hooks.UserPromptSubmit.some(
-          (h: any) => Array.isArray(h.hooks) && h.hooks.some((c: any) => c?.command === routerCommand)
+          (h: any) =>
+            Array.isArray(h.hooks) &&
+            h.hooks.some((c: any) => c?.command === routerCommand),
         );
         if (!routerAlreadyRegistered) {
           config.hooks.UserPromptSubmit.push({
@@ -357,7 +395,14 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         await fs.mkdir(hookDir, { recursive: true });
 
         const injectScript = path.join(hookDir, "inject-knowledge.js");
-        const injectSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "inject-knowledge.js");
+        const injectSource = path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "..",
+          "..",
+          ".claude",
+          "hooks",
+          "inject-knowledge.js",
+        );
         try {
           const scriptContent = await fs.readFile(injectSource, "utf-8");
           await fs.writeFile(injectScript, scriptContent, "utf-8");
@@ -366,7 +411,14 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         }
 
         const stopScript = path.join(hookDir, "cortex-savings-footer.js");
-        const stopSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "cortex-savings-footer.js");
+        const stopSource = path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "..",
+          "..",
+          ".claude",
+          "hooks",
+          "cortex-savings-footer.js",
+        );
         try {
           const scriptContent = await fs.readFile(stopSource, "utf-8");
           await fs.writeFile(stopScript, scriptContent, "utf-8");
@@ -375,12 +427,67 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         }
 
         const routerScript = path.join(hookDir, "cortex-router.js");
-        const routerSource = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".claude", "hooks", "cortex-router.js");
+        const routerSource = path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "..",
+          "..",
+          ".claude",
+          "hooks",
+          "cortex-router.js",
+        );
         try {
           const scriptContent = await fs.readFile(routerSource, "utf-8");
           await fs.writeFile(routerScript, scriptContent, "utf-8");
         } catch {
           await fs.writeFile(routerScript, ROUTER_HOOK_INLINE, "utf-8");
+        }
+
+        // Write to ~/.claude.json (global Claude Code config) so the MCP
+        // server is available across all projects without re-running setup.
+        const globalClaudeJson = path.join(home, ".claude.json");
+        const globalClaudeConfig = await readJsonSafe(globalClaudeJson);
+        globalClaudeConfig.mcpServers = globalClaudeConfig.mcpServers || {};
+        globalClaudeConfig.mcpServers["project-cortex"] = getGlobalClaudeCodeMCPEntry();
+        await writeJsonFile(globalClaudeJson, globalClaudeConfig);
+        console.error(`  [ok] claude-code (global) → ${globalClaudeJson}`);
+
+        // Write to Claude Desktop config(s) — standard install and Windows Store.
+        // Only writes if the parent directory already exists (app is installed).
+        const desktopPaths: string[] = [];
+
+        if (process.platform === "darwin") {
+          desktopPaths.push(path.join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json"));
+        } else if (process.platform === "win32") {
+          // Standard install
+          desktopPaths.push(path.join(appData, "Claude", "claude_desktop_config.json"));
+          // Windows Store install — package name has a publisher-hash suffix (e.g.
+          // Claude_pzs8sxrjxfjjc) that varies, so scan for any "Claude_*" package.
+          try {
+            const packagesDir = path.join(localAppData, "Packages");
+            const entries = await fs.readdir(packagesDir);
+            for (const entry of entries) {
+              if (entry.startsWith("Claude_")) {
+                desktopPaths.push(path.join(packagesDir, entry, "LocalCache", "Roaming", "Claude", "claude_desktop_config.json"));
+              }
+            }
+          } catch {
+            // %LOCALAPPDATA%\Packages not readable — skip Store path.
+          }
+        } else {
+          desktopPaths.push(path.join(xdgConfig, "Claude", "claude_desktop_config.json"));
+        }
+
+        for (const desktopPath of desktopPaths) {
+          try {
+            await fs.access(path.dirname(desktopPath));
+            const desktopConfig = await readJsonSafe(desktopPath);
+            desktopConfig.mcpServers = desktopConfig.mcpServers || {};
+            desktopConfig.mcpServers["project-cortex"] = getMCPEntry(projectRoot);
+            await writeJsonFile(desktopPath, desktopConfig);
+            console.error(`  [ok] claude-desktop → ${desktopPath}`);
+          } catch {
+            // Claude Desktop not installed at this path — skip silently.
+          }
         }
       },
     },
@@ -411,12 +518,7 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
     },
     {
       name: "windsurf",
-      configPath: path.join(
-        home,
-        ".codeium",
-        "windsurf",
-        "mcp_config.json"
-      ),
+      configPath: path.join(home, ".codeium", "windsurf", "mcp_config.json"),
       writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
         config.mcpServers = config.mcpServers || {};
@@ -427,9 +529,10 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
     {
       name: "claude-desktop",
       configPath: path.join(
-        process.env.APPDATA || path.join(home, "Library", "Application Support"),
+        process.env.APPDATA ||
+          path.join(home, "Library", "Application Support"),
         "Claude",
-        "claude_desktop_config.json"
+        "claude_desktop_config.json",
       ),
       writeConfig: async (_sPath, configPath) => {
         const config = await readJsonSafe(configPath);
@@ -462,7 +565,12 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
         const skillFile = path.join(skillDir, "SKILL.md");
         const skillSource = path.join(
           path.dirname(fileURLToPath(import.meta.url)),
-          "..", "..", ".agent", "skills", "cortex", "SKILL.md",
+          "..",
+          "..",
+          ".agent",
+          "skills",
+          "cortex",
+          "SKILL.md",
         );
         try {
           await fs.mkdir(skillDir, { recursive: true });
@@ -511,7 +619,12 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
     },
     {
       name: "continue",
-      configPath: path.join(projectRoot, ".continue", "mcpServers", "project-cortex.yaml"),
+      configPath: path.join(
+        projectRoot,
+        ".continue",
+        "mcpServers",
+        "project-cortex.yaml",
+      ),
       writeConfig: async (_sPath, configPath) => {
         await fs.mkdir(path.dirname(configPath), { recursive: true });
         // Continue.dev workspace MCP file format — schema: v1 is required
@@ -535,7 +648,7 @@ function getIDETargets(projectRoot: string, options: SetupOptions = {}): IDETarg
 export async function setupIDE(
   projectRoot: string,
   targets: string[],
-  options: SetupOptions = {}
+  options: SetupOptions = {},
 ): Promise<void> {
   const allTargets = getIDETargets(projectRoot, options);
   const validNames = allTargets.map((t) => t.name);
@@ -548,7 +661,7 @@ export async function setupIDE(
     const target = allTargets.find((t) => t.name === targetName);
     if (!target) {
       console.error(
-        `Unknown target: ${targetName}. Valid: ${validNames.join(", ")}`
+        `Unknown target: ${targetName}. Valid: ${validNames.join(", ")}`,
       );
       continue;
     }

@@ -423,6 +423,12 @@ export class CortexMCPServer {
           inputSchema: { type: "object", properties: {} },
         },
         {
+          name: "ingest",
+          description:
+            "Run the full Cortex ingest workflow: fetch all git diffs since the last sync, analyze the changes using the Librarian prompt, synthesize entities/concepts/warnings, then call save_synthesis with the result. If the response says 'No pending changes', stop. Otherwise follow the systemPrompt instructions, use the userPrompt to analyze the diff, produce a synthesis object matching outputSchema, and call save_synthesis.",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
           name: "get_pending_changes",
           description:
             "Returns all git diffs since the last Cortex sync, the current knowledge index, and the Librarian synthesis prompt. Use this to gather everything needed to synthesize knowledge updates.",
@@ -915,7 +921,7 @@ export class CortexMCPServer {
         return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
-      if (name === "get_pending_changes") {
+      if (name === "ingest" || name === "get_pending_changes") {
         // BOOTSTRAP PATH: when the knowledge base is empty, never send a diff —
         // the most recent commits are usually just the installation of Cortex
         // itself (.knowledge/, .antigravity/, etc.), which would poison the
