@@ -120,7 +120,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 ┌────┐   ┌────────┐   ┌──────┐   ┌─────────┐   ┌──────┐   ┌──────────┐   ┌────────────┐
 │Free│──▶│ Hobby  │──▶│ Pro  │──▶│ Startup │──▶│ Team │──▶│ Business │──▶│ Enterprise │
 │    │   │        │   │      │   │         │   │      │   │          │   │            │
-│50  │   │150     │   │∞     │   │∞        │   │∞     │   │∞         │   │∞           │
+│∞   │   │∞       │   │∞     │   │∞        │   │∞     │   │∞         │   │∞           │
 │ent.│   │ent.    │   │ent.  │   │ent.     │   │ent.  │   │ent.      │   │ent.        │
 └────┘   └────────┘   └──────┘   └─────────┘   └──────┘   └──────────┘   └────────────┘
   │
@@ -133,13 +133,13 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 
 **Target**: Every developer on Earth. Students, indie hackers, senior staff engineers, open-source maintainers.
 **Philosophy**: The free tier IS Cortex. Not a demo, not a trial, not a crippled preview. If the free tier doesn't make you say "holy shit, this is incredible" within 20 minutes, the product has failed — no amount of paid features will save it.
-
+**Hook**: The "holy shit" moment is watching `.knowledge/` auto-populate as you code, then querying it through your AI agent.
 **Why generous free works**: Cortex's cost is borne by the user's own LLM API key, not by us. We don't pay for their synthesis calls — they do. Our marginal cost per free user is effectively **zero**. The only cost is the license server infrastructure, which is negligible.
 
 | Phase | Feature |
 |---|---|
 | 1-5 | Full core pipeline: watcher, auto-synthesis, storage, MCP, CLI |
-| 6 | Constraints & blast-radius (up to 5 rules) |
+| 6 | Constraints & blast-radius (unlimited rules) |
 | 7 | Full audit trail (`cortex log`, quality scores, lint, evolution) |
 | 7.5 | Quality scoring (read-only — view scores, can't customize formulas) |
 | 8 | **Live interactive knowledge graph** (WebSocket, not static HTML) |
@@ -148,31 +148,17 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 | 10 | Onboarding & guided reading |
 | 13, 13.1-2, 13.4-5 | Context packs, brevity, budget gating, fuzzy search |
 
-| Dimension | Free Value | Why Not Capped |
-|---|---|---|
-| Entities | **Unlimited** | Capping at 50 means users never see a real graph. Cortex's value scales with graph size — killing that kills adoption |
-| Syncs | **Unlimited** | Users pay their own LLM API key. Limiting syncs limits their experience, not our costs |
-| Auto-mode | **✅ Enabled** | Auto-synthesis is the magic. Without it, Cortex feels like a manual tool. The "wow" moment is seeing `.knowledge/` update itself |
-| Context packs | **16,000 tokens** | 4K was barely 2 entities — the AI agent couldn't even use Cortex effectively. 16K is enough for real value |
-| Constraints | **5** | Enough to experience governance. Pro unlocks unlimited + custom formulas |
-| Workspaces | **1** | Natural solo-dev limit. Multiple workspaces is a team/power-user need |
-| Agents | **1** | Natural limit. Multi-agent is clearly a team feature |
-| Graph | **Live interactive** | The static graph was actively ugly. The live graph is the "wow" demo moment |
-| Deep bootstrap | **Basic** (up to 15 entities) | They get a taste. Pro/Hobby gets the full 40-80 entity deep scan |
+Everything is **unlimited** — entities, syncs, constraints, workspaces, agents, context tokens. The only thing that varies between tiers is **which phases (features) you get**, not how much of them you can use.
 
 **What Free does NOT include** (these are the upgrade triggers):
 
-| Missing Feature | Why It Creates Upgrade Desire |
-|---|---|
-| No Soul (Phase 13.8) | After 2 weeks, they notice Cortex doesn't remember their patterns between sessions. "Why doesn't it learn?" → Pro |
-| No LLM caching | They see repeated API costs for the same queries. "I'm paying for the same thing twice" → Hobby |
-| No deep bootstrap | First run produces 10-15 entities. "Why is my 500-file project only 15 entities?" → Hobby/Pro gets 40-80 |
-| No cost analytics | They have no idea how much they're spending on LLM calls. "Where's my money going?" → Hobby |
-| No CI integration | They manually run `cortex sync`. "Can this run in my CI pipeline?" → Pro |
-| No tech debt register | They see quality scores but can't track debt over time. "Show me what's getting worse" → Pro |
-| No custom quality formulas | Default scoring is good but generic. "I want to weight security higher" → Pro |
-| No advisor / what-if | Graph is passive. "What if I refactored this module?" → Pro |
-| 5 constraint limit | Small projects won't hit this. Mid-size projects will. "I need more rules" → Pro |
+| Missing Feature | Upgrade To | Why |
+|---|---|---|
+| LLM caching, cost analytics | **Hobby** ($9) | Saves 30-60% on API costs — pays for itself. You're paying for the same synthesis twice. |
+| Deep bootstrap | **Hobby** ($9) | Without it, `cortex watch` synthesizes one file at a time as you edit. Phase 33 batch-scans the whole project upfront. |
+| Soul, advisor, custom quality, CI, tech debt | **Pro** ($24) | Your Librarian learns your patterns, advises on refactors, keeps knowledge healthy. |
+| Multi-agent, federation, shared knowledge | **Startup/Team** ($29-49/seat) | Collaboration features teams need — central server, multi-repo, multi-agent. |
+| SSO, RBAC, audit, compliance, air-gap | **Business/Enterprise** ($99+/seat) | Procurement-driven. "Legal says yes." |
 
 ---
 
@@ -180,7 +166,8 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 
 **Target**: Devs who use Cortex daily and want it to be smarter and cheaper.
 **Key unlock**: LLM caching (literally pays for itself), deep bootstrap, cost analytics.
-**Pitch**: "Cortex Hobby saves you more on LLM costs than it costs. It's a negative-cost upgrade."
+**Hook**: "Costs $9, saves you $30+ on API calls. It's a negative-cost upgrade."
+**Pitch**: "Cortex Hobby saves you more on LLM costs than it costs. Within days, caching pays for the subscription and you're net-positive."
 
 | Phase | Feature | Why This Tier |
 |---|---|---|
@@ -188,23 +175,17 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 | 7.6 | Global architectural lessons log | Institutional memory across sessions |
 | 12 | Git & CI integration (basic) | Automated workflow integration |
 | 13.3 | Token & cost savings ledger & analytics | See exactly where your LLM budget goes |
-| 33 | Deep bootstrap (standard — up to 40 entities) | 4× better first-run experience |
+| 33 | Deep bootstrap | 4× better first-run experience |
 
-| Limit | Value |
-|---|---|
-| Entities | Unlimited |
-| Syncs | Unlimited |
-| Context pack | 16,000 tokens |
-| Constraints | 15 |
-| Workspaces | 2 |
-| Agents | 1 |
+No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not breathing room.
 
 ---
 
 ### 💎 Tier 2: Pro — $24/month ($240/year)
 
 **Target**: Professional solo devs, freelancers, senior engineers. The core individual tier.
-**Key unlock**: Soul, unlimited everything, advanced advisor, full CI.
+**Key unlock**: Soul, architectural advisor, custom quality formulas, tech debt register.
+**Hook**: "Your Librarian learns your patterns, advises on refactors, and keeps your knowledge healthy. After 2 weeks, switching tools feels like losing a teammate."
 
 | Phase | Feature | Why This Tier |
 |---|---|---|
@@ -228,16 +209,9 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 | 20.13 | Pattern skill library (VOYAGER) | Learns your patterns |
 | 20.19 | Surgical knowledge editing (ROME/MEMIT) | Precision edits |
 | 20.22 | Spaced repetition & forgetting curves | Memory hygiene |
-| 33 | Deep bootstrap (full — up to 80 entities) | Deep first-run |
+| 33 | Deep bootstrap | Deep first-run |
 
-| Limit | Value |
-|---|---|
-| Entities | Unlimited |
-| Syncs | Unlimited |
-| Context pack | 32,000 tokens |
-| Constraints | Unlimited |
-| Workspaces | 5 |
-| Agents | 1 (advanced, with Soul) |
+No numeric limits — all caps are **unlimited**.
 
 ---
 
@@ -245,6 +219,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 
 **Target**: Early-stage teams, small agencies, indie studios. Team features at startup prices.
 **Key unlock**: Multi-agent, shared knowledge, basic federation — everything a small team needs.
+**Hook**: "Multi-agent, shared knowledge, polyrepo — team features at startup prices."
 
 #### Everything in Pro, plus:
 
@@ -261,12 +236,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 | 53.2 | Universal Librarian definition schema | Shared agents |
 | 56 | Multi-operator session coordination | Concurrency |
 
-| Limit | Value |
-|---|---|
-| Seats | 2-10 |
-| Workspaces | Unlimited |
-| Agents | Up to 5 Librarian agents |
-| Federation | Up to 3 repos |
+No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not breathing room.
 
 ---
 
@@ -274,6 +244,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 
 **Target**: Mid-size engineering teams. Full multi-agent, multi-repo, shared governance.
 **Key unlock**: Central server, polyrepo federation, human-in-the-loop review, compliance templates.
+**Hook**: "Central knowledge server, cross-repo federation, human-reviewed quality gates."
 
 #### Everything in Startup, plus:
 
@@ -292,12 +263,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 | 57 | Cross-agent workspace state sync | Agent coordination |
 | 58 | Multi-agent Librarian collaboration | Specialist agents |
 
-| Limit | Value |
-|---|---|
-| Seats | 5-50 |
-| Agents | Up to 15 Librarian agents |
-| Central server | Included (self-hosted or cloud) |
-| Federation | Up to 10 repos |
+No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not breathing room.
 
 ---
 
@@ -305,6 +271,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 
 **Target**: Larger orgs that need compliance, audit trails, and integrations but aren't full enterprise.
 **Key unlock**: RBAC, immutable audit, workflow integrations, FinOps, executive dashboards.
+**Hook**: "SSO, RBAC, immutable audit, Jira/Slack integration — 'Legal says yes.'"
 
 #### Everything in Team, plus:
 
@@ -321,14 +288,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 | 33.1 | Model provider registry & cost-tier routing | Multi-LLM governance |
 | 33.2 | Remote operations & mobile status PWA | Mobile access |
 
-| Limit | Value |
-|---|---|
-| Seats | 10-200 |
-| SSO | SAML 2.0, OIDC |
-| Audit | Immutable, exportable |
-| Agents | Up to 50 Librarian agents |
-| Federation | Unlimited repos |
-| Support | Priority email, SLA |
+No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not breathing room.
 
 ---
 
@@ -336,6 +296,7 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 
 **Target**: Large engineering orgs (200-5000+ devs), regulated industries, government, defense.
 **Key unlock**: Air-gap, BYO-key, cross-tenant federation, cryptographic signing, SOC2 pack.
+**Hook**: "Air-gapped, BYO-key, SOC2-ready. Deploys where your compliance requires it."
 
 #### Everything in Business, plus:
 
@@ -525,13 +486,13 @@ interface LicenseCache {
 
 // ── Tier Limits (defaults — server can override per-key) ───
 const TIER_LIMITS: Record<Tier, TierLimits> = {
-  free:       { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 16000, maxConstraints: 5,  maxWorkspaces: 1,  maxAgents: 1,  maxFederatedRepos: 0 },
-  hobby:      { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 16000, maxConstraints: 15, maxWorkspaces: 2,  maxAgents: 1,  maxFederatedRepos: 0 },
-  pro:        { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 32000, maxConstraints: -1, maxWorkspaces: 5,  maxAgents: 1,  maxFederatedRepos: 0 },
-  startup:    { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 32000, maxConstraints: -1, maxWorkspaces: -1, maxAgents: 5,  maxFederatedRepos: 3 },
-  team:       { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 32000, maxConstraints: -1, maxWorkspaces: -1, maxAgents: 15, maxFederatedRepos: 10 },
-  business:   { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: -1,    maxConstraints: -1, maxWorkspaces: -1, maxAgents: 50, maxFederatedRepos: -1 },
-  enterprise: { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: -1,    maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  free:       { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  hobby:      { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  pro:        { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  startup:    { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  team:       { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  business:   { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
+  enterprise: { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1, maxFederatedRepos: -1 },
 };
 
 // ── Constants ──────────────────────────────────────────────
@@ -900,19 +861,7 @@ export async function configureSSOProvider(opts: SSOOpts) {
   // ... existing Phase 25 logic unchanged
 }
 
-// ── Entity limit check (in knowledge writer) ────────────
-// In src/knowledge/writer.ts, before creating a new entity:
-const entityCount = Object.keys(state.entities).length;
-requireEntityLimit(entityCount);
 
-// ── Sync limit check (in ingest pipeline) ───────────────
-// In src/llm/client.ts or ingest handler, before each synthesis:
-const monthSyncs = getMonthSyncCount();  // read from state.json
-requireSyncLimit(monthSyncs);
-
-// ── Context pack budget (in packer) ─────────────────────
-// In src/mcp/tools/context.ts:
-const budget = getContextTokenBudget();  // returns 4000 (free) or 32000 (pro)
 ```
 
 ### Step 3: `cortex activate` CLI Command
@@ -983,13 +932,7 @@ const tierEmoji = { free: "🆓", pro: "💎", team: "👥", enterprise: "🏢" 
 console.log(`\n${tierEmoji[license.tier]} License: Cortex ${license.tier.toUpperCase()}`);
 console.log(getLicenseStatus());
 
-// If approaching limits, show warning:
-const entityCount = Object.keys(state.entities).length;
-const { maxEntities } = license.limits;
-if (maxEntities !== -1 && entityCount > maxEntities * 0.8) {
-  console.log(`\n⚠️  Entity usage: ${entityCount}/${maxEntities} (${Math.round(entityCount/maxEntities*100)}%)`);
-  console.log(`   Upgrade at https://cortex.dev/pricing`);
-}
+
 ```
 
 ### Step 5: License Server (`license.cortex.dev`)
@@ -1065,10 +1008,10 @@ export async function handleValidate(req: Request) {
 }
 
 const TIER_LIMITS = {
-  free:       { maxEntities: 50,  maxSyncsPerMonth: 100, maxContextTokens: 4000,  maxConstraints: 3,  maxWorkspaces: 1,  maxAgents: 1 },
-  pro:        { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 32000, maxConstraints: -1, maxWorkspaces: 3,  maxAgents: 1 },
-  team:       { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: 32000, maxConstraints: -1, maxWorkspaces: -1, maxAgents: 10 },
-  enterprise: { maxEntities: -1,  maxSyncsPerMonth: -1,  maxContextTokens: -1,    maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1 },
+  free:       { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1 },
+  pro:        { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1 },
+  team:       { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1 },
+  enterprise: { maxEntities: -1, maxSyncsPerMonth: -1, maxContextTokens: -1, maxConstraints: -1, maxWorkspaces: -1, maxAgents: -1 },
 };
 ```
 
@@ -1236,13 +1179,9 @@ Phase A: Client-Side Gate (ship FIRST — before any paid feature)
 ──────────────────────────────────────────────────────────────
 □  Create src/core/license.ts (code above)
 □  Add requireTier() calls to all existing paid-tier functions
-□  Add requireEntityLimit() to knowledge writer
-□  Add requireSyncLimit() to ingest pipeline
-□  Wire getContextTokenBudget() into context packer
 □  Add "cortex activate <key>" CLI command
 □  Add "cortex deactivate" CLI command
 □  Add tier display to "cortex status"
-□  Add approaching-limit warnings to "cortex status"
 □  Test: free tier works with zero config (no key, no internet)
 □  Test: paid features throw friendly CortexLicenseError
 □  Test: offline cache works for 72h
@@ -1269,12 +1208,11 @@ Phase C: Stripe Integration (ship THIRD — enables self-serve purchase)
 □  7-day grace period on payment failure
 □  Test: full purchase → activate → use → cancel → downgrade flow
 
-Phase D: Usage Metering (ship FOURTH — enables limit enforcement)
+Phase D: Usage Metering (ship FOURTH — optional analytics, no enforcement)
 ──────────────────────────────────────────────────────────────
-□  Track entity count, synthesis count per month in state.json
+□  Track entity count, synthesis count per month in state.json (opt-in)
 □  POST /api/usage on each cortex sync (anonymized, opt-out flag)
-□  "cortex status --usage" shows monthly consumption
-□  Approaching-limit warnings at 80% thresholds
+□  "cortex status --usage" shows monthly consumption (informational only)
 ```
 
 ---
@@ -1286,13 +1224,13 @@ Phase D: Usage Metering (ship FOURTH — enables limit enforcement)
 | Use Cortex on any project, unlimited entities & syncs | 🆓 Free |
 | See a live interactive knowledge graph | 🆓 Free |
 | Auto-synthesize on file save | 🆓 Free |
-| Get up to 16K context packs for my AI agent | 🆓 Free |
+| Context packs for my AI agent | 🆓 Free |
 | Save 30-60% on LLM API costs via caching | 🪴 Hobby ($9) |
-| Deep bootstrap (40 entities in one run) | 🪴 Hobby ($9) |
+| Deep bootstrap | 🪴 Hobby ($9) |
 | See exactly where my LLM budget goes | 🪴 Hobby ($9) |
 | Personalized Librarian that remembers my patterns (Soul) | 💎 Pro ($24) |
 | AI architectural advisor + what-if analysis | 💎 Pro ($24) |
-| Unlimited constraints + custom quality formulas | 💎 Pro ($24) |
+| Custom quality formulas | 💎 Pro ($24) |
 | Share knowledge across a 2-5 person team | 🌱 Startup ($29/seat) |
 | Run multiple specialized Librarian agents | 🌱 Startup ($29/seat) |
 | Full multi-repo federation + central server | 👥 Team ($49/seat) |
