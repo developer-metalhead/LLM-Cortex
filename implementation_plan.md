@@ -38,6 +38,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.13  | Retrocausality — Backward Quality Propagation           | ⏳ Planned                           |
 | 7.14  | Intrinsic Redshift — Novelty-at-Creation Metric         | ⏳ Planned                           |
 | 7.15  | Verlinde Avoidance — Blind-Spot Detection               | ⏳ Planned                           |
+| 7.16  | Proteasome Atrophy — Targeted Knowledge Degradation      | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
@@ -45,6 +46,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 8.4   | Hyperbolic Graph Layout (Poincaré Disk)                 | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
+| 9.2   | Torstone Inertia — Refactor Resistance Metric          | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
 | 10.1  | Spherification — Data Encapsulation for Entity Clusters | ⏳ Planned                           |
 | 10.2  | Smart Rule File Patching & Marker-Fenced Injection     | ⏳ Planned                           |
@@ -122,6 +124,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 26.2  | Policy-as-Code (OPA/Cedar)                             | ⏳ Planned (enterprise)              |
 | 26.3  | OpenTelemetry Tracing & Observability Export           | ⏳ Planned (enterprise)              |
 | 26.4  | Cryptographic Event Signing & Non-Repudiation          | ⏳ Planned (enterprise)              |
+| 26.5  | Xuan Paper Layer — Permanent Provenance Overlay        | ⏳ Planned                           |
 | 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
 | 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
 | 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
@@ -1682,6 +1685,18 @@ Implement `cortex parallax <entity> --ago <duration>` that reconstructs the enti
 
 ---
 
+## 🧬 Phase 7.16: Proteasome Atrophy — Targeted Knowledge Degradation — ⏳ Planned
+
+**Layman's Terms**: Instead of hard-deleting stale or contradictory entities, tag them for slow degradation — their relationships decay, their embedding fades, and they eventually become recyclable. Like biological garbage collection where proteins are tagged with ubiquitin and slowly chewed up by a proteasome.
+
+**Technical Terms**: Add `ubiquitinTags: { tag: string, severity: number, appliedAt: string }[]` to `EntityRecord`. Entities accumulate tags from Phase 16 contradictions, Phase 20.12 temporal staleness, and Phase 7.5 quality drops. A background process (`cortex atrophy --run`) degrades tagged entities: `quality_score *= (1 - 0.01 * sum(severity))` per pass, `embedding` weight decays, relationships weaken. At `quality_score < 0.1`, entity enters "recyclable" state — its content is stripped but its ID and edges remain as a skeleton for future synthesis to rebuild on. Integration with Phase 7.9 GC and Phase 20.22 forgetting curves. CLI: `cortex atrophy --status` shows degradation queue.
+
+**DoR**: Phase 7.9 GC, Phase 16 contradictions, Phase 20.22 forgetting curves stable.
+
+**DoD**: Ubiquitin tags accumulate from quality/contradiction/staleness events. Degradation pass reduces quality and embedding weight. Recyclable state strips content but preserves skeleton. Tests: tag accumulation, degradation pass effect, recyclable threshold, edge case with no tags (no-op).
+
+---
+
 ## ✅ Phase 8: Visual & Browseable Knowledge Graph — ✅ Done
 
 **Layman's Terms**
@@ -1897,6 +1912,18 @@ Expose a BFS-based pathfinding query over the relationship graph in `state.json`
 - `get_dependency_path` MCP tool is registered and returns matching path details.
 - Pathfinding handles cycles, missing nodes, and disconnected components gracefully.
 - Tests cover cyclic pathfinding, disconnected source/target, and correct edge-hop ordering.
+
+---
+
+## ⚖️ Phase 9.2: Torstone Inertia — Refactor Resistance Metric — ⏳ Planned
+
+**Layman's Terms**: Not all refactors are equally hard. A change to a deeply interconnected entity with many cyclic dependencies has high "inertia" — it resists change. Phase 9.2 computes a single mass score per entity that quantifies how hard it would be to refactor, based on graph geometry not lines of code.
+
+**Technical Terms**: Compute `inertiaScore` per entity from three factors: (1) **interconnection density** — number of unique inbound+outbound relationships, normalized against the graph max, (2) **cyclic depth** — longest path through cycles involving this entity (via Tarjan's SCC), (3) **fan-out breadth** — distinct subgraph communities this entity connects to (Leiden communities from Phase 13.2). Formula: `inertiaScore = 0.4 * density + 0.35 * cyclicDepth + 0.25 * communitySpan`. Score stored as `inertia: number` on the entity. Phase 9 `cortex impact <entity>` surfaces inertia alongside cascade depth. CLI: `cortex audit --high-inertia` lists top 10 highest-inertia entities.
+
+**DoR**: Phase 6 typed relationships and Phase 13.2 community detection are stable.
+
+**DoD**: Inertia score computed and persisted. `cortex impact` shows inertia. `cortex audit --high-inertia` surfaces top entities. Tests: leaf entity (low inertia), central hub (high inertia), cyclic dependency (high cyclic depth), empty graph (no-op).
 
 ---
 
@@ -6582,6 +6609,18 @@ interface SignedAuditEvent {
 
 - ✅ **Pros**: **The non-repudiation primitive enterprise auditors actually require.** Hash chains prove integrity; signatures prove authorship — both are required for SOX / HIPAA / FedRAMP audit confidence. Hardware-backed signing means a compromised Cortex process cannot forge signatures (private keys never reside in application memory). Standalone third-party verification binary means regulators can audit independently. Performance overhead is negligible (~200µs per audit event). Backward compatibility — legacy unsigned events still readable, just flagged in verification output.
 - ❌ **Cons**: Key management is operational surface — rotation, revocation, recovery paths must be carefully designed. Mitigated by sensible defaults (90-day grace), hardware backing where available, integration with Phase 27 BYO-Key. Hardware backing isn't universal — falls back to OS keychain which is lower-trust; mitigated by surfacing key-backing class in audit verification output so auditors see the trust level. Lost private keys mean future events can't be signed by that identity until rotation; mitigated by clear recovery procedure and admin override paths.
+
+---
+
+## 📜 Phase 26.5: Xuan Paper Layer — Permanent Provenance Overlay — ⏳ Planned
+
+**Layman's Terms**: Every interaction with an entity — even reads — leaves a permanent, semi-transparent mark. Nothing is ever deleted, only overlaid. Like writing on Xuan paper: every stroke bleeds through permanently. The current state is the topmost visible layer; full history is always preserved underneath.
+
+**Technical Terms**: Add `provenanceLayer` field to `EntityRecord`: `{ overwrites: { timestamp: string, type: "edit" | "read" | "resolve" | "reject", delta: string }[] }`. Every mutation creates a new layer describing what changed (`delta` is a JSON diff). Reads append a lightweight `{ type: "read", timestamp }` marker. `cortex edit` creates a write layer; `cortex review reject` creates a rejection layer. The entity's current `description` and `relationships` are the topmost write layer; all previous layers are accessible via `cortex provenance <entity>`. This is additive storage — no data is ever removed, only superseded. Phase 26 immutable audit already hash-chains events; Xuan Paper makes the entity itself permanently layered.
+
+**DoR**: Phase 26 immutable audit trail and `EntityRecord` schema are stable.
+
+**DoD**: Every mutation appends a provenance layer. Reads append lightweight markers. `cortex provenance` replays all layers. Tests: single write (one layer), multiple writes (layered stack), read-only entity (no write layers), provenance on deleted/skeleton entity.
 
 ---
 
