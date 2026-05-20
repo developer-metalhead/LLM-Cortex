@@ -23,6 +23,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 6.1   | Template Entities & Instantiated-From Relationships       | ⏳ Planned                           |
 | 6.2   | Arbitrary Predicate Relationships & Triple-Store Queries | ⏳ Planned                           |
+| 6.3   | Weak Measurements — Low-Certainty Hypothesis Tags      | ⏳ Planned                           |
+| 6.4   | Torsion Links — Context-Dependent Entity Meaning        | ⏳ Planned                           |
+| 6.5   | Plasma Filaments — Structural Edge Flag                 | ⏳ Planned                           |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
@@ -32,6 +35,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
 | 7.11  | Epigenetic Memory Suppression                          | ⏳ Planned                           |
 | 7.12  | Astronomical Parallax — Perspective Shift Scoring       | ⏳ Planned                           |
+| 7.13  | Retrocausality — Backward Quality Propagation           | ⏳ Planned                           |
+| 7.14  | Intrinsic Redshift — Novelty-at-Creation Metric         | ⏳ Planned                           |
+| 7.15  | Verlinde Avoidance — Blind-Spot Detection               | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
@@ -96,6 +102,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.15.1| Protein Folding — Argument Prediction                 | ⏳ Planned                           |
 | 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 58 | ⏳ Planned (moved — agent coordination)    |
 | 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
+| 20.17.1| Casimir Effect — Suppressed-Mode Creativity          | ⏳ Planned (research-grade)          |
 | 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
 | 20.19 | Surgical Knowledge Editing (ROME/MEMIT)                | ⏳ Planned                           |
 | 20.20 | Active Inference & Predictive Synthesis (Friston)      | ⏳ Planned (research-grade)          |
@@ -189,6 +196,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 41    | Cognitive Cache Invalidation Engine                    | ⏳ Planned (research-grade)          |
 | 42    | Fractal Memory Summarization (Multi-Level)             | ⏳ Planned (research-grade)          |
 | 43    | Information Thermodynamics & Entropy Scoring           | ⏳ Planned (research-grade)          |
+| 43.1  | CPT Asymmetry — Question/Answer Entropy Differential    | ⏳ Planned                           |
 | 44    | Semantic Authority Ranking                             | ⏳ Planned (research-grade)          |
 | 45    | Synthetic Immune System (Knowledge Quality)            | ⏳ Planned (research-grade)          |
 | 46    | Event-Sourced Cognition Replay                         | ⏳ Planned (research-grade)          |
@@ -1168,6 +1176,42 @@ Generalize the `kind` field from a constrained enum to an open string (with the 
 
 ---
 
+## 🌱 Phase 6.3: Weak Measurements — Low-Certainty Hypothesis Tags — ⏳ Planned
+
+**Layman's Terms**: Attach a tentative guess to any entity without committing to it. "This might be related to auth" — the guess accumulates confidence every time it's reinforced. When confidence crosses a threshold, it becomes a real tag.
+
+**Technical Terms**: New `weakTags` field on `EntityRecord`: `[{ hypothesis: string, confidence: number, measurements: number, lastMeasuredAt: string }]`. Each time a user or agent applies the same hypothesis, confidence ticks up. At threshold (>0.8 after ≥5 measurements), promotes to a strong tag in `state.json`. Context packer uses weak tags as soft ranking signals. MCP: `apply_weak_measurement(entityId, hypothesis)`.
+
+**DoR**: Phase 6 schema is stable.
+
+**DoD**: `weakTags` persisted and queryable. Auto-promotion at threshold. Tests: single measurement (confidence 0.2), threshold-crossing promotion, empty baseline.
+
+---
+
+## 🧭 Phase 6.4: Torsion Links — Context-Dependent Entity Meaning — ⏳ Planned
+
+**Layman's Terms**: The same entity means different things depending on how you arrived at it. AuthService emphasizes "token validation" when approached from PaymentService but "session management" when approached from UserService. The target's description adapts to the approach path.
+
+**Technical Terms**: Add optional `torsion` field to `relationships[]`: `{ fromContext: string, emphasis: string }`. When `Packer` includes an entity via a relationship that has torsion data, it injects the torsion-modified description instead of the generic one. Graph viewer highlights incoming torsion arcs. Schema: single `contextModifier` field per relationship with `{ emphasis: string, approachPath?: string[] }`.
+
+**DoR**: Phase 6 relationship schema is stable. Phase 13 packer is stable.
+
+**DoD**: Torsion data persisted on relationships. Context packer reads approach path and injects torsion description. Graph viewer renders torsion arcs distinctly. Tests: torsion-modified pack entry, fallback to generic description when no torsion matches.
+
+---
+
+## ⚡ Phase 6.5: Plasma Filaments — Structural Edge Flag — ⏳ Planned
+
+**Layman's Terms**: Some edges are more important than others. Deleting a structural edge cascades across the whole graph; deleting a regular edge only affects its two nodes. Mark edges that hold the graph together.
+
+**Technical Terms**: Add `structural: boolean` (default false) to relationship schema. Structural edges are exempt from Phase 20.17 pruning. Phase 9 impact preview shows cascade depth: structural edges flagged as high-impact (their deletion would ripple through connected clusters). CLI: `cortex edge flag <from> <to> --structural` and `cortex edge list --structural`.
+
+**DoR**: Phase 6 relationship schema is stable. Phase 9 impact preview is stable.
+
+**DoD**: `structural` flag persisted. Structural edges exempt from pruning. Impact preview marks structural edges with cascade depth. Tests: structural flag persistence, pruning exclusion, cascade depth calculation.
+
+---
+
 ## ✅ Phase 7: Audit & Traceability Tools — ✅ Done
 
 ### Phase 7 Execution Plan
@@ -1599,6 +1643,42 @@ Implement `cortex parallax <entity> --ago <duration>` that reconstructs the enti
 **DoR**: Phase 7 evolution commands and `log.jsonl` are stable.
 
 **DoD**: `cortex parallax` renders old vs. new with diff markers. Shift score computed and displayed. Tests: exact-match (score 0), minor-edit (score ~0.2), full-rewrite (score ~0.8), empty-history edge case.
+
+---
+
+## ⏪ Phase 7.13: Retrocausality — Backward Quality Propagation — ⏳ Planned
+
+**Layman's Terms**: When you mark a note as "resolved" or "concluded," the system looks backward and re-weights which past nodes actually contributed to reaching that conclusion. Entities that helped get a quality boost; entities that were consulted but irrelevant get decayed.
+
+**Technical Terms**: Extension to Phase 7.5 quality scoring. Add a `resolution_reweight` pass triggered when an entity is marked `status: resolved`. Walks the inbound dependency graph (reverse `depends_on`/`called_by` edges) and: boosts `quality_score` (+0.1) for nodes within 2 hops that have high causal co-occurrence with the resolution entity (Phase 20.14 `causalStrength`), decays `quality_score` (-0.05) for nodes within 2 hops that were consulted (have co-edits with the resolved entity) but zero causal strength. CLI: `cortex resolve <entity>` invokes the pass.
+
+**DoR**: Phase 7.5 quality scoring and Phase 20.14 causal strength are stable.
+
+**DoD**: `cortex resolve` triggers backward reweight. Quality scores updated. Tests: resolution with contributing nodes (scores boosted), resolution with consulted-but-irrelevant nodes (scores decayed), resolution with no dependencies (no-op).
+
+---
+
+## 🔴 Phase 7.14: Intrinsic Redshift — Novelty-at-Creation Metric — ⏳ Planned
+
+**Layman's Terms**: Not all old notes are equally stale. A 3-year-old note that was a brand new idea when written should decay differently than a 3-year-old note that was already a reformulation. Measure novelty at birth, not just age.
+
+**Technical Terms**: Add `intrinsicNovelty: number` (0-1) field to `EntityRecord`, computed at creation time by the synthesis engine. High novelty (>0.7) = entity introduced a concept not present in any existing entity's embedding space (Phase 18 similarity search against all existing entities at creation time, `1 - maxSimilarity`). Low novelty (<0.3) = entity is a reformulation of existing knowledge. Used as a multiplier in Phase 7.5 age_decay: `effective_age_decay = base_decay * (1 - intrinsicNovelty * 0.5)`. High-novelty entities decay slower.
+
+**DoR**: Phase 18 embeddings and Phase 7.5 age scoring are stable.
+
+**DoD**: `intrinsicNovelty` computed and persisted at entity creation. Age decay respects novelty multiplier. Tests: brand-new concept (novelty ~1.0), direct reformulation (novelty ~0.0), mid-range.
+
+---
+
+## 👁️ Phase 7.15: Verlinde Avoidance — Blind-Spot Detection — ⏳ Planned
+
+**Layman's Terms**: The nodes you're avoiding often matter most. If many nearby entities are semantically related to X but never link to X, X is a blind spot. Phase 7.15 flags these automatically.
+
+**Technical Terms**: Compute "avoidance score" per entity: count nearby nodes (within 2 graph hops) whose embedding (Phase 18) has semantic similarity >0.7 to this entity but which have no direct edge to it. High count + high semantic proximity = high avoidance. Entities with avoidance score in top 10% are flagged as "blind spot alerts." Surfaced via `cortex audit --blindspots`. MCP: `get_blindspots(threshold?)`.
+
+**DoR**: Phase 18 embeddings and Phase 6 typed relationships are stable.
+
+**DoD**: Avoidance score computed and queryable. `cortex audit --blindspots` surfaces top blind spots. Tests: known blind spot (semantically related but unlinked nodes), no blind spot (all related nodes linked), empty graph.
 
 ---
 
@@ -5173,6 +5253,20 @@ Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to t
 
 - ✅ **Pros**: Solves the "knowledge base grows forever as cruft" problem at the architectural level that biological sleep solves it (batch off-hours). Generative Agents' reflection phase is one of the paper's most-replicated mechanisms. The weekly reflection artifact is high-value documentation that emerges naturally from this layer. Diekelmann & Born (Nature Reviews) is a foundational reference frame for the design.
 - ❌ **Cons**: Consolidation is computationally expensive (~N² entity-pair embedding comparisons for duplicate detection). Fermentation adds state management over an unbounded set of dormant entities — mitigated by the auto-extend mechanism. User-approval-by-default means consolidation only happens when humans review — acceptable trade since architectural memory consolidation is too high-stakes to fully automate.
+
+---
+
+## 🧊 Phase 20.17.1: Casimir Effect — Suppressed-Mode Creativity — ⏳ Planned (research-grade)
+
+**Layman's Terms**: When two entities are brought close together in the graph, suppress the obvious connections between them. What remains are the surprising, creative links that wouldn't exist in either entity alone. Like forcing unrelated ideas close and seeing what unexpected sparks fly.
+
+**Technical Terms**: Phase 20.17 op 7 (Fermentation) already surfaces dormant entities. Casimir adds a specific pair-testing filter: when evaluation mode detects that an entity pair has high semantic overlap (>0.7 embedding cosine), instead of merging or deduplicating, invert the filter — exclude edges with embedding similarity >0.7 and surface only the residual low-probability edges (similarity <0.3) that still pass Phase 7.5 quality gates. Output is a "surprise report": entity pairs with unexpectedly low surface similarity but high architectural relevance. Gated by `CORTEX_CASIMIR=true` (default: off — research-grade).
+
+**Builds on**: Phase 7.5 quality scoring, Phase 20.17 op 7 fermentation, Phase 18 entity embeddings.
+
+**DoR**: Fermentation (Phase 20.17 op 7), Phase 18 embeddings, and Phase 7.5 quality scoring are stable.
+
+**DoD**: Casimir mode produces surprise reports with filtered edge pairs. Default-off flag. Tests: high-overlap pair (few edges surfaced), low-overlap pair (edges pass filter), empty result when no surprising edges found.
 
 ---
 
@@ -9251,6 +9345,18 @@ Context pack assembly selects the minimum sufficient level: entity-scoped querie
 
 ---
 
+## ⚖️ Phase 43.1: CPT Asymmetry — Question/Answer Entropy Differential — ⏳ Planned
+
+**Layman's Terms**: If a synthesized entity's question and answer are too similar, it contains zero new information — the entity is just a paraphrase of what prompted it. This phase measures that asymmetry and flags low-information entities for merging or deletion.
+
+**Technical Terms**: Extension to Phase 43 entropy scoring. For each entity, store `promptEmbedding` (embedding of the diff/query that triggered synthesis) alongside the existing description embedding. Compute asymmetry = `cosineDistance(promptEmbedding, descriptionEmbedding)`. Low asymmetry (<0.15) = the entity added nothing new → flag as `lowInformation: true`. High asymmetry (>0.5) = genuine insight → boost quality_score by 0.05. Asymmetry score stored as `cptAsymmetry` on the entity. Surface via `cortex audit --low-info`.
+
+**DoR**: Phase 43 entropy scoring and Phase 18 embeddings are stable.
+
+**DoD**: Prompt embedding captured at synthesis time. Asymmetry computed and stored. Low-asymmetry entities flagged. Tests: identical prompt/description (asymmetry ~0), completely unrelated (asymmetry ~1), mixed.
+
+---
+
 ## 🪐 Phase 44: Semantic Authority Ranking — ⏳ Planned (research-grade)
 
 **Layman's Terms**: Not all Cortex entities are equally important. A core service used by 30 other modules is more authoritative than a utility function used by one. This phase gives every entity a dynamic authority score combining: how many entities link to it, how often it surfaces in successful AI coding sessions, how stable its synthesis has been, and whether a human has reviewed and validated it.
@@ -9336,6 +9442,7 @@ If your team uses Cortex across multiple separate codebases or departments, they
 - **Federated Pattern Extraction**: An opt-in synchronization layer that extracts generalized metadata of successful prompt mutations from Phase 40.8 (Gödel loop) while stripping all proprietary code, strings, and domain-specific references.
 - **Anonymized Schema Exchange**: Transmits structural performance metrics (e.g., "this updated extraction prompt yielded a 14% increase in evidence quality scores for TypeScript interface blocks") to a central corporate or public schema registry.
 - **Global Wisdom Injection**: Local Cortex instances query the registry during background maintenance, pulling and applying top-performing generalized extraction schemas and prompt improvements that match the local repository's tech stack.
+- **Navigation Path Inheritance**: The registry also tracks anonymized entity-traversal sequences (entity A → entity B → entity C) that consistently lead to high-quality syntheses. When a new user's context matches the start of a high-performing path, their context packer biases toward that sequence. Routes are stripped of domain-specific identifiers before transmission. Requires Phase 22 central server for cross-user telemetry aggregation.
 
 **Engineering ROI**
 A company-wide network effect for AI documentation. Organizations benefit from a compound learning loop where every local developer's refinement of the AI-pair coding model systematically upgrades the intelligence of the entire fleet.
