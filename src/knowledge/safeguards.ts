@@ -81,6 +81,39 @@ export function loadSafeguardConfig(projectRoot: string): SafeguardConfig {
 }
 
 /**
+ * Simple inter-process lock using atomic directory creation.
+ */
+async function withLock<T>(projectRoot: string, fn: () => Promise<T>): Promise<T> {
+  const knowledgeDir = path.join(projectRoot, ".knowledge");
+  const lockDir = path.join(knowledgeDir, ".session_usage.lock");
+  const maxRetries = 50; // 50 * 100ms = 5 seconds
+
+  if (!fs.existsSync(knowledgeDir)) {
+    await fs.promises.mkdir(knowledgeDir, { recursive: true }).catch(() => {});
+  }
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await fs.promises.mkdir(lockDir);
+      // We got the lock
+      try {
+        return await fn();
+      } finally {
+        await fs.promises.rmdir(lockDir).catch(() => {});
+      }
+    } catch (e: any) {
+      if (e.code === 'EEXIST') {
+        // Wait and retry
+        await new Promise(r => setTimeout(r, 100));
+      } else {
+        throw e;
+      }
+    }
+  }
+  throw new Error("Timeout acquiring lock for session usage ledger. Another process might be hung.");
+}
+
+/**
  * Reads all session usage records from .session_usage.json, pruning events older than 24 hours.
  */
 export async function readSessionUsage(projectRoot: string): Promise<SessionUsage> {
@@ -104,13 +137,17 @@ export async function readSessionUsage(projectRoot: string): Promise<SessionUsag
     });
 
     return { events: activeEvents };
-  } catch {
-    return { events: [] };
+  } catch (e: any) {
+    if (e.code === 'ENOENT') {
+      return { events: [] };
+    }
+    // Fail-closed security design: if the ledger is corrupted, do NOT silently reset to $0
+    throw new Error(`Corrupted session usage file: ${e.message}. Please delete it manually or use 'cortex config -c clear' to reset safeguards.`);
   }
 }
 
 /**
- * Writes the session usage registry to .session_usage.json safely.
+ * Writes the session usage registry to .session_usage.json safely using atomic temp-file rename.
  */
 export async function writeSessionUsage(projectRoot: string, usage: SessionUsage): Promise<void> {
   const knowledgeDir = path.join(projectRoot, ".knowledge");
@@ -119,6 +156,7 @@ export async function writeSessionUsage(projectRoot: string, usage: SessionUsage
   }
 
   const filePath = path.join(knowledgeDir, USAGE_FILE_NAME);
+  const tmpPath = filePath + ".tmp";
   
   // Auto-prune events older than 24 hours before writing
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
@@ -127,11 +165,13 @@ export async function writeSessionUsage(projectRoot: string, usage: SessionUsage
     return !isNaN(t) && t >= cutoff;
   });
 
+  // Atomic write pattern: write to tmp, then rename
   await fs.promises.writeFile(
-    filePath,
+    tmpPath,
     JSON.stringify({ events: prunedEvents }, null, 2),
     "utf-8"
   );
+  await fs.promises.rename(tmpPath, filePath);
 }
 
 /**
@@ -139,52 +179,57 @@ export async function writeSessionUsage(projectRoot: string, usage: SessionUsage
  * Throws an descriptive Error if any limits are crossed.
  */
 export async function checkBudgetBeforeSync(projectRoot: string, estimatedCost: number): Promise<void> {
-  const config = loadSafeguardConfig(projectRoot);
-  const usage = await readSessionUsage(projectRoot);
+  return await withLock(projectRoot, async () => {
+    const config = loadSafeguardConfig(projectRoot);
+    const usage = await readSessionUsage(projectRoot);
 
-  // 1. Session cost check
-  if (config.maxSessionCostUsd !== undefined) {
-    const cumulativeSpent = usage.events.reduce((sum, e) => sum + (e.costUsd || 0), 0);
-    const projectedSpent = cumulativeSpent + estimatedCost;
-    if (projectedSpent > config.maxSessionCostUsd) {
-      throw new Error(
-        `Budget Exceeded: Cumulative session cost of $${projectedSpent.toFixed(4)} exceeds the hard limit of $${config.maxSessionCostUsd.toFixed(4)}.`
-      );
+    // 1. Session cost check (Rolling 24h Cost)
+    if (config.maxSessionCostUsd !== undefined) {
+      const cumulativeSpent = usage.events.reduce((sum, e) => sum + (e.costUsd || 0), 0);
+      const projectedSpent = cumulativeSpent + estimatedCost;
+      if (projectedSpent > config.maxSessionCostUsd) {
+        throw new Error(
+          `Budget Exceeded: Rolling 24h cost of $${projectedSpent.toFixed(4)} exceeds the hard limit of $${config.maxSessionCostUsd.toFixed(4)}.`
+        );
+      }
     }
-  }
 
-  // 2. Rolling hourly sync frequency check
-  if (config.maxSyncCallsPerHour !== undefined) {
-    const cutoffOneHour = Date.now() - 60 * 60 * 1000;
-    const syncsInLastHour = usage.events.filter(e => {
-      const t = new Date(e.timestamp).getTime();
-      return !isNaN(t) && t >= cutoffOneHour;
-    }).length;
+    // 2. Rolling hourly sync frequency check
+    if (config.maxSyncCallsPerHour !== undefined) {
+      const cutoffOneHour = Date.now() - 60 * 60 * 1000;
+      const syncsInLastHour = usage.events.filter(e => {
+        const t = new Date(e.timestamp).getTime();
+        return !isNaN(t) && t >= cutoffOneHour;
+      }).length;
 
-    if (syncsInLastHour >= config.maxSyncCallsPerHour) {
-      throw new Error(
-        `Rate Limit Exceeded: Sync calls capped at ${config.maxSyncCallsPerHour} per hour to prevent runaway sessions.`
-      );
+      if (syncsInLastHour >= config.maxSyncCallsPerHour) {
+        throw new Error(
+          `Rate Limit Exceeded: Sync calls capped at ${config.maxSyncCallsPerHour} per hour to prevent runaway sessions.`
+        );
+      }
     }
-  }
+  });
 }
 
 /**
  * Appends a successful sync run details to .session_usage.json
  */
 export async function recordSyncEvent(projectRoot: string, costUsd: number): Promise<SessionUsageEvent> {
-  const usage = await readSessionUsage(projectRoot);
-  
-  const nextInvocationCount = usage.events.length + 1;
-  const event: SessionUsageEvent = {
-    timestamp: new Date().toISOString(),
-    cost_usd: costUsd,
-    costUsd: costUsd,
-    invocation_count: nextInvocationCount,
-    invocationCount: nextInvocationCount,
-  };
+  return await withLock(projectRoot, async () => {
+    const usage = await readSessionUsage(projectRoot);
+    
+    const nextInvocationCount = usage.events.length + 1;
+    const event: SessionUsageEvent = {
+      timestamp: new Date().toISOString(),
+      cost_usd: costUsd,
+      costUsd: costUsd,
+      invocation_count: nextInvocationCount,
+      invocationCount: nextInvocationCount,
+    };
 
-  usage.events.push(event);
-  await writeSessionUsage(projectRoot, usage);
-  return event;
+    usage.events.push(event);
+    await writeSessionUsage(projectRoot, usage);
+    return event;
+  });
 }
+

@@ -276,7 +276,7 @@ export class CortexMCPServer {
           description: "Check or configure your active budget limits and runaway protection settings.",
           arguments: [
             { name: "action", description: "The action to perform: 'view' to inspect current safeguards, or 'configure' to update limits", required: false },
-            { name: "maxCost", description: "Optional: Max session cost limit to set (or 'none' to clear)", required: false },
+            { name: "maxCost", description: "Optional: Max rolling 24h cost limit to set (or 'none' to clear)", required: false },
             { name: "maxSyncsHour", description: "Optional: Max hourly sync frequency limit to set (or 'none' to clear)", required: false },
           ]
         },
@@ -718,7 +718,7 @@ export class CortexMCPServer {
               role: "user",
               content: {
                 type: "text",
-                text: "Step 1: Check the status. Call get_cortex_status. Step 2: Present the active budget gating status: Session Limit, Hourly Limit, Session Spent, Quota Remaining, and Hourly Syncs. If any limits are active, explain how they prevent runaway LLM sync loops."
+                text: "Step 1: Check the status. Call get_cortex_status. Step 2: Present the active budget gating status: Rolling 24h Limit, Hourly Limit, Rolling 24h Spent, Quota Remaining, and Hourly Syncs. If any limits are active, explain how they prevent runaway LLM sync loops."
               }
             }],
           };
@@ -732,7 +732,7 @@ export class CortexMCPServer {
               role: "user",
               content: {
                 type: "text",
-                text: "Ask the user: 'What new safety limits would you like to set? Please provide: (1) Max Session Cost in USD (e.g. 0.05 or 'none' to disable), and (2) Max Sync Calls per Hour (e.g. 5 or 'none' to disable).' Wait for their response, then call the configure_safeguards tool with their choices."
+                text: "Ask the user: 'What new safety limits would you like to set? Please provide: (1) Max Rolling 24h Cost in USD (e.g. 0.05 or 'none' to disable), and (2) Max Sync Calls per Hour (e.g. 5 or 'none' to disable).' Wait for their response, then call the configure_safeguards tool with their choices."
               }
             }],
           };

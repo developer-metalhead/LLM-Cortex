@@ -89,11 +89,11 @@ export async function runStatus(projectRoot: string): Promise<void> {
     
     safeguardSection = `
   [Safeguards & Budget]
-  Session Limit:   ${maxCost}
-  Hourly Limit:    ${maxSyncs}
-  Session Spent:   $${sessionSpent.toFixed(4)}
-  Hourly Syncs:    ${syncsInLastHour}
-  Quota Remaining: ${remainingBudget}`;
+  Rolling 24h Limit: ${maxCost}
+  Hourly Limit:      ${maxSyncs}
+  Rolling 24h Spent: $${sessionSpent.toFixed(4)}
+  Hourly Syncs:      ${syncsInLastHour}
+  Quota Remaining:   ${remainingBudget}`;
   } catch {
     // ignore
   }
