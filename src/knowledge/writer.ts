@@ -640,6 +640,40 @@ export class KnowledgeManager {
       state: { entities: state.entities, concepts: state.concepts },
     };
     await fs.appendFile(logJsonlPath, JSON.stringify(jsonlEntry) + "\n", "utf8");
+
+    // Ingest-bypass token savings ledger logging
+    try {
+      const { computeCostEstimate } = await import("../cli/test-cost.js");
+      const { appendTransaction, calculateSavedUsd } = await import("./ledger.js");
+      const estimate = await computeCostEstimate(this.projectRoot);
+      if (estimate && estimate.hasDiff && estimate.savingsTokens > 0) {
+        const provider = process.env.CORTEX_PROVIDER || "openai";
+        const model = process.env.CORTEX_MODEL || "gpt-4o";
+        const savedUsd = calculateSavedUsd(estimate.savingsTokens, provider, this.projectRoot);
+        
+        const uniqueFiles = Array.from(new Set(
+          synthesis.entities
+            .map(e => e.sourceFile)
+            .filter((f): f is string => typeof f === "string" && f.trim().length > 0)
+        ));
+        const fileDetail = uniqueFiles.length > 0 
+          ? uniqueFiles.map(f => path.basename(f)).join(", ")
+          : "metadata updates";
+        
+        await appendTransaction(this.projectRoot, {
+          category: "ingest_bypass",
+          provider,
+          model,
+          originalTokens: estimate.rawInputTokens,
+          denseTokens: estimate.inputTokens,
+          savedTokens: estimate.savingsTokens,
+          savedUsd,
+          details: `${fileDetail}`,
+        });
+      }
+    } catch (err: any) {
+      console.error(`[Cortex] Failed to record ingest_bypass savings: ${err.message}`);
+    }
   }
 
   private async renderEntityFile(name: string, record: EntityRecord): Promise<void> {
