@@ -2716,6 +2716,147 @@ graph TD
 
 ---
 
+## 🔗 Phase 13.8.2: Dynamic Co-Edit Edge Weighting — ⏳ Planned
+
+**Layman's Terms**
+Right now, every knowledge graph tool (Obsidian, Notion, Roam, and Cortex today) uses **static links**. When you write `AuthController depends_on JwtUtils`, that link is either there or it isn't — it never gets stronger or weaker. But in real codebases, some file pairs are edited together *constantly* (controller + its test, service + its DTO), while other links go stale and never get touched again. Phase 13.8.2 makes Cortex's graph edges **alive** — they strengthen automatically when files are co-edited in the same commit and decay slowly when they drift apart. This means the context packer automatically prioritizes the files you *actually work with together*, not just the ones that happen to have an import statement.
+
+**Why This Matters (The Competitive Differentiator)**
+Every competitor treats dependency edges as binary switches (exists / doesn't exist). Cortex will be the first architectural memory tool where the graph **learns from your editing patterns** without any LLM calls. When the context packer has to choose which 5 files to include in a 4,000-token budget, it picks the ones with the highest co-edit weight — the files that *actually matter together* based on real developer behavior, not just static import analysis.
+
+**Technical Terms & Engineering Spec**
+
+### A. Core Mechanism: 3-Tier Co-Edit Signal Stack
+
+Co-edit detection does **not** require git commits. It fires on three independent signal layers, each with a different trust level, so that even uncommitted edits build up co-edit weight over time:
+
+#### Tier 1 — File-System Co-Saves (Weakest, Finest Grain)
+When `cortex watch` detects file-save events, it groups files saved within a configurable time window (default: 60 seconds). Files saved in the same window are treated as a co-edit pair.
+```typescript
+// Tier 1: co-save within 60s window
+edge.coEditWeight = edge.coEditWeight * (1 - 0.02) + 0.02;
+// Very weak signal — could be coincidence. Takes ~50 co-saves to reach 0.5
+```
+
+#### Tier 2 — Sync Diff Co-Occurrence (Medium, Default Trigger)
+On every `cortex sync` (manual or watcher-triggered), Cortex runs `git diff` which includes **unstaged, uncommitted working-tree changes**. All files appearing in the same sync diff are co-edit pairs.
+```typescript
+// Tier 2: both files appear in the same sync diff (committed or not)
+edge.coEditWeight = edge.coEditWeight * (1 - 0.05) + 0.05;
+// Medium signal — you actively changed both since last sync
+```
+
+#### Tier 3 — Git Commit Bundling (Strongest, Coarsest Grain)
+When the sync diff includes committed changes, files that share the same commit hash get the strongest co-edit signal.
+```typescript
+// Tier 3: both files in the same git commit
+edge.coEditWeight = edge.coEditWeight * (1 - 0.10) + 0.10;
+// Strongest signal — you deliberately bundled these together
+```
+
+#### Decay on Every Sync Tick
+Edges that were **not** co-edited in the current sync tick decay slowly:
+```typescript
+// For every edge NOT co-edited in this tick:
+edge.coEditWeight *= decayFactor;
+// decayFactor = 0.995 (slow decay — takes ~140 syncs to halve)
+```
+
+**Why 3 tiers?** A developer who never commits but saves files A and B together 20 times still builds `coEditWeight ≈ 0.33` from Tier 1 alone. Committing is the strongest signal, but it's not required. The system learns from whatever workflow the developer actually uses.
+
+#### IDE/MCP Route — Tier 4: `save_synthesis` sourceFile Extraction
+When the developer uses the **IDE route** (Gemini, Claude, Cursor calling MCP tools directly), there is no `cortex watch` daemon and no file-system watcher running. Tiers 1-3 don't fire because there's no CLI sync loop. Instead, co-edit signals come from the MCP tools themselves:
+
+- **`save_synthesis` hook**: Every entity in a synthesis call carries a `sourceFile` field. When `save_synthesis` receives entities touching multiple source files in a single call, those files are treated as a co-edit set:
+  ```typescript
+  // Inside save_synthesis handler:
+  const sourceFiles = synthesis.entities
+    .map(e => e.sourceFile)
+    .filter(Boolean);
+  // All unique pairs from this set = co-edited
+  for (const [fileA, fileB] of allPairs(sourceFiles)) {
+    edge.coEditWeight = edge.coEditWeight * (1 - 0.08) + 0.08;
+  }
+  ```
+- **`ingest` hook**: When the agent calls `ingest` (which internally calls `get_pending_changes` → LLM → `save_synthesis`), Tier 2 and 3 fire naturally since `get_pending_changes` reads `git diff`.
+- **`get_pending_changes` is read-only** — it does not update co-edit weights. Weights only update on write operations (`save_synthesis` or `ingest`).
+
+| Route | Tiers That Fire | How |
+| :--- | :--- | :--- |
+| **CLI (`cortex watch` / `cortex sync`)** | Tier 1 + 2 + 3 | fs watcher + git diff + commit hash grouping |
+| **IDE/MCP (`save_synthesis` direct)** | Tier 4 | sourceFile extraction from synthesis entities |
+| **IDE/MCP (`ingest` tool)** | Tier 2 + 3 + 4 | git diff (via get_pending_changes) + sourceFile extraction |
+
+### B. Where Co-Edit Weights Are Used
+
+| Cortex Subsystem | How It Uses Co-Edit Weights |
+| :--- | :--- |
+| **Context Packer (`src/knowledge/packer.ts`)** | When assembling `build_context_pack`, entities with high co-edit weights to the currently modified files are boosted in the priority ranking. A file with `coEditWeight: 0.8` to the active file beats a file with `coEditWeight: 0.1` even if the latter has higher PageRank centrality. |
+| **Graph Visualization (`graph` tool)** | Edge thickness in the Mermaid output scales with `coEditWeight`. Thick edges = frequently co-edited. Thin/dashed edges = stale connections that may be candidates for pruning. |
+| **Stale Detection (`audit` tool)** | If an entity has `depends_on` relationships but all of them have `coEditWeight < 0.05`, that's a signal the dependency may be dead code. Flag it in the audit report. |
+| **Impact Analysis (`impact_analysis` tool)** | When computing blast radius, weight the severity of downstream impact by co-edit strength. A dependent with `coEditWeight: 0.9` is a much higher blast-radius risk than one with `coEditWeight: 0.02`. |
+
+### C. Data Model Changes
+
+Add a `coEditWeight` field to the existing relationship model in `state.json`:
+```typescript
+interface Relationship {
+  target: string;
+  kind: "depends_on" | "called_by" | "supports" | "contradicts" | "derived_from" | "parent_of";
+  coEditWeight?: number;  // 0.0 to 1.0, default 0.0 for new edges
+}
+```
+
+The weight is stored per-edge in `state.json` and persisted across syncs. No additional files needed — it piggybacks on the existing graph structure.
+
+### D. Implementation Scope
+
+- **File**: `src/knowledge/writer.ts` — Add co-edit extraction from both git diff (CLI route) and `sourceFile` fields (IDE route). Run EMA update loop during `save_synthesis`.
+- **File**: `src/knowledge/packer.ts` — Modify `build_context_pack` centrality ranking to blend PageRank with co-edit weight (configurable blend ratio via `CORTEX_COEDIT_BLEND`, default `0.3`).
+- **File**: `src/knowledge/manager.ts` — Add `decayCoEditWeights()` method called on every sync tick or `save_synthesis` call.
+- **File**: `src/mcp/tools.ts` — Expose co-edit weights in `graph` and `impact_analysis` tool outputs. Add Tier 4 hook inside the `save_synthesis` MCP handler.
+- **Config**: `CORTEX_COEDIT_ALPHA` (learning rate, default `0.1`), `CORTEX_COEDIT_DECAY` (decay factor, default `0.995`), `CORTEX_COEDIT_BLEND` (packer blend ratio, default `0.3`).
+
+**Architecture & System Design**
+
+```mermaid
+flowchart LR
+    subgraph CLI Route
+        FS["File-System Saves (Tier 1)"] --> EMA
+        Diff["Git Diff (Tier 2+3)"] --> EMA
+    end
+    subgraph IDE Route
+        SaveSynth["save_synthesis sourceFiles (Tier 4)"] --> EMA
+        Ingest["ingest → get_pending_changes (Tier 2+3)"] --> EMA
+    end
+    EMA["EMA Update Loop"] --> StateJson["state.json (coEditWeight on edges)"]
+    StateJson --> Packer["Context Packer (blended ranking)"]
+    StateJson --> Graph["Graph Tool (edge thickness)"]
+    StateJson --> Audit["Audit Tool (dead-edge detection)"]
+    StateJson --> Impact["Impact Analysis (weighted blast radius)"]
+    Tick["Sync Tick / save_synthesis call"] --> Decay["Decay All Untouched Edges"]
+    Decay --> StateJson
+```
+
+**Definition of Ready (DoR)**
+- Phase 6 (Typed Relationships) is completed — co-edit weights extend the existing `relationships[]` array.
+- Phase 13.8 (Cortex Soul) is completed or in progress — the co-edit weight system complements the Soul's experience ledger.
+
+**Definition of Done (DoD)**
+- **EMA Update Verified**: Co-editing files A and B in 5 consecutive commits increases `coEditWeight(A,B)` from 0.0 to ≥ 0.41 (verified mathematically: `1 - 0.9^5`).
+- **Decay Verified**: An edge untouched for 100 syncs decays from 1.0 to ≤ 0.61 (verified: `0.995^100`).
+- **Packer Integration**: `build_context_pack` with `CORTEX_COEDIT_BLEND=0.3` provably reorders entity priority vs pure PageRank when co-edit weights diverge.
+- **Graph Visualization**: `graph` tool output shows co-edit weights as edge annotations or thickness variations.
+- **Audit Integration**: `audit` tool flags `depends_on` edges with `coEditWeight < 0.05` as potentially stale.
+- **Zero LLM Cost**: The entire feature operates without any LLM calls — purely local git analysis and arithmetic.
+- Tests cover: EMA convergence, decay rate correctness, packer reordering, edge creation for new co-edit pairs, decay-to-zero cleanup threshold.
+
+**Pros & Cons**
+- ✅ **Pros**: First architectural memory tool with graph edges that learn from developer behavior; zero LLM cost; ~50 lines of core logic; directly improves context relevance for the most common editing patterns; complements Phase 13.8 Soul without adding complexity.
+- ❌ **Cons**: Requires git history access (already available via existing diff extraction); co-edit signal is noisy for large refactoring commits where 30+ files change together (mitigated by capping pair generation to files within the same directory bucket, reusing Phase 14's clustering logic when available).
+
+---
+
 ## 💸 Phase 13.9: Grapheme-Safe Token Compression (TokenJuice Rules) — ⏳ Planned
 
 **Layman's Terms**
