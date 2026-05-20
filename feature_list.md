@@ -8,17 +8,17 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
 - [**1. Auto-Sync Background Daemon**](./feature.md#1-auto-sync-background-daemon)
   *Runs `cortex watch` to automatically ingest codebase changes.*
 - [**2. Manual Ingestion Engine**](./feature.md#2-manual-ingestion-engine)
-  *Force a batch sync from your IDE before asking architectural questions.*
+  *Force a batch sync from your terminal or IDE before asking architectural questions.*
 - [**3. Magic Auto-Setup**](./feature.md#3-magic-auto-setup)
   *Instantly detect IDEs, scaffold `.knowledge/`, and register MCP servers.*
 - [**4. Developer Control Panel**](./feature.md#4-developer-control-panel)
-  *Manage config, health, and AI models via the CLI.*
+  *Manage config, health, and AI models via `cortex status` or `cortex config`.*
 - [**5. Universal IDE Integration**](./feature.md#5-universal-ide-integration)
-  *Native connection to Claude Code, Cursor, and VSCode via MCP.*
+  *Native connection to Claude Code, Cursor, VSCode, and Antigravity via MCP setup.*
 - [**6. Dynamic Root Rebasing**](./feature.md#6-dynamic-root-rebasing)
   *Auto-resolves broken paths when IDEs launch from unexpected root directories.*
 - [**7. Sub-millisecond Architectural Search**](./feature.md#7-sub-millisecond-architectural-search)
-  *Blazing-fast exact search engine that queries your architecture directly.*
+  *Blazing-fast exact search engine (`cortex find`) that queries your architecture directly.*
 - [**8. Interactive Knowledge Exploration**](./feature.md#8-interactive-knowledge-exploration)
   *Lets the AI browse the knowledge graph by following wiki-links organically.*
 
@@ -34,9 +34,9 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
 
 ### Safety, Governance & Traceability
 - [**13. Blast-Radius Propagation**](./feature.md#13-blast-radius-propagation)
-  *Automatically flags downstream dependents to prevent hidden regressions.*
+  *Automatically flags downstream dependents (`cortex impact`) to prevent hidden regressions.*
 - [**14. Outbound Dependency Analysis**](./feature.md#14-outbound-dependency-analysis)
-  *Shows everything a specific file relies on before you start coding.*
+  *Shows everything a specific file relies on (`cortex deps`) before you start coding.*
 - [**15. Active Guardrails (Policy as Code)**](./feature.md#15-active-guardrails-policy-as-code)
   *Hardblocks the AI from violating `mustNotImport` or `mustNotBeCalledBy` rules.*
 - [**16. Pre-Flight Safety Checks**](./feature.md#16-pre-flight-safety-checks)
@@ -56,13 +56,13 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
 - [**23. Historical Index Replay**](./feature.md#23-historical-index-replay)
   *Rewind time to view the entire knowledge index at a specific past commit.*
 - [**24. Architectural Event Logging**](./feature.md#24-architectural-event-logging)
-  *A central ledger of every architectural shift and structural warning.*
+  *A central ledger (`cortex log`) of every architectural shift and structural warning.*
 - [**25. Git Pre-Commit Guardrails**](./feature.md#25-git-pre-commit-guardrails)
-  *A hook that reminds developers to run a sync before they push breaking changes.*
+  *A hook (`cortex hook`) that reminds developers to run a sync before they push changes.*
 
 ### Visualization & Onboarding
 - [**26. Live Interactive Visualizer**](./feature.md#26-live-interactive-visualizer)
-  *A local web server rendering a force-directed layout of your entire architecture.*
+  *A local web server (`cortex serve`) rendering a force-directed layout of your architecture.*
 - [**27. Automated Dependency Graphing**](./feature.md#27-automated-dependency-graphing)
   *Exports Mermaid diagrams directly to the terminal or markdown files.*
 - [**28. Tailored Architectural Onboarding**](./feature.md#28-tailored-architectural-onboarding)
@@ -78,7 +78,7 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
 - [**32. Telegraphic Brevity Engine**](./feature.md#32-telegraphic-brevity-engine)
   *Actively strips conversational fluff from AI responses over the wire.*
 - [**33. Markdown Compression Engine**](./feature.md#33-markdown-compression-engine)
-  *Standalone engine that physically compresses `.knowledge/` markdown files on disk.*
+  *Physically compresses `.knowledge/` or raw rule files on disk (`cortex compress`).*
 - [**34. Token & Cost Savings Ledger**](./feature.md#34-token--cost-savings-ledger)
   *A live financial dashboard showing exactly how much Cortex has saved you.*
 
