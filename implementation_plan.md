@@ -28,6 +28,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
 | 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
 | 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
+| 7.11  | Epigenetic Memory Suppression                          | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
@@ -55,7 +56,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.7  | Hooks-Based Smart Read Cache & AST Skeleton Delta      | ⏳ Planned                           |
 | 13.7.2| Speculative Static Verification & Grounded Fallback    | ⏳ Planned                           |
 | 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
-| 13.9  | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
+| 13.8.8| Unified Edge Confidence (Synaptic Plasticity)         | ⏳ Planned                           |
+| 13.9   | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
+| 13.10  | Information Bottleneck Scoring                          | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 14.2  | Topological Hierarchy & Zoomable Retrieval (RAPTOR)   | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
@@ -67,6 +70,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20    | Intelligent Architectural Advisor                      | ⏳ Planned                           |
 | 20.1  | Architecture Simulation & What-If Analysis             | ⏳ Planned                           |
 | 20.2  | Bug Hotspot Prediction                                 | ⏳ Planned (research-grade)          |
+| 20.2.1| Catastrophe Tipping-Point Detection                    | ⏳ Planned                           |
 | 20.3  | Design Pattern Suggestion                              | ⏳ Planned                           |
 | 20.4  | Evolutionary Architecture Fitness Functions            | ⏳ Planned                           |
 | 20.5  | Architecture Documentation Generation                  | ⏳ Planned                           |
@@ -89,6 +93,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.20 | Active Inference & Predictive Synthesis (Friston)      | ⏳ Planned (research-grade)          |
 | 20.21 | Episodic-Semantic Memory Consolidation (Tulving)       | ⏳ Planned (research-grade)          |
 | 20.22 | Spaced Repetition & Forgetting Curves (Ebbinghaus/SM-2)| ⏳ Planned                           |
+| 20.22.1| Entity Lifecycle Phases                               | ⏳ Planned                           |
 | 20.23 | Tool-Use Augmented Synthesis (Toolformer/ReAct)        | ⏳ Planned (research-grade)          |
 | 20.24 | Sequential Thinking & Persistent Reasoning Traces      | ⏳ Planned (research-grade)          |
 | 21    | Polyrepo Federation                                    | ⏳ Planned                           |
@@ -1480,6 +1485,44 @@ Integrate a high-performance regex-based scanning and redaction pipeline inside 
 **Pros & Cons**
 - ✅ **Pros**: Crucial enterprise guardrail; prevents accidental leakage of API credentials and keys to the `.knowledge/` folder, which is typically committed to the repository.
 - ❌ **Cons**: Regex checks add a minor millisecond latency during ingestion. Mitigated by restricting scanning to text files and diff inputs.
+
+---
+
+## 🧬 Phase 7.11: Epigenetic Memory Suppression — ⏳ Planned
+
+**Layman's Terms**
+Contextually suppress entities without deleting them. A deprecated auth pattern should vanish from default retrieval but resurface when someone asks "why did we stop using X?"
+
+**Technical Terms**
+Add a `suppressionPolicy` field on entity records:
+
+```typescript
+suppressionPolicy?: {
+  suppressed: boolean;
+  reason: string;
+  suppressedAt: string;
+  resurfaceOn: string[];  // keywords that trigger resurfacing
+}
+```
+
+Suppressed entities excluded from `read_knowledge_index` and context packs by default. Queryable via `cortex find --include-suppressed` or when a query matches `resurfaceOn` keywords. Differentiates from:
+- **Deletion** (permanent, irreversible)
+- **Archival** (Phase 7.9 — moved to cold storage, fully retrievable)
+- **Staleness** (Phase 6 — flagged but still visible)
+
+**Definition of Ready (DoR)**
+- Phase 7.9 (Knowledge GC & Archive) is completed — suppression is the light-touch alternative to archival.
+
+**Definition of Done (DoD)**
+- `suppressionPolicy` field recognized by entity schema and persisted.
+- Suppressed entities excluded from default `read_knowledge_index` output and `cortex context build` packs.
+- `cortex find --include-suppressed` returns suppressed entities.
+- Query matching any `resurfaceOn` keyword auto-includes the suppressed entity.
+- Tests cover: suppression filter in index/packer, keyword resurfacing, `--include-suppressed` flag.
+
+**Pros & Cons**
+- ✅ **Pros**: Removes context noise without losing institutional memory. A codebase migrated from Redux to Zustand shouldn't have Redux entities polluting every pack — but should still answer "what state management did we use before?"
+- ❌ **Cons**: Adds a new entity lifecycle concept alongside deletion, archival, staleness — users must understand the differences.
 
 ---
 
@@ -3334,6 +3377,45 @@ function processSpike(spike: Spike, graph: KnowledgeGraph): void {
 
 ---
 
+## 🔗 Phase 13.8.8: Unified Edge Confidence (Synaptic Plasticity) — ⏳ Planned
+
+**Layman's Terms**
+Today Cortex tracks four separate edge-level signals — co-edit weight, causal strength, evidence count, contradiction status — but no single score answers "how much should I trust this relationship?" Phase 13.8.8 combines them into a computed `edgeConfidence` that the packer and impact analysis use to weight traversal: high-confidence edges are followed preferentially.
+
+**Technical Terms**
+A computed `edgeConfidence: number` (0–1) on each relationship:
+
+```typescript
+edgeConfidence = weighted_mean(
+  coEditWeight,           // behavioral signal (Phase 13.8.2)
+  causalStrength,         // temporal co-change signal (Phase 20.14)
+  evidenceCount > 0 ? 1 : 0,  // grounded in cited code (Phase 7)
+  hasContradiction ? 0 : 1    // no open contradiction on this edge (Phase 16)
+)
+```
+
+Default weights: `{ coEdit: 0.3, causal: 0.3, evidence: 0.2, contradiction: 0.2 }`, configurable via `CORTEX_EDGE_CONFIDENCE_WEIGHTS`. Edge confidence is computed on read and stored ephemerally — it's a projection, not a persisted field. Used by:
+- **Context packer**: traverse edges with `edgeConfidence > 0.5` preferentially; low-confidence edges require explicit `--include-weak` flag.
+- **Impact analysis**: blast-radius weighting scales with edge confidence.
+- **Graph visualization**: edge opacity or dash pattern reflects confidence.
+
+**Definition of Ready (DoR)**
+- Phase 13.8.2 (coEditWeight) and Phase 20.14 (causalStrength) are completed.
+- Phase 7 evidence and Phase 16 contradiction flags are stable.
+
+**Definition of Done (DoD)**
+- `edgeConfidence` computed for every relationship at read time from existing fields.
+- Configurable weight vector respected.
+- Context packer skips edges below confidence threshold (default 0.3) unless `--include-weak` is set.
+- Impact analysis weights blast radius by edge confidence.
+- Tests cover: confidence computation on edges with various signal combinations, threshold filtering, weight override.
+
+**Pros & Cons**
+- ✅ **Pros**: Single trust number per relationship — no mental arithmetic across 4 unrelated signals. Packer and impact analysis get strictly better edge-guidance; this is pure refinement with zero new data collection. ~30 lines of scoring logic.
+- ❌ **Cons**: Default weight vector may not suit all codebases — mitigated by explicit configuration. Edges with zero signals produce 0.5 (neutral) rather than 0.0 to avoid penalizing unsensed relationships.
+
+---
+
 ## 💸 Phase 13.9: Grapheme-Safe Token Compression (TokenJuice Rules) — ⏳ Planned
 
 **Layman's Terms**
@@ -3353,6 +3435,39 @@ Prevent token minifiers from breaking or corrupting complex language text or lay
 **Pros & Cons**
 - ✅ **Pros**: Guaranteed safety for international developers; prevents emoji and UI visual rendering bugs in compressed context payloads.
 - ❌ **Cons**: Using native `Intl.Segmenter` loops adds minor computational parsing overhead (1-2ms per massive file).
+
+---
+
+## 💸 Phase 13.10: Information Bottleneck Scoring — ⏳ Planned
+
+**Layman's Terms**
+When assembling context packs, prefer entities with high information density (lots of relevant signal per token) over verbose entities with the same total relevance. Two entities might both score 0.85 relevance, but one is 50 tokens and the other is 500 tokens — the compact one delivers 10x more value per token of budget consumed.
+
+**Technical Terms**
+In the context packer scoring function, add a density dimension:
+
+```typescript
+density_score = relevanceToQuery / descriptionTokenCount
+```
+
+- `relevanceToQuery`: existing relevance score (centrality x quality blend)
+- `descriptionTokenCount`: token count of the entity's rendered description (via Phase 13.1 tokenizer heuristic)
+- Final packer score: `relevanceToQuery x (1 + B x density_score)` where B (default 0.3) controls density bias
+
+Entities with high density (compact, signal-rich descriptions) are preferred over verbose entities with equivalent total relevance. This is a refinement of existing packer scoring (Phase 13 centrality x quality), not a new system.
+
+**Definition of Ready (DoR)**
+- Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
+
+**Definition of Done (DoD)**
+- `density_score` computed per entity during `build_context_pack`.
+- Score-weighted pack results prefer compact entities over verbose ones at equal relevance.
+- `CORTEX_DENSITY_BETA` configurable (default 0.3).
+- Tests cover: density bias reorders pack inclusion vs pure relevance scoring, B=0 produces identical ranking to current behavior.
+
+**Pros & Cons**
+- ✅ **Pros**: Extracts maximum value per token — directly reduces context pack size for equivalent relevance signal. No new data structures, no new storage. ~20 lines of scoring adjustment.
+- ❌ **Cons**: Slight risk of overly aggressive pruning on entities that are long because they're genuinely complex — mitigated by B defaulting to 0.3 (conservative density bias).
 
 ---
 
@@ -3848,6 +3963,36 @@ CLI:
 
 - ✅ **Pros**: Grounded in published empirical results (Nagappan & Ball ICSE 2008). No LLM in the path — predictions are reproducible and explainable. Reuses existing Cortex signals without new data collection. The "impact before change" query (`cortex predict impact <entity>`) is uniquely valuable at review time — reviewers get an objective risk signal rather than intuition alone.
 - ❌ **Cons**: Accuracy depends on all three input signals being populated. A fresh install with no CI history and few log entries produces low-signal scores — mitigated by surfacing data-sparsity warnings in output. High-churn but stable entities (e.g., actively developed but well-tested) will appear as false positives; mitigated by the component breakdown, which lets users discount misleading signals manually.
+
+---
+
+## 🐛 Phase 20.2.1: Catastrophe Tipping-Point Detection — ⏳ Planned
+
+**Layman's Terms**
+Some entities are one change away from structural collapse — one more dependency pushes them past the god-module threshold, or removing one edge disconnects a subgraph. Phase 20.2.1 models these tipping points: the nonlinear threshold where incremental change becomes structural collapse.
+
+**Technical Terms**
+`cortex predict tipping-points` — pure graph math, no LLM calls. Three detector types:
+
+1. **God-module proximity**: entities where `current_dependencies >= god_module_threshold - 1`. One more dependency edge pushes them over the lint threshold.
+2. **Bridge nodes**: entities whose removal would disconnect a subgraph (articulation points in the dependency graph). Detected via Tarjan's algorithm over the directed relationship graph.
+3. **Quality gate proximity**: entities where quality score is within 0.05 of the Phase 7.5 quality gate threshold. One more bad synthesis drops them below the gate.
+
+**Definition of Ready (DoR)**
+- Phase 20.2 (Hotspot Prediction) is completed — shares the `cortex predict` command namespace.
+- Phase 6 constraints include god_module threshold configuration.
+- Phase 7.5 quality gates are defined.
+
+**Definition of Done (DoD)**
+- `cortex predict tipping-points` returns all three detector types.
+- God-module proximity flagged for entities at threshold - 1 dependencies.
+- Bridge nodes correctly identified via articulation-point detection.
+- Quality-gate proximity surfaced for entities within 0.05 of the gate threshold.
+- Tests cover: each detector type on synthetic graphs, edge cases (empty graph, fully connected graph, single-bridge graph).
+
+**Pros & Cons**
+- ✅ **Pros**: Catches structural risk before it materializes — the most valuable intervention point. Zero LLM cost. Complements hotspot prediction (current bugs) with forward-looking risk.
+- ❌ **Cons**: Bridge-node detection produces false positives in intentionally star-shaped topologies (e.g., API gateways). Mitigated by severity labeling and by explaining why the entity is a bridge.
 
 ---
 
@@ -4732,13 +4877,14 @@ Humans don't just accumulate facts — they sleep, and during sleep the brain re
 > *Source Domain:* Sleep Biology / Neuroscience.
 > During sleep, the brain replays the day's events, compresses memories, and prunes weak synaptic connections (Synaptic Homeostasis Hypothesis). Cortex replicates this: when the IDE is closed or idle at 3 AM, a background daemon replays the day's git commits, compresses the knowledge graph, prunes dead synaptic weights (using Oja's rule from Phase 13.8), and even hallucinates possible refactorings (dreams) to test architectural stability for the next day.
 
-A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Five operations:
+A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Six operations:
 
 1. **Duplicate merging**: identify entities with high Phase 18 embedding similarity (>0.9) AND overlapping `sourceFile` paths AND no distinguishing relationships. Propose merge candidates; user applies via `cortex consolidate --apply-merges`.
 2. **Resolved-contradiction cleanup**: contradictions resolved >30 days ago with no recurrence are archived (moved from active `contradictions[]` to `contradictions-archive.jsonl`).
 3. **Higher-order pattern extraction**: detect entity clusters that share architectural patterns (Repository, Strategy, Factory) via Phase 20.13 skill library + Phase 20.9 communities, and synthesize a meta-entity describing the pattern at the cluster level.
 4. **Dead entity pruning**: entities with `removed: true` (Phase 20.12) AND no temporal queries against them in 90 days are hard-deleted (with explicit user confirmation per batch).
 5. **Reflection generation**: per Generative Agents pattern, an LLM pass over recent `log.jsonl` events produces "what did we learn this week" insights stored at `.knowledge/reflections/weekly/<date>.md`.
+6. **Synaptic edge pruning**: prune weak edges — relationships where `coEditWeight < 0.05` AND `causalStrength < 0.1` (or absent) AND `lastEvidenceAt > 180 days ago`. Pruned edges archived in `log.jsonl` for potential resurrection if the relationship re-emerges. Keeps the graph honest without human intervention.
 
 Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to true.
 
@@ -5076,6 +5222,41 @@ Auto-confirmation: an entity touched by a recent synthesis (last 30 days) is aut
 
 - ✅ **Pros**: Ebbinghaus + SM-2 represent 140 years of evidence-grounded memory science. Closes the "is this knowledge still accurate?" question proactively. Auto-confirmation makes adoption painless — active codebases see almost no review burden; only neglected areas surface. Directly complements Phase 7.5 staleness scoring with a temporal nudge system.
 - ❌ **Cons**: Review fatigue if too many entities go stale at once. Mitigated by auto-confirmation and `--top N` limiting per-query surface. Adds 4-5 fields per entity record; small storage cost.
+
+---
+
+## 🔁 Phase 20.22.1: Entity Lifecycle Phases — ⏳ Planned
+
+**Layman's Terms**
+Every entity passes through predictable stages: emerging (new, few relationships), growing (being actively developed), mature (stable, well-evidenced), declining (losing relevance), archived (removed or fossilized). Phase 20.22.1 computes a discrete lifecycle phase for each entity from existing signals — creation date, relationship count, quality trend, staleness — and surfaces it as a retrieval signal and visual indicator.
+
+**Technical Terms**
+A computed `lifecyclePhase: "emerging" | "growing" | "mature" | "declining" | "archived"` derived from:
+- **emerging**: created <30 days, <3 relationships
+- **growing**: created <90 days, relationships increasing (detected via log.jsonl trend)
+- **mature**: stable description, quality >0.7, well-evidenced (evidence count >2), no recent staleness signals
+- **declining**: `staleSince` set, quality dropping (last 3 scores decreasing), no recent synthesis touching this entity in 60 days
+- **archived**: removed from active index (Phase 7.9) or fossilized (Phase 40.6)
+
+Computed on read from existing fields — no new storage. Surface:
+- **Context packer**: deprioritize declining entities; prioritize emerging/growing entities for enrichment.
+- **Graph visualization**: color nodes by lifecycle phase (green=mature, amber=declining, blue=emerging).
+- **Cortex lint**: warn on declining entities with no archival plan.
+
+**Definition of Ready (DoR)**
+- Phase 20.22 (Spaced Repetition) is completed — provides creation timestamps and quality trends.
+- Phase 7.5 quality scores are stable.
+
+**Definition of Done (DoD)**
+- `lifecyclePhase` computed for every entity on read.
+- Phase boundaries configurable via `CORTEX_LIFECYCLE_THRESHOLDS` (age days, relationship count, quality floor).
+- Context packer deprioritizes declining entities.
+- Graph visualization colors nodes by lifecycle phase.
+- Tests cover: each phase correctly classified from synthetic entity records, configurable threshold overrides.
+
+**Pros & Cons**
+- ✅ **Pros**: Explicit lifecycle awareness without new storage or new synthesis. Refines retrieval quality — declining entities get less budget, emerging entities get more attention. ~25 lines of computed-field logic.
+- ❌ **Cons**: Phase boundaries are heuristic — a long-dormant entity might be "mature" not "declining." Mitigated by configurable thresholds and by always surfacing the raw signals alongside the computed phase.
 
 ---
 
@@ -6990,6 +7171,10 @@ A five-phase pipeline replacing the current single-shot bootstrap. Each phase is
 - If quality is below threshold for any domain, **auto-trigger a second Phase B pass for that domain** (budget permitting).
 - User-visible quality scorecard at the end: per-domain entity count, evidence coverage, relationship density, quality score (Phase 7.5).
 - If overall quality score < 0.5, emit a warning recommending `cortex bootstrap refine --domain <weakest-domain>`.
+
+**Phase F — Self-Entity Generation**
+- Auto-generate a `[[Cortex Configuration]]` meta-entity in `.knowledge/entities/` describing Cortex's own configuration on this project: which phases are active, which constraints are declared, which domains were detected, quality score trends, provider configuration, bootstrap history (timestamp, entity count, total cost). Gives the Librarian self-awareness about its own setup — when asked "how is Cortex configured for this project?" it has a ground-truth answer.
+- Cost: zero LLM calls — computed entirely from existing config + state.json + bootstrap progress. Updated on every Phase 20.17 consolidation pass to keep quality trends current.
 
 ### The Output-Token Wall — Why Multi-Wave Processing Is Physically Required
 
