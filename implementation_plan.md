@@ -61,6 +61,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.8.8| Unified Edge Confidence (Synaptic Plasticity)         | ⏳ Planned                           |
 | 13.9   | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
 | 13.10  | Information Bottleneck Scoring                          | ⏳ Planned                           |
+| 13.11  | Bidirectional Context Retrieval                        | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 14.2  | Topological Hierarchy & Zoomable Retrieval (RAPTOR)   | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
@@ -116,6 +117,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 29.2  | Tenant-Scoped Billing & Metering                       | ⏳ Planned (enterprise)              |
 | 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
 | 30.1  | External AI Conversation Import                        | ⏳ Planned (enterprise)              |
+| 30.2  | Knowledge Base Merge Engine                            | ⏳ Planned (enterprise)              |
 | 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
 | 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
 | 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
@@ -1067,6 +1069,8 @@ Four related additions, all sharing one schema/migration:
 
 3. **Blast-radius flagging on entity mutation.** When `action: update` materially changes an entity's description or `sourceFile`, the writer walks the inbound `relationships[]` graph (every entity whose `relationships[]` has the mutated entity as a `target` with kind `depends_on` or `called_by`) and stamps a `staleSince: <ISO timestamp>` field on each dependent record. `state.json` gains a derived `stalenessIndex` so `cortex status` and `read_knowledge_index` can surface "N entities are downstream of a change you haven't reconciled yet."
 
+   **Continuous staleness gradient** (upgrade): in addition to the binary `staleSince` flag, propagate a weighted `staleInfluence: number` (0.0–1.0) that decays with graph distance from the mutated entity — direct dependent gets 1.0, 2-hop gets 0.5, 3-hop gets 0.25 (default decay factor 0.5 per hop, configurable via `CORTEX_STALE_DECAY_PER_HOP`). The context packer (Phase 13) and impact analysis (Phase 9) use `staleInfluence` as a continuous priority signal: entities with `staleInfluence > 0.3` are demoted in packer ranking; entities with `staleInfluence > 0.7` are flagged for re-synthesis.
+
 4. **Failed-approaches memory (anti-repetition).** Add an optional `failedApproaches[]` array on entities and concepts:
 
    ```ts
@@ -1150,7 +1154,7 @@ Please review the proposed approach for adding structured logging, evidence bloc
 ##### 3. Audit, Evolution, and Lint Modules (`src/knowledge/audit.ts`, `src/knowledge/lint.ts`, `src/knowledge/evolution.ts`)
 
 - **audit.ts**: Implement structured log querying (by entity, since commit, warnings) and evidence drift detection.
-- **lint.ts**: Implement graph integrity checks for orphans, silos, missing source files, dependency cycles, god-modules, and contradiction-heavy entities.
+- **lint.ts**: Implement graph integrity checks for orphans, silos, missing source files, dependency cycles, god-modules, contradiction-heavy entities, and duplicate-pattern detection (reframes "merge candidates" as "missing abstraction signals" — identical subgraph shapes across entities indicate an unextracted shared pattern).
 - **evolution.ts**: Implement semantic timeline reconstruction per entity from `log.jsonl`.
 
 ##### 4. CLI Extensions (`src/cli/log.ts`, `src/cli/audit.ts`, `src/cli/evolution.ts`, `src/cli/lint.ts`, `src/cli/index.ts`)
@@ -2420,7 +2424,7 @@ Three small, self-contained surfaces over the existing knowledge — no new data
    - `--scope <entity-or-concept>` — narrow to a subgraph (reuses Phase 8's graph traversal).
    - `--depth N` — link-hop traversal depth from the scope root.
    - `--format markdown|json` — markdown for humans/IDEs, JSON for programmatic consumers.
-     The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
+           The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
 
 2. **Response compression in MCP outputs (sqz-style reference pointers).** Wrap MCP tool responses (`read_knowledge_index`, `read_entity`, `read_concept`, `get_pending_changes`) with a per-session content-addressed cache. On the first response that contains a given large block (e.g., a 4KB entity description), the full text is emitted. On any subsequent response in the same session that would repeat the same block, the body is replaced with a `§ref:<hash>§` token plus a small legend the agent can resolve client-side via a new `resolve_refs(refs[])` tool. Sessions are scoped to a single MCP connection; eviction is LRU on a small fixed budget (256KB by default). Backward-compatible: clients that don't call `resolve_refs` simply see the placeholder and ignore it.
 
@@ -3095,6 +3099,14 @@ if (norm > 1) edges.forEach(e => e.coEditWeight /= norm);
 - **Why it matters**: Without normalization, files touched in every commit would accumulate `coEditWeight: 1.0` with everything, making the signal useless. Oja's rule ensures weights represent *relative* co-edit importance, not absolute frequency.
 - **DoD**: A file co-edited with 20 other files has its weights normalized such that the L2 norm of its outgoing weights ≤ 1.0.
 
+### I. Casimir Shortcut Channels
+
+When two entity clusters have high mutual co-edit weight (inter-cluster `coEditWeight > 0.3` for 3+ entity pairs) but are separated by a chain of low-quality noise nodes (quality < 0.4, no inbound edges from outside the chain), create a **direct shortcut edge** between the clusters, bypassing the noise. The shortcut edge carries `kind: "shortcut"` with `coEditWeight` set to the mean inter-cluster weight.
+
+- **Implementation**: post-processing pass in `src/knowledge/graph.ts` after co-edit weights are computed. Reuses Phase 14's Leiden community detection to identify clusters, computes inter-cluster co-edit density, creates shortcut edges where density exceeds threshold.
+- **Why it matters**: Accelerates retrieval between coupled clusters — the context packer traverses 1 hop instead of N hops through noisy intermediaries. Edge count stays bounded because shortcuts are only created where behavioral (co-edit) evidence supports a real connection.
+- **DoD**: Two clusters with mean inter-cluster co-edit weight 0.4 connected via a 5-hop path of quality < 0.3 nodes produce a direct shortcut edge. Retrieval between clusters is 1 hop.
+
 ---
 
 ## 🎯 Phase 13.8.3: Simulated Annealing for Context Packing — ⏳ Planned
@@ -3532,6 +3544,46 @@ Entities with high density (compact, signal-rich descriptions) are preferred ove
 **Pros & Cons**
 - ✅ **Pros**: Extracts maximum value per token — directly reduces context pack size for equivalent relevance signal. No new data structures, no new storage. ~20 lines of scoring adjustment.
 - ❌ **Cons**: Slight risk of overly aggressive pruning on entities that are long because they're genuinely complex — mitigated by B defaulting to 0.3 (conservative density bias).
+
+---
+
+## 💸 Phase 13.11: Bidirectional Context Retrieval — ⏳ Planned
+
+**Layman's Terms**
+The context packer currently walks forward from the active entity: it follows dependency edges outward until the token budget is exhausted. But some of the most relevant context isn't reachable within N forward hops — it's structurally important because a high-centrality hub depends ON it. Phase 13.11 adds a backward traversal wave: simultaneously walk backward from the top hub entities (by PageRank) and intersect the two wavefronts. Entities at the intersection are the highest-relevance candidates — contextually near the query AND anchored to authoritative hubs.
+
+**Technical Terms**
+A second graph traversal pass in `src/knowledge/packer.ts` running alongside the existing forward BFS:
+
+```typescript
+// Forward wave: from scope root outward
+const forwardCandidates = bfs(entityGraph, scopeRoot, { direction: "outbound", depth: CORTEX_BIDIRECTIONAL_DEPTH });
+
+// Backward wave: from top 5% PageRank hubs inward
+const topHubs = entities.sortBy("pageRank").slice(0, Math.ceil(entities.length * 0.05));
+const backwardCandidates = topHubs.flatMap(hub => bfs(entityGraph, hub, { direction: "inbound", depth: CORTEX_BIDIRECTIONAL_DEPTH }));
+
+// Intersection: entities reachable from both waves
+const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id));
+```
+
+- The intersection is scored at `(forwardHops + backwardHops) / 2` for packer priority — entities close to both the scope root and a hub rank highest.
+- Configurable depth via `CORTEX_BIDIRECTIONAL_DEPTH` (default 2 hops per direction). Depth 0 disables the backward wave (current behavior).
+- Catches "pull" relationships: entities that important hubs depend on, but the current scope root doesn't directly reach.
+
+**Definition of Ready (DoR)**
+- Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
+- Phase 10 centrality scores are available — needed to identify hub entities.
+
+**Definition of Done (DoD)**
+- Bidirectional traversal produces the forward/backward intersection set.
+- Intersection entities score higher in packer ranking than forward-only entities at equal relevance.
+- `CORTEX_BIDIRECTIONAL_DEPTH=0` produces identical results to current (forward-only) behavior.
+- Tests cover: intersection correctness on a known graph, depth=0 backward-compatibility, hub selection respects PageRank ordering.
+
+**Pros & Cons**
+- ✅ **Pros**: Catches a genuine blind spot in forward-only traversal — hub-dependent entities that are structurally important but not locally reachable. No new data structures. ~30 lines of traversal logic. Complements Phase 13.8.2 (co-edit weighting) which is behavioral signal — this is structural signal.
+- ❌ **Cons**: Adds ~1 extra BFS per context pack per hub (capped at top 5% of entities). On a 500-entity graph with 2-hop depth, this is <10 extra traversals of <50 nodes each — negligible overhead. Hub selection is sensitive to PageRank quality — stale PageRank scores produce stale hub sets.
 
 ---
 
@@ -6805,6 +6857,39 @@ After raw import, each conversation passes through a synthesis pass that:
 
 - ✅ **Pros**: **Captures the most valuable architectural content in the org** — chat-based design reasoning that would otherwise be lost. Bridges the "where do decisions live?" gap for AI-assisted teams. Provenance preservation means imports are auditable and reversible. Integrates with Phase 20.5 ADR generation (imported conversations → draft ADRs), Phase 6 failedApproaches (rejected alternatives surface as entity history), Phase 43.1 entity "discussed-in" surface (imported conversations appear alongside agent messages). Differentiator vs. CodeScene / Sourcegraph / Aider — those tools don't ingest AI chat history at all.
 - ❌ **Cons**: 9 source-tool adapters is permanent maintenance as export formats evolve. Mitigated by isolating per-source parsing in dedicated adapter files. Post-processing LLM cost can be significant for large historical imports (years of conversations); mitigated by dry-run cost preview and incremental import via `--since <date>`. Privacy is non-trivial — conversations often contain client data, internal acquisition discussions, personnel matters; mitigated by mandatory DLP gate and per-conversation classification.
+
+---
+
+## 🔀 Phase 30.2: Knowledge Base Merge Engine — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+When two codebases combine (branch merge, repo consolidation, acquisition), their `.knowledge/` directories diverge independently. Today there's no path to merge them — the branch's knowledge is silently discarded on merge, and consolidating teams must bootstrap from scratch. Phase 30.2 adds `cortex merge <source-knowledge>` — collide two `.knowledge/` trees and produce a unified graph. Contradicting entity descriptions are flagged for Phase 23 review; identical entities are unified; unique entities from each side are retained.
+
+**Technical Terms**
+A structured merge engine operating on `state.json` graphs:
+
+1. **Entity identity resolution**: match entities across the two knowledge bases by name + `sourceFile` (strong match) or by name + subgraph shape similarity via Phase 18 embeddings (fuzzy match, when available). Unmatched entities are unique additions — retained from their source side.
+2. **Conflict detection**: when the same entity exists in both knowledge bases with different descriptions, both versions are retained as a `contradicts` relationship (Phase 16). The merge report lists all conflicts for Phase 23 human review.
+3. **Edge merge**: the union of both edge sets. Duplicate edges (same source, same target, same kind) are deduplicated; edges from both sides are retained. Temporal fields (`validFrom`/`validTo` from Phase 20.12) are preserved per side.
+4. **Garbage-resistant**: entities archived by Phase 7.9 (GC) on either side stay archived post-merge — GC decisions don't propagate across the merge boundary.
+5. **Idempotent**: running `cortex merge` twice on the same pair produces the same output (merge is a pure union function over the graph, modulo conflict labeling).
+
+**Definition of Ready (DoR)**
+- Phase 16 (Contradiction Detection) is shipped — needed for conflict labeling.
+- Phase 20.12 (Temporal KG) is shipped — needed for temporal field preservation.
+- Phase 23 (Human Review) is shipped — needed for conflict resolution workflow.
+
+**Definition of Done (DoD)**
+- `cortex merge <source-knowledge>` produces a unified `state.json` from two disjoint knowledge bases.
+- Entity identity resolution correctly matches same-file entities across the pair and flags cross-file fuzzy matches for review.
+- Conflict report lists all entity-level description contradictions with side-by-side sources.
+- Edge union preserves all non-conflicting edges; duplicate edges deduplicated.
+- Merge is idempotent: second run produces byte-identical output.
+- Tests cover: identity resolution (exact + fuzzy), conflict detection, edge union, idempotency, GC boundary preservation.
+
+**Pros & Cons**
+- ✅ **Pros**: Fills a genuine write-side federation gap — current Phase 11/21 federation is read-only. Makes branch-level knowledge preservation possible (no more discarded knowledge on merge). Enterprise consolidation use case (acquisitions, org restructuring) is a concrete sales scenario.
+- ❌ **Cons**: Depends on Phase 16, 20.12, and 23 being shipped — merge can't ship without all three. Entity identity resolution is inherently heuristic (two knowledge bases may name the same thing differently). Conflicts require human review — fully automated merge is not the goal.
 
 ---
 
