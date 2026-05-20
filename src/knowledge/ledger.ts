@@ -11,6 +11,8 @@ export interface SavingsTransaction {
   savedTokens: number;
   savedUsd: number;
   details?: string;
+  spentTokens?: number;
+  spentUsd?: number;
 }
 
 // Token-to-character heuristics to estimate token count when offline
@@ -98,6 +100,54 @@ export function calculateSavedUsd(
   // Rate is USD per Million Tokens
   return (savedTokens / 1_000_000) * rate;
 }
+
+/**
+ * Calculates spent USD based on input/output tokens, provider, and custom pricing.
+ */
+export function calculateSpentUsd(
+  inputTokens: number,
+  outputTokens: number,
+  provider: string,
+  projectRoot: string
+): number {
+  const providerLower = provider.toLowerCase();
+  let rates = DEFAULT_PRICING.fallback;
+  
+  // Try to load custom pricing from cortex.json
+  try {
+    const configPath = path.join(projectRoot, "cortex.json");
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      if (config.pricing) {
+        for (const [key, val] of Object.entries(config.pricing)) {
+          if (providerLower.includes(key.toLowerCase()) && val && typeof val === "object") {
+            const inputRate = (val as any).input || (val as any).inputRate;
+            const outputRate = (val as any).output || (val as any).outputRate;
+            if (typeof inputRate === "number" && typeof outputRate === "number") {
+              rates = { input: inputRate, output: outputRate };
+              break;
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore config reading errors, fallback to default pricing table
+  }
+
+  // Fallback to static pricing table if not found in custom config
+  if (rates === DEFAULT_PRICING.fallback) {
+    for (const [key, val] of Object.entries(DEFAULT_PRICING)) {
+      if (providerLower.includes(key)) {
+        rates = val;
+        break;
+      }
+    }
+  }
+
+  return (inputTokens / 1_000_000) * rates.input + (outputTokens / 1_000_000) * rates.output;
+}
+
 
 /**
  * Appends a new transaction atomically to the local savings ledger file.

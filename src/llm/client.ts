@@ -5,6 +5,8 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { LIBRARIAN_SYSTEM_PROMPT, EXTRACTION_PROMPT_TEMPLATE } from "./prompts.js";
 import { SynthesisSchema, type Synthesis } from "./schema.js";
+import path from "path";
+import fs from "fs";
 
 export { SynthesisSchema, type Synthesis } from "./schema.js";
 
@@ -60,10 +62,37 @@ function resolveModel() {
   }
 }
 
+function findProjectRoot(startDir: string): string {
+  let current = startDir;
+  while (current !== path.parse(current).root) {
+    if (fs.existsSync(path.join(current, ".knowledge")) || fs.existsSync(path.join(current, ".git"))) {
+      return current;
+    }
+    current = path.dirname(current);
+  }
+  return startDir;
+}
+
 export async function synthesizeChanges(diff: string, context: string, guardrails: string = ""): Promise<Synthesis | null> {
+  const projectRoot = findProjectRoot(process.cwd());
+  
+  // 1. Pre-flight cost estimation
+  const simulatedPrompt = LIBRARIAN_SYSTEM_PROMPT + "\n\n" + context + "\n\n### CODE CHANGES\n" + diff + "\n\n" + guardrails;
+  const provider = process.env.CORTEX_PROVIDER || "openai";
+  
+  const { estimateTokens, calculateSpentUsd } = await import("../knowledge/ledger.js");
+  const inputTokens = estimateTokens(simulatedPrompt, provider);
+  const outputTokens = Math.max(500, Math.floor(inputTokens * 0.15));
+  const estimatedCost = calculateSpentUsd(inputTokens, outputTokens, provider, projectRoot);
+
+  // 2. Safeguard budget check
+  const { checkBudgetBeforeSync, recordSyncEvent } = await import("../knowledge/safeguards.js");
+  await checkBudgetBeforeSync(projectRoot, estimatedCost);
+
   // --- MOCK ENGINE (FOR TESTING ONLY) ---
   if (process.env.CORTEX_MOCK_AI === 'true') {
     console.error('Testing [MOCK MODE] Simulating LLM Synthesis...');
+    await recordSyncEvent(projectRoot, estimatedCost);
     return {
       summary: "Simulated summary of your project changes.",
       entities: [
@@ -98,6 +127,7 @@ export async function synthesizeChanges(diff: string, context: string, guardrail
         system: LIBRARIAN_SYSTEM_PROMPT,
         prompt: EXTRACTION_PROMPT_TEMPLATE(diff, context, [], guardrails),
       });
+      await recordSyncEvent(projectRoot, estimatedCost);
       return object;
     } catch (error) {
       if (attempt === maxAttempts) {

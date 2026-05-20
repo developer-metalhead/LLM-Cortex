@@ -102,6 +102,8 @@ program
   .option("-m, --model <model>", "LLM model ID")
   .option("-i, --mode <mode>", "Ingestion mode (auto, manual)")
   .option("-b, --brevity <level>", "Brevity level (off, lite, ultra)")
+  .option("-c, --max-cost <usd>", "Max session budget in USD")
+  .option("-s, --max-syncs-hour <count>", "Max rolling hourly sync calls limit")
   .action(async (options) => {
     await runConfig(projectRoot, options);
   });
@@ -151,8 +153,28 @@ program
 program
   .command("audit")
   .description("Audit the knowledge base")
-  .argument("<type>", "Type of audit to perform: 'stale', 'evidence', or 'quality'")
+  .argument("[type]", "Type of audit to perform: 'stale', 'evidence', or 'quality'")
   .action(async (type) => {
+    if (!type) {
+      console.log(`
+  Project Cortex — Audit Manager
+
+  Runs diagnostic audits across codebase documentation, synchronization, and governance rules.
+
+  Usage:
+    cortex audit stale     - Heal documentation flagged as stale by upstream changes
+    cortex audit evidence  - Detect drift between referenced source lines and documentation
+    cortex audit quality   - Analyze quality metric scores and flag low-quality entities
+
+  Examples:
+    cortex audit stale
+    cortex audit evidence
+    cortex audit quality
+      `);
+      process.exitCode = 1;
+      return;
+    }
+
     let code = 0;
     if (type === "stale") {
       code = await runAuditStale(projectRoot);
@@ -172,10 +194,29 @@ program
 program
   .command("review")
   .description("Mark an entity as human-reviewed (Phase 7.5 quality signal)")
-  .argument("<action>", "Action: 'accept' or 'reject'")
-  .argument("<entity>", "Entity name (must match exactly as shown in the index)")
+  .argument("[action]", "Action: 'accept' or 'reject'")
+  .argument("[entity]", "Entity name (must match exactly as shown in the index)")
   .option("-r, --reviewer <name>", "Name of the reviewer (defaults to 'human')")
-  .action(async (action: string, entity: string, options: { reviewer?: string }) => {
+  .action(async (action: string | undefined, entity: string | undefined, options: { reviewer?: string }) => {
+    if (!action || !entity) {
+      console.log(`
+  Project Cortex — Review Manager
+
+  Used to mark codebase entities as human-reviewed (boosting their quality score to 100%).
+
+  Usage:
+    cortex review accept <entity> [--reviewer <name>]
+    cortex review reject <entity>
+
+  Examples:
+    cortex review accept PropertyController
+    cortex review accept JwtUtils --reviewer SeniorDev
+    cortex review reject AuthMiddleware
+      `);
+      process.exitCode = 1;
+      return;
+    }
+
     let code = 0;
     if (action === "accept") {
       code = await runReviewAccept(projectRoot, entity, options.reviewer);

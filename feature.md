@@ -307,3 +307,13 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex savings` (summary table) or `cortex savings --graph` (chronological bar chart)
 - **MCP Tool Call:** `get_savings` with argument `graph=true|false`
 - **MCP Prompt Trigger:** `/savings` or select `savings` prompt (pass `graph` argument)
+
+---
+
+## 35. API Budget & Runaway Safeguards
+**What it does:** Defends your wallet by enforcing hard session budget caps and rolling hourly frequency gates. It blocks autonomous AI agents or local runs from starting runaway billing loops, with support for real-time telemetry tracking and dynamic constraint clearing.
+**How to use it:**
+- **CLI Command:** `cortex config --max-cost <usd> --max-syncs-hour <count>` (configure), `cortex config -c none` (clear limit), or `cortex status` (view spent real-time usage)
+- **MCP Tool Call:** `configure_safeguards` with arguments `maxCost` and `maxSyncsHour`
+- **MCP Prompt Trigger:** select `safeguards` prompt
+

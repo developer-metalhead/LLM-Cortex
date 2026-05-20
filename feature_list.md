@@ -81,6 +81,9 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
   *Physically compresses `.knowledge/` or raw rule files on disk (`cortex compress`).*
 - [**34. Token & Cost Savings Ledger**](./feature.md#34-token--cost-savings-ledger)
   *A live financial dashboard showing exactly how much Cortex has saved you.*
+- [**35. API Budget & Runaway Safeguards**](./feature.md#35-api-budget--runaway-safeguards)
+  *Defends your wallet by enforcing hard session budget caps and rolling frequency gates.*
 
 ---
 *Built incrementally to solve the hardest problem in Agentic AI: **Maintained Architectural Context**.*
+

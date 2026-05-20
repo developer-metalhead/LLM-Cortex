@@ -65,6 +65,39 @@ export async function runStatus(projectRoot: string): Promise<void> {
   const logPath = path.join(projectRoot, "cortex.log");
   const logHint = fs.existsSync(logPath) ? `Daemon log: ${logPath}` : "Daemon log: (none yet — created when you run `cortex watch`)";
 
+  let safeguardSection = "";
+  try {
+    const { loadSafeguardConfig, readSessionUsage } = await import("../knowledge/safeguards.js");
+    const config = loadSafeguardConfig(projectRoot);
+    const usage = await readSessionUsage(projectRoot);
+    
+    const maxCost = config.maxSessionCostUsd !== undefined ? `$${config.maxSessionCostUsd.toFixed(2)}` : "no limit";
+    const maxSyncs = config.maxSyncCallsPerHour !== undefined ? `${config.maxSyncCallsPerHour}/hour` : "no limit";
+    
+    const sessionSpent = usage.events.reduce((sum, e) => sum + (e.costUsd || 0), 0);
+    
+    const cutoffOneHour = Date.now() - 60 * 60 * 1000;
+    const syncsInLastHour = usage.events.filter(e => {
+      const t = new Date(e.timestamp).getTime();
+      return !isNaN(t) && t >= cutoffOneHour;
+    }).length;
+    
+    let remainingBudget = "N/A";
+    if (config.maxSessionCostUsd !== undefined) {
+      remainingBudget = `$${Math.max(0, config.maxSessionCostUsd - sessionSpent).toFixed(4)}`;
+    }
+    
+    safeguardSection = `
+  [Safeguards & Budget]
+  Session Limit:   ${maxCost}
+  Hourly Limit:    ${maxSyncs}
+  Session Spent:   $${sessionSpent.toFixed(4)}
+  Hourly Syncs:    ${syncsInLastHour}
+  Quota Remaining: ${remainingBudget}`;
+  } catch {
+    // ignore
+  }
+
   console.log(`
   Project Cortex — Status  (tip: \`cortex status --next\` for a single recommended action)
 
@@ -84,6 +117,7 @@ export async function runStatus(projectRoot: string): Promise<void> {
   [Daemon]
   ${lockLine}
   ${logHint}
+  ${safeguardSection}
   `);
 }
 
