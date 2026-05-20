@@ -1362,7 +1362,7 @@ Implement structural graph metrics and review-time advisory prompts in the `OrgC
 ## 🚨 Phase 7.9: Knowledge Garbage Collection & Archive Consolidation — ⏳ Planned
 
 **Layman's Terms**
-Prevent your AI's memory from getting cluttered with obsolete code that you deleted or refactored months ago. Cortex automatically scans the knowledge folder, sweeps old/unused entity files into a single compressed archive file (`.knowledge/ARCHIVE.md`), and removes them from the active index. This keeps your active workspace tiny and cheap to query, while still saving the history in case the AI needs to look it up later.
+The problem with standard RAG (Retrieval-Augmented Generation) is that as code is deleted or refactored over months, the database fills with outdated garbage, causing the AI to confidently hallucinate based on "ghost" code. Cortex implements an intelligent, automated filter that evaluates staleness and pushes dead entities into cold archives, guaranteeing the active memory is pristine and current. This keeps your active workspace tiny and cheap to query, while still saving the history in case the AI needs to look it up later.
 
 **Technical Terms**
 Implement an automated garbage collection (GC) utility in the `KnowledgeManager`.
@@ -3293,7 +3293,7 @@ When you change 30+ files at once — say, touching auth, database, and UI all i
 Introduce a deterministic clustering step that runs _before_ the LLM synthesis call when a diff exceeds a configurable file-count or token threshold. Each cluster is synthesised independently; the results are merged into a single log entry. Clustering is intentionally LLM-free — it uses structural signals already present in `state.json` (directory paths, Phase 6's typed `relationships[]` edges) so it adds no token cost and no latency outside of the synthesis calls themselves.
 
 - **Trigger threshold**: configurable via `.cortexrc` / env; defaults to `CORTEX_CLUSTER_THRESHOLD=15` files. Below the threshold the existing single-shot path runs unchanged.
-- **Clustering algorithm**: an $O(N \log N)$ hierarchical tree-clustering pass. Comparing every file to every other file is $O(N^2)$, which is too slow. Instead, Cortex treats deep directory sub-trees as single nodes, grouping them hierarchically.
+- **Clustering algorithm**: an $O(N \log N)$ hierarchical tree-clustering pass. If you commit 5,000 file changes at once (like a mass refactor), standard tools use $O(N^2)$ comparisons to group them, which freezes the IDE or times out the CI/CD pipeline. By using hierarchical tree clustering, Cortex treats distant folders as single macro-nodes, instantly grouping related files in $O(N \log N)$ time with zero LLM latency overhead.
   1. **Directory bucketing** — group changed files by their nearest common ancestor directory (e.g. `src/auth/`, `src/db/`, `src/ui/`). Files in the repo root are their own bucket.
   2. **Edge merge** — if two directory buckets share a `depends_on` or `called_by` edge in `state.json`'s typed graph, merge them into one cluster. This prevents splitting a change that straddles a tightly coupled boundary (e.g., a service and its direct repository layer) into two disconnected syntheses that each miss the other half.
 - **Synthesis**: each cluster is sent to the LLM as a separate `generateObject` call using the same Librarian prompt, with its own diff slice and a CURRENT CONTEXT block scoped to that cluster's entities. Retries (Phase 2's 3-attempt backoff) apply per cluster.
@@ -3981,7 +3981,7 @@ Extend Phase 20.5 with an automated ADR generation engine.
 **Research grounding**: MemGPT (Packer, Wooders, Lin, Fang, Patil, Stoica, Gonzalez — UC Berkeley 2023 — *"MemGPT: Towards LLMs as Operating Systems"*, arXiv:2310.08560). MemGPT introduces a hierarchical memory architecture inspired by traditional OS virtual memory: a small "main context" (in the LLM's window) and a large "external context" paged in/out via function calls. The LLM controls its own paging via a small set of memory-management functions. Reports that MemGPT outperforms fixed-context baselines on long-document QA and multi-session chat consistency.
 
 **Layman's Terms**
-Today every Cortex query reads the entire knowledge index. As the knowledge base grows past a few hundred entities, the index becomes too big for the AI to read efficiently. Phase 20.6 introduces a two-tier memory: a "hot" working memory of frequently-accessed entities that's always loaded, and a "cold" archive of rarely-touched entities that's pulled in on demand. The AI controls the paging itself — it can request "load the auth subsystem into working memory" and "evict the payment subsystem to make room." This is the architecture behind MemGPT, applied to Cortex's growing knowledge base.
+Standard LLM tools dump the entire repo into the context window for every query, costing $5-$10 per prompt on massive codebases. Phase 20.6 introduces a two-tier memory architecture (a hot/cold caching layer). Cortex "freezes" irrelevant codebase segments into cold storage, ensuring they consume zero tokens unless specifically queried, cutting API costs by 80-90%. The AI controls the paging itself — it can request "load the auth subsystem into working memory" and "evict the payment subsystem to make room."
 
 **Technical Terms**
 A two-tier memory architecture over `state.json`:
@@ -5077,7 +5077,7 @@ Pipeline:
 
 ### Layman's Terms
 
-When Cortex's Librarian synthesizes a complex change today, the reasoning vanishes — you see the resulting entity description but not *why* the AI concluded what it did. Phase 20.24 records the step-by-step thinking ("first I considered X; then I noticed Y contradicted it; I revised my conclusion to Z; verified by Q") and stores it with the entity. When a PR is blocked by a constraint violation (Phase 6) or a fitness function (Phase 20.4), the PR comment includes the reasoning chain: *"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."* Developers stop hating constraint blocks because they understand *why*. Powered by Anthropic's open-source Sequential Thinking MCP server, integrated via Phase 20.23's tool registry — not reinvented.
+Normal AI prediction is linear and greedy; if it makes one wrong assumption early on, the whole task fails. Phase 20.24 forces the AI to explore multiple logic trees concurrently (branching, backtracking, verifying) so the final generated code is the result of deep, rigorously verified logic. When a PR is blocked by a constraint violation (Phase 6), the PR comment includes the reasoning chain: *"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."* Developers stop hating constraint blocks because they understand *why*.
 
 ### Technical Terms
 
@@ -8420,7 +8420,7 @@ A senior engineer has 5 projects open: their company's main monorepo, a forked o
 A meta-graph layer above per-workspace knowledge graphs that supports cross-workspace query and entity correlation:
 
 - **Workspace registration**: workspaces opt into the meta-graph via `cortex workspace join --substrate <id>`. Each workspace remains the canonical owner of its own entities; the meta-graph is a derived view.
-- **Cross-workspace API Boundary Linking**: Instantly maps cross-repo topological dependencies. If a backend service API changes, the graph links across network boundaries to identify the exact frontend client repository that will break.
+- **Cross-workspace API Boundary Linking**: In an enterprise, backend services and frontend clients live in isolated repos. This creates architectural links across workspaces so that when an AI changes an API in the backend repo, it instantly knows it broke the UI in a completely different workspace it doesn't even have open.
 - **Cross-workspace entity correlation**: entities are correlated across workspaces via embedding similarity (Phase 18) + name match + structural match (relationship topology). Correlations are surfaced as `crossWorkspaceMatches` annotations, never as merges.
 - **Cross-workspace queries**:
   - `cortex query "JWT validation pattern" --substrate-wide` searches across all joined workspaces
@@ -9057,7 +9057,7 @@ Phase 43.1 messaging mentions "rate limiting" informally but never specifies how
 Six coordination-safety primitives enforced by the substrate, configurable via `cortex.coordination.yaml`:
 
 ### 0. Atomic File-State Locking (Collision Prevention)
-Strict distributed locking: Two autonomous agents cannot simultaneously hold an uncommitted write-lock on the exact same architectural entity. When agent trajectories collide on the same file, the substrate enforces a mutex, forcing one agent to yield and shift to a different task branch to prevent infinite recursion and merge conflicts.
+If you have 5 autonomous agents working in the same repo, Agent A might overwrite a file Agent B just fixed, causing an infinite loop or a recursion bomb that crashes the system. This provides a strict distributed mathematical lock: two AI agents cannot occupy the exact same state (file edit) simultaneously. When agent trajectories collide, the substrate forces one agent to yield and shift to a different task branch, allowing you to safely unleash massive swarms of agents in parallel.
 
 ### 1. Message Depth Limit (Recursion Bomb Prevention)
 
