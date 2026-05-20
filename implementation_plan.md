@@ -46,10 +46,10 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ✅ Done                              |
 | 13.1  | Dense & Raw Token-Reduction Projections                | ✅ Done                              |
-| 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ⏳ Planned                           |
-| 13.3  | Token & Cost Savings Ledger & Analytics                | ⏳ Planned                           |
-| 13.4  | API Budget Gating & Runaway Safeguards                | ⏳ Planned                           |
-| 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ⏳ Planned                           |
+| 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ✅ Done                              |
+| 13.3  | Token & Cost Savings Ledger & Analytics                | ✅ Done                              |
+| 13.4  | API Budget Gating & Runaway Safeguards                | ✅ Done                              |
+| 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
 | 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
@@ -2261,7 +2261,7 @@ Extend `cortex test-cost` with comparative raw-vs-dense math and customized toke
 
 ---
 
-## 💸 Phase 13.2: Cortex Brevity Engine & Telegraphic Memory Compression — ⏳ Planned
+## 💸 Phase 13.2: Cortex Brevity Engine & Telegraphic Memory Compression — ✅ Done
 
 **Layman's Terms**
 Save up to 50% of your AI token costs by stripping out prose fluff, introductory greetings, and redundant explanations from Cortex's generated files. This "telegraphic" mode writes compact, high-density instructions directly to `GEMINI.md` and onboarding guides. Code paths, file names, and syntax structures are preserved with 100% accuracy, giving your AI maximum context at half the price.
@@ -2291,7 +2291,7 @@ Implement a "Brevity Engine" containing:
 
 ---
 
-## 💸 Phase 13.3: Token & Cost Savings Ledger & Analytics — ⏳ Planned
+## 💸 Phase 13.3: Token & Cost Savings Ledger & Analytics — ✅ Done
 
 **Layman's Terms**
 Keep track of exactly how much money and how many tokens Cortex has saved you. Running `cortex savings` shows a daily graph of token reductions from smart caching, compressed MCP outputs, and output minification, complete with actual dollar savings based on your AI provider.
@@ -2322,7 +2322,7 @@ Implement a persistent local ledger to audit token and monetary savings.
 
 ---
 
-## 💸 Phase 13.4: API Budget Gating & Runaway Safeguards — ⏳ Planned
+## 💸 Phase 13.4: API Budget Gating & Runaway Safeguards — ✅ Done
 
 **Layman's Terms**
 Protect your wallet from runaway AI loops. If your editor or terminal agent goes into a loop calling Cortex over and over, it could drain your API account. Phase 13.4 lets you set a hard cap on session costs or the number of LLM syncs allowed per hour. Once crossed, Cortex blocks subsequent calls until you reset it.
@@ -2347,7 +2347,7 @@ Implement a session-based usage tracker and gatekeeper:
 
 ---
 
-## 💸 Phase 13.5: Fuzzy Levenshtein & RRF Search Ranker — ⏳ Planned
+## 💸 Phase 13.5: Fuzzy Levenshtein & RRF Search Ranker — ✅ Done
 
 **Layman's Terms**
 Make searching your architecture robust to typos and spelling mistakes. If you search for "useEfect" or "authContrller", Cortex uses fuzzy matching (calculating how close spelling is) and merges the results with exact term matches using Reciprocal Rank Fusion (RRF). The result is that the right files appear at the top, even if you make a typo.
