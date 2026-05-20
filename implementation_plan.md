@@ -2855,6 +2855,411 @@ flowchart LR
 - ✅ **Pros**: First architectural memory tool with graph edges that learn from developer behavior; zero LLM cost; ~50 lines of core logic; directly improves context relevance for the most common editing patterns; complements Phase 13.8 Soul without adding complexity.
 - ❌ **Cons**: Requires git history access (already available via existing diff extraction); co-edit signal is noisy for large refactoring commits where 30+ files change together (mitigated by capping pair generation to files within the same directory bucket, reusing Phase 14's clustering logic when available).
 
+### E. Transitive Co-Edit Inference (2-Hop)
+
+If File A and File B are frequently co-edited (`coEditWeight(A,B) = 0.7`), and File B and File C are frequently co-edited (`coEditWeight(B,C) = 0.6`), infer a **transitive co-edit weight** for A↔C even if they've never been directly edited together:
+
+```typescript
+// Transitive inference: product of path weights
+transitiveWeight(A, C) = coEditWeight(A, B) * coEditWeight(B, C);
+// = 0.7 * 0.6 = 0.42
+```
+
+- **Implementation**: 2-hop BFS from the active file during `build_context_pack`. For each neighbor's neighbor, compute the product-of-path weight. Cap at 2 hops to avoid noise.
+- **Where it fires**: Inside `src/knowledge/packer.ts` during context assembly.
+- **Why it matters**: Catches "hidden companion" files that should be in context but have zero direct signal. Without this, `tokenConfig.ts` would never appear when editing `authController.ts`, even though `jwtUtils.ts` bridges them.
+- **DoD**: Transitive weight for a 2-hop path (A→B→C with weights 0.7 and 0.6) computes to 0.42 and successfully promotes File C into the context pack when File A is active.
+
+### F. Triangle Detection for Stable Context Caching
+
+Detect whether a group of 3 frequently co-edited files forms a **triangle** (all three pairwise edges have `coEditWeight > 0.3`) or a **chain** (only two of three edges are active):
+
+- **Triangle detected** (A↔B, B↔C, A↔C all strong): These 3 files are a **stable context unit**. Cache their combined summary as an atomic group in the packer. When any one is touched, always pull all three without re-evaluating individual edges.
+- **Chain detected** (A↔B, B↔C strong, but A↔C weak): The relationship is **volatile**. Do not cache as a unit. Evaluate each edge independently per sync.
+
+```typescript
+function isTriangle(a: string, b: string, c: string, edges: Map): boolean {
+  const threshold = 0.3;
+  return getWeight(a, b) > threshold
+      && getWeight(b, c) > threshold
+      && getWeight(a, c) > threshold;
+}
+```
+
+- **Implementation**: Cycle detection in `src/knowledge/packer.ts` during context assembly (~20 lines).
+- **Why it matters**: Avoids re-evaluating stable groups every sync. Once identified, triangles become atomic packer units, reducing computation and improving cache hit rates.
+- **DoD**: A triangle of 3 files with all pairwise `coEditWeight > 0.3` is cached as a single atomic context unit and served without per-edge re-evaluation.
+
+### G. Monogamy Constraint on Token Budget
+
+If File B has a very strong co-edit weight with File A (`coEditWeight(B,A) = 0.9`), then File B's co-edit weight with all other files should be **discounted** in packer ranking. B's "context attention" is already consumed by A:
+
+```typescript
+// Monogamy discount: strongest edge consumes attention budget
+effectiveWeight(B, C) = coEditWeight(B, C) * (1 - maxCoEditWeight(B));
+// If max is 0.9: effectiveWeight = 0.6 * (1 - 0.9) = 0.06
+```
+
+- **Implementation**: Single multiplication per edge during `build_context_pack` ranking (~3 lines).
+- **Why it matters**: Prevents hub files (like `utils.ts`) that are co-edited with everything from pulling in their entire neighborhood. The monogamy constraint forces the budget toward the *strongest* companion only.
+- **DoD**: A hub file with `coEditWeight: 0.9` to File A and `coEditWeight: 0.6` to File C produces `effectiveWeight(hub, C) = 0.06`, verified to not promote File C over genuinely relevant files.
+
+### H. Oja's Rule Weight Normalization
+
+Prevent co-edit weights from saturating at 1.0 for "everything files" (e.g., `index.ts`, `utils.ts`) that appear in every commit. Apply Oja's normalization rule after each EMA update to keep the weight vector bounded:
+
+```typescript
+// After EMA update, normalize: Oja's rule
+const norm = Math.sqrt(edges.reduce((sum, e) => sum + e.coEditWeight ** 2, 0));
+if (norm > 1) edges.forEach(e => e.coEditWeight /= norm);
+```
+
+- **Implementation**: 3 lines in `src/knowledge/writer.ts`, called after each EMA update batch.
+- **Why it matters**: Without normalization, files touched in every commit would accumulate `coEditWeight: 1.0` with everything, making the signal useless. Oja's rule ensures weights represent *relative* co-edit importance, not absolute frequency.
+- **DoD**: A file co-edited with 20 other files has its weights normalized such that the L2 norm of its outgoing weights ≤ 1.0.
+
+---
+
+## 🎯 Phase 13.8.3: Simulated Annealing for Context Packing — ⏳ Planned
+
+**Layman's Terms**
+When Cortex builds the context pack for your AI, it's solving a version of the Knapsack Problem: given 50 files of varying sizes and relevance scores, pick the subset that maximizes total relevance while fitting within your token budget. This is NP-hard — greedy algorithms get stuck picking one large, moderately relevant file when three small, highly relevant files would have been better. Phase 13.8.3 adds Simulated Annealing (SA) to the packer, allowing it to explore non-obvious combinations and find significantly better context packs in <10ms.
+
+**Technical Terms & Engineering Spec**
+
+### A. The Problem: Greedy Gets Stuck
+
+Current packer (Phase 5): sort entities by centrality score, take from top until budget exhausted.
+
+```
+Greedy result:   [User.ts (800 tok), AppError.ts (600 tok)]  → 1400/2000 tokens
+                 600 tokens wasted, 2 files, moderate relevance
+
+SA result:       [jwtUtils (300), authMiddleware (250), tokenConfig (200),
+                  authRoutes (150), User.ts (800)]             → 1700/2000 tokens
+                 300 tokens wasted, 5 files, high relevance
+```
+
+### B. The Algorithm
+
+```typescript
+function annealContextPack(
+  entities: ScoredEntity[],
+  budget: number,
+  options: { initTemp?: number; coolingRate?: number; iterations?: number }
+): ScoredEntity[] {
+  const { initTemp = 1.0, coolingRate = 0.995, iterations = 500 } = options;
+  let current = greedyPack(entities, budget); // start from greedy solution
+  let bestScore = totalRelevance(current);
+  let best = [...current];
+  let temp = initTemp;
+
+  for (let i = 0; i < iterations; i++) {
+    // Perturbation: swap one file in the pack with one outside
+    const candidate = perturb(current, entities, budget);
+    const candidateScore = totalRelevance(candidate);
+    const delta = candidateScore - totalRelevance(current);
+
+    // Metropolis criterion: accept improvements always, accept worse
+    // solutions with decreasing probability as temperature cools
+    if (delta > 0 || Math.random() < Math.exp(delta / temp)) {
+      current = candidate;
+      if (candidateScore > bestScore) {
+        best = [...candidate];
+        bestScore = candidateScore;
+      }
+    }
+    temp *= coolingRate;
+  }
+  return best;
+}
+```
+
+### C. Implementation Scope
+
+- **File**: `src/knowledge/packer.ts` — Add `annealContextPack()` as an alternative to the existing greedy sort. Gated behind `CORTEX_PACKER_MODE` config (`greedy` | `annealing`, default `greedy`).
+- **Performance**: 500 iterations at ~0.02ms each = ~10ms total. Negligible compared to LLM round-trip.
+- **Config**: `CORTEX_PACKER_MODE` (default `greedy`), `CORTEX_SA_ITERATIONS` (default `500`), `CORTEX_SA_COOLING` (default `0.995`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer) and Phase 13.8.2 (Co-Edit Weights) are completed.
+
+**Definition of Done (DoD)**
+- SA packer produces measurably higher total relevance scores than greedy packer on test cases with >20 candidate entities.
+- SA packer respects token budget — never exceeds allocated limit.
+- SA packer runs in <50ms for up to 200 candidate entities.
+- `CORTEX_PACKER_MODE=greedy` preserves existing behavior (no regression).
+- Tests cover: budget boundary, improvement over greedy on known-suboptimal cases, cooling convergence.
+
+**Pros & Cons**
+- ✅ **Pros**: 10-30% better context quality on complex codebases where greedy gets stuck; mathematically proven to converge toward global optimum; zero LLM cost; <10ms runtime.
+- ❌ **Cons**: Non-deterministic output (different runs may produce slightly different packs); adds ~80 lines of code; marginal improvement on small codebases (<20 entities) where greedy is already near-optimal.
+
+---
+
+## 🎯 Phase 13.8.4: Quantum Walk-Inspired Entity Ranking — ⏳ Planned
+
+**Layman's Terms**
+PageRank imagines a random person clicking links. It works, but it has a problem: in well-structured codebases, many files end up with identical importance scores — the algorithm can't tell them apart. Phase 13.8.4 replaces the random-surfer model with a "quantum walk" — a mathematically different way of exploring the graph that spreads faster and uses wave-like interference to amplify truly important nodes while suppressing noise. This runs on normal computers (no quantum hardware needed) and breaks ties that PageRank can't resolve.
+
+**Technical Terms & Engineering Spec**
+
+### A. Why PageRank Has Degeneracy Problems
+
+In a well-organized codebase, many modules have similar connectivity (e.g., 5 controllers each depending on 3 services each). PageRank assigns them nearly identical scores. The packer then has to break ties arbitrarily — usually alphabetically or by file size, which is meaningless.
+
+### B. Szegedy Quantum Walk (Classical Simulation)
+
+The quantum walk operates on the same graph but uses a **unitary evolution** operator instead of a stochastic transition matrix:
+
+```typescript
+function quantumWalkRank(
+  adjacency: number[][],
+  steps: number = 20
+): number[] {
+  const n = adjacency.length;
+  // Build Szegedy walk operator from adjacency matrix
+  const P = buildTransitionMatrix(adjacency);       // same as PageRank
+  const W = buildSzegedyOperator(P);                // unitary operator (2n × 2n)
+
+  // Initialize uniform superposition
+  let state = uniformSuperposition(2 * n);
+
+  // Evolve for T steps
+  for (let t = 0; t < steps; t++) {
+    state = matVecMul(W, state);
+  }
+
+  // Measure: probability of finding the walker at each node
+  const scores = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    scores[i] = state[i] ** 2 + state[i + n] ** 2;  // sum of amplitudes squared
+  }
+  return normalize(scores);
+}
+```
+
+### C. Key Advantage: Resolving Degeneracies
+
+Where PageRank gives 5 controllers identical scores (e.g., all 0.042), quantum walk produces differentiated scores (e.g., 0.051, 0.048, 0.039, 0.035, 0.027) based on deeper structural properties — secondary hub connectivity, cluster membership, and bridge positions.
+
+### D. Implementation Scope
+
+- **File**: `src/knowledge/packer.ts` — Add `quantumWalkRank()` as an alternative centrality scorer. Gated behind `CORTEX_RANK_MODE` config (`pagerank` | `qwalk`, default `pagerank`).
+- **Performance**: O(n² × steps) where n = entity count, steps = 20. For 200 entities: ~8ms.
+- **Config**: `CORTEX_RANK_MODE` (default `pagerank`), `CORTEX_QWALK_STEPS` (default `20`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer with PageRank) is completed.
+
+**Definition of Done (DoD)**
+- Quantum walk ranking produces strictly fewer tied scores than PageRank on a test graph with ≥20 nodes of similar connectivity.
+- Scores are normalized to sum to 1.0 (valid probability distribution).
+- Ranking is deterministic (same graph → same scores, unlike SA).
+- `CORTEX_RANK_MODE=pagerank` preserves existing behavior.
+- Tests cover: tie-breaking verification, score normalization, performance under 50ms for 200 entities.
+
+**Pros & Cons**
+- ✅ **Pros**: Breaks ties that PageRank cannot; deterministic; classically simulable; well-studied mathematical foundation; better at identifying secondary hubs and bridge nodes.
+- ❌ **Cons**: O(n²) complexity vs O(n) for PageRank — acceptable for <500 entities but not for massive monorepos; conceptually harder for contributors to understand; marginal improvement when graph has natural hierarchy (few ties).
+
+---
+
+## 🎯 Phase 13.8.5: Contextual RAG Preprocessing — ⏳ Planned
+
+**Layman's Terms**
+When Cortex sends a code file to the AI, it sends the raw content with no explanation. The AI has to figure out *why* this file is in the context pack. Phase 13.8.5 prepends a 1-sentence "relevance header" to each entity in the pack — explaining why Cortex included it (e.g., "Included because it shares a strong co-edit pattern with the active file" or "Included as a high-centrality hub that many modules depend on"). This makes the AI significantly better at using the context correctly.
+
+**Technical Terms & Engineering Spec**
+
+### A. The Problem: Uncontextualized Chunks
+
+Current context pack output:
+```
+## AuthMiddleware
+Role: Express middleware for JWT verification...
+```
+
+AI's internal question: *"Why am I seeing this? Is the user editing this? Does it depend on what I'm changing? Should I modify it?"*
+
+### B. The Solution: Relevance Headers
+
+Enhanced context pack output:
+```
+## AuthMiddleware
+> 📎 Included: co-edit weight 0.72 with active file AuthController.
+> Direct dependent — changes to AuthController may require updates here.
+
+Role: Express middleware for JWT verification...
+```
+
+### C. Header Generation (Zero LLM Cost)
+
+Headers are generated deterministically from graph signals already available:
+
+```typescript
+function generateRelevanceHeader(entity: Entity, activeFile: string): string {
+  const reasons: string[] = [];
+  const coEdit = getCoEditWeight(entity, activeFile);
+  if (coEdit > 0.3) reasons.push(`co-edit weight ${coEdit.toFixed(2)} with active file`);
+  const rel = getRelationship(entity, activeFile);
+  if (rel) reasons.push(`${rel.kind} relationship`);
+  if (entity.centrality > 0.7) reasons.push(`high-centrality hub (${entity.centrality.toFixed(2)})`);
+  return reasons.length > 0
+    ? `> 📎 Included: ${reasons.join('; ')}.\n`
+    : '';
+}
+```
+
+### D. Implementation Scope
+
+- **File**: `src/knowledge/packer.ts` — Add header injection step after entity selection, before serialization.
+- **Token overhead**: ~15-30 tokens per entity. For a pack of 8 entities: ~200 extra tokens (trivial vs the thousands saved by better AI decisions).
+- **Config**: `CORTEX_CONTEXT_HEADERS` (default `true`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer) and Phase 13.8.2 (Co-Edit Weights) are completed.
+
+**Definition of Done (DoD)**
+- Every entity in `build_context_pack` output includes a relevance header when `CORTEX_CONTEXT_HEADERS=true`.
+- Headers are generated deterministically from graph signals (no LLM calls).
+- Headers add ≤30 tokens per entity.
+- `CORTEX_CONTEXT_HEADERS=false` suppresses all headers.
+- Tests cover: header generation for co-edit, relationship, and centrality signals; empty header for entities with no clear relevance signal.
+
+**Pros & Cons**
+- ✅ **Pros**: Makes the AI understand *why* each file is in context, leading to better-targeted responses; zero LLM cost; ~30 lines of code; trivial token overhead.
+- ❌ **Cons**: Adds slight token overhead per entity; headers may become stale if graph signals change mid-session (mitigated by regenerating on each `build_context_pack` call).
+
+---
+
+## 🎯 Phase 13.8.6: Selective Retrieval Gate — ⏳ Planned
+
+**Layman's Terms**
+Not every question needs Cortex to search the knowledge base. If the developer asks "what does `console.log` do?", Cortex shouldn't waste time retrieving architectural context. Phase 13.8.6 adds a cheap pre-filter that decides — before doing any retrieval — whether the current query actually *needs* external context. If not, it skips retrieval entirely, saving tokens and latency.
+
+**Technical Terms & Engineering Spec**
+
+### A. The Gate: Keyword + Heuristic Classifier
+
+```typescript
+function needsRetrieval(query: string, activeFile: string | null): boolean {
+  // Skip retrieval for generic knowledge questions
+  const genericPatterns = [
+    /what (is|does|are)/i,
+    /explain/i,
+    /how do I/i,
+    /syntax for/i,
+  ];
+  if (genericPatterns.some(p => p.test(query)) && !activeFile) return false;
+
+  // Skip retrieval if no active file context
+  if (!activeFile) return false;
+
+  // Always retrieve for modification-intent queries
+  const modifyPatterns = [
+    /refactor/i, /fix/i, /add/i, /implement/i, /change/i,
+    /update/i, /modify/i, /delete/i, /rename/i, /move/i,
+  ];
+  if (modifyPatterns.some(p => p.test(query))) return true;
+
+  // Default: retrieve
+  return true;
+}
+```
+
+### B. Implementation Scope
+
+- **File**: `src/mcp/tools.ts` — Add gate check before `build_context_pack` and `read_entity` calls in tool handlers.
+- **Config**: `CORTEX_RETRIEVAL_GATE` (default `true`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer) is completed.
+
+**Definition of Done (DoD)**
+- Queries matching generic patterns with no active file context skip retrieval entirely.
+- Queries with modification intent always trigger retrieval.
+- `CORTEX_RETRIEVAL_GATE=false` disables the gate (always retrieve).
+- Tests cover: generic question bypass, modification intent pass-through, edge cases.
+
+**Pros & Cons**
+- ✅ **Pros**: Saves tokens and latency on ~20% of typical IDE interactions that don't need architectural context; ~15 lines of code; zero false negatives on modification-intent queries.
+- ❌ **Cons**: Risk of false negatives — a question phrased generically might actually need context. Mitigated by defaulting to retrieve when uncertain.
+
+---
+
+## 🎯 Phase 13.8.7: Spike-Based Event-Driven Graph Updates — ⏳ Planned
+
+**Layman's Terms**
+Right now, `cortex watch` polls for file changes on a timer or file-system event, then runs the full sync pipeline. Phase 13.8.7 makes the graph update system event-driven: instead of checking everything on every tick, it only updates the specific edges and nodes that were "spiked" by a relevant event (file save, compile pass/fail, test result). This reduces idle CPU usage and makes updates near-instant for the affected subgraph.
+
+**Technical Terms & Engineering Spec**
+
+### A. Spike Events
+
+Borrowed from Spiking Neural Networks (SNNs): instead of continuous polling, define discrete "spike" events that trigger targeted graph updates:
+
+| Spike Event | Source | What It Updates |
+| :--- | :--- | :--- |
+| `FILE_SAVE` | fs watcher | co-edit weights for the saved file's edges (Tier 1) |
+| `COMPILE_PASS` | compiler/build tool | Boost `coEditWeight` for all files in the successful build |
+| `COMPILE_FAIL` | compiler/build tool | Decay `coEditWeight` for files in the failed build |
+| `TEST_PASS` | test runner | Strengthen edges between test file and its source file |
+| `TEST_FAIL` | test runner | Flag the source file's entity for staleness check |
+| `GIT_COMMIT` | git hook | Tier 3 co-edit weight update for committed files |
+| `BRANCH_SWITCH` | git hook | Reset all active co-edit weights to baseline (ESD) |
+
+### B. Spike Processing
+
+```typescript
+interface Spike {
+  type: 'FILE_SAVE' | 'COMPILE_PASS' | 'COMPILE_FAIL' | 'TEST_PASS' | 'TEST_FAIL' | 'GIT_COMMIT' | 'BRANCH_SWITCH';
+  files: string[];
+  timestamp: number;
+}
+
+function processSpike(spike: Spike, graph: KnowledgeGraph): void {
+  switch (spike.type) {
+    case 'FILE_SAVE':
+      updateCoEditWeights(spike.files, 0.02);  // Tier 1
+      break;
+    case 'COMPILE_PASS':
+      updateCoEditWeights(spike.files, 0.05);  // boost
+      break;
+    case 'COMPILE_FAIL':
+      decayCoEditWeights(spike.files, 0.1);    // punish
+      break;
+    case 'BRANCH_SWITCH':
+      resetAllActiveWeights(graph);             // ESD
+      break;
+    // ... other cases
+  }
+}
+```
+
+### C. Implementation Scope
+
+- **File**: `src/knowledge/manager.ts` — Add `processSpike()` method and spike event queue.
+- **File**: `src/cli/watch.ts` — Emit spike events from file watcher instead of full sync triggers.
+- **File**: `src/mcp/tools.ts` — Accept spike events from IDE extensions via a new `emit_spike` MCP tool.
+- **Config**: `CORTEX_SPIKE_MODE` (default `false` — opt-in, since it requires integration with build tools).
+
+**Definition of Ready (DoR)**
+- Phase 13.8.2 (Co-Edit Weights) is completed.
+- Phase 5 (CLI/Daemon) is completed.
+
+**Definition of Done (DoD)**
+- `FILE_SAVE` spikes trigger Tier 1 co-edit weight updates within 10ms.
+- `BRANCH_SWITCH` spikes reset all active weights to 0.0 (ESD behavior).
+- `COMPILE_PASS` spikes boost co-edit weights for all files in the build.
+- Spike processing is non-blocking — does not delay the main sync pipeline.
+- `CORTEX_SPIKE_MODE=false` disables spike processing (existing polling behavior preserved).
+- Tests cover: each spike type's expected graph mutation, spike queue ordering, ESD reset correctness.
+
+**Pros & Cons**
+- ✅ **Pros**: Near-instant targeted graph updates instead of full-graph scans; reduces idle CPU usage by ~60%; enables real-time co-edit signal from compiler/test feedback; pairs naturally with Phase 13.8 Soul's experience ledger.
+- ❌ **Cons**: Requires integration with the developer's build toolchain (compiler, test runner) to emit spikes — opt-in complexity; spike queue management adds ~40 lines of code; `BRANCH_SWITCH` detection requires a git hook or polling `HEAD`.
+
 ---
 
 ## 💸 Phase 13.9: Grapheme-Safe Token Compression (TokenJuice Rules) — ⏳ Planned
