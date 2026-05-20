@@ -162,19 +162,27 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 39.5  | Cognitive Branch Prediction                            | ⏳ Planned (research-grade)          |
 | 39.6  | Merkle-DAG Integrity Verification                       | ⏳ Planned (research-grade)          |
 | 39.7  | OODA Agent Runtime                                     | ⏳ Planned (research-grade)          |
+| 40    | The Reality Engine                                     | ⏳ Planned (research-grade)          |
+| 40.1  | Semantic LLVM Compilation (Semantic IR)                | ⏳ Planned (research-grade)          |
+| 40.2  | ECS Knowledge Architecture (Entity Component System)   | ⏳ Planned (research-grade)          |
+| 40.3  | Gödel Self-Optimizing Graph Rules                      | ⏳ Planned (research-grade)          |
+| 40.4  | SMT-Assisted Constraint Verification                   | ⏳ Planned (research-grade)          |
+| 40.5  | Knot-Theoretic Dependency Untangling                   | ⏳ Planned (research-grade)          |
+| 40.6  | Architectural Fossilization (Cold Storage)             | ⏳ Planned (research-grade)          |
+| 40.7  | Borges Exhaustive Design-Space Generation              | ⏳ Planned (research-grade)          |
 | —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
-| 40    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
-| 41    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
-| 42    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
-| 43    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
-| 43.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
-| 43.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
-| 43.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
-| 43.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
-| 43.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
-| 43.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
-| 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
-| 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
+| 50    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
+| 51    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
+| 52    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
+| 53    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
+| 53.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
+| 53.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
+| 53.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
+| 53.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
+| 53.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
+| 53.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
+| 54    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
+| 55    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
 
 ---
 
@@ -8602,10 +8610,94 @@ This phase hardens Cortex for mission-critical enterprise environments. It intro
 
 ---
 
-## 🌌 Distributed Cognitive Substrate (Phases 40-45) — The Extended Vision
+## ⚙️ Phase 40: The Reality Engine (Self-Optimization & Compilation) — ⏳ Planned (research-grade)
+
+### The Vision
+To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codebase simulation engine, Cortex adopts game engine architecture (Entity Component System), intermediate representations (Semantic LLVM), and formal logic solvers (Z3 SMT). This enables infinite monorepo scaling, mathematically verified guardrail checking, and self-improving architectural governance rules.
+
+---
+
+### Phase 40.1: Semantic LLVM Compilation (Semantic IR)
+**Layman's Terms**: Just like code compilers simplify complex program source into intermediate versions to remove dead code before generating final output, Cortex compiles massive codebase contexts into a highly compressed, mathematical "Intermediate Reasoning Representation" (IR). This strips out boilerplate and fluff, leaving only semantic nodes.
+
+**Technical Terms**: Scans AST nodes and wikilink graph to emit a normalized, token-bounded intermediate representation. Runs graph-optimization passes (Semantic Dead-Code Elimination) to trim non-functional text and context dependencies.
+
+**Engineering ROI**: Drops input context sizes by up to 70%, slashing API billing costs and ensuring only critical structural signals enter LLM windows.
+
+---
+
+### Phase 40.2: ECS Knowledge Architecture (Entity Component System)
+**Layman's Terms**: Game engines like Unreal Engine organize massive worlds by separating objects (entities) from their traits (components) and running fast, parallel loops (systems) over them. Cortex migrates the `.knowledge` folder from nested JSONs into an ECS layout on disk.
+
+**Technical Terms**: Rewrites the graph engine to treat files/entities as standard index IDs. Components are flat byte-arrays representing facets (dependencies, constraints, exports). Systems run as raw WebAssembly compilation loops that scan memory-contiguous component tables.
+
+**Engineering ROI**: 10,000x faster local graph traversal. CPU cache-locality optimization drops memory usage by 90% and enables instant scanning of massive monorepos.
+
+---
+
+### Phase 40.3: Gödel Self-Optimizing Graph Rules
+**Layman's Terms**: Instead of humans manually maintaining the `cortex.yaml` rule book, the engine audits the project's evolution. If it finds that developers consistently follow patterns that bypass a rule safely, it auto-submits a PR to refine its own rules.
+
+**Technical Terms**: Evaluates historical `log.jsonl` mutation rates and rule exception logs. Dynamically constructs updated schema constraint variations and validates them against the codebase using symbolic logic.
+
+**Engineering ROI**: Zero-maintenance architectural governance. The system automatically adapts its boundaries as the team's styling and frameworks evolve.
+
+---
+
+### Phase 40.4: SMT-Assisted Constraint Verification
+**Layman's Terms**: LLMs are notoriously bad at strict mathematical logic. Cortex compiles architectural rules and AST edges into boolean logical problems, passing them to a local SAT/SMT theorem solver (like Z3). The LLM is only used to translate the solver's output into english.
+
+**Technical Terms**: Maps AST relations and `cortex.yaml` boundary rules directly to SMT-LIB language constraints. Solves using Z3 or CVC5 engines. If unsatisfiable, outputs the exact counterexample path.
+
+**Engineering ROI**: Mathematical proof of architectural compliance. Eliminates LLM hallucinations during linting.
+
+---
+
+### Phase 40.5: Knot-Theoretic Dependency Untangling
+**Layman's Terms**: Circular dependencies are architectural knots. Cortex applies knot theory mathematics to calculate the topological complexity of import graphs, pinpointing the single file or interface that must be decoupled to free the entire structure.
+
+**Technical Terms**: Models circular import cycles as mathematical links and calculates their Alexander-Conway polynomial invariants. Identifies topological bottleneck vertices that, when split, reduce the graph genus to zero.
+
+**Engineering ROI**: Deterministic, step-by-step refactoring guides for eliminating circular dependencies, removing the guesswork from decoupling spaghetti code.
+
+---
+
+### Phase 40.6: Architectural Fossilization (Cold Storage)
+**Layman's Terms**: Legacy code that hasn't changed in years doesn't need to load into active AI memory. Cortex "fossilizes" stable historical directories, compressing them into a secure cryptographic summary. It only unzips them if a developer changes them.
+
+**Technical Terms**: Computes deep Merkle-hashes of directories with zero change vectors over N months. Compresses target node attributes into a single, high-dimensional holographic tensor.
+
+**Engineering ROI**: Infinite monorepo scalability. 50-million-line codebases can run on standard laptop RAM because only active domains remain unfossilized.
+
+---
+
+### Phase 40.7: Borges Exhaustive Design-Space Generation
+**Layman's Terms**: When generating code, instead of guessing a single structure, Cortex generates every mathematically possible structural variant for the task. It filters them against rules using the SMT solver and only shows you the winning options.
+
+**Technical Terms**: Procedurally expands the AST schema variations for target inputs, generating a closed library of all structural variations. Evaluates each candidate's boundaries via the Phase 40.4 Z3 engine.
+
+**Engineering ROI**: Flawless design generation. Developers receive pre-validated, compliant architectural skeletons with zero trial-and-error.
+
+---
+
+### Definition of Ready (DoR)
+- Phase 39 (Merkle-DAG Integrity) completed.
+- Z3 SMT solver binaries integrated into the local runner toolset.
+- Memory component schema registry established for the ECS layout.
+
+### Definition of Done (DoD)
+- Intermediate representation (IR) parser passes unit tests for context compression.
+- Vector database benchmark shows 10,000x faster graph traversals on a 100,000-entity synthetic codebase.
+- SMT-LIB compiler correctly translates `cortex.yaml` rules.
+- Test suite verifies zero LLM hallucinations during constraint evaluations.
+- Memory consumption remains under 100MB RAM during ingestion.
+
+---
+
+## 🌌 Distributed Cognitive Substrate (Phases 50-55) — The Extended Vision
 
 > [!IMPORTANT]
-> Phases 40-45 are the **extended vision tier** of Cortex — its evolution from "single-codebase architectural memory engine" to "distributed cognitive substrate spanning multiple agents, multiple workspaces, and multiple knowledge graphs." These phases are intentionally placed at the extreme end of the roadmap because they presuppose that Cortex Standard + Enterprise tracks are fully mature in production. They are also the natural integration surface with **Nexus-OS** — where the memory side of Cortex meets the orchestration side of Nexus.
+> Phases 50-55 are the **extended vision tier** of Cortex — its evolution from "single-codebase architectural memory engine" to "distributed cognitive substrate spanning multiple agents, multiple workspaces, and multiple knowledge graphs." These phases are intentionally placed at the extreme end of the roadmap because they presuppose that Cortex Standard + Enterprise tracks are fully mature in production. They are also the natural integration surface with **Nexus-OS** — where the memory side of Cortex meets the orchestration side of Nexus.
 
 ### The Vision
 
