@@ -30,6 +30,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
+| 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
@@ -52,6 +53,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
 | 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
 | 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
+| 13.9  | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
@@ -362,12 +364,13 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 ## 🔌 Phase 4.6: Developer API & Client SDKs — ⏳ Planned
 
 **Layman's Terms**
-Makes it easy to programmatically query Cortex from your own scripts, CI pipeline, or terminal hacks. We're publishing lightweight client libraries for Node.js and Python that let you fetch entities, check quality scores, and perform impact analysis with simple, single-line functions.
+Makes it easy to programmatically query Cortex from your own scripts, CI pipeline, or terminal hacks. We're publishing lightweight client libraries for Node.js and Python that let you fetch entities, check quality scores, and perform impact analysis with simple, single-line functions. It also provides standard agent-memory proxy endpoints so other popular IDE programming assistants (like Claude Code, Cursor, or Aider) can query Cortex directly as a single source of architectural truth.
 
 **Technical Terms**
 Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`) and Python (`projectcortex-sdk`).
 - **Communication**: The SDKs communicate with the local running Cortex daemon over a standardized REST API or local JSON-RPC socket.
 - **Features**: Single-line helpers like `cortex.readEntity('AuthMiddleware')`, `cortex.getImpact('User')`, `cortex.getQuality('PaymentService')`, and `cortex.runLint()`.
+- **Durable Memory Proxy Layer (`agentmemory` compatibility)**: Emulate the standard, lightweight SQLite/PostgreSQL `agentmemory` schema endpoints in `CortexMCPServer`. This exposes a standard memory backend route that external AI tools can tap into to retrieve relational context, preventing secondary agents from duplicating state or inventing contradictory rules.
 - **Use Cases**: Developers can use these SDKs to write custom git hooks, pre-commit scripts, or documentation generators.
 
 **Definition of Ready (DoR)**
@@ -377,12 +380,13 @@ Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`)
 **Definition of Done (DoD)**
 - Official JS/TS client package (`@projectcortex/sdk`) and Python client package (`projectcortex-sdk`) built and tested.
 - SDKs can successfully connect to the local daemon and execute read/impact/quality operations.
+- **Standardized Proxy Interface**: Expose a fully-compliant, read-only `agentmemory` protocol endpoint from the local MCP daemon; tested successfully with external coding scripts querying knowledge paths.
 - Documentation and code examples included in `README.md`.
-- Tests cover offline/error recovery, API timeouts, and payload verification.
+- Tests cover offline/error recovery, API timeouts, concurrency safeguards, and payload verification.
 
 **Pros & Cons**
-- ✅ **Pros**: Standardizes programmatic access to Cortex, unlocking custom automation for team setups.
-- ❌ **Cons**: Multiplies library maintenance across two ecosystems (NPM/PyPI).
+- ✅ **Pros**: Standardizes programmatic access to Cortex, unlocking custom automation for team setups; makes Cortex the single source of truth for all IDE agents.
+- ❌ **Cons**: Multiplies library maintenance across two ecosystems (NPM/PyPI); emulating third-party protocols requires keeping proxy schemas stable regardless of downstream state changes.
 
 ---
 
@@ -1467,6 +1471,41 @@ Implement a lightweight read-only WebSocket endpoint at `ws://127.0.0.1:<port>/w
 
 ---
 
+## 💾 Phase 8.2: Karpathy-Style Obsidian Wiki Compliance & Presets — ⏳ Planned
+
+**Layman's Terms**
+Open your Cortex architectural memory vault directly inside Obsidian for free. Phase 8.2 configures your `.knowledge/` folders to be 100% compliant with standard Obsidian vaults, allowing you to open your codebase memory as a gorgeous, color-coded interactive graph view. It also sets up styling templates and informative visual tooltips on hover without writing any heavy custom desktop code.
+
+**Technical Terms**
+1. **Andrej Karpathy-Style Obsidian Wiki Compliance**: Ensure all inter-linkages utilize relative markdown paths (e.g. `[[entities/Name.md|Name]]` and `[[concepts/Name.md|Name]]`) rather than simple flat names. This guarantees links are fully resolved and clickable in both Obsidian and standard VS Code / GitHub markdown rendering engines.
+2. **Pre-Configured Node Coloring & Tooltips**: Scaffolds default `.obsidian/graph.json` and `.obsidian/appearance.json` configurations under `.knowledge/` (gitignored to avoid team merge conflicts). Establishes a Cyberpunk Dark Palette with precise HSL mappings:
+   - **Electric Blue (`#3B82F6`)**: Concrete Entities
+   - **Royal Purple (`#8B5CF6`)**: Abstract Concepts
+   - **Teal Turquoise (`#0D9488`)**: Parent Module Directories ($\ge 5$ children)
+   - **Electric Cyan (`#06B6D4`)**: Active Constraint Guardrail Boundary (has constraints)
+   - **Magenta Violet (`#D946EF`)**: Historical Scarring (has failed approaches)
+   - **Emerald Green (`#10B981`)**: Quality Certified/Human-Reviewed (score $\ge 0.9$)
+   - **Ochre Amber (`#F59E0B`)**: Decaying Module (score $0.4 - 0.8$)
+   - **Crimson Scarlet (`#EF4444`)**: Quality/Gating Danger (score $< 0.4$)
+   - **Hot Pink (`#FF2E93`)**: High Centrality God Module (from Phase 7)
+   - **Rust Orange (`#F97316`)**: Active Staleness Warning (`[!WARNING]`)
+   - **Slate Gray (`#64748B`)**: Orphan Siloed Node
+   Optimizes markdown templates to front-load headers, warnings, summaries, and quality metrics so native Obsidian tooltips (Hover Page Preview) serve as instant visual diagnostic cards.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+
+**Definition of Done (DoD)**
+- **Obsidian Vault Compliance**: Scaffolds a compliant `.knowledge/index.md` and generates relative, folder-scoped markdown links for maximum clickable portability across VS Code and GitHub.
+- **Sleek Theming Presets**: Generates local-only, gitignored `.obsidian/graph.json` and `.obsidian/appearance.json` presets mapping HSL color signals to quality scores, God modules, and active safeguards. Hover tooltips cleanly display diagnostic headers.
+- Tests cover offline parsing compatibility, relative link resolver robustness, and preset generation checks.
+
+**Pros & Cons**
+- ✅ **Pros**: Turns architectural understanding into a shareable, stunning, zero-overhead interactive graph viewer; clickable links in standard VS Code and GitHub previews; zero runtime desktop bloat.
+- ❌ **Cons**: Changing directory layout or names requires re-mapping link paths in the compilation pass (handled in-memory using `state.json` to preserve speed). Committing default `.obsidian/` folders to git could clutter developer preferences, mitigated by standard gitignore rules.
+
+---
+
 ## ✅ Phase 9: Refactoring Impact Preview — ✅ Done
 
 **Layman's Terms**
@@ -2449,6 +2488,28 @@ When you use an AI assistant, it forgets everything you did in the previous task
 **Pros & Cons**
 - ✅ **Pros**: Proves massive ROI for paid Indie Pro tier; stops AI hallucination loops by grounding it in real-world sync history; slashes token costs via dynamic reranking.
 - ❌ **Cons**: Adds two local JSON state files that must be protected from formatting corruption and kept in sync.
+
+---
+
+## 💸 Phase 13.9: Grapheme-Safe Token Compression (TokenJuice Rules) — ⏳ Planned
+
+**Layman's Terms**
+Prevent token minifiers from breaking or corrupting complex language text or layout status emojis. Phase 13.9 integrates grapheme cluster segmentation into our token compressor so that Chinese, Japanese, Korean comments, system-status emojis, and code formatting remain completely uncorrupted during high-ratio compression passes.
+
+**Technical Terms**
+- **Grapheme-Safe Token Compression (TokenJuice rules)**: Integrate Node's native compiled C++ `Intl.Segmenter` API inside `src/knowledge/brevity.ts`. Rather than using standard byte-level slices or regex matches, analyze strings at the grapheme cluster level.
+- **Multi-Byte Preservation**: Retains multi-byte CJK comments, custom visual glyphs, status emojis, and layout indicators from truncation during telemetry or context-packer compression passes.
+
+**Definition of Ready (DoR)**
+- Phase 13.2 (Brevity Engine) is completed.
+
+**Definition of Done (DoD)**
+- **Grapheme Safety Verified**: Minified outputs containing Chinese/Japanese/Korean text comments and visual status emojis are processed with 100% character and glyph preservation.
+- Tests verify character and glyph preservation across high-ratio compression boundaries.
+
+**Pros & Cons**
+- ✅ **Pros**: Guaranteed safety for international developers; prevents emoji and UI visual rendering bugs in compressed context payloads.
+- ❌ **Cons**: Using native `Intl.Segmenter` loops adds minor computational parsing overhead (1-2ms per massive file).
 
 ---
 
