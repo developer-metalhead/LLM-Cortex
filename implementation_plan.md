@@ -177,6 +177,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 44    | Semantic Authority Ranking                             | ⏳ Planned (research-grade)          |
 | 45    | Synthetic Immune System (Knowledge Quality)            | ⏳ Planned (research-grade)          |
 | 46    | Event-Sourced Cognition Replay                         | ⏳ Planned (research-grade)          |
+| 47    | Architectural Pattern Recurrence (Poincaré Recurrence) | ⏳ Planned (research-grade)          |
+| 48    | Dependency Entanglement Detection (ER=EPR)             | ⏳ Planned (research-grade)          |
+| 49    | Cross-Deployment Synthesis Learning (Morphic Resonance) | ⏳ Planned (research-grade)          |
 | 56    | Multi-Operator Session Coordination (was 5.8)          | ⏳ Planned (extended vision)         |
 | 57    | Cross-Agent Workspace State Synchronization (was 20.7.1)| ⏳ Planned (extended vision)        |
 | 58    | Multi-Agent Librarian Collaboration (was 20.16)        | ⏳ Planned (extended vision)         |
@@ -8648,7 +8651,9 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ### Phase 40.3: Gödel Self-Optimizing Graph Rules
 **Layman's Terms**: Instead of humans manually maintaining the `cortex.yaml` rule book, the engine audits the project's evolution. If it finds that developers consistently follow patterns that bypass a rule safely, it auto-submits a PR to refine its own rules.
 
-**Technical Terms**: Evaluates historical `log.jsonl` mutation rates and rule exception logs. Dynamically constructs updated schema constraint variations and validates them against the codebase using symbolic logic.
+**Technical Terms**: 
+- **Adaptive Graph Restructuring**: Evaluates historical `log.jsonl` mutation rates and rule exception logs. Dynamically constructs updated schema constraint variations and validates them against the codebase using symbolic logic.
+- **Implicate Order / Invariant Extraction**: Employs statistical dependency mining to identify "negative invariants"—architectural relationships, dependency edges, or import paths that *never* exist or are never co-present across historical graph configurations (e.g., frontend components never directly querying DB models). These statistical exclusions represent the codebase's implicit or "implicate" structural order, allowing Cortex to proactively suggest highly tailored `cortex.yaml` constraint definitions to prevent future boundary erosion.
 
 **Engineering ROI**: Zero-maintenance architectural governance. The system automatically adapts its boundaries as the team's styling and frameworks evolve.
 
@@ -8776,7 +8781,7 @@ Context pack assembly selects the minimum sufficient level: entity-scoped querie
 **Layman's Terms**: Cortex's knowledge base can be poisoned by bad syntheses — LLM hallucinations inventing non-existent classes, prompt injections hiding in code comments, or a single bad diff causing cascading false dependencies. This phase adds a pre-commit immune layer: before any synthesis is committed to `.knowledge/`, it passes through an anomaly detector that quarantines suspicious outputs for review.
 
 **Technical Terms**: Three-layer immune stack:
-1. **Hallucination antibodies**: pattern-match synthesis outputs against known hallucination signatures — invented entities with no source-file evidence, dependency edges with no import-graph backing, descriptions that contradict the diff content
+1. **Hallucination antibodies (Boltzmann Entity Detection)**: pattern-match synthesis outputs against known hallucination signatures. This includes the dedicated **Boltzmann Entity Detection** class, which statistically catches hallucinations that are syntactically coherent and stylistically perfect, but completely lack any underlying source-file backing or import-graph grounding, ensuring false entities never contaminate the canonical knowledge base.
 2. **Prompt injection resistance**: scan synthesis inputs (code diffs, file content) for adversarial patterns before they reach the Librarian
 3. **Anomaly quarantine**: statistical anomaly detection on synthesis outputs. If a single diff claims to add 40 new dependency edges to an entity that historically has 3, it is held for human review rather than auto-committed
 
@@ -8797,6 +8802,51 @@ Quarantine queue surfaced via `cortex audit --quarantine`. Auto-released after h
 **Builds on**: Phase 7 (log.jsonl append-only event log), Phase 26 (audit trail), Phase 3 (state.json).
 
 **Engineering ROI**: Forensic analysis and explainability for AI reasoning decisions. Required by banking, healthcare, and compliance customers. "What did Cortex know about `PaymentService` before the incident?" becomes a one-command answer. Bad ingest runs are now fully recoverable via rollback.
+
+---
+
+## 🔁 Phase 47: Architectural Pattern Recurrence (Poincaré Recurrence) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Cortex keeps a fingerprint of how your codebase's architectural graph looks every time you ingest changes. If you are about to structure a new service or database connection in a way that resembles a past setup that caused major incidents or bugs (like the "PaymentService Incident" three months ago), Cortex will proactively warn you before you even write the code. It is retrospective pattern matching for your architecture's mistakes.
+
+**Technical Terms**
+- **Graph Fingerprinting**: During each ingest, Cortex computes a serialized topological fingerprint of the active sub-graph using graph embedding similarity (Phase 18) and PageRank centrality vectors.
+- **Problematic Configuration Registry**: Leverages Phase 26 audit logs and historical git commit metadata to associate specific historic graph states with incident keywords (e.g., "incident", "hotfix", "regression").
+- **Pattern Matching & Warning Engine**: On new ingests, computes the cosine similarity between the current sub-graph topology and states in the registry. If similarity crosses a configurable threshold (e.g., > 0.85), triggers a warning indicating matching past states, the files/entities involved in that historic incident, and links to the relevant retrospectives.
+
+**Engineering ROI**
+Architectural safety through hindsight. Prevents teams from repeating the same structural mistakes (e.g., introducing circular dependency patterns, or placing an un-cached bottleneck component under high-concurrency loops) that previously caused production outages.
+
+---
+
+## 🕸️ Phase 48: Dependency Entanglement Detection (ER=EPR) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Sometimes, changing a file in one part of your app unexpectedly breaks a file in a completely different part, even though they don't seem to import or call each other. Phase 48 mines your Git commit history to find files that constantly change together in the same PRs or commits. It maps these hidden "entanglement" links so you are warned of invisible side effects: "I only changed X, why did Y break?"
+
+**Technical Terms**
+- **Git Commit Co-Change Mining**: A background miner scans the git repository's commit graph. It calculates the co-change frequency matrix of all source files over a rolling sliding window (e.g., last 6 months).
+- **Entanglement Edge Synthesis**: If two files A and B co-change in more than N% of commits (and share no explicit imports or wikilinks in the knowledge base), Cortex synthesizes a virtual `entangled_with` relationship between their respective entities.
+- **Impact Warning Hook**: Extends the `cortex before_change` command. When querying the blast-radius of entity A, the engine automatically resolves and prints its entangled dependents, presenting the developer with the exact historical co-change correlation percentage.
+
+**Engineering ROI**
+Eliminates silent dependency failures and "mystery bugs." Developers get instant, empirical warnings about implicit coupling that is invisible to traditional AST and import-graph scanners.
+
+---
+
+## 🧬 Phase 49: Cross-Deployment Synthesis Learning (Morphic Resonance) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+If your team uses Cortex across multiple separate codebases or departments, they all individually learn how to write better documentation and rules. Phase 49 lets these separate deployments securely share their best-performing Librarian extraction patterns and rule modifications. If a TypeScript team in one department discovers a highly effective way to document API boundaries, other TypeScript teams across the company automatically inherit that wisdom.
+
+**Technical Terms**
+- **Federated Pattern Extraction**: An opt-in synchronization layer that extracts generalized metadata of successful prompt mutations from Phase 40.8 (Gödel loop) while stripping all proprietary code, strings, and domain-specific references.
+- **Anonymized Schema Exchange**: Transmits structural performance metrics (e.g., "this updated extraction prompt yielded a 14% increase in evidence quality scores for TypeScript interface blocks") to a central corporate or public schema registry.
+- **Global Wisdom Injection**: Local Cortex instances query the registry during background maintenance, pulling and applying top-performing generalized extraction schemas and prompt improvements that match the local repository's tech stack.
+
+**Engineering ROI**
+A company-wide network effect for AI documentation. Organizations benefit from a compound learning loop where every local developer's refinement of the AI-pair coding model systematically upgrades the intelligence of the entire fleet.
 
 ---
 
