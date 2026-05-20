@@ -312,8 +312,90 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ## 35. API Budget & Runaway Safeguards
 **What it does:** Defends your wallet by enforcing hard session budget caps and rolling hourly frequency gates. It blocks autonomous AI agents or local runs from starting runaway billing loops, with support for real-time telemetry tracking and dynamic constraint clearing.
+* **Emergent Cost-Optimal Routing:** When budget limits are armed, smart AI agents will dynamically bypass expensive LLM `ingest` calls and intelligently route requests through free local validation tools (like `refresh_stale_entities` and `export`) to heal state and verify contracts for **$0.00**, delivering maximum quality at zero cost!
 **How to use it:**
 - **CLI Command:** `cortex config --max-cost <usd> --max-syncs-hour <count>` (configure), `cortex config -c none` (clear limit), or `cortex status` (view spent real-time usage)
 - **MCP Tool Call:** `configure_safeguards` with arguments `maxCost` and `maxSyncsHour`
 - **MCP Prompt Trigger:** select `safeguards` prompt
+
+---
+
+## 36. Time-Travel Architectural Autopsy
+**What it does:** Allows developers to inspect the exact historical code crime scenes that triggered past architectural failures or constraint violations. By linking the structural history database directly to Git commits, you can travel back in time to audit mistakes.
+**How to use it:**
+1. Read the `## Failed Approaches` section of an entity using `cortex read -e <entityName>` or `read_entity`.
+2. Grab the specific `commit` hash associated with the failed approach.
+3. In your terminal, run `git checkout <commit-hash>`.
+4. Open the file in your IDE to see the exact offending code that triggered the architectural alarm at that point in history.
+
+---
+
+## 37. Historical Quality & Debt Progression
+**What it does:** Tracks the structural health of your codebase over weeks, months, or years. By leveraging the fact that `.knowledge/state.json` is checked into Git, you can analyze your team's quality progression and visualize how technical debt is evolving.
+**How to use it:**
+- Check out any historical commit in your project (e.g. `git checkout main@{1.month.ago}`).
+- Run `cortex serve` or `cortex graph` to visually inspect the dependency map and quality scores as they stood at that exact moment in history.
+- Run `cortex audit quality` to get a quantitative health report of the historical state, allowing you to plot a timeline of architectural health.
+
+---
+
+## 38. Automatic Stale Repair Guide
+**What it does:** Converts generic developer onboarding guides into a highly targeted action plan for fixing active technical debt. If you have stale or broken entities, the PageRank onboarding generator automatically appends a step-by-step roadmap to repair them.
+**How to use it:**
+- **CLI Command:** Run `cortex onboard --audience senior --depth thorough` while you have active stale entities in the codebase.
+- **Result:** The system will dynamically generate `.knowledge/onboarding_senior_thorough.md`, mapping out exactly what files are stale, who made the changes that broke them, which downstream dependents are affected, and what failed solutions to avoid.
+
+---
+
+## 39. Self-Vaccinating Architectural Immune System
+**What it does:** An emergent cycle that turns failed architectural attempts into active AI wisdom. If an agent or human tries a quick hack that violates constraints, the hook blocks it, the system logs the failure, and the AI pre-emptively warns future attempts about this specific dead end.
+**How to use it:**
+- Attempt to commit code that violates active constraints in `cortex.constraints.json`.
+- The git hook automatically blocks the commit and prompts the AI to log the failed approach.
+- In subsequent tasks, the AI reads `failedApproaches` before writing code, dynamically guiding you away from making the same mistake twice.
+
+---
+
+## 40. Centrality-Weighted Semantic Pruning
+**What it does:** An emergent feature in our context packing module. When packing files to fit within a strict LLM token limit, Cortex sorts files by graph centrality (importance) and selectively compresses leaf nodes (fluff, utilities) while preserving full architectural fidelity for core hubs.
+**How to use it:**
+- **CLI Command:** `cortex context build --budget <tokens> --scope <entity>`
+- **Result:** Cortex will automatically allocate higher token budgets to central graph nodes and aggressively compress/elide minor leaf nodes to fit your exact budget limit.
+
+---
+
+## 41. Zero-Cost Human Curation Loop
+**What it does:** Allows human curators to prune, update, and manage architectural documentation with zero API costs. You can resolve stale warnings and audit downstream blast-radii using fast, completely offline tools, keeping your database pristine for free.
+**How to use it:**
+1. Call `cortex audit stale` (or `smart_audit`) to view stale entities.
+2. Verify that the files are still structurally valid.
+3. Call `cortex review accept <entity>` to mark as reviewed and boost the Quality Score to 1.0.
+4. Run `cortex audit stale` and select the entity to clear the stale flag locally—all without spending a single penny on LLM calls.
+
+---
+
+## 42. Graph Linting as a PR Quality Gate
+**What it does:** Treats structural technical debt (like cyclical dependencies or bloated god modules) as a PR compile-time test failure. Because graph lint warnings automatically degrade the deterministic Quality Score, you can block PR merges that violate structural integrity.
+**How to use it:**
+- Add `cortex audit quality` or `cortex lint` to your CI/CD pipeline (e.g. GitHub Actions).
+- Configure your runner to exit with a non-zero status if any active entity's Quality Score falls below your configured threshold (e.g., `0.5`).
+- Any PR that introduces circular imports or unmaintained orphans will fail the build, preventing architectural decay natively!
+
+---
+
+## 43. Verbatim Source-Code Grounding (Deterministic Proofs)
+**What it does:** Prevents AI hallucinations by grounding all architectural descriptions in physical, verbatim code snippets and exact line ranges. Cortex tracks these "proofs" and flags them as drifted the second the physical source code lines diverge.
+**How to use it:**
+- When reading an entity with `cortex read -e <entity>` or `read_entity`, check the `Evidence` blocks containing physical code snippets.
+- If you refactor or edit those exact lines, run `cortex audit evidence` in your terminal or IDE to instantly verify if your documented proofs still match the ground truth.
+
+---
+
+## 44. Automated Structural Contradiction Alarms
+**What it does:** Actively flags logical contradictions between your implementation and documented contracts. If a developer implements a method that contradicts an active constraint or parent interface, Cortex instantly drops the entity's Quality Score below the safety gate.
+**How to use it:**
+- **How it triggers:** Automatically evaluated during `cortex sync` or `ingest` using the AI Librarian's contradiction engine.
+- **Action:** If a logical contradiction is detected, the Quality Score degrades below `0.5`, failing the PR merge and alerting the team of structural contract drift.
+
+
 

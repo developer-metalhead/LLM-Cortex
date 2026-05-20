@@ -31,6 +31,7 @@ import { runExportGraph } from "../cli/export.js";
 import { compressResponse, resolveRefs } from "./compression.js";
 import { buildContextPack } from "../knowledge/packer.js";
 import { computeCostEstimate } from "../cli/test-cost.js";
+import { loadSafeguardConfig } from "../knowledge/safeguards.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -2334,7 +2335,13 @@ export class CortexMCPServer {
         if (!estimate.hasDiff) {
           return { content: [{ type: "text", text: "No pending changes since last sync. Estimated cost: $0.00." }] };
         }
-        const budget = typeof (args as any)?.budget === "number" ? (args as any).budget as number : null;
+        let budget = typeof (args as any)?.budget === "number" ? (args as any).budget as number : null;
+        if (budget === null) {
+          const config = loadSafeguardConfig(this.projectRoot);
+          if (config.maxSessionCostUsd !== undefined) {
+            budget = config.maxSessionCostUsd;
+          }
+        }
         const lines: string[] = [
           `Estimated Input Tokens:  ~${estimate.inputTokens.toLocaleString()}`,
           `Estimated Output Tokens: ~${estimate.outputTokens.toLocaleString()}`,
