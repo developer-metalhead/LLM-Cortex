@@ -52,6 +52,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.4  | API Budget Gating & Runaway Safeguards                | ✅ Done                              |
 | 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
 | 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
+| 13.7  | Hooks-Based Smart Read Cache & AST Skeleton Delta      | ⏳ Planned                           |
+| 13.7.2| Speculative Static Verification & Grounded Fallback    | ⏳ Planned                           |
 | 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
 | 13.9  | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
@@ -1278,27 +1280,31 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 ## 🎲 Phase 7.6: Global Architectural Lessons & Retrospective Log — ⏳ Planned
 
 **Layman's Terms**
-When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` markdown view and command. You can also log global, codebase-wide architectural lessons that aren't tied to a single file.
+When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` view. More importantly, it turns this log into a living **Evolutionary Advisory Engine** (inspired by the Nemesis system): if an approach failed in the past due to a specific limitation (like an old Node version or a missing package), and today you upgrade your environment, Cortex actively alerts you: *"Hey, you can now implement that optimal approach you tried before, because the blocker is finally gone!"*
 
 **Technical Terms**
-Implement a global lessons aggregator in the Knowledge Manager.
+Implement a global lessons compiler and active evolutionary advisor in the Knowledge Manager:
 - **Aggregation**: Collects all `failedApproaches` across all synthesized entities from `state.json`.
+- **Constraint/Blocker Tagging**: When the Librarian synthesizes a failed approach, it explicitly identifies and tags its **blocking conditions** in a structured schema (e.g., `"blocker": "node < 16"`, `"blocker": "dependency: react < 18"`, `"blocker": "flag: CORTEX_STRICT_MODE"`).
+- **Environment Shift Monitor**: During each sync pass, the compiler audits the active workspace environment (`package.json`, `tsconfig.json`, global active constraints, node environment).
+- **Active Evolutionary Advisory**: If a previously active blocker is resolved (e.g. the package is updated or a constraint is lifted), the compiler flags the associated failed approach and raises an active suggestion alert in `.knowledge/LESSONS.md` and CLI returns: *"Architectural Opportunity: [Approach] was previously blocked by [Blocker]. Since your environment changed, you can now safely execute this optimization."*
 - **Manual Logs**: Exposes a CLI command `cortex lessons log --summary "..." --reason "..."` to record a global codebase-wide architectural lesson saved under `.knowledge/lessons.jsonl`.
-- **Output Emitter**: Compiles these into a unified report `.knowledge/LESSONS.md` during sync, showing chronological failures, reasons, and target mitigations.
+- **Output Emitter**: Compiles these into a unified report `.knowledge/LESSONS.md` during sync, highlighting chronological failures, active blocker status, and unlocked optimization advisories.
 
 **Definition of Ready (DoR)**
 - Phase 7 and Phase 7.5 are completed.
-- `state.json` schema supports `failedApproaches[]` correctly.
+- `state.json` schema supports `failedApproaches[]` with structured `blocker` metadata.
 
 **Definition of Done (DoD)**
-- `cortex lessons` command displaying chronological list of all entity-level and global failed approaches/lessons.
+- `cortex lessons` command displaying chronological list of all entity-level and global failed approaches, actively highlighting their blocker statuses (Blocked vs. Unlocked).
+- **Evolutionary Advisory Trigger**: Modifying `package.json` or global environment variables to resolve a logged blocker successfully triggers an active optimization advisory on the next sync pass.
 - `cortex lessons log` command for manual global entries.
-- Unified `.knowledge/LESSONS.md` automatically compiled during sync.
-- Tests covering aggregation, manual entry persistence, and compilation correctness.
+- Unified `.knowledge/LESSONS.md` automatically compiled during sync, splitting entries into "Active Failures/Lessons" and "Newly Unlocked Opportunities."
+- Tests covering blocker tagging correctness, environment change detection, and dynamic optimization advisory triggers.
 
 **Pros & Cons**
-- ✅ **Pros**: Surfaces codebase anti-patterns and retrospects in a single searchable document, preventing AI assistants and developers from repeating historical mistakes.
-- ❌ **Cons**: Requires manual input for global lessons (although entity-level failed approaches are auto-synthesized).
+- ✅ **Pros**: Turns static failure logs into a dynamic, evolutionary optimization engine; prevents developers from forgetting old ideas that are now viable; mimics a biological codebase memory.
+- ❌ **Cons**: Relies on the Librarian accurately extracting and structuring the exact blocker criteria from the Git diff and commit messages. Mitigated by allowing developers to manually adjust or add blocker tags inside the Markdown files.
 
 ---
 
@@ -2464,6 +2470,33 @@ During a coding session, the AI reads the same source code files over and over a
 
 ---
 
+## 💸 Phase 13.7.2: Speculative Static Verification & Grounded Fallback Resolution (Adaptive Retrieval Guardrails) — ⏳ Planned
+
+**Layman's Terms**
+Make your AI co-pilot incredibly reliable and self-healing. When gathering files to help you code, Cortex runs a super-fast check behind the scenes: *"Do the gathered files contain everything the AI needs to understand the changes?"* If the system detects a missing piece (like a reference to a newly added utility that hasn't been documented yet), instead of letting the AI guess or throw a blind error, it instantly runs a local "grep" search across your files, extracts the missing code, and feeds it to the AI as a real-time safety net. You get perfect answers even if the project documentation is momentarily out of sync.
+
+**Technical Terms**
+Implement adaptive retrieval verification and local grep-fallback engines inside the context assembly pipeline:
+- **Speculative Static Verification**: When compiling a token-bounded context pack inside `src/knowledge/packer.ts`, extract all imports and explicit class/function relationships of the target entities. Run a static verification pass to ensure all mapped relationships (Phase 6 edges) are resolved within the active context bundle.
+- **Dynamic Context Expansion**: If critical 1-hop dependencies or contract interfaces are missing from the compact bundle, dynamically "zoom in" and expand the retrieval radius to automatically pull in the missing contracts before the final payload is generated.
+- **Grounded Fallback Resolution**: If a queried relationship or class reference is missing from `.knowledge/` altogether (e.g. a fresh, un-ingested file), intercept the error and execute a sub-millisecond local string search (`git grep` or native node-grep) across the active source code directory.
+- **Signature Extraction Fallback**: Extract the matching raw source code block or interface signature, validate its structure, and inject it as a `[Grounded Fallback Context]` block into the context pack.
+
+**Definition of Ready (DoR)**
+- Phase 6 (Typed Relationships) and Phase 13.5 (RRF Ranker) are completed.
+
+**Definition of Done (DoD)**
+- **Static Import Verification**: Context packing automatically detects when 100% of physical imports of the target target are resolved in the context pack.
+- **Grep Fallback Extraction**: Querying a newly created, un-synced module falls back to live local source code search and successfully retrieves its raw signature, verified by integration tests.
+- **Zero-Latency Invariant**: The static verification and fallback search add less than 15ms of overhead to the total context assembly pass.
+- Tests cover static import coverage verification, deep contract extraction, and grep-fallback signature integration.
+
+**Pros & Cons**
+- ✅ **Pros**: Guarantees absolute context completeness; prevents AI hallucinations caused by missing interface files; operates completely offline and local-first with zero API overhead.
+- ❌ **Cons**: Grep fallbacks are string-based and can return false-positive matching signatures if multiple modules share the exact same helper function names. Mitigated by filtering results based on source file proximity.
+
+---
+
 ## 💸 Phase 13.8: Persistent Experience & Cognitive Mode-Adaptive Context — ⏳ Planned
 
 **Layman's Terms**
@@ -2575,6 +2608,7 @@ Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstr
    - **Neighborhood Tier (40% detail)**: Truncated `## Role` + `## Interface` signatures only for 1-hop dependencies.
    - **System/District Tier (10% detail)**: The `directory_summary.md` parent node only for 2+ hop nodes.
 4. **Self-Cleaning Directory Garbage Collection**: If a directory is emptied during file refactoring/moves, its logical node in `state.json` and its summary file on disk are automatically garbage collected and deleted during the next sync pass.
+5. **PageRank Centrality Hub Summaries (GraphRAG Adaptation)**: When compiling a directory summary, use the graph centrality values calculated in Phase 7 to identify "Transit Hub" modules (entities with high PageRank or degree centrality). Generate a consolidated transit hub summary `transit_hub_summary.md` detailing how these central intersection files coordinate system-wide architectural traffic.
 
 **Definition of Ready (DoR)**
 - Phase 8.2 (Obsidian Vault Compliance) and Phase 13 (Token Economics) are completed.
@@ -2584,8 +2618,9 @@ Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstr
 - **Automated Directory Summary Generation**: Compilation of `[dir_name]_summary.md` is successfully triggered on directory additions or structural changes, and garbage-collected when directories physically empty out.
 - **Dynamic Zoomable Context Packs**: The context packer correctly trims neighborhood and distant nodes based on graph hop distance, proving a >= 50% token reduction compared to flat raw loading on the same neighborhood.
 - **Obsidian Visual Integration**: Directory summaries render as **Teal Turquoise (`#0D9488`)** hub nodes connecting their children in Obsidian's visual graph view.
+- **Transit Hub Summaries**: Centrality-based PageRank hub summaries are successfully generated for the top 5% most connected entities in the codebase, proving active, LLM-free community-summarization.
 - Direct query endpoints (like `read_entity`) are completely unaffected and continue to return 100% of raw content when explicitly queried (no dynamic truncation).
-- Tests cover: hierarchy compilation, directory addition/deletion triggers, self-cleaning garbage collection, dynamic zoom trimming logic, and direct query contract compatibility.
+- Tests cover: hierarchy compilation, directory addition/deletion triggers, self-cleaning garbage collection, dynamic zoom trimming logic, transit hub calculations, and direct query contract compatibility.
 
 **Pros & Cons**
 - ✅ **Pros**: Massive context window token and cost savings (up to 70% reduction); prevents AI "lost-in-the-middle" issues by maintaining high conceptual focus; enhances Obsidian visual structures into clean topological constellations.
