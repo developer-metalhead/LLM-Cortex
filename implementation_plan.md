@@ -232,6 +232,43 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 61    | Plasma Current Routing (Electromagnetic Propagation)    | ⏳ Planned (add-on module)           |
 | 62    | Inverted Reality Mode & Curved Abstraction Layers       | ⏳ Planned (add-on module)           |
 | 63    | Outsider Pattern Discovery & Contrarian Analysis       | ⏳ Planned (add-on module)           |
+| 64    | Biogenic Synthesis (Neuroscience & Immunology)         | ⏳ Planned (cross-domain)             |
+| 64.1  | Long-Term Potentiation — Frequency-Strengthened Paths | ⏳ Planned (cross-domain)             |
+| 64.2  | Neurogenesis — Adult-Born Entity Creation             | ⏳ Planned (cross-domain)             |
+| 64.3  | Lateral Inhibition — Competitive Neighbor Suppression  | ⏳ Planned (cross-domain)             |
+| 64.4  | Immunological Memory — Antigen-Specific Recognition   | ⏳ Planned (cross-domain)             |
+| 64.5  | Clonal Selection — Amplifying Successful Patterns     | ⏳ Planned (cross-domain)             |
+| 65    | Physical Metallurgy Synthesis                         | ⏳ Planned (cross-domain)             |
+| 65.1  | Alloy Strengthening — Compositional Hardening         | ⏳ Planned (cross-domain)             |
+| 65.2  | Annealing & Tempering — Controlled Stress Relief      | ⏳ Planned (cross-domain)             |
+| 65.3  | Fatigue Crack Propagation — Cyclical Stress Analysis  | ⏳ Planned (cross-domain)             |
+| 65.4  | Creep Deformation — Slow Structural Drift             | ⏳ Planned (cross-domain)             |
+| 66    | Mechanical & Structural Engineering Synthesis         | ⏳ Planned (cross-domain)             |
+| 66.1  | Truss Optimization — Triangulated Dependency Nets     | ⏳ Planned (cross-domain)             |
+| 66.2  | Buckling Analysis — Critical-Load Prediction          | ⏳ Planned (cross-domain)             |
+| 66.3  | Damping & Resonance — Oscillation Absorption          | ⏳ Planned (cross-domain)             |
+| 66.4  | Factor of Safety — Engineering Margin in Decisions    | ⏳ Planned (cross-domain)             |
+| 67    | Data Science & Statistical Learning Synthesis         | ⏳ Planned (cross-domain)             |
+| 67.1  | Dimensionality Reduction — Entity Space Compression   | ⏳ Planned (cross-domain)             |
+| 67.2  | Ensemble Methods — Multi-Signal Convergence           | ⏳ Planned (cross-domain)             |
+| 67.3  | Survival Analysis — Entity Lifetime Prediction        | ⏳ Planned (cross-domain)             |
+| 67.4  | Bayesian Updating — Prior-Driven Belief Revision      | ⏳ Planned (cross-domain)             |
+| 68    | Medical & Clinical Diagnostic Synthesis               | ⏳ Planned (cross-domain)             |
+| 68.1  | Cardiology — Architectural Pulse & Arrhythmia Detection | ⏳ Planned (cross-domain)           |
+| 68.2  | Psychiatry — Cognitive Distortion & Bias Patterns     | ⏳ Planned (cross-domain)             |
+| 68.3  | Epidemiology — Architectural Smell Contagion Modeling | ⏳ Planned (cross-domain)             |
+| 68.4  | Radiology — Cross-Sectional Architectural Tomography  | ⏳ Planned (cross-domain)             |
+| 68.5  | Neurology — Lesion Studies & Functional Deficit Maps  | ⏳ Planned (cross-domain)             |
+| 69    | Criminal Forensics & Investigative Synthesis          | ⏳ Planned (cross-domain)             |
+| 69.1  | Trace Evidence — Regression Provenance Chain          | ⏳ Planned (cross-domain)             |
+| 69.2  | Behavioral Profiling — Module Pattern-of-Life         | ⏳ Planned (cross-domain)             |
+| 69.3  | Crime Scene Reconstruction — Post-Mortem Failure Analysis | ⏳ Planned (cross-domain)         |
+| 69.4  | Recidivism Prediction — Recurrence Risk Scoring       | ⏳ Planned (cross-domain)             |
+| 70    | Jurisdictional & Legal System Synthesis               | ⏳ Planned (cross-domain)             |
+| 70.1  | Subject-Matter Jurisdiction — Component Authority Maps | ⏳ Planned (cross-domain)            |
+| 70.2  | Stare Decisis — Architectural Precedent Binding       | ⏳ Planned (cross-domain)             |
+| 70.3  | Due Process — Fair Notification Before Enforcement    | ⏳ Planned (cross-domain)             |
+| 70.4  | Habeas Corpus — Justification Requirement for Actions  | ⏳ Planned (cross-domain)            |
 
 ---
 
@@ -10905,3 +10942,467 @@ Three classes of issues surfaced after the first public release. v0.3.3 addresse
 | 2   | **Antigravity setup not portable across projects**      | Antigravity prioritizes the global `~/.gemini/antigravity/mcp_config.json` over per-project `.antigravity/mcp_config.json`, so the previous per-project setup was silently ignored. Even when local won, every new project required a fresh setup, and entries with hardcoded `node_modules` paths broke on project switches. | [src/cli/setup.ts](src/cli/setup.ts) antigravity target now defaults to writing the **global** config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`, `env: { DOTENV_CONFIG_QUIET: "1" }`). `findProjectRoot()` resolves the active project from CWD at runtime — one global entry serves every project. A `--local` flag on `cortex setup` writes the per-project file instead. Pre-flight check verifies `cortex` is on PATH; aborts with an install hint if not.                                                                                                                                                                                       |
 | 3   | **Bootstrap ingestion documents Project Cortex itself** | Prompt-level guidance ("if index is empty, scan src/") was too weak — `get_pending_changes` still returned a git diff in the user prompt, and LLMs follow what's in front of them. The first diff is invariably "the user installed Cortex," so the first synthesis described Cortex's footprint instead of the user's app.   | Tool-level enforcement: `get_pending_changes` now calls `KnowledgeManager.isEmpty()` and branches. On empty: returns `mode: "bootstrap"` with a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) and `BOOTSTRAP_PROMPT_TEMPLATE` — **the git diff is intentionally absent from the payload**. The file list excludes the Cortex/IDE footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, `.cursor/`, `.vscode/`, etc.), test files (`tests/`, `*.test.*`, `*.spec.*`), and `node_modules`-class noise; includes `docs/`. Capped at 500 entries with a footer. Both ingest prompt files now branch on the `mode` field. |
 | 4   | **Bootstrap is too shallow on large codebases — produces ~5 entities on 1800-file projects** | Fix #3 prevents Cortex-self-documentation but doesn't make bootstrap deep. Three compounding issues remain: (a) the 500-file cap silently truncates large repos (1800 files → 1300 invisible); (b) the prompt receives a *file list*, not *file contents*, so the LLM pattern-matches on filenames instead of reading code; (c) it is a single-shot synthesis — one LLM call summarizing the entire repo naturally compresses to ~5 entities regardless of input size. Observed in production on a real ~1800-file React/Redux/Keycloak project: 4 entities, 3 concepts; user had to manually re-prompt 3+ times to extract any depth, and the result was still ~5 entities. | **Tactical (v0.3.4):** raise the 500-file cap to 2000, group the file list by top-level directory so the LLM at least sees structural hints, and tweak `BOOTSTRAP_PROMPT_TEMPLATE` to explicitly require ≥15 entities and ≥5 concepts as a minimum bar. **Strategic (Phase 33):** the proper fix is multi-phase recursive bootstrap with per-domain deep synthesis, hot-path deepening, cross-domain relationship pass, and quality-gate auto-refine — see [Phase 33: Deep Recursive Bootstrap Ingest](#-phase-33-deep-recursive-graph-bootstrap-ingest----planned-p0--fixes-production-issue) for the full design. Phase 33 produces 40-80 entities and 10-15 concepts on the same 1800-file project in one run (~$2.50-6.50, ~6-10 minutes) vs. the current 4 entities for $0.20 in 30 seconds. |
+
+---
+
+## 🧬 Phase 64: Biogenic Synthesis (Neuroscience & Immunology) — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Drawing from how biological brains and immune systems learn, adapt, and defend: pathways that fire together wire together, new neurons are born throughout life, active cells suppress their neighbors, and the immune system remembers past invaders to mount faster future responses.
+
+**Technical Terms**
+A family of biologically-inspired knowledge dynamics that make the architectural knowledge graph self-optimizing, adaptive, and resilient.
+
+### 64.1 Long-Term Potentiation — Frequency-Strengthened Pathways
+
+**Metaphor**: In neuroscience, synapses that are repeatedly activated undergo long-term potentiation (LTP) — the connection strengthens, making future signal transmission more efficient. The classic Hebbian rule: "cells that fire together, wire together."
+
+**Cortex Analog**: Entities and relationships that are frequently queried together (co-accessed in the same MCP read, co-mentioned in synthesis output, co-traversed in impact analysis) develop a **potentiation weight**. This weight:
+- Elevates the pair in proximity-reranking (Phase 13.6)
+- Shortens the retrieval path — they're pre-joined in the index summary
+- Triggers proactive deep-synthesis on the potentiated pair when either changes (even if the other file was untouched)
+- Decays over time (long-term depression) if the pair stops being co-accessed — the graph self-prunes unused associations
+
+**Implementation**: A `potentiation` adjacency matrix stored in `.knowledge/state.json` (sparse — only stores non-zero pairs). Decay runs as a background tick every N queries. Threshold-triggered events fire into the synthesis queue.
+
+### 64.2 Neurogenesis — Adult-Born Entity Creation
+
+**Metaphor**: The adult mammalian brain continues to generate new neurons throughout life, primarily in the hippocampus and olfactory bulb. These newborn neurons are highly plastic and integrate into existing circuits.
+
+**Cortex Analog**: When a new source file appears (or a fundamentally new module structure emerges), Cortex creates **juvenile entities** — placeholder entity pages with high plasticity (low confidence, wide `## Role` descriptions, tentative `## Wiring` sections). Juvenile entities:
+- Are tagged `stage: juvenile` in `state.json` with a birth timestamp
+- Receive more frequent re-synthesis passes (every N synths vs. the standard every 5N)
+- Have a lower threshold for merge/rename — the system actively proposes consolidating overlapping juveniles
+- Mature to `stage: adult` after surviving K re-synthesis cycles without major revision, at which point synthesis frequency drops to the standard rate
+
+**Implementation**: Extended `EntityMeta` in `state.json` with `stage: "juvenile" | "adult" | "senescent"` and `birthTick`. The synthesis queue priority function ranks juvenile entities higher.
+
+### 64.3 Lateral Inhibition — Competitive Neighbor Suppression
+
+**Metaphor**: In sensory systems (vision, touch), when one neuron fires strongly, it inhibits its immediate neighbors via lateral connections. This sharpens contrast — the "edge" between active and inactive regions becomes crisp.
+
+**Cortex Analog**: When an entity is the direct subject of a synthesis pass (just modified, just read, just impact-analyzed), laterally adjacent entities (its direct `## Wiring` neighbors) receive a **temporary suppression signal**:
+- Their `lastRefined` age does not advance during this window — they're not flagged as stale just because they weren't refined alongside the hot entity
+- Synthesis bandwidth is diverted: while entity A is hot, entities A±1 (direct neighbors) get lower synthesis priority
+- Edge cases between the hot entity and its suppressed neighbors are flagged for explicit attention — "A changed but B (depended by A) was not refined" is a deliberate decision, not an oversight
+
+**Implementation**: A `suppressionRing` computed on every synthesis tick — decrementing priority weights for first-degree neighbors of the synthesized entity. Configurable radius (1-hop default). Clears after synthesis completes.
+
+### 64.4 Immunological Memory — Antigen-Specific Recognition
+
+**Metaphor**: After a pathogen infection, the immune system retains memory B and T cells that recognize the same antigen years later, enabling a faster and stronger secondary response.
+
+**Cortex Analog**: When an architectural smell, pattern violation, or regression is detected and resolved, Cortex stores an **immunological signature** — a hash of the relevant code context, entity topology, and the fix applied. On future code changes, if a similar signature is detected:
+- A `memory recall` event fires ("you fixed this same pattern in PaymentService 3 months ago — same fix pattern applies to AuthService")
+- The previous synthesis output, review notes, and `failedApproaches` are surfaced as context
+- The system proactively suggests the prior fix pattern as a template
+
+**Implementation**: Signature store in `.knowledge/immunity.json` — keyed by SHA-256 of (entity name + relationship topology + code pattern hash). Comparative recall via fuzzy threshold (0.85+ cosine similarity on the signature vector). False-positive rate bounded by requiring at least 2 structural features to match.
+
+### 64.5 Clonal Selection — Amplifying Successful Patterns
+
+**Metaphor**: In the adaptive immune system, B cells whose antibodies bind an antigen undergo clonal expansion — they proliferate rapidly, amplifying the successful binding pattern.
+
+**Cortex Analog**: When an entity or architectural pattern consistently passes quality gates, receives positive human review feedback, and survives multiple regression cycles without issues, it enters a **clonal selection** phase:
+- The pattern is extracted as a reusable **architectural antibody** — encoded as a structured template in `.knowledge/patterns/`
+- When the synthesis engine detects similar structural prerequisites in other parts of the codebase, it proactively proposes the same pattern
+- Amplified patterns get higher `## Wiring` priority — they're surfaced first in `read_entity` results
+
+**Implementation**: Pattern extraction runs as a post-synthesis step, comparing newly-stable entity topologies against a library of recognized patterns. Matches generate `pattern_proposal` entries in the synthesis queue for human review.
+
+---
+
+## ⚒️ Phase 65: Physical Metallurgy Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Learning from how metals are strengthened, shaped, and eventually fail — alloying combines elements for stronger composites, annealing relieves internal stress, fatigue cracks grow under repeated loading, and creep slowly deforms structures under constant strain.
+
+**Technical Terms**
+Metallurgical principles applied to software architecture — compositional hardening, stress-relief refactoring, cyclical stress analysis, and long-term structural drift detection.
+
+### 65.1 Alloy Strengthening — Compositional Hardening
+
+**Metaphor**: Pure metals are soft. Adding alloying elements (carbon to iron → steel, copper to gold → 18k) introduces lattice distortions that impede dislocation movement, dramatically increasing strength.
+
+**Cortex Analog**: Pure architectural patterns (a generic REST API, a plain event bus) are soft — they flex under load but offer little resistance to degradation. When complementary **alloying elements** are added — validation middleware, rate limiting, structured logging, circuit breakers — the composition becomes harder:
+- The composite entity (e.g., "AuthenticatedAPIGateway") receives a higher **hardness score** in quality metrics
+- Hardened compositions are tagged with their constituent elements as `alloyedFrom: [MiddleAuth, RateLimiter, StructuredLogger]`
+- When an alloying element changes, all entities `alloyedFrom` it receive elevated synthesis priority
+
+**Implementation**: `alloyComposition` metadata in entity pages. Hardness score computed as a weighted function of constituent elements' individual quality scores plus a synergy bonus. Breaking change to any alloying element triggers an impact cascade.
+
+### 65.2 Annealing & Tempering — Controlled Stress Relief
+
+**Metaphor**: Annealing heats metal to a specific temperature then cools slowly, relieving internal stresses and reducing hardness. Tempering reheats hardened steel to a lower temperature, trading some hardness for increased toughness.
+
+**Cortex Analog**: After intensive refactoring (heating), the codebase has internal stresses — circular dependencies, inconsistent naming, duplicated logic that hasn't settled. **Annealing** is a scheduled, low-priority synthesis pass that:
+- Identifies stress concentration points (high cyclomatic complexity + high change frequency)
+- Proposes non-functional refactoring candidates (rename, extract, consolidate) without changing behavior
+- Generates "cooling period" recommendations — "wait 3 more commits before merging this module to allow stress to settle"
+
+**Tempering** trades brittleness (perfect purity of abstraction) for toughness (pragmatic tolerance):
+- Identifies overly-abstracted interfaces with zero concrete implementations — "this abstraction is too hard, it will shatter under first real use"
+- Flags purity-at-all-costs refactorings that removed necessary duplication or pragmatic shortcuts
+
+**Implementation**: Annealing temperature modeled as a scalar `codebaseTemperature` updated per-synthesis (based on change volume + refactoring frequency + entity churn). When above threshold, annealing suggestions activate. Tempering triggers on excessive abstraction depth (>3 levels) with low implementation ratio.
+
+### 65.3 Fatigue Crack Propagation — Cyclical Stress Analysis
+
+**Metaphor**: Metals under repeated cyclic loading develop micro-cracks that grow incrementally with each cycle until catastrophic failure. The crack grows slowly at first, then accelerates — most of the component's life is spent with an undetected crack already present.
+
+**Cortex Analog**: Architectural debt that accumulates under repeated, small changes follows the same pattern:
+- Each commit to a high-churn module applies a **stress cycle** — tiny structural deformation that doesn't fail on its own
+- Cortex tracks cycle count per entity (`stressCycleCount` in state.json)
+- When cycle count crosses a material-specific threshold (configurable per module complexity tier), the entity enters `fatigue_warning` state
+- Fatigue-stage entities receive elevated synthesis priority and appear in `cortex status` as "⚠️ Fatigue — N cycles, recommend structural review"
+- At critical crack length (threshold 2× warning threshold), the system recommends a **refactoring intervention** before the next change cycle
+
+**Implementation**: `src/knowledge/fatigue.ts` — stress cycle counter per entity, decay function (cycles decay if module stabilizes), tiered thresholds derived from entity size × change frequency.
+
+### 65.4 Creep Deformation — Slow Structural Drift
+
+**Metaphor**: Materials under constant load below their yield strength still gradually deform over time — called creep. It's imperceptible day-to-day but over months causes significant distortion, especially at elevated temperatures.
+
+**Cortex Analog**: Under constant development load, even well-structured modules slowly drift from their original architecture:
+- API surfaces accumulate optional parameters
+- Single-responsibility classes grow additional concerns
+- Interface contracts silently expand beyond their original scope
+
+Cortex detects creep by comparing each entity's current `## Interface` against its historically-snapshotted signature (stored at each synthesis). When cumulative drift exceeds a threshold without a corresponding documentation/version update, the entity is flagged as `creep_warning`. The delta is surfaced in `cortex status` and the MCP `read_entity` response as "🦎 Creep: this entity's interface has expanded by 40% since last documented — consider formal version bump or extraction."
+
+**Implementation**: Interface snapshot at each synthesis (`interfaceFingerprint: string`). Diff computed on every read. Creep ratio = (current interface surface) / (snapshot surface). Thresholds: warning at 1.25×, critical at 2×.
+
+---
+
+## 🏗️ Phase 66: Mechanical & Structural Engineering Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Applying principles from building bridges, machines, and structures: triangulated trusses distribute load efficiently, every column has a critical buckling load, oscillating systems need damping, and responsible engineers always include a safety factor.
+
+**Technical Terms**
+Structural engineering heuristics for dependency topology, load-bearing capacity, oscillation detection in feedback loops, and safety margins in architectural decisions.
+
+### 66.1 Truss Optimization — Triangulated Dependency Nets
+
+**Metaphor**: In structural engineering, triangles are the strongest shape. A truss made of triangles distributes loads efficiently — any single member failure redistributes the load without collapse.
+
+**Cortex Analog**: Dependency graphs with triangular structures (A depends on B, B depends on C, C depends on A) are not necessarily bad — they can be load-bearing trusses. Cortex distinguishes **pathological cycles** (fragile, tightly-coupled death spirals) from **triangulated trusses** (stable, load-distributing patterns with clear interfaces):
+- Analyzes each cyclic component in the dependency graph and classifies it as `truss` (stable, load-bearing) or `tangle` (fragile, needs refactoring)
+- Truss classification criteria: clear interface contracts between each pair, single responsibility per member, reversible dependencies
+- Tangle criteria: implicit coupling, shared mutable state, bidirectional knowledge of internals
+
+**Implementation**: Graph analysis in `src/knowledge/truss.ts` — Tarjan's algorithm for strongly connected components, then per-component classifier using interface clarity metrics from entity pages.
+
+### 66.2 Buckling Analysis — Critical-Load Prediction
+
+**Metaphor**: A slender column under compression doesn't fail by crushing — it fails by buckling at a critical load far below its material strength. Euler's formula predicts exactly when: P_cr = π²EI / (KL)².
+
+**Cortex Analog**: Modules that depend on many interfaces (compression) don't fail by "crushing" (too many dependencies) — they fail by buckling (the abstraction bends unpredictably under load). Cortex computes a **critical-load score**:
+- I = interface complexity (number of exported functions/classes/types)
+- L = dependency chain length to root module
+- K = end-condition factor (1.0 for leaf modules, 0.5 for core infrastructure, 2.0 for utility modules)
+
+When a module's actual dependency count approaches its critical load, it's flagged as `pre-buckling`. The system recommends: reduce interface surface (increase I? no — reduce effective load) or add lateral bracing (intermediate abstraction layers).
+
+**Implementation**: Euler-inspired formula in `src/knowledge/buckling.ts`. Critical load compared against measured dependency fan-in. Visualization shows margin-to-buckling as a percentage.
+
+### 66.3 Damping & Resonance — Oscillation Absorption
+
+**Metaphor**: Every mechanical system has natural frequencies. When driven at those frequencies, resonance causes runaway oscillation amplitude — Tacoma Narrows Bridge collapse. Damping elements absorb energy and prevent resonance.
+
+**Cortex Analog**: Software systems with feedback loops (build triggers, CI pipelines, auto-scaling, reconciliation loops) can exhibit resonance — small changes amplified into cascading failures:
+- Cortex detects **oscillating dependency patterns**: A triggers B, B triggers C, C triggers A (not just cycle — timed feedback)
+- Flags entities that form **positive feedback loops** — where a change in entity X propagates and returns amplified
+- Recommends **damping elements**: idempotency keys, rate limiters, exponential backoff, dead-letter queues, circuit breakers
+- Monitors **oscillation frequency** via git history — modules that change in lockstep with N-commit cadence are potentially resonant
+
+**Implementation**: Feedback loop detection + frequency analysis from git history timestamps. Damping recommendation library mapped to oscillation type.
+
+### 66.4 Factor of Safety — Engineering Margin in Decisions
+
+**Metaphor**: Every engineered structure includes a factor of safety — the structure is designed to handle 2×, 5×, or 10× the expected maximum load. This accounts for material defects, construction tolerances, and unknown unknowns.
+
+**Cortex Analog**: Architectural decisions should include a factor of safety — known as **engineering margin**. Cortex tracks:
+- **Load margin**: current dependency load vs. estimated capacity of the module's interface
+- **Degradation margin**: current quality score vs. minimum acceptable quality for the entity's tier (core infrastructure gets higher margin)
+- **Complexity margin**: current cyclomatic complexity vs. team's historical failure threshold
+- **Staffing margin**: bus factor vs. module criticality (from `## Wiring` fan-out count)
+
+When any margin drops below 1.5×, Cortex issues an advisory. Below 1.0× (no margin — already at limit), it's a `cortex lint` violation.
+
+**Implementation**: Margin computation in `src/knowledge/safety-margin.ts`. Margins are additive — a module below margin on 3 of 4 axes gets consolidated `cortex status` output.
+
+---
+
+## 📊 Phase 67: Data Science & Statistical Learning Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Applying statistical and machine learning techniques: compressing high-dimensional entity spaces, combining multiple weak signals into strong predictions, modeling entity lifespan, and continuously updating beliefs with new evidence.
+
+**Technical Terms**
+Statistical learning principles for knowledge management — feature extraction, ensemble aggregation, survival modeling, and Bayesian inference over architectural observations.
+
+### 67.1 Dimensionality Reduction — Entity Space Compression
+
+**Metaphor**: High-dimensional data (1000+ features per point) is impossible to visualize or cluster meaningfully. Techniques like PCA, t-SNE, and UMAP project data into 2-3 dimensions while preserving relative distances.
+
+**Cortex Analog**: As entity counts grow, the relationship graph becomes high-dimensional — each entity is a point in N-dimensional space where dimensions are its relationships, quality scores, churn rates, and interface signatures. Dimensionality reduction projects this into a **latent entity map**:
+- Similar entities cluster together in the projection — revealing groups the synthesis engine might not have explicitly named
+- Outliers in the projection are candidates for `cortex lint` — either misclassified entities or genuinely unique modules needing attention
+- The projection is used as a secondary index — read_entity returns "similar entities" based on latent-space proximity
+
+**Implementation**: UMAP or t-SNE via a local Python script or WASM binding (no cloud dependency). Re-computed on a schedule (every N syntheses or on demand via `cortex reduce`). Projection stored in `.knowledge/projection.json`.
+
+### 67.2 Ensemble Methods — Multi-Signal Convergence
+
+**Metaphor**: No single model is reliable. Random forests combine hundreds of weak decision trees; gradient boosting iteratively corrects previous errors. The ensemble nearly always outperforms any individual member.
+
+**Cortex Analog**: No single quality signal is reliable. A module with high churn might be volatile — or it might be the most actively maintained. A module with many dependencies might be coupled — or it might be a well-factored hub. Ensemble methods combine multiple weak architectural signals into a **convergence score**:
+- Signals: churn rate, dependency fan-in/out, interface stability, test coverage (if available), review frequency, comment density, cyclomatic complexity, entity age, `staleSince` recency
+- Each signal is a weak classifier — on its own, noisy and unreliable
+- Combined via weighted ensemble (signal weights tuned per project via historical accuracy on `cortex lint` violations)
+- Convergence score appears in entity pages as `## Quality` with per-signal breakdown
+
+**Implementation**: `src/knowledge/ensemble.ts` — signal extractors, weight vector (per-project configurable), convergence computation. Ensemble weights saved to `.knowledge/ensemble-weights.json`.
+
+### 67.3 Survival Analysis — Entity Lifetime Prediction
+
+**Metaphor**: In medical statistics, survival analysis models time-to-event data: how long until a patient relapses, a machine fails, or a customer churns. Kaplan-Meier curves estimate the survival function from observed lifetimes.
+
+**Cortex Analog**: Architectural entities have lifetimes — from birth (first synthesis) to death (file deleted, module deprecated). Survival analysis models:
+- **Entity survival curve**: probability that an entity survives (is not deleted or fundamentally rewritten) past N days
+- **Risk factors**: high cyclomatic complexity, low quality score, high churn, high dependency count — each contributes a hazard ratio
+- **Cohort effects**: entities born in the same synthesis batch share survival characteristics (a badly-synthesized batch produces short-lived entities)
+- **Censoring**: entities that still exist at analysis time are right-censored — we know they've survived at least this long, but not their eventual lifetime
+
+Used to flag entities with unexpectedly high hazard ratios — "this entity has a 73% probability of being deleted or rewritten within 90 days based on its risk profile."
+
+**Implementation**: `src/knowledge/survival.ts` — Cox proportional hazards model fitted on entity lifecycle history from `log.md`. Hazard ratio per entity computed and surfaced in `cortex status` and MCP responses.
+
+### 67.4 Bayesian Updating — Prior-Driven Belief Revision
+
+**Metaphor**: Bayes' theorem describes how to update the probability of a hypothesis as new evidence arrives. The prior belief is combined with the likelihood of the observed data to produce a posterior belief. This is how science works — not binary true/false, but continuously refined probabilities.
+
+**Cortex Analog**: Every entity and relationship in Cortex has a **belief** — not a binary "this is correct" but a probability distribution over possible states:
+- **Prior**: initial confidence from the first synthesis (always relatively low — the LLM could be wrong)
+- **Evidence**: subsequent synthesis passes, human reviews, manual edits, `--force` re-synths, impact analysis results
+- **Likelihood**: how much each evidence type shifts the belief (a human editor's change is high-likelihood; an automated re-synthesis is lower)
+- **Posterior**: the updated belief — Bayesian Entity Certainty (BEC) score
+
+When contradicting evidence arrives (two synthesis passes disagree, a human review says "this is wrong"), the belief widens (increased variance) rather than jumping to the new value — reflecting genuine uncertainty. Only when multiple independent evidence sources converge does the variance shrink.
+
+**Implementation**: `src/knowledge/bayesian.ts` — conjugate prior updates using Beta distributions (natural for binary-outcome beliefs). BEC score = posterior mean; credibility interval = posterior 90% HDI. Persisted per entity in `state.json`.
+
+---
+
+## 🏥 Phase 68: Medical & Clinical Diagnostic Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Medical diagnostic techniques repurposed for architecture: monitoring the architectural pulse like an ECG, identifying cognitive biases that lead to design errors, tracking how architectural smells spread like infectious diseases, taking cross-sectional scans of the codebase, and using lesion studies to understand function from failure.
+
+### 68.1 Cardiology — Architectural Pulse & Arrhythmia Detection
+
+**Metaphor**: The heart's electrical activity produces a characteristic ECG waveform — P wave, QRS complex, T wave. Cardiologists detect arrhythmias (atrial fibrillation, ventricular tachycardia) from deviations in this pattern.
+
+**Cortex Analog**: The codebase has a **development pulse** — a characteristic rhythm of commits, syntheses, and architectural changes. Cortex tracks:
+- **Heart rate**: commits per day, syntheses per day — normal range varies by project phase
+- **P-R interval**: time between a file change and its synthesis — too long suggests queue build-up
+- **QRS complex**: rapid burst of changes across related files — indicates coordinated refactoring or reactive hotfix
+- **ST elevation**: sustained high change volume with no structural improvement — suggests technical debt accumulation
+- **Arrhythmia detection**: premature architectural contractions (rushed refactors), atrial fibrillation (chaotic, uncoordinated changes across unrelated modules), asystole (flatline — no architectural changes for extended periods)
+
+Arrhythmias are surfaced in `cortex status` as health warnings: "⚠️ Sinus arrhythmia detected — 3 coordinated refactors in 2 hours without intervening stability period. Recommend cooldown."
+
+**Implementation**: `src/knowledge/cardiology.ts` — change-event stream from git log + synthesis log. ECG-style visualization in `cortex status --cardio` (ASCII or Phase 8 graph overlay).
+
+### 68.2 Psychiatry — Cognitive Distortion & Bias Patterns
+
+**Metaphor**: Cognitive behavioral therapy identifies systematic thinking distortions: black-and-white thinking, catastrophizing, overgeneralization, mind reading, emotional reasoning. These biases distort perception of reality.
+
+**Cortex Analog**: Architectural decision-making exhibits systematic biases that degrade knowledge quality:
+- **Anchoring bias**: the first architectural decision about a module anchors all subsequent descriptions, even as the module evolves away — entity pages describe "what it was" not "what it is"
+- **Confirmation bias**: the synthesis engine selectively retains evidence that confirms its initial interpretation and discards contradictory signals
+- **Dunning-Kruger effect**: low-complexity modules receive overconfident descriptions; high-complexity modules receive overly cautious, vague descriptions
+- **Sunk cost fallacy**: entities with long histories resist reclassification even when their role has fundamentally changed
+- **Availability heuristic**: recently-edited entities dominate synthesis attention at the expense of quieter but equally important modules
+- **Groupthink**: in multi-Librarian scenarios, early Librarian outputs anchor later ones, reducing diversity of interpretation
+
+Cortex detects these patterns by analyzing synthesis history across time and surfacing bias indicators: "⚠️ Anchoring bias detected: AuthService's ## Role has not changed in 8 of 9 syntheses despite fan-out increasing 4×. Recommend forced re-synthesis."
+
+**Implementation**: `src/knowledge/cognitive-bias.ts` — per-bias detector functions that compare entity state over time against bias-specific heuristics. Bias events logged in `.knowledge/bias-log.json` and surfaced in `cortex lint` output.
+
+### 68.3 Epidemiology — Architectural Smell Contagion Modeling
+
+**Metaphor**: Infectious diseases spread through populations according to SIR models — Susceptible, Infected, Recovered. The basic reproduction number R₀ determines whether an outbreak grows or dies out.
+
+**Cortex Analog**: Architectural smells (god objects, circular dependencies, leaky abstractions, inconsistent naming) spread through the codebase like infections:
+- **Susceptible**: modules that follow clean patterns but are adjacent to infected modules
+- **Exposed**: modules adjacent to infected modules that share dependencies — they're at risk of "catching" the smell through copy-paste, shared authorship, or dependency-driven scope creep
+- **Infected**: modules exhibiting the smell
+- **Recovered**: modules that were refactored and now test clean
+
+Cortex computes R₀ for each known smell type — how many new infections each existing infection typically causes. R₀ > 1 means the smell is actively spreading and needs containment. R₀ < 1 means the smell is dying out naturally.
+
+**Containment strategies**: architectural quarantine (flagged modules get elevated review requirements), vaccination (pre-emptive lint on similarly-structured modules), contact tracing (all commits touching infected modules in the past N days trigger review).
+
+**Implementation**: `src/knowledge/epidemiology.ts` — SIR model over the entity graph. Smell propagation tracked via git blame + dependency adjacency. Outbreak alerts in `cortex status`.
+
+### 68.4 Radiology — Cross-Sectional Architectural Tomography
+
+**Metaphor**: CT scans and MRIs take multiple cross-sectional slices of the body and reconstruct a 3D model. Different tissue types have different radiodensity, revealing tumors, fractures, and abnormalities invisible from the surface.
+
+**Cortex Analog**: Cortex takes **architectural tomographic slices** — cross-sectional views of the codebase along different axes:
+- **Horizontal slice**: all entities at one layer of abstraction (e.g., all controllers, all repositories) — reveals layer-wide consistency issues
+- **Vertical slice**: all entities involved in one feature end-to-end — reveals cross-cutting coupling
+- **Depth slice**: entities at a specific dependency depth from root — reveals architectural layering violations
+- **Density slice**: entities grouped by quality score quartile — reveals systemic quality gradients
+- **Time slice**: entity state at a specific commit (from log.md snapshots) — reveals temporal evolution
+
+Each slice is rendered as a Mermaid diagram (Phase 8 overlay) with density coloring. Abnormalities appear as radiodense spots — clusters of inconsistent quality, unexpected dependencies, or missing layers.
+
+**Implementation**: `src/knowledge/tomography.ts` — slice engine producing entity sets + relationship subgraphs for each slice axis. Phase 8 integration for visualization.
+
+### 68.5 Neurology — Lesion Studies & Functional Deficit Maps
+
+**Metaphor**: In neurology, lesion studies correlate damaged brain regions with lost functions — damage to Broca's area impairs speech production, not comprehension. This reveals which regions are necessary for which functions.
+
+**Cortex Analog**: When a module is deleted, deprecated, or fundamentally broken (failing tests, compilation errors), Cortex performs a **lesion study**:
+- Identifies which remaining modules exhibit functional deficits after the lesion — failing transitive dependencies, broken imports, unhandled edge cases
+- Maps each deficit to a specific **necessary region** — demonstrating that the removed module was essential for that function
+- Builds a **functional deficit map**: which entities are necessary for which capabilities
+- Over time, synthesizes a necessity gradient — "AuthService is necessary for 12 downstream functions; TokenCache is necessary for 3" — informing refactoring priority
+
+This inverts the standard dependency analysis: instead of "what does X depend on," it answers "what depends on X being correct" — the functional consequence of failure.
+
+**Implementation**: `src/knowledge/lesion.ts` — simulated lesion engine. Given a removed entity, traces git-blame, test failures, and import graphs to identify deficit regions. Necessity gradient stored per entity in state.json.
+
+---
+
+## 🔍 Phase 69: Criminal Forensics & Investigative Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Detective work for software architecture: tracing the chain of evidence from a bug back to its root cause, profiling module behavior patterns, reconstructing the sequence of events leading to an outage, and predicting which problems are likely to recur.
+
+### 69.1 Trace Evidence — Regression Provenance Chain
+
+**Metaphor**: Forensic investigators collect trace evidence (fibers, hair, fingerprints, DNA) at a crime scene and establish a chain of custody — documenting every transfer from collection to courtroom. Each transfer is logged and verified.
+
+**Cortex Analog**: When a regression is detected (test failure, lint violation, behavior change), Cortex establishes a **regression provenance chain**:
+- **Primary evidence**: the diff that introduced the regression (from git bisect or test-mapped commit)
+- **Secondary evidence**: the synthesis record closest to the regression commit — what did the Librarian say about the affected entities at that time?
+- **Tertiary evidence**: dependency topology at the regression point — what else changed in related entities?
+- **Chain of custody**: timeline linking each evidence item with timestamps, commit hashes, and the tool/agent that collected it
+
+The provenance chain is surfaced as a structured report: "Regression in PaymentService.authorize() traced to commit a3f2c1 (2026-05-15, author: jdoe). At that point, the Librarian had not re-synthesized PaymentService in 12 days — stale `## Writing` section masked a changed dependency."
+
+**Implementation**: Git integration (bisect wrapper, blame annotation) + synthesis log cross-reference. Provenance chain stored in `.knowledge/forensics/` as JSON per regression event.
+
+### 69.2 Behavioral Profiling — Module Pattern-of-Life
+
+**Metaphor**: Criminal profilers analyze patterns of behavior — crime locations, times, methods, victimology — to build a profile of an unknown offender. Each crime is a data point revealing the offender's operational style.
+
+**Cortex Analog**: Each module has a **behavioral profile** built from its git history — a pattern-of-life analysis:
+- **Temporal pattern**: commits at specific times of day, days of week — reveals if this module is maintained by a specific team with specific working hours
+- **Modus operandi**: typical change patterns — does this module accumulate small fixes (maintenance pattern) or bulk structural rewrites (refactoring pattern)?
+- **Signature**: author name patterns, commit message style, test coverage patterns — uniquely identifies the maintainer's engineering fingerprint
+- **Victimology**: which downstream modules are most frequently broken by changes to this module?
+
+When anomalous behavior occurs — an unfamiliar author makes a structural change outside the module's typical pattern — Cortex issues an advisory: "⚠️ Anomalous commit in PaymentService: structural change by unfamiliar author, non-standard commit cadence, changes 3 dependencies simultaneously — this is outside the module's established pattern."
+
+**Implementation**: `src/knowledge/profiling.ts` — per-entity behavioral model from git history. Anomaly detection via statistical deviation from historical patterns.
+
+### 69.3 Crime Scene Reconstruction — Post-Mortem Failure Analysis
+
+**Metaphor**: After a crime, forensic investigators reconstruct the sequence of events — establishing a timeline, identifying entry and exit points, determining cause and manner of death. The reconstruction answers: "what happened, in what order, and why?"
+
+**Cortex Analog**: After a production incident or architectural failure, Cortex performs **post-mortem reconstruction**:
+- **Timeline construction**: orders all relevant events (commits, deploys, config changes, synthesis runs) in a coherent timeline
+- **Entry point identification**: pinpoints the first deviation from normal state — the "entry wound"
+- **Causal chain mapping**: traces how the initial deviation propagated through the dependency graph, amplifying at each step
+- **Root cause narrowing**: eliminates coincidental events and identifies the minimal set of changes that must have occurred for the failure to manifest
+- **Contributing factors**: secondary conditions that enabled the failure (unreviewed PRs, stale synthesis, missing tests)
+
+The reconstruction is saved as a structured forensic report in `.knowledge/forensics/` and linked to the affected entities' `## Wiring` sections as a historical note.
+
+**Implementation**: `src/knowledge/reconstruction.ts` — event ordering, causal chain analysis, root cause narrowing via counterfactual elimination. Output format matches incident-postmortem conventions (timeline, cause, contributing factors, action items).
+
+### 69.4 Recidivism Prediction — Recurrence Risk Scoring
+
+**Metaphor**: In criminal justice, recidivism prediction models estimate the likelihood that a convicted individual will re-offend. Factors include criminal history, age, employment status, and social connections.
+
+**Cortex Analog**: Entities that have experienced a regression, quality degradation, or architectural violation have a **recidivism risk** — the probability they will experience the same class of issue again:
+- **Criminal history**: number of past regressions/violations of the same type
+- **Time since last incident**: recent incidents are stronger predictors
+- **Environmental factors**: module churn rate, team size, test coverage, dependency stability
+- **Protective factors**: automated tests, code review requirements, recent refactoring, high quality score
+
+Risk scores are computed using a logistic regression model trained on historical incident data from `log.md`. High-risk entities appear in `cortex status` with intervention recommendations: "⚠️ Recidivism risk: 67% — PaymentService has had 3 NullPointer-related incidents in 6 months. Protective factors (test coverage: 92%) partially mitigate risk. Recommended: add input validation layer."
+
+**Implementation**: `src/knowledge/recidivism.ts` — logistic regression model. Feature extraction from entity history + `log.md`. Risk score per (entity, incident_class) pair.
+
+---
+
+## ⚖️ Phase 70: Jurisdictional & Legal System Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Legal and governance principles applied to architecture: which component has authority over what, how past architectural decisions create binding precedent, ensuring fair process before enforcement actions, and requiring justification for any constraint on developer freedom.
+
+### 70.1 Subject-Matter Jurisdiction — Component Authority Maps
+
+**Metaphor**: Courts have subject-matter jurisdiction — a family court cannot hear a criminal case, a federal court cannot hear most divorce cases. Jurisdiction defines which court has authority over which type of dispute.
+
+**Cortex Analog**: Every entity has a **jurisdiction** — the domain of architectural concerns it has authority over:
+- **AuthService**: jurisdiction over authentication, authorization, session management — but NOT over payment processing, data storage, or UI rendering
+- **PaymentService**: jurisdiction over transactions, refunds, billing — but NOT over user profiles or notifications
+
+When an entity's synthesis or behavior violates its jurisdiction (an entity describes payment logic inside AuthService's page, or a library function accesses a database it shouldn't), Cortex flags a **jurisdictional overreach**:
+- "AuthService's ## Wiring lists a 'createBillingProfile' relationship — this is outside AuthService's jurisdiction (authentication). Recommend moving to PaymentService or creating a dedicated entity."
+
+Jurisdiction boundaries are defined in entity metadata (`jurisdiction: string[]`) and enforced by a cross-reference check during synthesis and lint passes.
+
+**Implementation**: `src/knowledge/jurisdiction.ts` — jurisdiction registry, overreach detection via cross-reference of entity descriptions with jurisdiction claims. Overreach events surfaced in `cortex lint`.
+
+### 70.2 Stare Decisis — Architectural Precedent Binding
+
+**Metaphor**: Stare decisis (Latin: "to stand by things decided") is the common law principle that courts should follow precedents established in previous rulings. Lower courts are bound by higher courts; same-level courts follow persuasive precedent.
+
+**Cortex Analog**: Architectural decisions create **binding precedent** for future decisions:
+- **Vertical precedent**: core infrastructure entities (libraries, frameworks, platform services) set binding precedent — all consuming entities must conform to their patterns
+- **Horizontal precedent**: peer entities create persuasive precedent — if three microservices all use the same error-handling pattern, a fourth should follow unless there's a compelling reason
+- **Overruling**: an entity can be explicitly overruled by a higher-authority entity (core library changes its API — downstream entities must update)
+- **Distinguishing**: an entity can argue it's distinguishable from precedent — "PaymentService uses a different protocol, so the precedent from SearchService's caching pattern doesn't apply"
+
+Cortex tracks precedent links in entity metadata: `precedent: { source: "EntityName", ruling: "must implement RetryPolicy", binding: "persuasive" | "binding" | "overruled" }`. On reads, precedent network is resolved and displayed: "⚠️ 3 binding precedents apply to this entity. 2/3 are in compliance. 1 (RetryPolicy) is not yet implemented."
+
+**Implementation**: Precedent graph stored in `.knowledge/precedents.json`. Resolution engine computes applicable precedents per entity and compliance status. Integration with Phase 6 constraint engine.
+
+### 70.3 Due Process — Fair Notification Before Enforcement
+
+**Metaphor**: Due process requires that legal proceedings be fair — notice of the charges, an opportunity to be heard, an impartial tribunal, and a decision based on evidence. No one can be deprived of rights without due process.
+
+**Cortex Analog**: Before Cortex enforces any constraint, flags a violation, or modifies an entity's status, it must follow **architectural due process**:
+- **Notice**: the entity is notified (via MCP read response footer, `cortex status`, or lint output) that a constraint is being evaluated against it — before any enforcement action
+- **Hearing**: the developer has an opportunity to respond — override the constraint with a reasoned justification, request an extension, or acknowledge the issue and plan a fix
+- **Evidence basis**: every enforcement action cites the evidence — which entity, which constraint, which specific code or synthesis output triggered it
+- **Impartial review**: for automated enforcement (Phase 43.3 ACP gates), the reviewing agent must not be the same agent that recommended the action — separation of concerns
+- **Appeal path**: every enforcement action has a defined appeal mechanism — human override, re-synthesis with corrected context, or formal exemption registration
+
+**Implementation**: `src/knowledge/due-process.ts` — due process event pipeline: notification → response window → evidence compilation → impartial routing → decision with appeal link. Logged in `.knowledge/due-process-log.json`.
+
+### 70.4 Habeas Corpus — Justification Requirement for Actions
+
+**Metaphor**: Habeas corpus (Latin: "you shall have the body") requires a person under arrest to be brought before a judge — the state must justify the deprivation of liberty. It prevents arbitrary detention.
+
+**Cortex Analog**: Every automated enforcement action — constraint flagging, entity demotion, synthesis rejection, write-prevention — must be accompanied by a **writ of architectural habeas corpus**:
+- What is the specific action being taken?
+- What rule/constraint/precedent authorizes this action?
+- What evidence supports this action?
+- What is the specific harm this action prevents?
+- What is the duration/scope of the action?
+- What must the entity do to be released from this action?
+
+Without a valid writ, the action is not executed. The writ is recorded in `.knowledge/habeas-corpus-log.json` and is reviewable via `cortex lint --writs`.
+
+This prevents the system from taking punitive architectural actions without transparent, auditable justification — arbitrary enforcement undermines trust in the knowledge base.
+
+**Implementation**: `src/knowledge/habeas-corpus.ts` — writ schema, validation before enforcement action execution, writ registry with searchable index.
