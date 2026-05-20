@@ -18,7 +18,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
-| 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
+| 5.8   | ~~Multi-Operator Session Coordination~~ → see Phase 41 | ⏳ Planned (moved — agent coordination)    |
 | 5.9   | Shell Status Prompt Integration & Statusline Badge     | ⏳ Planned                           |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
@@ -73,7 +73,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.5.1| Automated ADR (Architectural Decision Records) Engine  | ⏳ Planned                           |
 | 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
 | 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
-| 20.7.1| Cross-Agent Workspace State Synchronization            | ⏳ Planned                           |
+| 20.7.1| ~~Cross-Agent Workspace State Sync~~ → see Phase 42    | ⏳ Planned (moved — agent coordination)    |
 | 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
 | 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
 | 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
@@ -82,7 +82,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.13 | Pattern Skill Library (VOYAGER-inspired)               | ⏳ Planned                           |
 | 20.14 | Causal Impact Analysis (Pearl do-calculus)             | ⏳ Planned (research-grade)          |
 | 20.15 | Dual-Process Synthesis (System 1 / System 2)           | ⏳ Planned (research-grade)          |
-| 20.16 | Multi-Agent Librarian Collaboration                    | ⏳ Planned (research-grade)          |
+| 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 43 | ⏳ Planned (moved — agent coordination)    |
 | 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
 | 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
 | 20.19 | Surgical Knowledge Editing (ROME/MEMIT)                | ⏳ Planned                           |
@@ -170,6 +170,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 40.5  | Knot-Theoretic Dependency Untangling                   | ⏳ Planned (research-grade)          |
 | 40.6  | Architectural Fossilization (Cold Storage)             | ⏳ Planned (research-grade)          |
 | 40.7  | Borges Exhaustive Design-Space Generation              | ⏳ Planned (research-grade)          |
+| 41    | Multi-Operator Session Coordination (was 5.8)          | ⏳ Planned (extended vision)         |
+| 42    | Cross-Agent Workspace State Synchronization (was 20.7.1)| ⏳ Planned (extended vision)        |
+| 43    | Multi-Agent Librarian Collaboration (was 20.16)        | ⏳ Planned (extended vision)         |
 | —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
 | 50    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
 | 51    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
@@ -8707,7 +8710,7 @@ Today Cortex assumes: one workspace, one Librarian, one knowledge graph. This wo
 - A developer has **multiple workspaces** open simultaneously (their primary monorepo + a forked OSS library + a documentation site + their team's design system repo). Today these are 4 disjoint knowledge graphs with no cross-pollination.
 - A team runs **specialized agents on different aspects** of the same project (a Security Librarian focused on `src/auth/`, a Performance Librarian focused on `src/services/`). Today they would step on each other if pointed at the same workspace.
 
-Phases 40-45 generalize Cortex from "one agent's memory" to "a cognitive substrate where many agents have their own scoped memories, plus access to shared workspace memories, plus access to a unified multi-workspace memory." It is the natural memory-side evolution of Cortex; it is **not** Nexus-OS rebuilt inside Cortex (Cortex does not absorb visual IDE awareness, real-time event buses, or agent-to-agent messaging — those remain in Nexus).
+Phases 50-55 generalize Cortex from "one agent's memory" to "a cognitive substrate where many agents have their own scoped memories, plus access to shared workspace memories, plus access to a unified multi-workspace memory." It is the natural memory-side evolution of Cortex; it is **not** Nexus-OS rebuilt inside Cortex (Cortex does not absorb visual IDE awareness, real-time event buses, or agent-to-agent messaging — those remain in Nexus).
 
 ### Phase 40: Distributed Cognitive Substrate (Umbrella Phase) — ⏳ Planned (extended vision)
 
