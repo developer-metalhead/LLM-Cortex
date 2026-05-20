@@ -18,7 +18,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
-| 5.8   | ~~Multi-Operator Session Coordination~~ → see Phase 41 | ⏳ Planned (moved — agent coordination)    |
+| 5.8   | ~~Multi-Operator Session Coordination~~ → see Phase 56 | ⏳ Planned (moved — agent coordination)    |
 | 5.9   | Shell Status Prompt Integration & Statusline Badge     | ⏳ Planned                           |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
@@ -73,7 +73,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.5.1| Automated ADR (Architectural Decision Records) Engine  | ⏳ Planned                           |
 | 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
 | 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
-| 20.7.1| ~~Cross-Agent Workspace State Sync~~ → see Phase 42    | ⏳ Planned (moved — agent coordination)    |
+| 20.7.1| ~~Cross-Agent Workspace State Sync~~ → see Phase 57    | ⏳ Planned (moved — agent coordination)    |
 | 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
 | 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
 | 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
@@ -82,7 +82,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.13 | Pattern Skill Library (VOYAGER-inspired)               | ⏳ Planned                           |
 | 20.14 | Causal Impact Analysis (Pearl do-calculus)             | ⏳ Planned (research-grade)          |
 | 20.15 | Dual-Process Synthesis (System 1 / System 2)           | ⏳ Planned (research-grade)          |
-| 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 43 | ⏳ Planned (moved — agent coordination)    |
+| 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 58 | ⏳ Planned (moved — agent coordination)    |
 | 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
 | 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
 | 20.19 | Surgical Knowledge Editing (ROME/MEMIT)                | ⏳ Planned                           |
@@ -170,9 +170,16 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 40.5  | Knot-Theoretic Dependency Untangling                   | ⏳ Planned (research-grade)          |
 | 40.6  | Architectural Fossilization (Cold Storage)             | ⏳ Planned (research-grade)          |
 | 40.7  | Borges Exhaustive Design-Space Generation              | ⏳ Planned (research-grade)          |
-| 41    | Multi-Operator Session Coordination (was 5.8)          | ⏳ Planned (extended vision)         |
-| 42    | Cross-Agent Workspace State Synchronization (was 20.7.1)| ⏳ Planned (extended vision)        |
-| 43    | Multi-Agent Librarian Collaboration (was 20.16)        | ⏳ Planned (extended vision)         |
+| 40.8  | Gödel Self-Improving Synthesis Loop                    | ⏳ Planned (research-grade)          |
+| 41    | Cognitive Cache Invalidation Engine                    | ⏳ Planned (research-grade)          |
+| 42    | Fractal Memory Summarization (Multi-Level)             | ⏳ Planned (research-grade)          |
+| 43    | Information Thermodynamics & Entropy Scoring           | ⏳ Planned (research-grade)          |
+| 44    | Semantic Authority Ranking                             | ⏳ Planned (research-grade)          |
+| 45    | Synthetic Immune System (Knowledge Quality)            | ⏳ Planned (research-grade)          |
+| 46    | Event-Sourced Cognition Replay                         | ⏳ Planned (research-grade)          |
+| 56    | Multi-Operator Session Coordination (was 5.8)          | ⏳ Planned (extended vision)         |
+| 57    | Cross-Agent Workspace State Synchronization (was 20.7.1)| ⏳ Planned (extended vision)        |
+| 58    | Multi-Agent Librarian Collaboration (was 20.16)        | ⏳ Planned (extended vision)         |
 | —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
 | 50    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
 | 51    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
@@ -8694,6 +8701,102 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 - SMT-LIB compiler correctly translates `cortex.yaml` rules.
 - Test suite verifies zero LLM hallucinations during constraint evaluations.
 - Memory consumption remains under 100MB RAM during ingestion.
+
+---
+
+### Phase 40.8: Gödel Self-Improving Synthesis Loop
+**Layman's Terms**: Phase 40.3 makes Cortex rewrite its own rule book. Phase 40.8 goes further: Cortex watches its own synthesis *quality over time*, detects where the Librarian consistently fails (missing service boundaries, under-extracting dependencies, producing stale facts), and automatically mutates its own Librarian prompts and extraction schemas to fix the patterns — then validates the fix against historical ground truth before promoting it.
+
+**Technical Terms**: Builds on `log.jsonl` quality trail and Phase 7.5 quality scores. A meta-synthesis pass computes per-entity-type quality trend vectors (e.g., "service boundary entities in this repo have 23% lower quality scores than the baseline"). Detects systematic under/over-extraction patterns. Generates candidate Librarian prompt mutations, scores them against a held-out golden corpus, and promotes winners via Phase 23 (human-in-loop gate). Mutation history stored in `.knowledge/meta/prompt_evolution.jsonl`.
+
+**Engineering ROI**: Each enterprise deployment becomes uniquely self-tuned. Cortex adapts to a React monorepo differently than a Go microservices repo — no manual prompt engineering. The system gets measurably better over time, creating a genuine deployment moat.
+
+---
+
+## 🔁 Phase 41: Cognitive Cache Invalidation Engine — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Cortex's stale detection currently notices *that* something changed. This phase makes it proactive: when `AuthService` changes, every entity that depends on it gets its confidence score automatically decayed — without waiting for a full re-synthesis. Cortex knows *why* a memory is no longer valid, not just *that* it might be.
+
+**Technical Terms**: Cascade invalidation through the wikilink dependency graph. Every edge carries a propagation weight; on ingest, changed entities trigger a BFS invalidation wave capped at configurable depth. Confidence scores decay proportionally to graph distance from the changed node. TTL-based decay: entities with no recent evidence signal have confidence reduced by a sigmoid function over time. Version-bump triggers: when `package.json` dependency versions change, all entities referencing that dependency's API patterns get flagged.
+
+**Builds on**: Phase 3 (state.json), Phase 7 (staleSince flag), Phase 39.6 (Merkle-DAG hashing), Phase 6 (wikilink graph).
+
+**Engineering ROI**: Enterprise customers' #1 complaint about AI memory is staleness. Cascade invalidation makes Cortex's truth model deterministic and auditable. "Why is this entity stale?" is now answerable with a precise change chain — a major trust and compliance win.
+
+---
+
+## 🌊 Phase 42: Fractal Memory Summarization (Multi-Level Compression) — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Cortex currently stores one level of knowledge — per-entity pages. A 5,000-entity enterprise monorepo is overwhelming. This phase adds automatic multi-level compression: raw entities compress into domain summaries, which compress into a workspace overview. Context pack assembly pulls from the right level depending on the question — surgical detail for specific functions, high-level overview for architectural questions.
+
+**Technical Terms**: Three-tier storage hierarchy:
+- **L0** — per-entity pages (current `.knowledge/entities/*.md`)
+- **L1** — per-domain summaries (`.knowledge/domains/<domain>.md`, one per top-level directory grouping, regenerated when any entity in the domain changes)
+- **L2** — workspace meta-summary (`.knowledge/meta/overview.md`, 1-2 page architectural overview, regenerated on major structural changes)
+
+Context pack assembly selects the minimum sufficient level: entity-scoped queries → L0; domain-scoped queries → L1; workspace-scoped queries → L2. Each level is a lossy compression of the one below, with explicit cross-references preserved.
+
+**Builds on**: Phase 14.2 (RAPTOR hierarchical retrieval), Phase 20.6 (MemGPT tiered memory), Phase 13 (context pack assembly).
+
+**Engineering ROI**: Directly solves the "200+ entity scaling wall." A 5,000-entity monorepo becomes queryable in O(log n) token budget instead of O(n). Extends Cortex's viable enterprise range by 10× without any model context window increase.
+
+---
+
+## 🌡️ Phase 43: Information Thermodynamics & Entropy Scoring — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Some Cortex knowledge is crystal clear — precise, well-evidenced, stable. Other knowledge is murky — vague, contradictory, based on thin evidence. Right now Cortex treats all knowledge equally. This phase gives every entity and every context pack an entropy score: a mathematical measure of how noisy vs. signal-dense it is. High-entropy knowledge is flagged, compressed harder, and evicted first under token pressure.
+
+**Technical Terms**: Per-entity entropy computed from: contradiction density (Phase 16 outputs), evidence count and freshness, linguistic precision of synthesized text (hedging language detection via pattern matching), cross-reference stability (how often this entity's wikilinks change across syncs). Context pack assembly uses entropy as an eviction heuristic — under token budget pressure, high-entropy low-authority nodes are dropped first. Synthesis outputs scored pre-commit; high-entropy outputs trigger Phase 45 (Immune System) quarantine.
+
+**Builds on**: Phase 7.5 (quality governance and quality scores), Phase 16 (contradiction detection), Phase 13 (context pack token management).
+
+**Engineering ROI**: Realistic 30–60% reduction in context pack noise. Direct token cost savings. "Cortex knows what it doesn't know" — measurable uncertainty quantification rather than uniform confidence. Maps directly to enterprise risk and compliance requirements.
+
+---
+
+## 🪐 Phase 44: Semantic Authority Ranking — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Not all Cortex entities are equally important. A core service used by 30 other modules is more authoritative than a utility function used by one. This phase gives every entity a dynamic authority score combining: how many entities link to it, how often it surfaces in successful AI coding sessions, how stable its synthesis has been, and whether a human has reviewed and validated it.
+
+**Technical Terms**: Extends Phase 35.1 (Architectural PageRank) with three additional signal layers:
+1. **Usage signal**: tracks entity appearances in context packs accessed during AI coding sessions (via Phase 4 MCP hooks)
+2. **Stability signal**: entities whose synthesis has not changed despite surrounding code changes accumulate authority through consistency
+3. **Human review boost**: Phase 23 (human-in-loop review) explicitly increments `authority_score` on approval
+
+`authority_score: float` stored in each entity's frontmatter. Context pack assembly and Phase 42's fractal summarization both use it as a priority signal. Visual graph (Phase 8) colors nodes by authority. Score decays when evidence goes stale.
+
+**Builds on**: Phase 35.1 (Architectural PageRank), Phase 8 (visual graph), Phase 23 (human review), Phase 13 (context packs).
+
+**Engineering ROI**: Better retrieval without bigger context windows. PageRank tells you centrality; authority ranking tells you trustworthiness. Combined, the 20% of entities that matter most automatically surface in every context pack.
+
+---
+
+## 🛡️ Phase 45: Synthetic Immune System (Knowledge Quality) — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Cortex's knowledge base can be poisoned by bad syntheses — LLM hallucinations inventing non-existent classes, prompt injections hiding in code comments, or a single bad diff causing cascading false dependencies. This phase adds a pre-commit immune layer: before any synthesis is committed to `.knowledge/`, it passes through an anomaly detector that quarantines suspicious outputs for review.
+
+**Technical Terms**: Three-layer immune stack:
+1. **Hallucination antibodies**: pattern-match synthesis outputs against known hallucination signatures — invented entities with no source-file evidence, dependency edges with no import-graph backing, descriptions that contradict the diff content
+2. **Prompt injection resistance**: scan synthesis inputs (code diffs, file content) for adversarial patterns before they reach the Librarian
+3. **Anomaly quarantine**: statistical anomaly detection on synthesis outputs. If a single diff claims to add 40 new dependency edges to an entity that historically has 3, it is held for human review rather than auto-committed
+
+Quarantine queue surfaced via `cortex audit --quarantine`. Auto-released after human approval or auto-rejected after configurable TTL.
+
+**Builds on**: Phase 6 (guardrails), Phase 16 (contradiction detection), Phase 7.5 (quality governance), Phase 23 (human review).
+
+**Engineering ROI**: Enterprise trust is everything. A single hallucinated architectural fact that propagates through 12 dependent entities and corrupts an AI coding session is catastrophic. The immune system makes Cortex's knowledge base provably clean — certifiable for regulated industries.
+
+---
+
+## ⏮️ Phase 46: Event-Sourced Cognition Replay — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Right now Cortex's `log.jsonl` is a read-only audit trail. This phase makes it fully replayable: `.knowledge/` becomes a deterministic projection of the event log. You can reconstruct exactly what Cortex knew at any point in time — before an incident, before a deployment, before a bad synthesis run — and diff any two points in history.
+
+**Technical Terms**: Event sourcing applied to `state.json` and all entity files. Every synthesis mutation becomes an immutable append to `log.jsonl`. `state.json` becomes a derived projection rebuilt by replaying the log from genesis. New CLI: `cortex replay --to <ISO-timestamp>` reconstructs `.knowledge/` at any past point. `cortex diff-knowledge --from <t1> --to <t2>` shows the architectural delta between two timestamps. Weekly snapshot checkpoints accelerate replay by avoiding full genesis replay on large repos.
+
+**Builds on**: Phase 7 (log.jsonl append-only event log), Phase 26 (audit trail), Phase 3 (state.json).
+
+**Engineering ROI**: Forensic analysis and explainability for AI reasoning decisions. Required by banking, healthcare, and compliance customers. "What did Cortex know about `PaymentService` before the incident?" becomes a one-command answer. Bad ingest runs are now fully recoverable via rollback.
 
 ---
 
