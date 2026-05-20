@@ -196,6 +196,11 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 53.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
 | 54    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
 | 55    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
+| 59    | Operational Ontology Layer (Palantir-Inspired)         | ⏳ Planned (add-on module)           |
+| 60    | Circlon Ring Primitives (Topological Composition)      | ⏳ Planned (add-on module)           |
+| 61    | Plasma Current Routing (Electromagnetic Propagation)    | ⏳ Planned (add-on module)           |
+| 62    | Inverted Reality Mode & Curved Abstraction Layers       | ⏳ Planned (add-on module)           |
+| 63    | Outsider Pattern Discovery & Contrarian Analysis       | ⏳ Planned (add-on module)           |
 
 ---
 
@@ -10017,6 +10022,103 @@ A dedicated observability layer for the substrate:
 **Definition of Done**: substrate map renders all partitions/agents/grants/workspaces; cross-partition flow timeline; conflict heatmap; federation grant map; per-agent/partition cost breakdown; executive roll-up.
 
 **Cross-product integration with Nexus-OS**: this is **the bundle moment**. The Cortex Substrate Observatory (memory side) and the Nexus Mission Control (action side) are two views of the same agent fleet. A combined customer running both products gets a unified pane of glass: agents executing actions in Nexus, agents remembering what they learned in Cortex, all visible together. This is the single biggest demo win for the **Cortex + Nexus Bundle** GTM.
+
+---
+
+## 🔌 Cortex Pro Add-On Modules (Phases 59-63) — Genuinely New Ideas
+
+### ⚙️ Phase 59: Operational Ontology Layer (Palantir-Inspired) — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+Cortex already has all the raw ingredients — knowledge graph, typed relationships, constraints, quality scores, agent mesh, MCP tools, substrate observatory — but lacks a unified operational ontology layer that fuses them into a single executable digital twin of the codebase. What Palantir calls "ontology" — semantic objects + kinetic actions + dynamic security/governance as one coherent model — is exactly the missing meta-layer between Cortex's many subsystems.
+
+**Technical Terms**
+- **59.1: Semantic Object Registry**: Every entity, concept, constraint, and agent is registered as a strongly-typed ontology object with classification, capabilities, and governance metadata in `.knowledge/ontology/registry.json`.
+- **59.2: Kinetic Action Bindings**: Each ontology object declares available kinetic actions (e.g., triggering specific MCP tools, synthesis operations, constraint enforcement checks, and automated code-fixes), transforming the knowledge graph from a static queryable index into an executable runtime substrate.
+- **59.3: Common Operating Picture (COP)**: A real-time, fused user interface that merges the Phase 8 visual graph, Phase 31 analytics, and Phase 45 substrate routing metrics into a single actionable "god-view" dashboard for developers and architects.
+- **59.4: Closed-Loop Decision Chains**: Implements OODA-style (Observe, Orient, Decide, Act) loops. The system detects an architectural anomaly or pattern violation, generates a proposed action or mitigation, routes the proposal to the appropriate developer or supervisor via a designated Slack/CLI/Web hook, and, upon approval, executes the change, updating the graph in a closed loop. Extends the Phase 43.3 approval gate.
+- **59.5: Cross-Temporal Pattern Detection**: Scans across `log.jsonl` and `experience.jsonl` to detect recurring architectural patterns and predict future structural drift before it manifests.
+
+**Engineering ROI**
+Transforms Cortex from "a collection of powerful but separate features" into "a coherent operating system where everything is one unified, actionable reality model." This is the difference between having a knowledge graph and having a digital twin of your codebase's architecture with human-AI closed loops.
+
+**Definition of Done**
+Registry enforces schemas on all objects; kinetic actions execute successfully; COP dashboard displays real-time state; OODA loops execute successfully with human-in-the-loop approval gates.
+
+---
+
+### ⚙️ Phase 60: Circlon Ring Primitives (Topological Composition) — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+While traditional knowledge bases represent concepts as a flat list or standard nodes with arrows, Phase 60 introduces a physical composition metaphor inspired by "circlons" (mechanical ring primitives). Think of your codebase as chainmail: every piece of code is a mechanical ring that physically links with other rings through specific ports. Removing a ring propagates physical tension through the chainmail, giving you a physically intuitive sense of what will break.
+
+**Technical Terms**
+- **Topological Ring Primitives**: Knowledge primitives are modeled as virtual circlons/rings with explicit, addressable interface ports rather than key-value slots.
+- **Chainmail Composition Meshes**: Rings connect by locking ports, building a contiguous topological mesh.
+- **Mechanical Stress Propagation**: Instead of standard breadth-first-search (BFS) for calculating blast-radius, the system simulates mechanical stress propagation through the linked rings. Removing or modifying a high-centrality ring propagates physical tension to all connected rings, highlighting high-stress regions.
+- **Mating & Subdivision Lifecycle**: Reflects refactoring (subdividing a large ring into smaller interlocking rings) and merging (mating two rings into a unified primitive).
+- **Chainmail Renderer**: Extends Phase 8 visual graph to render the topology as a beautiful, interactive physical 3D mesh of interlocking rings instead of traditional node-edge diagrams.
+
+**Engineering ROI**
+Provides a highly intuitive, physically-modeled approach to understanding complex codebase coupling and blast-radius analysis. It replaces abstract graph metrics with visual, structural stress indicators that developers can instantly grasp.
+
+**Definition of Done**
+Primitives support port-based connections; stress propagation algorithm accurately calculates blast-radius; subdivision/mating operations work deterministically; Phase 8 renders interlocking ring meshes.
+
+---
+
+### ⚙️ Phase 61: Plasma Current Routing (Electromagnetic Propagation Model) — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+High-traffic parts of your codebase are like busy highways. Instead of searching through every file one by one, Phase 61 creates high-speed "plasma current channels" through your knowledge graph. When code changes, the updates flow along these currents like electricity. If multiple currents collide at a single file, that file is identified as a critical architectural crossroads that needs special care.
+
+**Technical Terms**
+- **Birkeland Current Highways**: High-frequency query and execution paths through the graph generate self-reinforcing, low-latency "plasma filaments" (optimized hot-paths in the database memory layout).
+- **Stellar Pinch Points (Z-Pinch)**: Identifies nodes where multiple distinct filaments converge. These represent major architectural bottlenecks or hubs that are automatically flagged for strict governance.
+- **Electromagnetic Wave Propagation**: Ingest changes propagate via wave-like equations through current channels rather than standard graph traversals. Nearby nodes along the same filament update almost instantly, while nodes on unrelated branches are updated in a lower-priority lazy queue.
+- **Filament Visualizer**: Renders the graph's filaments with varying glow intensity corresponding to current strength (frequency of use) in the Phase 8 visual graph.
+
+**Engineering ROI**
+Highly efficient, path-based cache-invalidation and propagation. Optimizes search and updates on massive monorepos by focusing compute on active electrical channels rather than uniform traversals.
+
+**Definition of Done**
+Filaments dynamically form and reinforce based on query telemetry; S-pinch hubs are auto-flagged; change propagation follows filament weights; filament intensity renders correctly.
+
+---
+
+### ⚙️ Phase 62: Inverted Reality Mode & Curved Abstraction Layers — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+Sometimes to solve a difficult problem, you have to look at the world inside-out. Phase 62 introduces an "Inverted Reality" view: instead of showing you what a file depends on, it warps the universe so that the file is at the center, and the entire outer codebase is pulled in towards it. It also bends your navigation paths so that the shortest path between two distant services is a curved line of abstract concepts, revealing non-obvious ways they are connected.
+
+**Technical Terms**
+- **Inside-Out View Toggle**: Re-projects the graph coordinate space using a conformal mapping where a single selected entity acts as the center (origin), and the entire rest of the workspace is inverted around it to visualize dependency pull and structural gravity.
+- **Curved Abstraction Paths**: Computes shortest paths between entities using a non-Euclidean metric weighted by semantic abstraction level, allowing developers to trace deep, non-obvious conceptual connections.
+- **Rotating Abstraction Shells**: Abstractions are partitioned into concentric, independently-rotating spherical layers representing different update frequencies (e.g., stable core interfaces on the outer shell, volatile local changes in the core).
+
+**Engineering ROI**
+Unlocks breakthrough architectural insights for senior engineers refactoring complex systems by presenting relationships from an entirely novel mathematical perspective, exposing implicit architectural coupling.
+
+**Definition of Done**
+Toggle swaps coordinate mapping; curved pathfinding calculates abstract links; concentric shells group and rotate based on update frequency.
+
+---
+
+### ⚙️ Phase 63: Outsider Pattern Discovery & Contrarian Analysis — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+Mainstream linters and tools enforce standard, rigid rules, but every codebase has its own unique, successful quirks. Phase 63 is the "lone-wolf" mode: it actively looks for non-standard design patterns that actually work beautifully in your codebase, even if they violate generic textbook rules (like a circular dependency that is actually perfectly safe and performance-optimized). It prevents generic AI tools from breaking these highly specialized, successful designs.
+
+**Technical Terms**
+- **Forbidden Knowledge Paths**: Scans and catalogs custom architectural patterns that violate standard static-analysis rules but exhibit high stability and low regression rates in Git history.
+- **Contrarian Analysis Engine**: A reasoning pass that challenges conventional rules: "What if this god-module is the optimal design for this specific engine?" or "What if this circular dependency is structurally load-bearing for high-throughput messaging?"
+- **Lone-Wolf Theory Registry**: Stores registered "contrarian" architectural theories in `.knowledge/ontology/lone_wolf_patterns.json`, exempting them from standard linting rules and protecting them from destructive generic AI refactoring attempts.
+
+**Engineering ROI**
+Protects custom high-performance optimizations and legacy load-bearing patterns from being accidentally "cleaned up" or broken by generic LLMs or developers attempting standard textbook refactors.
+
+**Definition of Done**
+Detects stable outlier patterns; contrarian analysis correctly runs on linting failures; lone-wolf registry excludes selected patterns from standard violations.
 
 ---
 
