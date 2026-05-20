@@ -114,17 +114,20 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 ## 🏗️ Tier Architecture (7 Tiers + OSS Program)
 
 ```
- $0          $9          $24       $29/seat     $49/seat     $99/seat      Custom
-  │           │           │           │            │            │            │
-  ▼           ▼           ▼           ▼            ▼            ▼            ▼
-┌────┐   ┌────────┐   ┌──────┐   ┌─────────┐   ┌──────┐   ┌──────────┐   ┌────────────┐
-│Free│──▶│ Hobby  │──▶│ Pro  │──▶│ Startup │──▶│ Team │──▶│ Business │──▶│ Enterprise │
-│    │   │        │   │      │   │         │   │      │   │          │   │            │
-│∞   │   │∞       │   │∞     │   │∞        │   │∞     │   │∞         │   │∞           │
-│ent.│   │ent.    │   │ent.  │   │ent.     │   │ent.  │   │ent.      │   │ent.        │
-└────┘   └────────┘   └──────┘   └─────────┘   └──────┘   └──────────┘   └────────────┘
-  │
-  └──▶ 🌿 OSS Program (Free Pro for qualifying open-source projects)
+  $0          $9/$90     $24/$240   $29/$290     $49/$490     $99/$990      Custom
+   │           │           │      /seat  /seat   /seat         /seat         │
+   │           │           │      /yr    /yr     /yr           /yr           │
+   ▼           ▼           ▼           ▼            ▼            ▼            ▼
+ ┌────┐   ┌────────┐   ┌──────┐   ┌─────────┐   ┌──────┐   ┌──────────┐   ┌────────────┐
+ │Free│──▶│ Hobby  │──▶│ Pro  │──▶│ Startup │──▶│ Team │──▶│ Business │──▶│ Enterprise │
+ │    │   │        │   │      │   │         │   │      │   │          │   │            │
+ │∞   │   │∞       │   │∞     │   │∞        │   │∞     │   │∞         │   │∞           │
+ │ent.│   │ent.    │   │ent.  │   │ent.     │   │ent.  │   │ent.      │   │ent.        │
+ └────┘   └────────┘   └──────┘   └─────────┘   └──────┘   └──────────┘   └────────────┘
+   │
+   └──▶ 🌿 OSS Program (Free Pro for qualifying open-source projects)
+
+Annual billing saves ~17% ($90/yr vs $108 for month-to-month).
 ```
 
 ---
@@ -135,6 +138,8 @@ export async function runDeepBootstrap(opts: BootstrapOpts) {
 **Philosophy**: The free tier IS Cortex. Not a demo, not a trial, not a crippled preview. If the free tier doesn't make you say "holy shit, this is incredible" within 20 minutes, the product has failed — no amount of paid features will save it.
 **Hook**: The "holy shit" moment is watching `.knowledge/` auto-populate as you code, then querying it through your AI agent.
 **Why generous free works**: Cortex's cost is borne by the user's own LLM API key, not by us. We don't pay for their synthesis calls — they do. Our marginal cost per free user is effectively **zero**. The only cost is the license server infrastructure, which is negligible.
+
+> **💡 First run?** You get a **14-day Pro trial** automatically — no credit card, no activation key, no website visit. Just `npm install projectcortex` and go. All Pro features work immediately. After 14 days, it gracefully downgrades to Free. `cortex subscribe` to keep Pro.
 
 | Phase | Feature |
 |---|---|
@@ -162,7 +167,7 @@ Everything is **unlimited** — entities, syncs, constraints, workspaces, agents
 
 ---
 
-### 🪴 Tier 1: Hobby — $9/month ($90/year)
+### 🪴 Tier 1: Hobby — $9/month or $90/year (save ~17%)
 
 **Target**: Devs who use Cortex daily and want it to be smarter and cheaper.
 **Key unlock**: LLM caching (literally pays for itself), deep bootstrap, cost analytics.
@@ -181,7 +186,7 @@ No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not 
 
 ---
 
-### 💎 Tier 2: Pro — $24/month ($240/year)
+### 💎 Tier 2: Pro — $24/month or $240/year (save ~17%)
 
 **Target**: Professional solo devs, freelancers, senior engineers. The core individual tier.
 **Key unlock**: Soul, architectural advisor, custom quality formulas, tech debt register.
@@ -215,7 +220,7 @@ No numeric limits — all caps are **unlimited**.
 
 ---
 
-### 🌱 Tier 3: Startup — $29/seat/month ($290/seat/year) — 2-10 seats
+### 🌱 Tier 3: Startup — $29/seat/month or $290/seat/year — 2-10 seats
 
 **Target**: Early-stage teams, small agencies, indie studios. Team features at startup prices.
 **Key unlock**: Multi-agent, shared knowledge, basic federation — everything a small team needs.
@@ -240,7 +245,7 @@ No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not 
 
 ---
 
-### 👥 Tier 4: Team — $49/seat/month ($490/seat/year) — 5-50 seats
+### 👥 Tier 4: Team — $49/seat/month or $490/seat/year — 5-50 seats
 
 **Target**: Mid-size engineering teams. Full multi-agent, multi-repo, shared governance.
 **Key unlock**: Central server, polyrepo federation, human-in-the-loop review, compliance templates.
@@ -267,7 +272,7 @@ No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not 
 
 ---
 
-### 🏛️ Tier 5: Business — $99/seat/month ($990/seat/year) — 10-200 seats
+### 🏛️ Tier 5: Business — $99/seat/month or $990/seat/year — 10-200 seats
 
 **Target**: Larger orgs that need compliance, audit trails, and integrations but aren't full enterprise.
 **Key unlock**: RBAC, immutable audit, workflow integrations, FinOps, executive dashboards.
@@ -329,6 +334,14 @@ No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not 
 | Support | Dedicated account manager, private Slack |
 
 ---
+
+### 💵 Refund Policy
+
+**30-day money-back guarantee** on all paid tiers. First purchase only (not repeat cancellations).
+
+Why: Removes purchase anxiety. "Try Pro free for 14 days, buy it, and if it doesn't deliver value within 30 more days, get your money back." The 14-day trial + 30-day refund = 44 risk-free days. Combined with "Cortex saves you $30+/mo on API calls" (Hobby), the financial case is irrefutable.
+
+Processing: `cortex subscribe` → Stripe handles refunds. License key deactivated on refund. Data preserved (`.knowledge/` still works on Free tier — they keep their knowledge base).
 
 ### 🌿 OSS Program — Free Pro for Qualifying Open-Source Projects
 
@@ -515,9 +528,11 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
 ...IDAQAB
 -----END PUBLIC KEY-----`;
 
-// ── Machine Fingerprint (hardened) ─────────────────────────
-// Combines multiple OS signals for stability. Not DRM — just
-// enough to prevent casual key sharing across 50 machines.
+// ── Machine Fingerprint ─────────────────────────────────────
+// Used ONLY for trial abuse prevention (one trial per machine).
+// NOT used for paid customers — your license key works on all
+// your machines regardless of fingerprint. Combining multiple
+// OS signals prevents casual re-claiming but is not DRM.
 function getMachineId(): string {
   const signals = [
     os.hostname(),
@@ -634,6 +649,25 @@ function validateRemoteSync(key: string): LicensePayload | null {
   } catch { return null; }
 }
 
+// ── Trial Auto-Grant ────────────────────────────────────────
+// On first run (no cache, no key), the client asks the server
+// for a 14-day Pro trial. No user action needed.
+async function requestTrial(): Promise<LicensePayload | null> {
+  try {
+    const resp = await fetch(`${LICENSE_API}/trial`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ machine: getMachineId() }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json() as { jwt: string };
+    const payload = verifyJwt(data.jwt);
+    if (payload) writeCache(data.jwt, payload);
+    return payload;
+  } catch { return null; }
+}
+
 // ── License Resolution ─────────────────────────────────────
 let _resolved: LicensePayload | null = null;
 
@@ -647,7 +681,7 @@ export function getActiveLicense(): LicensePayload {
     if (verified) { _resolved = verified; return _resolved; }
   }
 
-  // 2. Remote validation
+  // 2. Remote validation with key
   const key = process.env.CORTEX_LICENSE_KEY;
   if (key) {
     const remote = validateRemoteSync(key);
@@ -660,7 +694,13 @@ export function getActiveLicense(): LicensePayload {
     if (verified) { _resolved = verified; return _resolved; }
   }
 
-  // 4. Free tier fallback — NEVER crashes
+  // 4. Auto-trial on first run (no cache exists → this is a new install)
+  if (!cache) {
+    const trial = requestTrial();
+    if (trial) { _resolved = trial; return _resolved; }
+  }
+
+  // 5. Free tier fallback — NEVER crashes
   _resolved = {
     sub: "free", iss: "local", aud: "projectcortex",
     jti: "local-free",
@@ -678,6 +718,68 @@ export async function refreshLicenseAsync(): Promise<void> {
   if (!key) return;
   const payload = await validateRemote(key);
   if (payload) _resolved = payload;
+}
+
+// Subscribe — polls server until Stripe checkout completes, then auto-activates
+export async function subscribeViaCLI(tier: string): Promise<boolean> {
+  const subscribeId = crypto.randomUUID();
+  const checkoutUrl = `https://cortex.dev/checkout?tier=${tier}&subscribe_id=${subscribeId}&cli=true`;
+
+  console.log(`\nOpening browser to complete your purchase...\n  ${checkoutUrl}\n`);
+  await openBrowser(checkoutUrl);
+
+  console.log("Waiting for payment confirmation... (Ctrl+C to cancel)");
+  for (let i = 0; i < 120; i++) {  // poll for up to 2 minutes
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const resp = await fetch(`${LICENSE_API}/subscribe-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscribe_id: subscribeId }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json() as { key?: string; status: string };
+      if (data.status === "completed" && data.key) {
+        process.env.CORTEX_LICENSE_KEY = data.key;
+        writeKeyToRc(data.key);
+        _resolved = null; // force re-resolve
+        const license = getActiveLicense();
+        console.log(`\n✅ Activated: Cortex ${license.tier.toUpperCase()}`);
+        console.log(`   Org: ${license.org || "(personal)"}`);
+        return true;
+      }
+    } catch { /* retry */ }
+  }
+  console.log("\n⏱ Payment confirmation timed out. Run `cortex activate <key>` with the key emailed to you.");
+  return false;
+}
+
+function openBrowser(url: string): Promise<void> {
+  const { exec } = require("child_process");
+  const platform = os.platform();
+  const cmd = platform === "win32" ? "start" : platform === "darwin" ? "open" : "xdg-open";
+  return new Promise((resolve) => {
+    exec(`${cmd} "${url}"`, () => resolve());
+  });
+}
+
+function writeKeyToRc(key: string): void {
+  const rcPath = path.join(os.homedir(), ".cortexrc");
+  let rcContent = "";
+  try {
+    if (fs.existsSync(rcPath)) {
+      rcContent = fs.readFileSync(rcPath, "utf-8");
+      if (rcContent.includes("CORTEX_LICENSE_KEY=")) {
+        rcContent = rcContent.replace(/CORTEX_LICENSE_KEY=.*/, `CORTEX_LICENSE_KEY=${key}`);
+      } else {
+        rcContent += `\nCORTEX_LICENSE_KEY=${key}\n`;
+      }
+    } else {
+      rcContent = `CORTEX_LICENSE_KEY=${key}\n`;
+    }
+    fs.writeFileSync(rcPath, rcContent);
+  } catch { /* best-effort */ }
 }
 
 // ── The Gates ──────────────────────────────────────────────
@@ -809,11 +911,23 @@ export function isTrialActive(): boolean {
   return !!license.trial && license.trial.trialEndsAt * 1000 > Date.now();
 }
 
+export function isTrialExpired(): boolean {
+  const license = getActiveLicense();
+  return !!license.trial && license.trial.trialEndsAt * 1000 < Date.now();
+}
+
 export function getTrialDaysRemaining(): number {
   const license = getActiveLicense();
   if (!license.trial) return 0;
   const remaining = (license.trial.trialEndsAt * 1000 - Date.now()) / (86400 * 1000);
   return Math.max(0, Math.ceil(remaining));
+}
+
+export function getTrialDaysUsed(): number {
+  const license = getActiveLicense();
+  if (!license.trial) return 0;
+  const used = (Date.now() - license.trial.iat * 1000) / (86400 * 1000);
+  return Math.min(14, Math.floor(used));
 }
 
 // ── Status Display ─────────────────────────────────────────
@@ -832,37 +946,248 @@ export function getLicenseStatus(): string {
 }
 ```
 
-### Step 2: How to Gate Every Paid Feature (One Line Each)
+### Step 2: Centralized Phase-to-Tier Config + Enforcement
 
-No architectural changes needed. Add **one line** at the top of each paid function:
+Instead of sprinkling `requireTier("hobby")` throughout every function, centralize the mapping in one file. Rebalancing tiers becomes a one-line change.
 
 ```typescript
-// ── Phase 33: Deep Bootstrap (Pro) ─────────────────────
-export async function runDeepBootstrap(opts: BootstrapOpts) {
-  requireTier("pro");
-  // ... existing Phase 33 logic unchanged
+// src/core/tier-map.ts — SINGLE SOURCE OF TRUTH
+// This is the only file that maps phases to tiers.
+// `cortex features`, MCP tool registration, and runtime
+// enforcement all read from this config.
+
+import type { Tier } from "./license.js";
+
+export interface PhaseEntry {
+  phase: string;
+  tier: Tier;
+  label: string;
 }
 
-// ── Phase 13.8: Soul / Persistent Experience (Pro) ──────
-export async function loadSoulState(projectRoot: string) {
-  requireTier("pro");
-  // ... existing Phase 13.8 logic unchanged
+// Auto-generated from the master phase list.
+// Adding a new phase here automatically gates it everywhere.
+export const PHASE_TIER_MAP: Record<string, Tier> = {
+  // ── Free ───────────────────────────────────────────
+  "1": "free", "2": "free", "3": "free", "4": "free", "5": "free",
+  "6": "free", "7": "free", "7.5": "free",
+  "8": "free", "8.1": "free",
+  "9": "free", "10": "free",
+  "13": "free", "13.1": "free", "13.2": "free", "13.4": "free", "13.5": "free",
+
+  // ── Hobby ──────────────────────────────────────────
+  "3.1": "hobby",
+  "7.6": "hobby",
+  "12": "hobby",
+  "13.3": "hobby",
+  "33": "hobby",
+
+  // ── Pro ────────────────────────────────────────────
+  "5.9": "pro",
+  "7.5+": "pro", "7.7": "pro", "7.8": "pro", "7.9": "pro",
+  "8.2": "pro",
+  "9.1": "pro",
+  "12.2": "pro", "12.3": "pro",
+  "13.6": "pro", "13.8": "pro",
+  "14": "pro",
+  "20": "pro", "20.1": "pro", "20.3": "pro", "20.5": "pro",
+  "20.5.1": "pro", "20.13": "pro", "20.19": "pro", "20.22": "pro",
+
+  // ── Startup ────────────────────────────────────────
+  "4.6": "startup", "4.8": "startup",
+  "5.6": "startup",
+  "7.10": "startup",
+  "10.2": "startup",
+  "11": "startup",
+  "16": "startup",
+  "20.7": "startup",
+  "53.2": "startup",
+  "56": "startup",
+
+  // ── Team ───────────────────────────────────────────
+  "4.7": "team",
+  "5.7": "team",
+  "14.2": "team",
+  "17": "team", "17.1": "team",
+  "21": "team", "22": "team", "23": "team", "24": "team",
+  "53.6": "team",
+  "57": "team", "58": "team",
+
+  // ── Business ───────────────────────────────────────
+  "25": "business", "26": "business", "26.1": "business", "26.3": "business",
+  "28": "business", "29": "business",
+  "30": "business", "31": "business",
+  "33.1": "business", "33.2": "business",
+
+  // ── Enterprise ─────────────────────────────────────
+  "25.1": "enterprise", "26.2": "enterprise", "26.4": "enterprise",
+  "27": "enterprise",
+  "29.1": "enterprise", "29.2": "enterprise",
+  "30.1": "enterprise", "30.2": "enterprise",
+  "32": "enterprise", "32.1": "enterprise", "32.2": "enterprise",
+  "50": "enterprise", "51": "enterprise", "52": "enterprise",
+  "53": "enterprise", "54": "enterprise", "55": "enterprise",
+  "53+": "enterprise",
+};
+
+// Single runtime gate — replaces all individual requireTier() calls
+export function requirePhase(phase: string, context?: string): void {
+  const required = PHASE_TIER_MAP[phase];
+  if (!required || required === "free") return;  // free for all
+  requireTier(required, context || `Phase ${phase}`);
 }
 
-// ── Phase 11: Monorepo Federation (Team) ────────────────
-export async function federateMonorepo(config: FederationConfig) {
-  requireTier("team");
-  // ... existing Phase 11 logic unchanged
+// Phase-to-tier lookup for MCP registration and cortex features
+export function getPhaseTier(phase: string): Tier {
+  return PHASE_TIER_MAP[phase] || "free";
 }
 
-// ── Phase 25: SSO Integration (Enterprise) ──────────────
-export async function configureSSOProvider(opts: SSOOpts) {
-  requireTier("enterprise");
-  // ... existing Phase 25 logic unchanged
+export function getPhasesForTier(minTier: Tier): string[] {
+  const rank: Record<Tier, number> = {
+    free: 0, hobby: 1, pro: 2, startup: 3, team: 4, business: 5, enterprise: 6,
+  };
+  const min = rank[minTier];
+  return Object.entries(PHASE_TIER_MAP)
+    .filter(([_, t]) => rank[t] <= min)
+    .map(([p]) => p);
 }
-
-
 ```
+
+**Usage in feature code** — consistent, grepable, single source of truth:
+
+```typescript
+// ── Phase 33: Deep Bootstrap ──────────────────────────
+export async function runDeepBootstrap(opts: BootstrapOpts) {
+  requirePhase("33");   // ← maps to "hobby" via tier-map.ts
+  // ... Phase 33 logic
+}
+
+// ── Phase 13.8: Soul ──────────────────────────────────
+export async function loadSoulState(projectRoot: string) {
+  requirePhase("13.8"); // ← maps to "pro"
+  // ... Soul logic
+}
+
+// ── Phase 11: Monorepo Federation ─────────────────────
+export async function federateMonorepo(config: FederationConfig) {
+  requirePhase("11");   // ← maps to "startup"
+  // ... federation logic
+}
+
+// ── Phase 25: SSO Integration (Enterprise) ────────────
+export async function configureSSOProvider(opts: SSOOpts) {
+  requirePhase("25");   // ← maps to "enterprise"
+  // ... SSO logic
+}
+```
+
+**Benefits:**
+- Add a phase: one line in `PHASE_TIER_MAP`. Every gate picks it up.
+- Rebalance a phase (e.g., move deep bootstrap from Hobby to Free): change one value. No hunting through files.
+- `cortex features` and MCP tool registration both read `PHASE_TIER_MAP` — single source of truth.
+- `requirePhase()` is grepable — find all gated entry points by searching for `requirePhase(`.
+- The CLI never needs updating for tier changes. Just `npm update` to get the new `tier-map.ts`.
+
+### MCP Tool Registration — Dynamic Filtering by Tier
+
+Instead of registering all tools and relying on the AI to self-filter, dynamically build the tool list based on the current license. MCP supports `notifications/tools/list_changed` to re-register tools when the license changes.
+
+```typescript
+// src/mcp/server.ts — dynamic tool registration
+
+function buildToolList(license: LicensePayload) {
+  const tier = license.tier;
+  const rank: Record<string, number> = {
+    free: 0, hobby: 1, pro: 2, startup: 3, team: 4, business: 5, enterprise: 6,
+  };
+  const hasTier = (min: string) => rank[tier] >= rank[min];
+
+  const tools = [];
+
+  // ── Free (always available) ────────────────────────────
+  tools.push({
+    name: "synthesize_entity",
+    description: "Synthesize a knowledge entity for the current file",
+    inputSchema: { /* ... */ },
+    handler: async (args) => { /* ... */ },
+  });
+  tools.push({
+    name: "read_knowledge_index",
+    description: "List all entities in the knowledge base",
+    handler: async () => { /* ... */ },
+  });
+  // ... all other Free phase tools
+
+  // ── Hobby ────────────────────────────────────────────
+  if (hasTier("hobby")) {
+    tools.push({
+      name: "run_deep_bootstrap",
+      description: "Batch-scan the entire project and synthesize entities upfront",
+      handler: async () => { /* ... */ },
+    });
+    tools.push({
+      name: "get_cost_analytics",
+      description: "Show LLM token usage and cost breakdown",
+      handler: async () => { /* ... */ },
+    });
+  }
+
+  // ── Pro ──────────────────────────────────────────────
+  if (hasTier("pro")) {
+    tools.push({
+      name: "load_soul_state",
+      description: "Load the Librarian's persistent memory of your coding patterns",
+      handler: async () => { /* ... */ },
+    });
+    tools.push({
+      name: "run_advisor",
+      description: "Run architectural advisor on the current codebase",
+      handler: async () => { /* ... */ },
+    });
+    tools.push({
+      name: "get_tech_debt_register",
+      description: "View automated tech debt tracking",
+      handler: async () => { /* ... */ },
+    });
+  }
+
+  // ── Startup / Team ─────────────────────────────────────
+  if (hasTier("startup")) {
+    tools.push({
+      name: "federate_monorepo",
+      description: "Configure multi-package repository federation",
+      handler: async () => { /* ... */ },
+    });
+    tools.push({
+      name: "invoke_librarian_agent",
+      description: "Spawn a specialized Librarian agent",
+      handler: async () => { /* ... */ },
+    });
+  }
+
+  return tools;
+}
+
+// On MCP startup:
+const license = getActiveLicense();
+const tools = buildToolList(license);
+server.setTools(tools);
+
+// When license changes (trial expires, upgrade, downgrade):
+// Send MCP notification so the client re-fetches the tool list
+server.sendNotification("notifications/tools/list_changed");
+
+// Background: re-check license periodically
+setInterval(async () => {
+  await refreshLicenseAsync();
+  const newLicense = getActiveLicense();
+  if (newLicense.tier !== license.tier) {
+    server.setTools(buildToolList(newLicense));
+    server.sendNotification("notifications/tools/list_changed");
+  }
+}, 60 * 60 * 1000);  // every hour
+```
+
+The AI agent only sees tools it can actually call. No confusing "you don't have access" errors in the tool list. The `requireTier()` backstop in each handler is still kept as defense-in-depth, but it should never trigger since the tool won't be registered if the tier is insufficient.
 
 ### Step 3: `cortex activate` CLI Command
 
@@ -904,17 +1229,148 @@ program
 
 program
   .command("deactivate")
-  .description("Remove license and revert to free tier")
-  .action(() => {
+  .description("Remove license from this device (revert to free)")
+  .option("--device <id>", "Deactivate a specific device remotely (admin only)")
+  .option("--all", "Deactivate all devices on this license")
+  .action(async (opts: { device?: string; all?: boolean }) => {
+    // Remote device management
+    if (opts.device || opts.all) {
+      const resp = await fetch(`${LICENSE_API}/deactivate-device`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: process.env.CORTEX_LICENSE_KEY,
+          deviceId: opts.device,  // null for --all
+          all: !!opts.all,
+          machine: getMachineId(),
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (resp.ok) {
+        console.log(`✅ Device${opts.all ? "s" : ""} deactivated. Free slot available.`);
+      } else {
+        console.log("❌ Could not deactivate device. Check your license key.");
+      }
+      return;
+    }
+
+    // Local deactivation (this machine only)
     if (fs.existsSync(CACHE_PATH)) fs.unlinkSync(CACHE_PATH);
-    // Remove key from ~/.cortexrc
     const rcPath = path.join(os.homedir(), ".cortexrc");
     if (fs.existsSync(rcPath)) {
       let rc = fs.readFileSync(rcPath, "utf-8");
       rc = rc.replace(/CORTEX_LICENSE_KEY=.*\n?/, "");
       fs.writeFileSync(rcPath, rc);
     }
-    console.log("✅ License removed. Reverted to free tier.");
+    console.log("✅ License removed from this device. Reverted to free tier.");
+  });
+
+program
+  .command("subscribe [tier]")
+  .description("Upgrade to a paid tier (default: pro). Usage: cortex subscribe [hobby|pro|team]")
+  .action(async (tier: string = "pro") => {
+    const valid = ["hobby", "pro", "team"];
+    if (!valid.includes(tier)) {
+      console.error(`❌ Invalid tier "${tier}". Options: ${valid.join(", ")}`);
+      return;
+    }
+    console.log(`\n🚀 Starting Cortex ${tier.toUpperCase()} subscription...`);
+    const ok = await subscribeViaCLI(tier);
+    if (ok) {
+      console.log(`   Run \`cortex status\` to verify your new tier.`);
+    }
+  });
+
+program
+  .command("features")
+  .description("List features. Usage: cortex features [--locked] [search]")
+  .option("--locked", "Show only features locked behind higher tiers")
+  .argument("[search]", "Search term to filter features")
+  .action(async (search: string | undefined, opts: { locked?: boolean }) => {
+    const license = getActiveLicense();
+
+    // Fetch feature definitions from server (single source of truth).
+    // Falls back to hardcoded defaults if offline.
+    const DEFAULT_FEATURES = [
+      { tier: "free", phases: "1-10, 13", desc: "Core pipeline, graph, audit, context packs" },
+      { tier: "hobby", phases: "3.1, 7.6, 12, 13.3, 33", desc: "LLM caching, cost analytics, deep bootstrap, basic CI" },
+      { tier: "pro", phases: "13.8, 20, 7.5, 7.7, 12.2", desc: "Soul, advisor, custom quality, tech debt, CI hooks" },
+      { tier: "startup", phases: "4.6, 11, 16, 56", desc: "Multi-agent, monorepo federation, shared knowledge" },
+      { tier: "team", phases: "21, 22, 23, 24", desc: "Polyrepo federation, central server, HITL review" },
+      { tier: "business", phases: "25, 26, 28, 29", desc: "SSO, RBAC, audit, workflow integrations" },
+      { tier: "enterprise", phases: "27, 32, 50-55", desc: "Air-gap, SOC2, cognitive substrate" },
+    ];
+    let ALL_FEATURES = DEFAULT_FEATURES;
+    try {
+      const resp = await fetch(`${LICENSE_API}/features`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (resp.ok) ALL_FEATURES = await resp.json();
+    } catch { /* use defaults */ }
+    const current = license.tier;
+    const rank: Record<string, number> = { free: 0, hobby: 1, pro: 2, startup: 3, team: 4, business: 5, enterprise: 6 };
+    const isLocked = (t: string) => rank[t] > rank[current];
+
+    // Filter by search
+    let filtered = ALL_FEATURES;
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = ALL_FEATURES.filter(f =>
+        f.desc.toLowerCase().includes(q) || f.phases.includes(q) || f.tier.includes(q)
+      );
+    }
+
+    // Filter by --locked
+    if (opts.locked) {
+      filtered = filtered.filter(f => isLocked(f.tier));
+    }
+
+    if (filtered.length === 0) {
+      if (opts.locked) console.log("\n🎉 All features are unlocked on your current tier!");
+      else console.log(`\nNo features matching "${search}".`);
+      return;
+    }
+
+    const header = opts.locked
+      ? `\n🔒 Locked features (upgrade to unlock):\n`
+      : search
+        ? `\n🔍 Features matching "${search}":\n`
+        : `\n📋 Cortex Features — Current tier: ${current.toUpperCase()}\n`;
+
+    console.log(header);
+    for (const f of filtered) {
+      const icon = isLocked(f.tier) ? "🔒" : "✅";
+      const label = isLocked(f.tier) ? `→ ${f.tier.toUpperCase()}` : "AVAILABLE";
+      console.log(`  ${icon} ${f.tier.toUpperCase().padEnd(12)} ${f.desc.padEnd(50)} ${label}`);
+    }
+    console.log(`\n💡 Run \`cortex features --locked\` to see only gated features.`);
+    console.log(`💡 Run \`cortex features <search-term>\` to search.`);
+  });
+
+program
+  .command("devices")
+  .description("List and manage devices activated on your license")
+  .action(async () => {
+    const license = getActiveLicense();
+    if (license.tier === "free") {
+      console.log("Device management is available on paid tiers.");
+      return;
+    }
+    // Fetch from license server
+    const resp = await fetch(`${LICENSE_API}/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: process.env.CORTEX_LICENSE_KEY }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) { console.log("Could not fetch device list."); return; }
+    const data = await resp.json() as { devices: { machineId: string; lastSeen: string }[]; limit: number };
+    console.log(`\n💻 Active devices (${data.devices.length}/${data.limit}):\n`);
+    for (const d of data.devices) {
+      const lastSeen = new Date(d.lastSeen).toLocaleDateString();
+      console.log(`  🖥  ${d.machineId.slice(0, 12)}...  Last seen: ${lastSeen}`);
+    }
+    console.log(`\nTo deactivate a device, run: cortex deactivate --device <id>`);
   });
 ```
 
@@ -923,16 +1379,34 @@ program
 ```typescript
 // Add to existing src/cli/status.ts output:
 
-import { getLicenseStatus, getActiveLicense } from "../core/license.js";
+import { getLicenseStatus, getActiveLicense, isTrialActive, isTrialExpired, getTrialDaysRemaining, getTrialDaysUsed } from "../core/license.js";
 
 // Inside the status display function, add a section:
 const license = getActiveLicense();
-const tierEmoji = { free: "🆓", pro: "💎", team: "👥", enterprise: "🏢" };
+const tierEmoji: Record<string, string> = {
+  free: "🆓", hobby: "🪴", pro: "💎",
+  startup: "🌱", team: "👥", business: "🏛️", enterprise: "🏢",
+};
 
-console.log(`\n${tierEmoji[license.tier]} License: Cortex ${license.tier.toUpperCase()}`);
+console.log(`\n${tierEmoji[license.tier] || "🔑"} License: Cortex ${license.tier.toUpperCase()}`);
 console.log(getLicenseStatus());
 
+// Trial countdown
+if (isTrialActive()) {
+  const days = getTrialDaysRemaining();
+  if (days <= 3) {
+    console.log(`\n⚠️  Pro trial ends in ${days} day${days === 1 ? "" : "s"}. Run \`cortex subscribe\` to keep Pro features.`);
+  } else {
+    console.log(`\n💡 Pro trial — ${days} days remaining. Experience all features before you buy.`);
+  }
+} else if (isTrialExpired()) {
+  console.log(`\n⏱ Pro trial ended (you used ${getTrialDaysUsed()} of 14 days). Run \`cortex subscribe\` to reactivate Pro.`);
+}
 
+// Upgrade hint for free users
+if (license.tier === "free" && !isTrialExpired()) {
+  console.log(`\n💡 Run \`cortex features --locked\` to see what you'd unlock by upgrading.`);
+}
 ```
 
 ### Step 5: License Server (`license.cortex.dev`)
@@ -946,7 +1420,8 @@ license-server/
 │   ├── routes/
 │   │   ├── validate.ts       # POST /api/validate
 │   │   ├── activate.ts       # POST /api/activate
-│   │   └── usage.ts          # POST /api/usage
+│   │   ├── usage.ts          # POST /api/usage
+│   │   └── features.ts       # GET /api/features (single source of truth for feature lists)
 │   ├── stripe/
 │   │   └── webhooks.ts       # Stripe webhook handlers
 │   ├── jwt.ts                # Sign/verify with RS256 private key
@@ -954,6 +1429,76 @@ license-server/
 ├── prisma/schema.prisma
 ├── Dockerfile
 └── package.json
+```
+
+**Key endpoint — `/api/trial` (auto-grants 14-day Pro trial on first run):**
+
+```typescript
+// license-server/src/routes/trial.ts
+
+// One trial per machine fingerprint. Forever. No re-claim.
+// This prevents trial cycling. Machine fingerprint is a speed
+// bump (not DRM) — a determined user can spoof it, but they're
+// paying $24/mo in API overhead (no caching) to save $24/mo on
+// subscription. The economics don't work for them.
+const TRIAL_DURATION_DAYS = 14;
+
+export async function handleTrial(req: Request) {
+  const { machine } = await req.json();
+  if (!machine) return Response.json({ error: "machine required" }, { status: 400 });
+
+  // Check if this machine ever had a trial
+  const existing = await db.trial.findUnique({ where: { machineId: machine } });
+  if (existing) {
+    return Response.json({ error: "trial already used" }, { status: 403 });
+  }
+
+  // Grant trial
+  const trialEndsAt = new Date();
+  trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DURATION_DAYS);
+
+  await db.trial.create({
+    data: { machineId: machine, grantedAt: new Date(), trialEndsAt },
+  });
+
+  const jwt = await new SignJWT({
+    tier: "pro",
+    org: "",
+    email: "",
+    seats: 1,
+    features: ALL_PRO_FEATURES,
+    limits: TIER_LIMITS.pro,
+    trial: { trialEndsAt: Math.floor(trialEndsAt.getTime() / 1000), convertedFrom: "free" },
+  })
+    .setProtectedHeader({ alg: "RS256" })
+    .setIssuedAt()
+    .setExpirationTime("14d")
+    .sign(PRIVATE_KEY);
+
+  return Response.json({ jwt });
+}
+```
+
+**Key endpoint — `GET /api/features` (single source of truth):**
+
+```typescript
+// license-server/src/routes/features.ts
+
+export async function handleFeatures() {
+  // This is the single source of truth for `cortex features`.
+  // The CLI fetches this at runtime. Update this list when adding
+  // new phases — the CLI will reflect it automatically.
+  const features = [
+    { tier: "free", phases: "1-10, 13", desc: "Core pipeline, graph, audit, context packs" },
+    { tier: "hobby", phases: "3.1, 7.6, 12, 13.3, 33", desc: "LLM caching, cost analytics, deep bootstrap, basic CI" },
+    { tier: "pro", phases: "13.8, 20, 7.5, 7.7, 12.2", desc: "Soul, advisor, custom quality, tech debt, CI hooks" },
+    { tier: "startup", phases: "4.6, 11, 16, 56", desc: "Multi-agent, monorepo federation, shared knowledge" },
+    { tier: "team", phases: "21, 22, 23, 24", desc: "Polyrepo federation, central server, HITL review" },
+    { tier: "business", phases: "25, 26, 28, 29", desc: "SSO, RBAC, audit, workflow integrations" },
+    { tier: "enterprise", phases: "27, 32, 50-55", desc: "Air-gap, SOC2, cognitive substrate" },
+  ];
+  return Response.json(features);
+}
 ```
 
 **Key endpoint — `/api/validate`:**
@@ -971,18 +1516,30 @@ export async function handleValidate(req: Request) {
     return Response.json({ error: "Invalid or expired key" }, { status: 401 });
   }
 
-  // 2. Check machine limit (Pro: 2 machines, Team: seats × 2)
+  // Device limit: 3 for individual tiers, seats × 2 for team tiers.
+  // This prevents casual key-sharing while accommodating a developer's
+  // real devices (laptop, desktop, CI machine). Users can deactivate
+  // old devices via `cortex devices` CLI or the web dashboard.
+  const maxDevices = ["startup", "team", "business", "enterprise"].includes(record.tier)
+    ? record.seats * 2
+    : 3;
+
   const machines = await db.activation.findMany({ where: { keyId: record.id } });
-  const maxMachines = record.tier === "pro" ? 2 : record.seats * 2;
   if (!machines.find(m => m.machineId === machine)) {
-    if (machines.length >= maxMachines) {
+    if (machines.length >= maxDevices) {
       return Response.json({
-        error: `Machine limit reached (${machines.length}/${maxMachines}). ` +
-               `Deactivate another machine first.`
+        error: `Device limit reached (${machines.length}/${maxDevices}). ` +
+               `Run \`cortex devices\` to see your active devices and deactivate old ones.`
       }, { status: 403 });
     }
     await db.activation.create({
       data: { keyId: record.id, machineId: machine, activatedAt: new Date() }
+    });
+  } else {
+    // Update last seen timestamp
+    await db.activation.updateMany({
+      where: { keyId: record.id, machineId: machine },
+      data: { lastSeenAt: new Date() },
     });
   }
 
@@ -1015,6 +1572,25 @@ const TIER_LIMITS = {
 };
 ```
 
+**CLI polling endpoint — `/api/subscribe-status`:**
+
+```typescript
+// license-server/src/routes/subscribeStatus.ts
+
+export async function handleSubscribeStatus(req: Request) {
+  const { subscribe_id } = await req.json();
+  if (!subscribe_id) return Response.json({ error: "subscribe_id required" }, { status: 400 });
+
+  const pending = await db.pendingSubscription.findUnique({ where: { subscribeId: subscribe_id } });
+  if (!pending) return Response.json({ status: "unknown" });
+
+  if (pending.status === "completed" && pending.licenseKey) {
+    return Response.json({ status: "completed", key: pending.licenseKey });
+  }
+
+  return Response.json({ status: pending.status });
+}
+```
 ### Step 6: Stripe Webhooks → Key Lifecycle
 
 ```typescript
@@ -1026,11 +1602,12 @@ export async function handleStripeWebhook(event: Stripe.Event) {
       const session = event.data.object;
       const tier = session.metadata.tier as Tier;
       const email = session.customer_email!;
+      const subscribeId = session.metadata.subscribe_id || null;
 
       // Generate unique license key
       const key = `cortex_${tier}_${randomBytes(24).toString("hex")}`;
 
-      await db.licenseKey.create({
+      const license = await db.licenseKey.create({
         data: {
           key,
           tier,
@@ -1044,7 +1621,16 @@ export async function handleStripeWebhook(event: Stripe.Event) {
         },
       });
 
-      // Email key to customer
+      // If this came from `cortex subscribe`, mark the pending subscription
+      // so the CLI's poll loop picks it up within seconds.
+      if (subscribeId) {
+        await db.pendingSubscription.update({
+          where: { subscribeId },
+          data: { status: "completed", licenseKey: key },
+        });
+      }
+
+      // Email key to customer (fallback if CLI poll times out)
       await sendEmail(email, "Your Cortex License Key", `
         Run this in your terminal:
         
@@ -1077,9 +1663,87 @@ export async function handleStripeWebhook(event: Stripe.Event) {
 }
 ```
 
-### Step 7: Graceful Degradation Flow
+### Step 7: Graceful Degradation & Cancellation Flow
 
 ```
+Offline degradation (existing customer):
+
+Hour 0:    ✅ Pro features work (JWT cached, fresh)
+Hour 71:   ✅ Pro features work (cache still within 72h TTL)
+Hour 73:   ⚠️  Cache expired. Cortex tries remote validation.
+           ❌ No internet. Remote validation fails.
+           ✅ BUT: JWT itself hasn't expired (30-day JWT lifetime).
+           ✅ Cortex uses stale cache as grace — Pro features STILL WORK.
+Day 30:    ❌ JWT itself expires (30-day lifetime hit).
+           ❌ Still no internet. Cannot refresh.
+           ⬇️  Graceful downgrade to free tier.
+           📢 "Your Cortex Pro license could not be validated.
+               Features have been limited to free tier.
+               Connect to the internet to restore your license."
+```
+
+```
+Non-payment / cancellation:
+
+Day 0:     ❌ Stripe invoice fails or user cancels subscription.
+           Stripe webhook sets key status → "cancelled".
+           🔑 Cached JWT still valid (30-day lifetime).
+Day 0-3:   ✅ Pro features still work (fresh cache).
+Day 3:     ⚠️  Cache refresh triggers. Client tries remote validation.
+           ❌ Server sees key is "cancelled". Returns 401.
+           ⬇️  Graceful downgrade to free.
+           📢 "Your Cortex Pro subscription was cancelled.
+               Features reverted to free tier.
+               Reactivate: cortex subscribe"
+           💾 Soul data, settings, and .knowledge/ are PRESERVED on disk.
+               Re-subscribing restores Pro features immediately — no data lost.
+```
+
+```
+Trial lifecycle:
+
+Day 0:     ✅ First run. Auto-granted 14-day Pro trial.
+           📢 "💡 Pro trial — 14 days remaining. Experience all features."
+Day 11:    ✅ Trial still active. Status shows warning.
+           📢 "⚠️  Pro trial ends in 3 days. Run \`cortex subscribe\` to keep Pro."
+Day 14:    ⬇️  Trial expires. Graceful downgrade to free.
+           📢 "⏱ Pro trial ended (you used 14 of 14 days). Run \`cortex subscribe\` to reactivate."
+Day 15+:   🆓 Free tier. Trial is one-time — re-installing won't reset it.
+           All paid features return CortexLicenseError.
+           📢 "⚡ This feature requires Cortex PRO. Upgrade: https://cortex.dev/pricing"
+```
+
+```
+Downgrade between paid tiers (e.g. Pro → Hobby):
+
+Day 0:     User changes plan from Pro to Hobby on website.
+           Stripe webhook updates key: tier → "hobby", features → HOBBY_FEATURES.
+           🔑 Cached JWT still signed for Pro (30-day lifetime).
+Day 0-3:   ✅ Pro features still work within the 72h cache window.
+Day 3:     ⚠️  Cache refresh. Server issues new JWT with Hobby features.
+           ⬇️  Soul, advisor, custom quality stop working.
+               Caching, deep bootstrap, cost analytics remain.
+           📢 "Plan changed to Cortex HOBBY. Soul features suspended.
+               Upgrade back anytime — your Soul data is preserved."
+```
+
+```
+Upgrade with proration (e.g. Hobby → Pro mid-cycle):
+
+Day 0:     User upgrades from Hobby to Pro on website.
+           Stripe prorates remaining Hobby balance.
+           ⚡ Key is updated immediately on license server.
+Day 0:     ✅ Next CLI operation triggers cache refresh.
+           ✅ New JWT with Pro features. Soul activates immediately.
+           📢 "Upgraded to Cortex PRO! Soul is now active.
+               Your pattern history continues uninterrupted."
+```
+
+The developer NEVER sees a crash. Paid features
+return CortexLicenseError (caught by CLI with friendly message),
+free features continue working perfectly. Data from paid features
+(Soul, custom formulas, tech debt register) is preserved on disk indefinitely.
+Re-subscribing restores everything instantly — the lock-in is the data, not DRM.
 Developer has Pro license, goes offline for 3 days:
 
 Hour 0:    ✅ Pro features work (JWT cached, fresh)
@@ -1095,7 +1759,19 @@ Day 30:    ❌ JWT itself expires (30-day lifetime hit).
                Features have been limited to free tier.
                Connect to the internet to restore your license."
 
-Key point: The developer NEVER sees a crash. Paid features
+```
+Trial lifecycle:
+
+Day 0:     ✅ First run. Auto-granted 14-day Pro trial.
+           📢 "💡 Pro trial — 14 days remaining. Experience all features."
+Day 11:    ✅ Trial still active. Status shows warning.
+           📢 "⚠️  Pro trial ends in 3 days. Run \`cortex subscribe\` to keep Pro."
+Day 14:    ⬇️  Trial expires. Graceful downgrade to free.
+           📢 "⏱ Pro trial ended (you used 14 of 14 days). Run \`cortex subscribe\` to reactivate."
+Day 15+:   🆓 Free tier. All paid features return CortexLicenseError.
+           📢 "⚡ This feature requires Cortex PRO. Upgrade: https://cortex.dev/pricing"
+
+The developer NEVER sees a crash. Paid features
 return CortexLicenseError (caught by CLI with friendly message),
 free features continue working perfectly.
 ```
@@ -1106,16 +1782,18 @@ free features continue working perfectly.
 ┌──────────────────────────────────────────────────────────┐
 │  What we do (speed bumps for honest users):              │
 │                                                          │
-│  ✅ Machine fingerprint — 1 key ≠ 50 machines            │
+│  ✅ Machine fingerprint — one trial per machine          │
+│  ✅ 3-device limit per license — covers laptop, desktop, │
+│     and CI; prevents casual key-sharing with 10 friends  │
 │  ✅ JWT signed with RS256 — can't forge without priv key │
 │  ✅ 72h cache refresh — revoked keys stop working soon   │
-│  ✅ Obfuscate license.ts in dist/ (optional, minor)      │
+│  ✅ `cortex devices` — self-service device management    │
 │                                                          │
 │  What we DON'T do (walls that destroy trust):            │
 │                                                          │
 │  ❌ Binary obfuscation or code encryption                │
 │  ❌ Phone-home telemetry on every command                 │
-│  ❌ Hardware-bound DRM (TPM, dongles)                     │
+│  ❌ TPM/dongle hardware binding                           │
 │  ❌ Encrypted .knowledge/ files                          │
 │  ❌ Legal threats in error messages                       │
 └──────────────────────────────────────────────────────────┘
@@ -1123,6 +1801,95 @@ free features continue working perfectly.
 Philosophy: Make it easier to pay $19/mo than to maintain
 a patched fork. The 5 minutes spent patching requireTier()
 on every npm update is worth more than $19/mo in eng time.
+```
+
+### Step 8.5: Team Seat Management
+
+For team tiers (Startup/Team/Business), seats are managed via the license server. The flow:
+
+**Invite flow:**
+```
+Admin runs:       cortex invite --email alice@company.com --role editor
+Server action:    Creates a pending seat invitation (valid 7 days).
+                  Emails alice with: cortex join --org <org> --invite <code>
+Alice runs:       cortex join --org acme --invite abc123
+Server action:    Verifies invite code, decrements available seats,
+                  issues Alice her own signed JWT under the org license.
+                  Alice's JWT has: tier=team, seats=N, org=acme
+```
+
+**Seat counting:**
+- Each activation of an invite consumes one seat.
+- `cortex team seats` shows: used/total, with list of active members.
+- When a member leaves: `cortex revoke --email alice@company.com` frees their seat.
+- If all seats are used, `cortex invite` returns "No seats available. Upgrade at cortex.dev/pricing."
+
+This avoids the complexity of having every team member share one license key. Each member gets their own JWT, enabling per-user audit trails and individual feature flags.
+
+```typescript
+// license-server/src/routes/invite.ts
+
+export async function handleInvite(req: Request) {
+  const { orgLicenseKey, email, role } = await req.json();
+
+  // 1. Validate org license
+  const license = await db.licenseKey.findUnique({ where: { key: orgLicenseKey } });
+  if (!license || license.status !== "active") {
+    return Response.json({ error: "Invalid license" }, { status: 401 });
+  }
+
+  // 2. Count current active seats
+  const activeSeats = await db.seatAssignment.count({
+    where: { orgId: license.id, status: "active" },
+  });
+  if (activeSeats >= license.seats) {
+    return Response.json({ error: "No seats available" }, { status: 403 });
+  }
+
+  // 3. Create invitation
+  const code = randomBytes(16).toString("hex");
+  await db.seatInvitation.create({
+    data: { code, email, role, orgId: license.id, expiresAt: addDays(new Date(), 7) },
+  });
+
+  await sendEmail(email, "You've been invited to Cortex", `
+    Run: cortex join --org ${license.orgName} --invite ${code}
+  `);
+  return Response.json({ invited: email, seatsRemaining: license.seats - activeSeats - 1 });
+}
+```
+
+```typescript
+// CLI commands
+program
+  .command("invite <email>")
+  .description("Invite a teammate to your Cortex org (requires admin key)")
+  .action(async (email: string) => { /* ... */ });
+
+program
+  .command("join")
+  .description("Accept an org invitation")
+  .requiredOption("--org <org>", "Organization name")
+  .requiredOption("--invite <code>", "Invitation code")
+  .action(async (opts) => { /* ... */ });
+
+program
+  .command("revoke <email>")
+  .description("Revoke a team member's seat")
+  .action(async (email: string) => { /* ... */ });
+
+program
+  .command("team seats")
+  .description("Show seat usage for your org")
+  .action(async () => {
+    const license = getActiveLicense();
+    if (!["startup", "team", "business"].includes(license.tier)) {
+      console.log("Seat management is available on Startup+ plans.");
+      return;
+    }
+    console.log(`Seats: ${used}/${license.seats}`);
+    // ...
+  });
 ```
 
 ### Step 9: Database Schema (Prisma)
@@ -1170,6 +1937,46 @@ model UsageRecord {
 
   @@unique([keyId, month])
 }
+
+model SeatInvitation {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  email     String
+  role      String   @default("editor")  // admin | editor | viewer
+  orgId     String
+  license   LicenseKey @relation(fields: [orgId], references: [id])
+  status    String   @default("pending") // pending | accepted | expired
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model SeatAssignment {
+  id        String   @id @default(cuid())
+  orgId     String
+  license   LicenseKey @relation(fields: [orgId], references: [id])
+  email     String
+  role      String   @default("editor")
+  machineId String?  // SHA256 fingerprint, set on first activation
+  status    String   @default("active")  // active | revoked
+  joinedAt  DateTime @default(now())
+  revokedAt DateTime?
+
+  @@unique([orgId, email])
+}
+
+model PendingSubscription {
+  subscribeId String   @id
+  tier        String
+  status      String   @default("pending")  // pending | completed | expired
+  licenseKey  String?  // set when Stripe webhook fires
+  createdAt   DateTime @default(now())
+}
+
+model Trial {
+  machineId    String   @id
+  grantedAt    DateTime @default(now())
+  trialEndsAt  DateTime
+}
 ```
 
 ### Step 10: Full Implementation Checklist
@@ -1181,8 +1988,14 @@ Phase A: Client-Side Gate (ship FIRST — before any paid feature)
 □  Add requireTier() calls to all existing paid-tier functions
 □  Add "cortex activate <key>" CLI command
 □  Add "cortex deactivate" CLI command
-□  Add tier display to "cortex status"
+□  Add "cortex subscribe [tier]" CLI command
+□  Add "cortex features" CLI command
+□  Add trial auto-grant logic (step 4 in getActiveLicense)
+□  Add tier display + trial countdown to "cortex status"
 □  Test: free tier works with zero config (no key, no internet)
+□  Test: first run auto-grants 14-day Pro trial (online)
+□  Test: offline first run falls back to free gracefully
+□  Test: trial countdown shows at 3 days / expired states
 □  Test: paid features throw friendly CortexLicenseError
 □  Test: offline cache works for 72h
 □  Test: graceful degradation after cache + JWT expiry
@@ -1193,22 +2006,42 @@ Phase B: License Server (ship SECOND — enables first paid customer)
 □  Set up Prisma + Postgres
 □  Implement POST /api/validate
 □  Implement POST /api/activate
+□  Implement POST /api/trial (14-day Pro trial, once per machine)
+□  Implement POST /api/subscribe-status (CLI polling)
+□  Add Trial + PendingSubscription models to Prisma schema
 □  Generate RS256 keypair; embed public key in projectcortex npm package
 □  Deploy to Fly.io / Railway
 □  Test: cortex activate <valid-key> succeeds
 □  Test: cortex activate <invalid-key> shows error
+□  Test: trial auto-grant works once per machine (second request returns 403)
 □  Test: machine limit enforcement works
 
 Phase C: Stripe Integration (ship THIRD — enables self-serve purchase)
 ──────────────────────────────────────────────────────────────
 □  Create Stripe products: Pro ($19/mo), Team ($49/seat/mo)
 □  Build cortex.dev/pricing page with Stripe Checkout links
+□  Pass subscribe_id metadata on CLI-initiated checkouts
 □  Implement Stripe webhook handlers (checkout, cancel, payment_failed)
-□  Auto-email license key on checkout.session.completed
+□  Mark PendingSubscription as completed on checkout.session.completed
+□  Auto-email license key on checkout.session.completed (fallback)
 □  7-day grace period on payment failure
+□  Test: `cortex subscribe` → browser → pay → auto-activated (no copy-paste)
+□  Test: `cortex subscribe` → browser → close → still works via email fallback
 □  Test: full purchase → activate → use → cancel → downgrade flow
 
-Phase D: Usage Metering (ship FOURTH — optional analytics, no enforcement)
+Phase D: Team Seat Management (ship FOURTH — enables team tiers)
+──────────────────────────────────────────────────────────────
+□  Implement POST /api/invite & POST /api/join endpoints
+□  Add SeatInvitation, SeatAssignment models to Prisma
+□  Add `cortex invite <email>` CLI command
+□  Add `cortex join --org --invite` CLI command
+□  Add `cortex revoke <email>` CLI command
+□  Add `cortex team seats` CLI command
+□  Test: invite → join → seat consumed → revoke → seat freed flow
+□  Test: inviting when all seats full returns clear error
+□  Test: expired invitation is rejected
+
+Phase E: Usage Metering (ship FIFTH — optional analytics)
 ──────────────────────────────────────────────────────────────
 □  Track entity count, synthesis count per month in state.json (opt-in)
 □  POST /api/usage on each cortex sync (anonymized, opt-out flag)
@@ -1253,3 +2086,17 @@ The moat is **not** DRM. The moat is:
 7. **Smooth pricing ramp**: $0 → $9 → $24 → $29/seat → $49/seat → $99/seat eliminates "sticker shock" decision paralysis
 
 The license server is a **speed bump**, not a wall. It keeps honest people honest and enterprises compliant. The real lock-in is that Cortex gets better the longer you use it.
+
+### Why Not Just Use X?
+
+| Instead of Cortex | Gap |
+|---|---|
+| **Obsidian + manual notes** | No auto-synthesis, no MCP, no AI agent integration. You write everything by hand. |
+| **Sourcegraph/Cody** | Code search only, no architectural knowledge graph, no Soul/personalization, no cross-repo federation. |
+| **Copilot/Codeium** | Code completion, not architecture understanding. They don't model your codebase structure. |
+| **Notion/Confluence wiki** | Manual documentation that rots. Cortex auto-generates and stays current with your code. |
+| **`tree` + grep** | Works for file structure, not for relationships, dependencies, intent, or architectural patterns. |
+| **A custom script** | You'd be building Phases 1-63 yourself. Cortex is 18 shipped phases + 70+ planned. |
+| **Another MCP server** | Almost all are generic "read a file" tools. Cortex has an evolving knowledge graph, quality scoring, blast-radius analysis, and team federation. |
+
+Cortex's real competitor is **the developer who doesn't know they need it yet** — not another tool.
