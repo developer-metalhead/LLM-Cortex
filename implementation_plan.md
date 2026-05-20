@@ -3293,7 +3293,7 @@ When you change 30+ files at once — say, touching auth, database, and UI all i
 Introduce a deterministic clustering step that runs _before_ the LLM synthesis call when a diff exceeds a configurable file-count or token threshold. Each cluster is synthesised independently; the results are merged into a single log entry. Clustering is intentionally LLM-free — it uses structural signals already present in `state.json` (directory paths, Phase 6's typed `relationships[]` edges) so it adds no token cost and no latency outside of the synthesis calls themselves.
 
 - **Trigger threshold**: configurable via `.cortexrc` / env; defaults to `CORTEX_CLUSTER_THRESHOLD=15` files. Below the threshold the existing single-shot path runs unchanged.
-- **Clustering algorithm**: two-pass.
+- **Clustering algorithm**: an $O(N \log N)$ hierarchical tree-clustering pass. Comparing every file to every other file is $O(N^2)$, which is too slow. Instead, Cortex treats deep directory sub-trees as single nodes, grouping them hierarchically.
   1. **Directory bucketing** — group changed files by their nearest common ancestor directory (e.g. `src/auth/`, `src/db/`, `src/ui/`). Files in the repo root are their own bucket.
   2. **Edge merge** — if two directory buckets share a `depends_on` or `called_by` edge in `state.json`'s typed graph, merge them into one cluster. This prevents splitting a change that straddles a tightly coupled boundary (e.g., a service and its direct repository layer) into two disconnected syntheses that each miss the other half.
 - **Synthesis**: each cluster is sent to the LLM as a separate `generateObject` call using the same Librarian prompt, with its own diff slice and a CURRENT CONTEXT block scoped to that cluster's entities. Retries (Phase 2's 3-attempt backoff) apply per cluster.
@@ -3785,6 +3785,8 @@ CLI:
 Phase 7's `cortex lint` tells you what's wrong — "`AuthModule` is a god module" or "`UserService` and `OrderService` form a cycle." Phase 20.3 tells you what to do about it: "Consider extracting the validation logic into a `Validator` strategy — here's what that graph looks like in Cortex terms." It maps each anti-pattern the linter detects to a canonical design pattern that resolves it, gives a concrete entity-level suggestion, and shows what the knowledge graph would look like after the refactor.
 
 **Technical Terms**
+To escape architectural "local minima" (where a simple fix doesn't resolve deep coupling), Cortex uses heuristic topological search. It explores hundreds of randomized refactoring paths concurrently in memory, scoring each topology's coupling density, before returning the globally optimal canonical pattern (like a Facade) that mathematically minimizes systemic coupling.
+
 Inspired by ROSE (2024) — transformer-based refactoring recommendation fine-tuned on 2M+ historical refactorings — but implemented without a trained model: a curated anti-pattern → pattern mapping table that operates over `LintManager` output and instantiates concrete suggestions against the entity's actual graph neighborhood.
 
 Anti-pattern → pattern library (initial set):
@@ -5190,6 +5192,19 @@ This is what makes constraint blocks **explainable** instead of cryptic — the 
 - `cortex sync --think` and `/sync --think` MCP arg force sequential reasoning.
 - `cortex trace show <entity>` CLI renders the entity's stored reasoning traces.
 - Tests cover: `sequential_think` tool registration + invocation, trace persistence + LRU eviction, CoVe verification flag, activation gating across each signal source, PR-comment rendering format, quality score integration, `--think` override behavior.
+
+---
+
+## 🗜️ Phase 20.25: Telegraphic AST Memory Compression — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Standard LLM text is full of fluff, conversational noise, and repetitive syntactic structures. By flattening the Abstract Syntax Tree (AST) into a maximally dense hash—compressing the knowledge graph down to its absolute minimum theoretical length—we pack 2x-3x more actionable architectural context into the exact same token limits.
+
+**Technical Terms**
+An advanced algorithmic compression layer over the knowledge graph. Cortex's synthesis engine acts as an information density maximizer: it strips non-semantic ASCII, pleasantries, and redundant syntax, flattening the architecture into a telegraphic representation.
+- **AST Flattening:** Directly translates source code AST patterns into deterministic hash structures rather than prose, ensuring every LLM token carries maximum semantic weight.
+- **Semantic Minification:** Removes all conversational filler ("It is important to note that...") automatically during the consolidation step.
+- **Outcome:** Doubles or triples the effective context window capacity when querying the `state.json` knowledge graph, cutting per-query token costs drastically without losing any architectural details.
 
 ### Pros & Cons
 
@@ -8405,6 +8420,7 @@ A senior engineer has 5 projects open: their company's main monorepo, a forked o
 A meta-graph layer above per-workspace knowledge graphs that supports cross-workspace query and entity correlation:
 
 - **Workspace registration**: workspaces opt into the meta-graph via `cortex workspace join --substrate <id>`. Each workspace remains the canonical owner of its own entities; the meta-graph is a derived view.
+- **Cross-workspace API Boundary Linking**: Instantly maps cross-repo topological dependencies. If a backend service API changes, the graph links across network boundaries to identify the exact frontend client repository that will break.
 - **Cross-workspace entity correlation**: entities are correlated across workspaces via embedding similarity (Phase 18) + name match + structural match (relationship topology). Correlations are surfaced as `crossWorkspaceMatches` annotations, never as merges.
 - **Cross-workspace queries**:
   - `cortex query "JWT validation pattern" --substrate-wide` searches across all joined workspaces
@@ -9039,6 +9055,9 @@ Phase 43.1 messaging mentions "rate limiting" informally but never specifies how
 
 **Technical Terms**
 Six coordination-safety primitives enforced by the substrate, configurable via `cortex.coordination.yaml`:
+
+### 0. Atomic File-State Locking (Collision Prevention)
+Strict distributed locking: Two autonomous agents cannot simultaneously hold an uncommitted write-lock on the exact same architectural entity. When agent trajectories collide on the same file, the substrate enforces a mutex, forcing one agent to yield and shift to a different task branch to prevent infinite recursion and merge conflicts.
 
 ### 1. Message Depth Limit (Recursion Bomb Prevention)
 
