@@ -39,6 +39,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.14  | Intrinsic Redshift — Novelty-at-Creation Metric         | ⏳ Planned                           |
 | 7.15  | Verlinde Avoidance — Blind-Spot Detection               | ⏳ Planned                           |
 | 7.16  | Proteasome Atrophy — Targeted Knowledge Degradation      | ⏳ Planned                           |
+| 7.17  | Keystone Index — Entity Impact-to-Size Ratio             | ⏳ Planned                           |
+| 7.18  | Regulatory Suppression — Alert Correlation Dampening     | ⏳ Planned                           |
+| 7.19  | Synaptic Tagging — Retroactive Importance Boost           | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
@@ -47,6 +50,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
 | 9.2   | Torstone Inertia — Refactor Resistance Metric          | ⏳ Planned                           |
+| 9.3   | Hyrum's Law — Implicit Dependency Detection            | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
 | 10.1  | Spherification — Data Encapsulation for Entity Clusters | ⏳ Planned                           |
 | 10.2  | Smart Rule File Patching & Marker-Fenced Injection     | ⏳ Planned                           |
@@ -74,6 +78,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.9   | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
 | 13.10  | Information Bottleneck Scoring                          | ⏳ Planned                           |
 | 13.11  | Bidirectional Context Retrieval                        | ⏳ Planned                           |
+| 13.12  | Opportunity Cost Scoring — Packer Exclusion Tracking   | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 14.2  | Topological Hierarchy & Zoomable Retrieval (RAPTOR)   | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
@@ -1738,6 +1743,42 @@ Two complementary surfaces over the existing `state.json` graph — no new data,
 
 ---
 
+## 🗿 Phase 7.17: Keystone Index — Entity Impact-to-Size Ratio — ⏳ Planned
+
+**Layman's Terms**: Some small, simple entities hold up the entire graph — change them and everything breaks. Others are large and complex but changing them only affects themselves. The Keystone Index measures the ratio: a small entity with huge cascade impact gets a high keystone score and is flagged as low-touch.
+
+**Technical Terms**: Compute `keystoneScore = cascadeSize / entityComplexity`. `cascadeSize = number of unique entities reachable via inbound depends_on/called_by edges within 3 hops` (reuses Phase 6 blast-radius). `entityComplexity = description length (chars) + relationship count + edge complexity`. Entities in the top 10% of keystone scores are flagged as "keystones" — their deletion would create disproportionate damage. CLI: `cortex audit --keystones` surfaces top keystones. Graph viewer renders keystones with a distinct visual marker (crown icon).
+
+**DoR**: Phase 6 blast-radius propagation and entity schema are stable.
+
+**DoD**: Keystone score computed and persisted. `cortex audit --keystones` surfaces top entities. Graph viewer marks keystones. Tests: leaf entity (low keystone), dense small hub (high keystone), complex entity with few dependents (low keystone).
+
+---
+
+## 🛡️ Phase 7.18: Regulatory Suppression — Alert Correlation Dampening — ⏳ Planned
+
+**Layman's Terms**: When a major refactor touches 50 files, Phase 16 contradiction detection might fire 20 alerts. That's not 20 independent problems — it's 1 root cause (the refactor) causing 20 symptoms. Phase 7.18 detects when alerts are correlated and collapses them into one root-cause warning instead of a noise storm.
+
+**Technical Terms**: Add a regulator pass in the Phase 16/17 alert pipeline. When `alertDensity = alertsPerMinute > threshold(5)` within a sliding 30-minute window, compute pairwise `jaccardSimilarity` of the source entity sets of each alert. If >0.6 of alerts share ≥70% entities, they are correlated. Correlated alerts are collapsed into a single composite warning with `{ rootCause: mostCentralEntity, symptomCount: N, affectedEntities: [...] }`. The regulator also applies a suppression cool-down: after one correlation collapse, no new individual alerts from the same entity set are emitted for 1 hour. CLI: `cortex audit --alerts` shows both raw and collapsed counts.
+
+**DoR**: Phase 16 contradiction detection and Phase 17 self-consistency are stable.
+
+**DoD**: Alert density threshold triggers regulation. Correlated alerts collapsed into composite warnings. Suppression cool-down prevents re-emission. Tests: isolated alerts (no correlation, pass-through), correlated alerts (collapsed), high density with no correlation (pass-through, no false collapse).
+
+---
+
+## ⚡ Phase 7.19: Synaptic Tagging — Retroactive Importance Boost — ⏳ Planned
+
+**Layman's Terms**: When you create a highly important entity, the system looks back at weak entities created in the recent past that are related to it. If a weak entity shares topics with a newly important one, it gets an importance boost — the new entity "captures" the old one, strengthening both.
+
+**Technical Terms**: When an entity is created with `quality_score > 0.7` (strong entity), search for entities created within the past 48 hours that share ≥30% entity overlap (via Szymkiewicz-Simpson coefficient on shared `relationships[].target`). Matching weak entities (`quality_score < 0.5`) receive: `quality_score += 0.25 * overlapCoefficient`, `importance += 0.1`. This mimics synaptic tagging and capture (Frey & Morris 1997): the strong entity's "plasticity-related proteins" are captured by tagged weak synapses. Window configurable via `CORTEX_TAG_WINDOW_HOURS` (default 48). Admin: `cortex audit --tagged` shows recently boosted entities.
+
+**DoR**: Phase 7.5 quality scoring and entity relationship schema are stable.
+
+**DoD**: Strong entity creation triggers backward scan. Matching weak entities receive boost. Configurable window. Tests: strong entity with recent weak relative (boost applied), strong entity without recent weak relatives (no-op), stale window (entity outside window, no boost).
+
+---
+
 ## 💾 Phase 8.1: Live Graph Stream (WebSocket) — ⏳ Planned
 
 **Layman's Terms**
@@ -1924,6 +1965,18 @@ Expose a BFS-based pathfinding query over the relationship graph in `state.json`
 **DoR**: Phase 6 typed relationships and Phase 13.2 community detection are stable.
 
 **DoD**: Inertia score computed and persisted. `cortex impact` shows inertia. `cortex audit --high-inertia` surfaces top entities. Tests: leaf entity (low inertia), central hub (high inertia), cyclic dependency (high cyclic depth), empty graph (no-op).
+
+---
+
+## ⚠️ Phase 9.3: Hyrum's Law — Implicit Dependency Detection — ⏳ Planned
+
+**Layman's Terms**: Every observable behavior of an entity gets depended on by someone — even undocumented ones. If entity A happens to always return entities in a certain order, and entity B depends on that order, changing A's behavior breaks B in unexpected ways. Phase 9.3 detects these implicit dependencies by analyzing which entities' observable properties (relationship patterns, description structure, embedding neighborhood) downstream entities actually rely on.
+
+**Technical Terms**: Extends Phase 9 impact preview with implicit dependency detection. Compute per entity: (1) **observable surface** — all fields on `EntityRecord` that vary between entities of the same type (description length, relationship count, relationship kind distribution, embedding neighborhood), (2) **downstream sensitivity** — for each dependent entity, check if its quality score drops when the upstream entity's observable surface changes (via Phase 20.12 temporal log). If `P(qualityDrop | upstreamChange) > 0.6`, mark an implicit dependency edge. CLI: `cortex impact <entity> --implicit` shows both explicit and implicit dependents. `cortex audit --implicit-deps` surfaces entities with the most implicit dependents (high-risk refactoring targets).
+
+**DoR**: Phase 9 impact preview and Phase 20.12 temporal log are stable.
+
+**DoD**: Implicit dependency edges computed and queryable. `cortex impact --implicit` surfaces them. Tests: entity with no downstream quality correlation (zero implicit deps), entity with strong correlation (implicit deps detected), stable entity (no change history, no data).
 
 ---
 
@@ -3780,6 +3833,18 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **Pros & Cons**
 - ✅ **Pros**: Catches a genuine blind spot in forward-only traversal — hub-dependent entities that are structurally important but not locally reachable. No new data structures. ~30 lines of traversal logic. Complements Phase 13.8.2 (co-edit weighting) which is behavioral signal — this is structural signal.
 - ❌ **Cons**: Adds ~1 extra BFS per context pack per hub (capped at top 5% of entities). On a 500-entity graph with 2-hop depth, this is <10 extra traversals of <50 nodes each — negligible overhead. Hub selection is sensitive to PageRank quality — stale PageRank scores produce stale hub sets.
+
+---
+
+## 💰 Phase 13.12: Opportunity Cost Scoring — Packer Exclusion Tracking — ⏳ Planned
+
+**Layman's Terms**: Every time the context packer has to choose between entities under token budget, it makes a tradeoff. Phase 13.12 logs what was excluded and why. Over time, entities that are frequently excluded despite high relevance scores get boosted — the system learns that it's consistently making the wrong tradeoff.
+
+**Technical Terms**: Add `opportunityLog` to the context packer: each assembly run appends `{ entityId, priorityScore, excludedAt, reason }` for every candidate entity that passed relevance filtering but was excluded by the budget cap. Accumulate `exclusionCount` and `avgPriorityWhenExcluded` per entity per time window. An entity with `exclusionCount > 10` AND `avgPriorityWhenExcluded > 0.7` gets `priorityBoost: 0.1` applied to its base priority score (Phase 13 ranking). CLI: `cortex pack --audit` shows top 5 excluded entities per assembly for debugging. MCP: `get_packer_opportunity_cost(entityId?)`.
+
+**DoR**: Phase 13 context packer and relevance scoring are stable.
+
+**DoD**: Opportunity log accumulated per assembly. Auto-boost applied to frequently-excluded high-priority entities. `cortex pack --audit` surfaces exclusions. Tests: entity never excluded (no boost), entity excluded with high priority (boost applied), empty pack (no-op).
 
 ---
 
