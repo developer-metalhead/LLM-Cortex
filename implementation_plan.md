@@ -1425,6 +1425,7 @@ Instead of just checking basic code style or linting rules, Cortex analyzes the 
 Implement structural graph metrics and review-time advisory prompts in the `OrgConstraintEvaluator` and a new `cortex review-advisory` CLI engine:
 - **Untested Hub Detector**: Cross-references PageRank centrality scores (from Phase 10) against entity relations. If a node is in the top 20% of centrality but has zero `called_by` or `depends_on` relationships with `*test*` or `*spec*` entities, flag it as an untested hub.
 - **Architectural Surprise (Unexpected Coupling) Detector**: Evaluates graph distance and community membership (Leiden communities from Phase 13.2). If a new relationship is synthesized that crosses two distinct, previously decoupled communities, flag a "surprise edge" warning.
+- **Hidden Coupling Detector**: Cross-references Phase 13.8.2 co-edit weights against the explicit dependency graph. If two entities have co-edit weight > 0.5 but no direct or transitive dependency edge, flag a hidden coupling advisory — these entities always change together despite having no modeled relationship. The missing edge should likely exist, or the structural coupling should be investigated. Advisory severity scales with co-edit weight.
 - **Advisory Generator**: Exposes a new MCP tool `get_review_advisories(diff)` that computes the blast radius of the diff (using Phase 6) and returns targeted warning prompts (e.g. "authController is a central hub. Verify routes.ts handles the new token error. No tests detected for authController").
 
 **Definition of Ready (DoR)**
@@ -3517,6 +3518,8 @@ density_score = relevanceToQuery / descriptionTokenCount
 
 Entities with high density (compact, signal-rich descriptions) are preferred over verbose entities with equivalent total relevance. This is a refinement of existing packer scoring (Phase 13 centrality x quality), not a new system.
 
+**Irreducible entity detection**: entities whose description resists compression (compression ratio > 0.8 — the shortest faithful summary is still 80%+ of the full text) are flagged as `irreducible`. Irreducible entities are exempted from the density penalty: their packer score reverts to raw `relevanceToQuery` without the density multiplier, preventing the scanner from penalizing complexity that can't be usefully compressed.
+
 **Definition of Ready (DoR)**
 - Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
 
@@ -3755,6 +3758,8 @@ A disambiguation question is a structured object — `{ id, file, summary, optio
 
 - ✅ **Pros**: Self-consistency is well-validated in the literature as a quality signal and is calibration-free — it requires no model-emitted confidence. Surfaces low-confidence syntheses for human input _exactly_ where input is most useful, without forcing review on the ~95% of syntheses where the model is consistent. Provides a clean experimental surface: _what fraction of disagreement cases, on real corpora, correspond to genuine architectural ambiguity vs LLM noise?_ That measurement is publishable.
 - ❌ **Cons**: _N×_ token cost on every synthesis call. Mitigated by opt-in env-var gating and by Phase 14 clustering reducing per-synthesis size. Disambiguation queue can grow unbounded if the user ignores it — mitigated by overflow refusal and surfacing the count in `cortex status`.
+
+**Synthesis drift detection**: monitor consecutive syntheses of the same entity for diminishing description variance. If the last N syntheses (default N=5) produce near-identical descriptions (cosine similarity > 0.95 on description embedding) while the source code context has measurably changed (non-trivial git diff between syntheses), flag the entity as `stuck` — the Librarian is re-scribing prior output rather than re-evaluating from evidence. Stuck entities are surfaced in `cortex audit quality` with a `stuck` signal and routed to Phase 23 human review for forced re-synthesis.
 
 ---
 
@@ -4683,6 +4688,8 @@ Integrates with Phase 7's `cortex evolution --replay --at <commit>` at a finer g
 - ✅ **Pros**: Enables genuinely useful queries: "when did this dependency get introduced?", "what did the architecture look like before the auth migration?", "which edges have been added in the last week?" — all O(graph) instead of O(log replay). Temporal KG is a well-established research area, so the data model is on solid ground. The bitemporal distinction (validity vs. event time) is the right level of rigor for an architectural memory tool — it's how databases handle this (SQL:2011 system-versioned tables).
 - ❌ **Cons**: Doubles the relationship field count (every edge gains 2-3 extra fields). Mitigated by the fields being small (timestamps) and persisted only in `state.json`, not in human-readable markdown. Soft-delete semantics (entities retained with `removed: true`) accumulate cruft over time; mitigated by an optional `cortex prune --before <date>` command that hard-deletes old soft-deleted records (explicit user invocation).
 
+**Temporal Consistency Correction**: When a later synthesis produces entity content or relationships that contradict an earlier version, the temporal graph retroactively corrects the earlier record — the contradiction is annotated (not overwritten), marking it as `supersededBy: <newer_version_ref>`. This ensures temporal queries always see a self-consistent timeline. Separately, when source code changes invalidate the evidence chain of an older synthesis (e.g., the file line range an entity referenced no longer exists), the evidence chain is traced backward through the temporal graph and each affected entity's confidence score is decayed proportionally to the evidence distance from the invalidated source. Builds on Phase 7's `evidenceDrift` field and Phase 16's contradiction detection.
+
 ---
 
 ## 🎒 Phase 20.13: Pattern Skill Library — ⏳ Planned
@@ -4755,6 +4762,8 @@ Lifecycle:
 
 - ✅ **Pros**: VOYAGER's skill library is a high-profile lifelong-learning paper (TMLR 2024, 800+ citations). The "your team did this before, here's how" framing is uniquely valuable — most static refactoring tools give generic advice; Cortex's skill library gives team-specific historical precedent. The library compounds in value: more successful refactors → better future suggestions. Reuses Cortex's existing log, quality, and embedding infrastructure.
 - ❌ **Cons**: Skill harvesting depends on outcome signals — without Phase 15 (CI), Phase 7.5 (quality), and ideally Phase 23 (review), the harvester has weaker "successful" signals. Mitigated by graceful degradation: weaker signals produce fewer skills, not wrong ones. Skill quality varies with team behavior — a team that resolves anti-patterns poorly harvests poor skills. Mitigated by the manual `cortex skills remove` escape hatch.
+
+**Emerging Pattern Detection**: beyond harvesting known refactors, monitor the entity graph for spontaneously-repeating subgraph topologies. When the same entity-neighborhood shape appears in 3+ independent locations without a shared synthesis event, flag it as an emergent pattern — an implicit architecture forming without design intent. Surface via `cortex skills list --emergent`. Patterns matching known anti-pattern shapes (god-module, cycle) escalate to advisory; patterns matching desirable shapes annotate the entity with `_emergentPattern: "<name>"` for the skill library to learn from.
 
 ---
 
@@ -5153,6 +5162,8 @@ CLI: `cortex surprise log [--top N]` — ranked list of most-surprising recent s
 
 - ✅ **Pros**: Free Energy Principle is the most-cited unified theory in computational neuroscience. Predict-then-update is a research-validated paradigm. The surprise leaderboard is genuinely useful — it surfaces the most architecturally anomalous changes, exactly where bugs and architectural drift hide. Reuses Phase 19's distilled Librarian without new infrastructure.
 - ❌ **Cons**: Surprise threshold tuning matters — too low and every sync is "surprising," too high and nothing surfaces. Mitigated by exposing the threshold and documenting calibration via empirical observation. Requires Phase 19 distillation for cost-efficient prediction.
+
+**Prediction circularity guard**: when a prediction influences the synthesis outcome such that it becomes self-fulfilling, detect the circular dependency and flag it. Detection: compare the predicted entity state (pre-synthesis) against the synthesized state (post-synthesis). If post-synthesis matches prediction more closely than pre-synthesis by a suspicious margin (Jaccard > 0.9 vs pre-synthesis Jaccard < 0.5 with source), the synthesis was likely biased by the prediction. Logged as `predictionParadox` in `log.jsonl` with references to both prediction and synthesis. Surfaced via `cortex predict log --paradoxes`.
 
 ---
 
