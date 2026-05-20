@@ -55,6 +55,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
 | 13.9  | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
+| 14.2  | Topological Hierarchy & Zoomable Retrieval (RAPTOR)   | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
 | 17    | Active Disambiguation via Self-Consistency             | ⏳ Planned (research-grade)          |
@@ -2557,6 +2558,38 @@ Introduce a deterministic clustering step that runs _before_ the LLM synthesis c
 
 - ✅ **Pros**: Directly improves synthesis quality on the class of diffs where it degrades today — large, cross-cutting changes. Each cluster is small enough for the LLM to reason about precisely. Costs more tokens per large sync (N synthesis calls instead of 1), but produces N focused entries instead of 1 vague one — net knowledge quality improves.
 - ❌ **Cons**: Adds latency on large syncs (N sequential or parallel LLM calls). Parallel calls are faster but multiply the concurrent API load; sequential calls are safer but slower. Default to sequential; expose a `CORTEX_CLUSTER_PARALLEL=true` flag for users on rate-limit-generous API tiers. The edge-merge heuristic can over-merge tightly coupled directories into one large cluster — mitigated by capping each cluster at `2 × CORTEX_CLUSTER_THRESHOLD` files and splitting oversized merged clusters by sub-directory.
+
+---
+
+## 🗂️ Phase 14.2: Topological Hierarchy & Multi-Tier Zoomable Retrieval (RAG-RAPTOR Adaptation) — ⏳ Planned
+
+**Layman's Terms**
+Supercharge your AI assistant with the ability to "zoom in and out" of your codebase like Google Maps. Instead of feeding the AI massive blocks of detailed code for every file, Phase 14.2 groups your files into their physical folder directories and creates a tiny, 3-sentence "cheat-sheet" summary for each folder. When working on a task, the AI gets the full, detailed code for the exact file you are changing, public names for surrounding files, and only the 1-page folder summaries for distant code. This keeps the AI laser-focused, prevents brain fog, and cuts your AI token bills by up to 70% with zero lag.
+
+**Technical Terms**
+Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval) framework using your workspace directory topology:
+1. **Topological Hierarchy Mapping (`state.json`)**: During ingestion, map directories as abstract parent nodes in the logical dependency graph. Concrete file entities are mapped as child nodes (`child_of`) based on their physical folder paths.
+2. **Deterministic Folder Summarization (`directory_summary.md`)**: When a directory has structural changes (files added, deleted, or moved), the Librarian compiles a high-level summary of the module's unified role, boundaries, and public API, written to `.knowledge/entities/[dir_name]_summary.md`. No summary is generated for unchanged directories.
+3. **Multi-Tier Zoomable Context Packing (`src/knowledge/packer.ts`)**: When compiling a token-bounded context pack:
+   - **Target Tier (100% detail)**: Full layered page (`## Role`/`## Interface`/`## Behavior`/`## Wiring`) for the active edit target.
+   - **Neighborhood Tier (40% detail)**: Truncated `## Role` + `## Interface` signatures only for 1-hop dependencies.
+   - **System/District Tier (10% detail)**: The `directory_summary.md` parent node only for 2+ hop nodes.
+4. **Self-Cleaning Directory Garbage Collection**: If a directory is emptied during file refactoring/moves, its logical node in `state.json` and its summary file on disk are automatically garbage collected and deleted during the next sync pass.
+
+**Definition of Ready (DoR)**
+- Phase 8.2 (Obsidian Vault Compliance) and Phase 13 (Token Economics) are completed.
+
+**Definition of Done (DoD)**
+- **Deterministic Parent Mapping**: Directory parent nodes and child relationships are successfully serialized inside `state.json`.
+- **Automated Directory Summary Generation**: Compilation of `[dir_name]_summary.md` is successfully triggered on directory additions or structural changes, and garbage-collected when directories physically empty out.
+- **Dynamic Zoomable Context Packs**: The context packer correctly trims neighborhood and distant nodes based on graph hop distance, proving a >= 50% token reduction compared to flat raw loading on the same neighborhood.
+- **Obsidian Visual Integration**: Directory summaries render as **Teal Turquoise (`#0D9488`)** hub nodes connecting their children in Obsidian's visual graph view.
+- Direct query endpoints (like `read_entity`) are completely unaffected and continue to return 100% of raw content when explicitly queried (no dynamic truncation).
+- Tests cover: hierarchy compilation, directory addition/deletion triggers, self-cleaning garbage collection, dynamic zoom trimming logic, and direct query contract compatibility.
+
+**Pros & Cons**
+- ✅ **Pros**: Massive context window token and cost savings (up to 70% reduction); prevents AI "lost-in-the-middle" issues by maintaining high conceptual focus; enhances Obsidian visual structures into clean topological constellations.
+- ❌ **Cons**: Relies on sensible codebase folder structures to operate at peak efficiency (flat root repositories collapse into a single broad summary); directory summaries require a single cheap LLM compilation pass when folders structurally change.
 
 ---
 
