@@ -3414,6 +3414,9 @@ A new module that ingests CI run results (success / failure / which tests failed
 Cortex already detects when new code contradicts the existing knowledge — _"the auth module is documented as JWT but the new code uses cookies."_ Today those contradictions are logged inline in `log.md` and then forgotten. Phase 16 promotes the contradiction history into a queryable graph: when a developer or AI reads `[[AuthService]]`, the response surfaces every unresolved contradiction touching that entity. Future syntheses see the contradiction history in CURRENT CONTEXT and can no longer silently re-introduce rejected patterns.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Paraconsistent Logic**
+> *Source Domain:* Mathematical Logic / Philosophy.
+> Standard classical logic "explodes" when it encounters a contradiction (if A and Not-A are both true, anything can be proven). But legacy codebases are fundamentally contradictory. Paraconsistent logic frameworks are designed to tolerate localized contradictions without corrupting the entire knowledge system. Cortex treats contradictions not as errors to be panicked over, but as stable, queryable topological features. The graph holds "Auth is JWT" and "Auth is Session" simultaneously, tagging the contradictory edge, preventing global state corruption while isolating the discrepancy for human review.
 Promote `warnings[]` (today a per-log-entry free-form string array) into a first-class contradiction graph. Each warning containing `[[WikiLink]]` references is parsed into a directed edge between the referenced entities/concepts, stamped with the synthesis event that produced it and a mutable status. The graph is queryable via CLI, surfaced in `read_entity` / `read_concept` MCP responses, and injected into CURRENT CONTEXT for entities touched by the next synthesis.
 
 - **Schema (additive)**: a new top-level `contradictions[]` array in `state.json` — `{ id, between: [name1, name2], summary, recordedAt, sourceSynthesis, status: "open" | "resolved" | "muted", resolution?: { note, resolvedAt } }`. Existing `warnings[]` arrays in `log.md` stay; `contradictions[]` is a structured projection on top.
@@ -3459,6 +3462,10 @@ Promote `warnings[]` (today a per-log-entry free-form string array) into a first
 Sometimes the AI is sure about what a code change means; sometimes it's guessing. Today Cortex treats both the same — it just writes down whatever the AI said. Phase 17 makes Cortex sample the AI's synthesis multiple times at the same input and check whether the answers agree. When they agree, it commits silently. When they disagree, it surfaces a short structured question — _"Did this change introduce `[[OAuth2Strategy]]` or modify the existing `[[JWTStrategy]]`?"_ — and waits for an answer before persisting. The user (or an IDE agent) picks one; Cortex commits with that choice. The "confidence" signal is structural inter-sample agreement, not an LLM-emitted number.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Quantum Superposition & Wave Function Collapse**
+> *Source Domain:* Quantum Mechanics.
+> When an LLM evaluates a highly ambiguous code change, multiple architectural interpretations may be valid simultaneously. Instead of forcing the LLM to greedily pick one (which leads to hallucinations), Cortex places the architectural state in "superposition" — it holds multiple contradictory interpretations in memory as uncommitted possibilities. When a human developer answers a clarifying prompt, that "observation" collapses the wave function, forcing the system into a single, verified truth state that is then committed to the knowledge graph.
+
 Implement self-consistency sampling (Wang et al., 2022 — _Self-Consistency Improves Chain of Thought Reasoning in Language Models_) as a synthesis-quality signal. For each synthesis call, sample the Librarian _N_ times (default _N=3_) at non-zero temperature, structurally diff the outputs, and route by inter-sample agreement. Supports multi-model consensus verification checks: when running in multi-provider mode, queries are routed to two different providers (e.g. Claude and Gemini) and cross-verified via a consensus checker to calculate a confidence score (0-100%) and resolve discrepancy before committing.
 
 - **Full agreement** (all _N_ samples produce equivalent entity sets and equivalent action verbs per entity): commit silently. This is the dominant case on routine diffs.
@@ -3536,6 +3543,10 @@ Implement a multi-model architectural debate command: `cortex debate <entity-nam
 Cortex understands structure (the typed dependency graph) and Cortex understands text (the synthesised descriptions). Phase 18 fuses them into a single vector per entity, so a question like _"which other entity is architecturally most similar to `[[AuthService]]`?"_ can be answered numerically without re-reading the whole index. The embeddings also become the substrate for Phase 19's distilled Librarian and a link-injection assist for Phase 6.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Poincaré Embeddings (Hyperbolic Geometry)**
+> *Source Domain:* Differential Geometry / String Theory.
+> Standard vector databases use flat (Euclidean) space. But software architecture and dependency graphs are highly hierarchical (trees and DAGs). In flat space, trying to embed a deep tree forces nodes at the edges to crowd together, losing fidelity. In hyperbolic space (specifically the Poincaré ball model), volume grows exponentially as you move outward from the origin—perfectly matching the capacity needed for hierarchical software structures. By switching from cosine similarity in Euclidean space to hyperbolic distance, Cortex can perform zero-hallucination structural code search and cluster deep dependency trees with massive accuracy improvements.
+
 For each entity, compute a hybrid embedding that fuses three signals:
 
 - **Text embedding** of the entity description + concatenated `evidence[].content` snippets (Phase 7), via a small open-weight encoder (default `bge-small-en-v1.5`, 384-d, CPU-friendly).
@@ -3722,11 +3733,15 @@ Some parts of the codebase are just more dangerous than others — they change c
 **Technical Terms**
 Grounded in Nagappan & Ball (ICSE 2008): network analysis on a dependency graph predicts which modules are most defect-prone — 10% higher recall than complexity metrics alone on the Windows Server 2003 dataset. Cortex already has the dependency graph (Phase 6 `relationships[]`), CI failure history (Phase 15 `ciSignal`), and entity churn (derivable from `log.jsonl`). Phase 20.2 combines them into a defect-prediction surface with no LLM in the computation path.
 
+> 🔬 **Scientific Foundation: Hawkes Processes (Self-Exciting Point Processes)**
+> *Source Domain:* Seismology / Quantitative Finance.
+> In seismology, an earthquake drastically increases the probability of aftershocks in the immediate area. Hawkes processes model this "self-exciting" mathematical decay. In software, a bug fix in a file is an "earthquake" that increases the probability of another bug in that *same* file or its dependency neighbors within 48 hours. By applying Hawkes math, Cortex doesn't just look at static churn; it models the temporal decay of risk, dynamically warning users: *"This file was part of a major refactor 12 hours ago. Hawkes probability of a hidden regression is 84%."*
+
 Per-entity hotspot score fusing three signals:
 - **Churn score**: count of synthesis events touching the entity in a rolling window (default 90 days), normalized to [0, 1] against the max-churned entity.
 - **Centrality score**: Phase 8/10's PageRank over the typed dependency graph. High centrality = many entities depend on this one; a bug here cascades.
 - **CI failure rate**: from Phase 15's `ciSignal` — `redRunsSince / (greenRunsSince + redRunsSince)`. Defaults to 0.5 (neutral) when no CI data exists.
-- **Hotspot score**: `churn × centrality × (1 + ci_failure_rate)` — entities that are heavily modified, highly coupled, and frequently fail CI score highest. Formula weights are configurable via `CORTEX_HOTSPOT_WEIGHTS`.
+- **Hotspot score (Hawkes-adjusted)**: `churn × centrality × (1 + ci_failure_rate) × hawkes_decay_factor` — entities that are heavily modified, highly coupled, and frequently fail CI score highest. Formula weights are configurable via `CORTEX_HOTSPOT_WEIGHTS`.
 
 CLI:
 - `cortex predict hotspots [--top N] [--since DATE]` — ranked hotspot list with scores and contributing factor breakdown.
@@ -3827,6 +3842,10 @@ MCP tool: `get_pattern_suggestions(entity?)` for IDE surface.
 You can write unit tests to make sure your code doesn't break. Phase 20.4 gives you "architecture tests" — rules like "the dependency graph must never have cycles," "no single entity can have more than 15 incoming dependencies," or "at least 80% of entities must have CI evidence." These run in CI automatically. When the architecture drifts outside the bounds the team agreed on, the build fails and the team is alerted — before it ships.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Fitness Landscapes & Pareto Frontiers**
+> *Source Domain:* Evolutionary Biology / Mathematical Economics.
+> In evolution, there is no single "perfect" organism—only peaks and valleys on a multidimensional fitness landscape. Similarly, in software architecture, there is no perfect design, only trade-offs (e.g., Latency vs. Memory vs. Maintainability). Instead of enforcing a rigid binary rule, Phase 20.4 maps the architecture onto a Pareto Frontier. When Cortex evaluates fitness functions, it charts the architecture's trajectory on this landscape, warning the team when an evolution optimizes one dimension (e.g., speed) at the critical expense of another (e.g., coupling), keeping the system on the optimal evolutionary frontier.
+
 Grounded in Ford, Parsons, Kua — "Building Evolutionary Architectures" (O'Reilly, 2017). Fitness functions are automated governance checks that verify the architecture remains within acceptable bounds as the system evolves — the architectural equivalent of unit tests. Phase 20.4 implements them as declarative YAML evaluated by `cortex fitness`, intentionally distinct from Phase 6's entity-level constraints (per-entity import rules) and Phase 7.5's org constraints (domain-level rules). Fitness functions are systemic: they measure properties of the entire graph at a point in time.
 
 Pre-built fitness function library (initial set):
@@ -4207,6 +4226,9 @@ MCP tool: `read_community(name)` returns a community summary for IDE consumption
 When you ask Cortex "which entities are likely affected if I change the JWT validator?", today it does a one-hop dependency lookup. But the real answer might be three hops away — the JWT validator is used by the auth middleware, called by the API gateway, which serves payment endpoints. Phase 20.10 implements hippocampus-inspired retrieval: it does one mathematical computation (Personalized PageRank) that captures all multi-hop reachability at once. Faster, more accurate, and grounded in cognitive science research (HippoRAG, OSU 2024).
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Hippocampal Indexing Theory**
+> *Source Domain:* Cognitive Neuroscience.
+> The hippocampus doesn't store memories; it stores the *index* of cortical patterns. Cortex's vector DB shouldn't store code; it should store the *activation patterns* of how concepts link, acting as an index to pull the raw code from the disk only when needed. This allows for lightning-fast multi-hop retrieval without context explosion.
 Personalized PageRank (PPR) based multi-hop retrieval over the typed dependency graph. Given a query entity (or set), the personalized PageRank vector is computed with restart probability anchored to the query, yielding a relevance score for every entity in the graph that captures multi-hop reachability in one computation.
 
 Pipeline:
@@ -4327,6 +4349,10 @@ Together these establish a representation pattern: every fact carries `(validFro
 Today Cortex tells you what the architecture is *right now*. It can't tell you what it was last month — "did AuthService depend on JWT then?" or "when did we switch from sessions to OAuth?" Phase 20.12 adds time-validity intervals to every relationship: each `depends_on` edge has a `validFrom` and (optionally) `validTo`. Cortex can now answer time-travel queries directly without replaying the entire JSONL log. This is the temporal knowledge graph pattern from KG research (TNTComplEx, TimePlex), applied to Cortex's architecture graph.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Minkowski Spacetime (Worldlines)**
+> *Source Domain:* Special Relativity / Physics.
+> In relativity, objects don't just exist in space; they travel along "worldlines" through spacetime. Cortex treats entities exactly like this. An entity isn't a static point in `state.json`; it's a worldline. A bug isn't a bad state; it's an event intersection in spacetime. By adopting this physics-based topology, Cortex can trivially answer questions like *"What did this architecture's spacetime volume look like relative to the Auth migration event?"* without brute-force log replay.
+
 Time-aware extension to the entity relationship model. Each edge in `state.json.entities[].relationships[]` gains:
 
 - `validFrom: ISO 8601 timestamp` — when the relationship was first observed (the synthesis event that introduced it).
@@ -4459,6 +4485,10 @@ Lifecycle:
 Today Cortex tells you "AuthService and SessionStore are related" but doesn't tell you whether changing AuthService will *cause* SessionStore to break, or whether they're correlated through some shared parent dependency. Phase 20.14 builds a causal model over the architecture: when you ask "what happens if I remove the JWT library?", Cortex answers using Pearl's do-calculus — the same math the FDA uses to evaluate drug interventions — to give a causal answer, not just a correlational one. Root-cause analysis ("which entity is the likely origin of this failure?") becomes a first-class query.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Pearl's Do-Calculus ($do(X)$)**
+> *Source Domain:* Causal Inference (Judea Pearl).
+> The system distinguishes between *correlation* (X and Y change together) and *causation* (intervening to change X *causes* Y to break). Cortex uses structural causal models to mathematically prove if a refactor will break a downstream service, answering counterfactual queries like *"What would have happened to the payment service if the auth module had not been migrated?"*
+
 A structural causal model (SCM) layer over the Phase 6 typed dependency graph. Each `depends_on` edge gains a `causalStrength: number` (0-1) derived from observed change-propagation in `log.jsonl`: if changes to A historically caused changes to B within N syncs, the A→B edge gains causal strength proportional to the conditional probability `P(change_B | change_A)` over the empirical history.
 
 Three new query types:
@@ -4624,6 +4654,10 @@ CLI: `cortex sync --agents <list>` overrides activation (e.g., `--agents archite
 Humans don't just accumulate facts — they sleep, and during sleep the brain reorganizes what was learned that day into deeper patterns. Today Cortex just keeps adding entities forever. Phase 20.17 adds a "sleep" phase: every N syncs (or nightly via cron), Cortex runs a consolidation pass that merges duplicate concepts, archives resolved contradictions, generates higher-order pattern insights, and prunes truly dead entities. The knowledge base stays sharp instead of accumulating as cruft.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Sleep Consolidation (Synaptic Downscaling)**
+> *Source Domain:* Sleep Biology / Neuroscience.
+> During sleep, the brain replays the day's events, compresses memories, and prunes weak synaptic connections (Synaptic Homeostasis Hypothesis). Cortex replicates this: when the IDE is closed or idle at 3 AM, a background daemon replays the day's git commits, compresses the knowledge graph, prunes dead synaptic weights (using Oja's rule from Phase 13.8), and even hallucinates possible refactorings (dreams) to test architectural stability for the next day.
+
 A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Five operations:
 
 1. **Duplicate merging**: identify entities with high Phase 18 embedding similarity (>0.9) AND overlapping `sourceFile` paths AND no distinguishing relationships. Propose merge candidates; user applies via `cortex consolidate --apply-merges`.
@@ -4790,6 +4824,9 @@ MCP tool: `edit_entity(entity, field, value, reason?)` for IDE-assisted surgical
 Today Cortex is reactive — it waits for a code change, then synthesizes. Phase 20.20 makes it predictive: before you commit a change, Cortex predicts what synthesis it expects based on past patterns. When your actual change matches the prediction, the system is unsurprised and synthesizes quickly. When your change is wildly unexpected ("you just imported a payment library in the auth module — never seen that before"), the system surfaces *surprise* as a signal: "this is unusual relative to your codebase's pattern — worth a careful look." Inspired by Karl Friston's Free Energy Principle.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Predictive Coding (Free Energy Principle)**
+> *Source Domain:* Neuroscience (Karl Friston).
+> The brain doesn't react to stimuli; it constantly predicts what will happen and only processes "surprise" (prediction errors). Cortex should predict what files you will edit next based on historical dependencies. If you edit something expected, synthesis is fast. If you edit something else, that "surprise signal" triggers a heavy re-indexing of that specific edge. By minimizing surprise (Free Energy), Cortex actively pulls the developer back toward established architectural patterns.
 A predictive model over the synthesis distribution: P(synthesis | diff, current_context). On each diff:
 
 1. **Prediction step**: a fast prediction LLM call (Phase 19 distilled Librarian) generates an *expected* synthesis given the diff and CURRENT CONTEXT, *before* the actual synthesis runs.
@@ -8337,6 +8374,10 @@ A meta-architecture release that introduces the Substrate model: every memory pa
 When multiple AI agents work on the same codebase, each one needs its own scratch space — private working memory, hypotheses, intermediate observations — while still sharing the team's canonical architectural knowledge. Phase 41 makes this explicit: every agent gets its own `.knowledge/agents/<agent-id>/` private partition, plus read access to the shared workspace partition at `.knowledge/`. Writes to the shared partition require explicit promotion ("this hypothesis is now confirmed, promote to shared knowledge").
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Stigmergy (Swarm Intelligence / Pheromone Decay)**
+> *Source Domain:* Biology (Ant Colony Optimization).
+> Ants coordinate complex tasks without central command by leaving temporary chemical trails (pheromones) that evaporate over time. In a multi-agent environment (Phase 40+), passing massive JSON state payloads between agents is extremely inefficient. Instead, Cortex uses Stigmergy: when an agent interacts with a file or entity, it leaves a digital "pheromone" tag (e.g., `_active_reasoning_weight`). This weight dynamically decays. If another agent visits that entity, it detects the high pheromone concentration, immediately knowing a teammate is currently reasoning about it, allowing implicit, zero-overhead coordination.
+
 Three-tier memory model per workspace:
 
 - **Private partition** (`.knowledge/agents/<agent-id>/`): per-agent scratchpad. Visible only to the owning agent. Stores ephemeral observations, in-progress hypotheses, agent-specific reflexion traces, agent-specific reasoning chains (Phase 20.24).
