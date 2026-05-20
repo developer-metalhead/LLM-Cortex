@@ -21,6 +21,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5.8   | ~~Multi-Operator Session Coordination~~ → see Phase 56 | ⏳ Planned (moved — agent coordination)    |
 | 5.9   | Shell Status Prompt Integration & Statusline Badge     | ⏳ Planned                           |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
+| 6.1   | Template Entities & Instantiated-From Relationships       | ⏳ Planned                           |
+| 6.2   | Arbitrary Predicate Relationships & Triple-Store Queries | ⏳ Planned                           |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
@@ -29,6 +31,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
 | 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
 | 7.11  | Epigenetic Memory Suppression                          | ⏳ Planned                           |
+| 7.12  | Astronomical Parallax — Perspective Shift Scoring       | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
@@ -37,6 +40,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
+| 10.1  | Spherification — Data Encapsulation for Entity Clusters | ⏳ Planned                           |
 | 10.2  | Smart Rule File Patching & Marker-Fenced Injection     | ⏳ Planned                           |
 | 11    | Monorepo Federation                                    | ⏳ Planned                           |
 | 12    | Git & CI Integration                                   | ⏳ Planned                           |
@@ -89,6 +93,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.13 | Pattern Skill Library (VOYAGER-inspired)               | ⏳ Planned                           |
 | 20.14 | Causal Impact Analysis (Pearl do-calculus)             | ⏳ Planned (research-grade)          |
 | 20.15 | Dual-Process Synthesis (System 1 / System 2)           | ⏳ Planned (research-grade)          |
+| 20.15.1| Protein Folding — Argument Prediction                 | ⏳ Planned                           |
 | 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 58 | ⏳ Planned (moved — agent coordination)    |
 | 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
 | 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
@@ -1123,6 +1128,46 @@ Four related additions, all sharing one schema/migration:
 
 ---
 
+## 🧩 Phase 6.1: Template Entities & Instantiated-From Relationships — ⏳ Planned
+
+**Layman's Terms**
+Define a template entity once → every entity instantiated from it inherits updates when the template changes. Change your "Service" template definition → all 47 services created from it update automatically. Like Figma component tokens or CSS classes — the instance stays linked to its definition.
+
+**Technical Terms**
+Add `instantiated_from` to the relationship kind enum. When a template entity's description or relationships change, all entities with an inbound `instantiated_from` edge pointing to it get `staleSince` flagged (reuses Phase 6 blast-radius propagation). A `cortex template update <name>` command re-applies the template body to all instances.
+
+- **New relationship kind**: `instantiated_from` added to the existing enum in `EntityRecord.relationships[].kind`.
+- **Template detection**: any entity with outbound `instantiated_from` edges is a template. Marked with `isTemplate: true` in `state.json`.
+- **Cascade**: on template mutation, reuses Phase 6's staleness propagation — instances get `staleSince` set, triggering re-synthesis on next sync.
+- **CLI**: `cortex template list` (templates + instance counts), `cortex template update <name>` (propagate template body to all instances).
+- **MCP**: `get_template(name)` and `instantiate_template(name, entities)` tools.
+
+**DoR**: Phase 6 typed relationships are stable.
+
+**DoD**: `instantiated_from` relationship accepted and persisted. Template mutation propagates `staleSince` to all instances. `cortex template list/update` CLIs. Tests: cascade correctness, template detection, instance staleness.
+
+---
+
+## 🔍 Phase 6.2: Arbitrary Predicate Relationships & Triple-Store Queries — ⏳ Planned
+
+**Layman's Terms**
+Today every relationship must be one of 6 kinds: `depends_on`, `called_by`, `supports`, etc. Phase 6.2 removes that constraint — relationships can use arbitrary predicate strings like "validates", "deployed_on", "owned_by". The graph becomes a proper triple-store, queryable with wildcards: `cortex query "? → validates → ?"`.
+
+**Technical Terms**
+Generalize the `kind` field from a constrained enum to an open string (with the 6 original kinds as defaults). Add triple-pattern query support.
+
+- **Schema**: `relationships[].kind` becomes `string` instead of the enum union. The 6 original kinds remain valid and unchanged.
+- **Query CLI**: `cortex query <subject?> <predicate?> <object?>` — each field supports wildcard `?` or `*`. Returns matching triples.
+- **Export**: `cortex export --format nt | turtle` — N-Triples or Turtle format for SPARQL engine ingestion.
+- **MCP**: `query_triples(subject?, predicate?, object?)` tool for IDE agents.
+- **Backward-compatible**: existing enum-only consumers continue to work; Phase 6 constraint validation still checks the original 6 kinds for enforcement (arbitrary predicates are informational, not enforceable until a constraint type is defined for them).
+
+**DoR**: Phase 6 schema is stable.
+
+**DoD**: `kind` field accepts arbitrary strings. `cortex query` returns matching triples with wildcards. N-Triples export produces valid RDF. Tests: query wildcard matching, export format correctness, backward compatibility with existing enum-only consumers.
+
+---
+
 ## ✅ Phase 7: Audit & Traceability Tools — ✅ Done
 
 ### Phase 7 Execution Plan
@@ -1431,6 +1476,7 @@ Implement structural graph metrics and review-time advisory prompts in the `OrgC
 - **Architectural Surprise (Unexpected Coupling) Detector**: Evaluates graph distance and community membership (Leiden communities from Phase 13.2). If a new relationship is synthesized that crosses two distinct, previously decoupled communities, flag a "surprise edge" warning.
 - **Hidden Coupling Detector**: Cross-references Phase 13.8.2 co-edit weights against the explicit dependency graph. If two entities have co-edit weight > 0.5 but no direct or transitive dependency edge, flag a hidden coupling advisory — these entities always change together despite having no modeled relationship. The missing edge should likely exist, or the structural coupling should be investigated. Advisory severity scales with co-edit weight.
 - **Advisory Generator**: Exposes a new MCP tool `get_review_advisories(diff)` that computes the blast radius of the diff (using Phase 6) and returns targeted warning prompts (e.g. "authController is a central hub. Verify routes.ts handles the new token error. No tests detected for authController").
+- **Emergent Insight Generator**: when a new edge is synthesized connecting entities from different graph communities (surprise edge), run a single lightweight LLM prompt: `These two entities were just connected for the first time. What emergent architectural insight does this connection suggest?` The generated insight is auto-persisted via `save_concept` with `derived_from` links to both source entities. Gated by `CORTEX_EMERGENT_INSIGHTS=true` (default: false — opt-in to avoid LLM cost on every surprise edge).
 
 **Definition of Ready (DoR)**
 - Phase 7.5 (Quality & Constraints) and Phase 10 (Centrality ranking) are completed.
@@ -1533,6 +1579,26 @@ Suppressed entities excluded from `read_knowledge_index` and context packs by de
 **Pros & Cons**
 - ✅ **Pros**: Removes context noise without losing institutional memory. A codebase migrated from Redux to Zustand shouldn't have Redux entities polluting every pack — but should still answer "what state management did we use before?"
 - ❌ **Cons**: Adds a new entity lifecycle concept alongside deletion, archival, staleness — users must understand the differences.
+
+---
+
+## 🔭 Phase 7.12: Astronomical Parallax — Perspective Shift Scoring — ⏳ Planned
+
+**Layman's Terms**
+View any entity from two points in time simultaneously. "Here's what you wrote about AuthMiddleware 6 months ago vs. today" — with a quantified score showing how much your understanding shifted. High-shift entities surface first in onboarding because they represent the most intellectual growth.
+
+**Technical Terms**
+Implement `cortex parallax <entity> --ago <duration>` that reconstructs the entity's description at two temporal snapshots (current and past), computes a shift score, and renders a side-by-side diff.
+
+- **Data source**: Phase 7 `cortex evolution` already reconstructs temporal history from `log.jsonl` entries keyed by entity ID. Parallax reads the same log, snapshots the `description` + `relationships[]` at each timestamp, and picks the one closest to `now - ago`.
+- **Shift score**: `editDistance(oldDescription, newDescription) / max(len(old), len(new))` — normalized Levenshtein ratio. Score >0.3 is "high shift" (notable re-understanding). Score >0.6 is "rewrite" (complete conceptual replacement).
+- **CLI**: `cortex parallax authEntity --ago 6m` renders old vs. new with inline diff markers (`+`/`-` lines in the terminal).
+- **Onboarding integration**: Entities with `parallaxScore > 0.3` get boosted in Phase 10 reading paths — "this entity changed significantly since you last saw it."
+- **MCP**: `get_parallax(entityId, ago)` returns `{ old, current, shiftScore, diffLines }`.
+
+**DoR**: Phase 7 evolution commands and `log.jsonl` are stable.
+
+**DoD**: `cortex parallax` renders old vs. new with diff markers. Shift score computed and displayed. Tests: exact-match (score 0), minor-edit (score ~0.2), full-rewrite (score ~0.8), empty-history edge case.
 
 ---
 
@@ -1798,6 +1864,26 @@ A new synthesis _output mode_ — no schema changes, no new data, just a differe
 
 - ✅ **Pros**: Transforms `.knowledge/` from a reference into a teaching artifact. Onboarding is one of the highest-leverage uses of synthesized architectural memory — it's exactly where the "compounding knowledge" pays back for humans, not just AIs.
 - ❌ **Cons**: Centrality ≠ pedagogical value perfectly; some highly-linked entities are utility plumbing, not architecture. Mitigated by letting the Librarian re-rank with semantic judgment after centrality scoring produces the candidate list.
+
+---
+
+## 🫧 Phase 10.1: Spherification — Data Encapsulation for Entity Clusters — ⏳ Planned
+
+**Layman's Terms**
+Group related entities behind a single "sphere" node in the graph. Click a sphere → it bursts open revealing everything inside. The graph stays clean (dozens of nodes collapse into one) while complexity remains one click away. Like folders for your graph.
+
+**Technical Terms**
+Generalize Phase 10's `parent_summary` auto-generation into a user-definable cluster primitive with collapse/expand in the graph viewer.
+
+- **CLI**: `cortex sphere create "Auth System" --entities AuthMiddleware,JWTUtils,TokenConfig,AuthRoutes`. Creates a new entity of type `sphere` with `contains` relationships to each listed entity.
+- **Sphere entity type**: new `EntityType` value `"sphere"` added alongside `"concept"`, `"entity"`, etc. Spheres are not synthesized or scored — they are structural containers only.
+- **Graph viewer**: The 2D Cytoscape renderer (Phase 8) renders sphere nodes as larger, visually distinct circles. Click expands the sphere (replaces the sphere node with its contained nodes). Double-click outside collapses back.
+- **Context packer**: `Packer` treats spheres as atomic units — either include the entire sphere as one entry with `contains: [...]` summary, or exclude it entirely (no partial sphere inclusion). Configurable via `sphereMode: "expand" | "collapse"` in `packer.config.ts`.
+- **MCP**: `create_sphere(name, entityIds)`, `expand_sphere(sphereId)`, `list_spheres()`.
+
+**DoR**: Phase 8 graph viewer and `contains` relationship kind are stable.
+
+**DoD**: `cortex sphere create` creates sphere entities with `contains` edges. Graph viewer renders spheres distinctly. Click expands; double-click collapses. Context packer treats spheres as atomic. Tests: sphere creation, expand/collapse render, packer atomicity.
 
 ---
 
@@ -2716,6 +2802,9 @@ export type MemoryNode = {
     successBias: number;     // Reinforced if outcome is successful
     failureBias: number;     // Reinforced if outcome is unsuccessful
     decay: number;           // Time decay factor
+    certainty: number;       // Confidence in the memory's correctness [0.0 - 1.0]
+    credibility: number;     // Source trustworthiness [0.0 - 1.0]; higher for directly observed vs. inferred
+    energy: number;          // Activation potential [0.0 - 1.0]; decays without reinforcement, spikes on co-occurrence
   };
 };
 
@@ -4928,6 +5017,49 @@ CLI overrides: `cortex sync --force-slow` (always deliberate), `cortex sync --fo
 
 ---
 
+## 🧬 Phase 20.15.1: Protein Folding — Argument Prediction — ⏳ Planned (research-grade)
+
+**Research grounding**: **AlphaFold** (Jumper et al., DeepMind 2021 — *"Highly accurate protein structure prediction with AlphaFold"*, Nature 2021, 30,000+ citations) predicts 3D structure from a 1D amino-acid sequence. Conceptual analog: given a partial reasoning chain (1D argument sequence), predict the logical endpoints (3D conclusions) the chain is folding toward. Operates purely over the graph — no protein data, no model training.
+
+**Layman's Terms**
+When you or Cortex starts an incomplete reasoning chain — "if we move to microservices, then auth needs to be extracted, which means..." — Phase 20.15.1 predicts where that chain is heading. It reads the Partial graph of entities + argument edges and asks "what conclusion does this chain fold toward?" It's AlphaFold for arguments, not proteins.
+
+**Technical Terms**
+Post-20.15 dual-process routing is stable. Adds a lightweight prediction layer that runs over graph chains: given a sequence of entities linked by argument edges (premise → conclusion), predict the most likely missing conclusion.
+
+- **Input**: a subgraph where entities are linked by edges of kind `"premise"` or `"supports"` forming a directed chain (or tree). Extracted from the active synthesis context.
+- **Prediction mechanism**: a single LLM query: `Given these premises in sequence: [...]. What conclusion does this argument chain fold toward? Return a ranked list of up to 3 plausible conclusions, each with a confidence score (0-1).`
+- **Output**: up to 3 predicted conclusions as structured JSON with `{ conclusion: string, confidence: number, evidence: string[] }`. Persisted as draft entities with `predicted: true` flag (not synthesized unless confirmed).
+- **Integration**: invoked by Phase 20.15's System 2 router when the argument chain length exceeds 3 entities. Results appear as `cortex predict --chain <entityIds>`.
+- **Not**: a replacement for System 2 reasoning (Phase 20.18 ToT). It's a fast-lightweight prefix: predict first, then verify with ToT if confidence is low.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/synthesis/folding.ts` (chain extraction + prompt), small hook in `src/synthesis/router.ts` (gated on chain length > 3).
+- **Design Pattern**: Prompt-only — no model, no training, no infrastructure. Reuses existing entities and relationship kinds.
+- **Key Considerations**:
+  - Predictions are **never auto-committed**. They are stored as draft entities (`predicted: true`) and flagged for user review. The user can `cortex promote <predictionId>` to convert to a real entity.
+  - Chain extraction is conservative: only follows edges of kind `"premise"` or `"supports"` — not `"depends_on"` or `"called_by"` — because those are dependency edges, not argument edges.
+  - Works offline (no API call) if the chain is empty or trivially short (≤2 entities). The prompt is only dispatched for nontrivial chains.
+  - False positives (predicted conclusions that are wrong) are harmless because they're never synthesized — they sit as drafts until manually promoted or pruned by Phase 20.17 consolidation.
+
+**Definition of Ready (DoR)**
+- Phase 20.15 dual-process routing stable.
+- `"premise"` and `"supports"` relationship kinds present in the graph (Phase 6).
+
+**Definition of Done (DoD)**
+- `cortex predict --chain <entityIds>` returns ranked predictions with confidence scores.
+- Draft entities created with `predicted: true` flag; not auto-synthesized.
+- Predictions gated on chain length > 3.
+- Test with empty chain (no-op), short chain (≤2, no-op), medium chain (3+, predictions returned), and known-contrived chain (verify prediction quality is plausible).
+
+**Pros & Cons**
+
+- ✅ **Pros**: Novel intellectual framing (AlphaFold analogy), genuinely useful for architectural reasoning, zero infrastructure cost, builds naturally on existing graph structures.
+- ❌ **Cons**: Predictions are LLM-quality — not formal theorem proving. Draft entity pattern mitigates false-positive risk. The "premise" relationship kind needs to be actively maintained by users or auto-detected from commit messages (future work).
+
+---
+
 ## 🎭 Phase 20.16: Multi-Agent Librarian Collaboration — ⏳ Planned (research-grade)
 
 **Research grounding**: **AutoGen** (Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, Awadallah, White, Burger, Wang — Microsoft Research + Penn State 2023 — *"AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation"*, arXiv:2308.08155, ICLR 2024). **MetaGPT** (Hong, Zheng, Chen, Cheng, Wang, Zhang, Wang, Yau, Lin, Zhou, Ran, Xiao, Wu, Schmidhuber — DeepWisdom 2023 — arXiv:2308.00352, ICLR 2024 Oral). **Multi-Agent Debate** (Du, Li, Torralba, Tenenbaum, Mordatch — MIT 2023 — arXiv:2305.14325). **CAMEL** (Li, Hammoud, Itani, Khizbullin, Ghanem — KAUST 2023, NeurIPS 2023). **ChatDev** (Qian, Liu, Zhang, Chen, Dang, Liu, Cong, Sun — Tsinghua 2024, ACL 2024).
@@ -5008,6 +5140,7 @@ A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a s
 4. **Dead entity pruning**: entities with `removed: true` (Phase 20.12) AND no temporal queries against them in 90 days are hard-deleted (with explicit user confirmation per batch).
 5. **Reflection generation**: per Generative Agents pattern, an LLM pass over recent `log.jsonl` events produces "what did we learn this week" insights stored at `.knowledge/reflections/weekly/<date>.md`.
 6. **Synaptic edge pruning**: prune weak edges — relationships where `coEditWeight < 0.05` AND `causalStrength < 0.1` (or absent) AND `lastEvidenceAt > 180 days ago`. Pruned edges archived in `log.jsonl` for potential resurrection if the relationship re-emerges. Keeps the graph honest without human intervention.
+7. **Fermentation Incubation**: Add a `fermentingUntil` optional timestamp on `EntityRecord`. When an entity is marked as fermenting, it is excluded from synthesis (read-only) and excluded from context packs. When `fermentingUntil` expires, the scheduler triggers a notification resurfacing the entity alongside everything learned since it was locked. This operation runs between consolidation passes — entities with expired `fermentingUntil` are re-evaluated: if new connections (edges synthesized during the pause) or new entities with overlapping `sourceFile` now exist, the entity is un-fermented with a summary of "what happened while you were away." If no new connections exist, `fermentingUntil` is extended by the same duration — the entity wasn't ready to resurface. Gated by CLI flag `--ferment` on `cortex consolidate`.
 
 Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to true.
 
@@ -5028,7 +5161,7 @@ Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to t
 
 **Definition of Done (DoD)**
 
-- `cortex consolidate` runs all 5 operations with `--dry-run` defaulting to true.
+- `cortex consolidate` runs all 7 operations with `--dry-run` defaulting to true. Fermentation is gated by `--ferment` flag.
 - Duplicate merge candidates correctly identified by embedding + sourceFile overlap.
 - Resolved contradictions archived after configurable window.
 - Higher-order pattern entities generated from skill + community signals.
@@ -5039,7 +5172,7 @@ Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to t
 **Pros & Cons**
 
 - ✅ **Pros**: Solves the "knowledge base grows forever as cruft" problem at the architectural level that biological sleep solves it (batch off-hours). Generative Agents' reflection phase is one of the paper's most-replicated mechanisms. The weekly reflection artifact is high-value documentation that emerges naturally from this layer. Diekelmann & Born (Nature Reviews) is a foundational reference frame for the design.
-- ❌ **Cons**: Consolidation is computationally expensive (~N² entity-pair embedding comparisons for duplicate detection). Mitigated by off-hours scheduling. User-approval-by-default means consolidation only happens when humans review — acceptable trade since architectural memory consolidation is too high-stakes to fully automate.
+- ❌ **Cons**: Consolidation is computationally expensive (~N² entity-pair embedding comparisons for duplicate detection). Fermentation adds state management over an unbounded set of dormant entities — mitigated by the auto-extend mechanism. User-approval-by-default means consolidation only happens when humans review — acceptable trade since architectural memory consolidation is too high-stakes to fully automate.
 
 ---
 
