@@ -98,6 +98,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
 | 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
 | 20.7.1| ~~Cross-Agent Workspace State Sync~~ → see Phase 57    | ⏳ Planned (moved — agent coordination)    |
+| 20.7.2| Mem0-Style Memory Consolidation Pipeline               | ⏳ Planned                           |
+| 20.7.3| Prospective Memory & Belief Revision                   | ⏳ Planned                           |
 | 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
 | 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
 | 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
@@ -118,6 +120,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.22.1| Entity Lifecycle Phases                               | ⏳ Planned                           |
 | 20.23 | Tool-Use Augmented Synthesis (Toolformer/ReAct)        | ⏳ Planned (research-grade)          |
 | 20.24 | Sequential Thinking & Persistent Reasoning Traces      | ⏳ Planned (research-grade)          |
+| 20.28 | Agentic Retrieval Loop                                 | ⏳ Planned                           |
+| 20.29 | Corrective RAG Module                                  | ⏳ Planned                           |
+| 20.30 | Iterative RAG Refinement                               | ⏳ Planned                           |
 | 21    | Polyrepo Federation                                    | ⏳ Planned                           |
 | 22    | Central Knowledge Server                               | ⏳ Planned                           |
 | 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
@@ -4739,6 +4744,66 @@ Expose a real-time session state synchronization protocol via the Cortex daemon 
 
 ---
 
+## Phase 20.7.2: Mem0-Style Memory Consolidation Pipeline — ⏳ Planned
+
+**Layman's Terms**
+When the AI talks to a developer, it learns things. "Alice prefers functional style." "Bob burned a day on the legacy auth API." Phase 20.7 stores those facts, but it stores them naively — just dumps them in. Phase 20.7.2 adds a smart consolidation layer: each new fact is compared against what Cortex already knows, and an LLM decides whether to add it (new knowledge), update an existing fact (refinement), delete an obsolete one (contradiction), or do nothing (duplicate). Over time, the memory stays compact, coherent, and current.
+
+**Technical Terms**
+Implements the Mem0 three-stage consolidation pipeline (Chhikara et al., ECAI 2025, arXiv:2504.19413). For each interaction, Cortex runs:
+1. **Extraction phase**: recent messages + a periodically refreshed global summary are passed to an LLM prompt to distill salient memory facts (short statements).
+2. **Update phase**: each candidate fact is embedded and compared via cosine similarity against existing memory embeddings in the vector store. The top-K similar memories are retrieved. An LLM classifies the operation: **ADD** (new fact), **UPDATE** (refine existing), **DELETE** (contradiction/obsolescence), **NOOP** (duplicate). The update is executed on the persistent store.
+3. **Graph extension** (Mem0g variant): entities and relationships are extracted from the consolidated fact and stored in a lightweight in-memory graph (or Neo4j when available) for multi-hop relational retrieval.
+
+**Core Components**: new `src/memory/consolidation/pipeline.ts` (extraction prompt + embedding comparison + LLM classification router), `src/memory/consolidation/store.ts` (vector store wrapper with ADD/UPDATE/DELETE/NOOP operations), `src/memory/consolidation/graph.ts` (entity-extraction → relationship persistence for graph memories), configuration for embedding model (reuses existing Phase 13.5 embedding pipeline).
+
+**Definition of Ready (DoR)**
+- Phase 20.7 (Personalized Per-Developer Memory) is shipped — the per-developer fact store exists.
+- Phase 13.5 embedding pipeline is shipped (for semantic similarity comparison).
+- Vector store (existing from Phase 13 caching) is available for memory embeddings.
+
+**Definition of Done (DoD)**
+- After 5+ interactions with a developer, the memory store contains deduplicated, updated facts with no stale contradictions.
+- LLM triggers ADD for genuinely new facts, UPDATE for refinements ("prefers TypeScript" → "strongly prefers TypeScript with strict mode"), DELETE for contradictions ("used to prefer Mocha" → "now uses Vitest").
+- Graph memory enables answering "what relationships does Alice have to the auth subsystem?" via entity traversal.
+- Cost benchmark: consolidation adds ≤20ms p95 per interaction beyond the base Phase 20.7 memory write.
+
+**Pros & Cons**
+- ✅ **Pros**: Memory stays compact and coherent without manual curation; graph variant enables multi-hop relational retrieval; Mem0 benchmark shows 26% accuracy improvement over naive storage.
+- ❌ **Cons**: Each interaction costs one extra LLM call for consolidation; occasional false DELETE when a fact is nuanced rather than contradictory. Mitigated by confidence threshold: only DELETE when similarity >0.95.
+
+---
+
+## Phase 20.7.3: Prospective Memory & Belief Revision — ⏳ Planned
+
+**Layman's Terms**
+Two problems with naive memory: (1) you store a fact but never think to retrieve it in the context where it matters, and (2) when new facts contradict old ones, the old ones just get deleted leaving no trace. Phase 20.7.3 fixes both: at write time, Cortex imagines *when* this fact might be useful next and tags it with future query scenarios. At update time, contradictions don't vanish — they form a *version chain* so you can see what changed and why. Inspired by Kumiho's prospective indexing and belief revision (arXiv:2603.17244, 2026), using zero additional infrastructure.
+
+**Technical Terms**
+Two lightweight passes on top of Phase 20.7.2's consolidation pipeline:
+
+1. **Prospective Indexing**: after a memory is written, an LLM generates 3-5 likely future queries this fact would be relevant to (e.g., "what auth library do we use?" for a memory "Alice migrated from Passport to Auth.js"). These are embedded via the existing Phase 13.5 embedding pipeline and stored as `prospectiveQueries: string[]` on the memory record. At retrieval time, the query is also checked against prospective embeddings — if it matches, the memory's relevance score gets a +0.15 boost (configurable). No additional storage backend needed.
+
+2. **Belief Revision via Version Chains**: instead of DELETE in the ADD/UPDATE/DELETE/NOOP classifier (Phase 20.7.2), route DELETE decisions to a `supersededBy` link: the old fact is marked `active: false` with a `supersededBy: <new-fact-id>` reference and a `revisionReason` field explaining why. The LLM decides whether the new fact supersedes (DELETE but traceable) or coexists with the old (NOOP + both active for different contexts). At retrieval time, the system returns only the highest-confidence active version by default, but `cortex memory history <developer>` shows the full version chain.
+
+**Core Components**: additions to `src/memory/consolidation/pipeline.ts` (prospective query generation pass after consolidation), new field `prospectiveQueries` on the memory schema (embedded via Phase 13.5), additions to retrieval reranking (prospective match boost), modifications to `src/memory/consolidation/store.ts` (supersededBy link replacing hard DELETE), new `src/memory/revision/history.ts` (version chain inspection CLI).
+
+**Definition of Ready (DoR)**
+- Phase 20.7.2 (consolidation pipeline) is shipped.
+- Phase 13.5 (embedding pipeline) is shipped.
+
+**Definition of Done (DoD)**
+- Prospective indexing: after writing "Alice migrated auth libraries," generating queries like "what auth does Alice use?" returns the fact with boosted relevance vs. naive semantic search.
+- Belief revision: when a fact is superseded, `cortex memory history alice` shows the old fact, the new fact, and the `revisionReason` ("migrated from Passport to Auth.js v5").
+- No new storage backends — all data fits in existing vector store + memory record schema.
+- Each prospective pass adds ≤1 LLM call per memory write; version chain stores ≤1KB per revision.
+
+**Pros & Cons**
+- ✅ **Pros**: Future-query-aware retrieval catches relevant memories that pure semantic search would miss; version chains provide full audit trail of knowledge evolution without AGM infrastructure; zero new storage backends.
+- ❌ **Cons**: Prospective indexing adds an LLM call per memory write (~10% overhead on write path). Version chains add slight retrieval complexity (filter out inactive versions).
+
+---
+
 ## 🌊 Phase 20.8: Memory Stream Retrieval Scoring — ⏳ Planned (research-grade)
 
 **Research grounding**: Generative Agents (Park, O'Brien, Cai, Morris, Liang, Bernstein — Stanford 2023 — *"Generative Agents: Interactive Simulacra of Human Behavior"*, arXiv:2304.03442). The agents use a memory stream — an append-only log of observations — with a retrieval scoring formula combining **recency** (exponential decay), **importance** (LLM-rated 1-10), and **relevance** (cosine similarity to query). The combined score, not pure similarity, drives what gets surfaced. The paper's behavioral evaluations show this scoring produces more believable, contextually-grounded agent behavior than similarity-only retrieval.
@@ -5950,6 +6015,115 @@ An advanced algorithmic compression layer over the knowledge graph. Cortex's syn
 Phase 20.18 (Tree-of-Thoughts) is **breadth-first reasoning**: generate K parallel candidates, score them, pick the best. Phase 20.24 Sequential Thinking is **depth-first reasoning**: one chain that revises itself, with explicit verification. They are complementary patterns, not redundant — the slow path (Phase 20.15) can choose either or both depending on the problem shape.
 
 Phase 20.23 (Tool-Use) ships the tool *registry* and the 6 baseline tools. Phase 20.24 ships the Sequential Thinking tool integration + the persistent trace layer + the PR-comment integration. Folding 20.24 into 20.23 would conflate "tool registry exists" with "Sequential Thinking + trace persistence + PR integration is implemented" — different scopes, different DoR (20.23 requires no other phase; 20.24 requires 20.15 + 6 + 12), different test surfaces.
+
+---
+
+## 🕸️ Phase 20.28: Agentic Retrieval Loop — ⏳ Planned
+
+**Layman's Terms**
+Sometimes a simple search isn't enough. "How does the payment flow work end-to-end?" requires pulling facts from the auth module, the billing service, the webhook handler, and the ledger — each in a different part of the codebase. Phase 20.28 turns Cortex's retrieval into an *agent*: it doesn't just search once; it plans what to look up, searches, reads results, decides if it has enough, and searches again if not. Like a junior dev who knows when to go ask a follow-up question instead of guessing.
+
+**Technical Terms**
+Implements the Agentic RAG pattern (Singh et al., arXiv:2501.09136; Mishra et al., SoK arXiv:2603.07379, 2026). At query time, a reasoning LLM (the "retrieval agent") controls a loop:
+1. **Query decomposition**: the agent splits a complex query into sub-queries (e.g., "find auth entities" + "find billing entities" + "find ledger entities").
+2. **Tool routing**: per sub-query, the agent selects a retrieval tool — vector search, BM25 keyword search, entity name lookup, web search, or a data source tool (e.g., `git_blame`, `read_file`). Tools are registered via Phase 20.23's tool registry.
+3. **Multi-hop retrieval**: the agent iterates retrieve → reason → identify gaps → reformulate → re-retrieve until evidence sufficiency is met.
+4. **Self-check**: a faithfulness judge (LLM-as-a-judge) scores each candidate answer against the retrieved evidence. Unsupported claims trigger re-retrieval with a refined query.
+5. **Adaptive termination**: the loop ends when confidence exceeds a threshold (configurable per query type) or max iterations (default 5) is reached.
+
+**How this differs from Phase 20.11 (Reflexion-Style Self-Correcting Synthesis)**
+Phase 20.11 corrects the *generated output* after retrieval is done — it's a post-hoc critique. Phase 20.28 corrects the *retrieval process itself* mid-loop — the agent rewrites queries and re-retrieves before generation even starts. They compose: 20.28 produces high-quality context, then 20.11 verifies the output against that context.
+
+**Research grounding**: SoK: Agentic RAG (Mishra et al., arXiv:2603.07379, 2026); Agentic RAG Survey (Singh et al., arXiv:2501.09136); CoopRAG (Ko et al., NeurIPS 2025, arXiv:2512.10422).
+
+**Core Components**: new `src/retrieval/agent/planner.ts` (query decomposition → sub-query generation), `src/retrieval/agent/router.ts` (tool selection per sub-query), `src/retrieval/agent/loop.ts` (retrieve-reason-reformulate cycle with adaptive termination), `src/retrieval/agent/judge.ts` (faithfulness gate — reuses Phase 7.5 quality scoring infrastructure), integration with Phase 20.23 tool registry.
+
+**Definition of Ready (DoR)**
+- Phase 20.23 (tool registry) is shipped — the retrieval agent needs tools to call.
+- Phase 13.5 (vector/BM25 search) is shipped — baseline retrieval tools exist.
+
+**Definition of Done (DoD)**
+- A 3-hop query ("how does auth → billing → ledger work?") returns evidence from all three subsystems without manual rewrites, vs. Phase 13.5 baseline which misses ≥1 hop 60%+ of the time.
+- Faithfulness judge blocks hallucinated claims and triggers re-retrieval with ≥80% precision.
+- Adaptive termination: simple queries terminate in 1 iteration; complex ones use up to 5.
+- CLI flag `cortex query --agentic` activates the agentic loop (otherwise uses standard Phase 13.5 retrieval).
+
+**Pros & Cons**
+- ✅ **Pros**: Dramatically better multi-hop retrieval quality; self-correcting loop reduces hallucination at source; composable with Phase 20.11 and Phase 20.29 for layered reliability.
+- ❌ **Cons**: Higher latency (3-5x vs. single-pass retrieval) and token cost per query. Mitigated by adaptive termination (simple queries skip the loop).
+
+---
+
+## 🎯 Phase 20.29: Corrective RAG Module — ⏳ Planned
+
+**Layman's Terms**
+When Cortex searches for information, sometimes the results are bad — irrelevant pages, outdated docs, wrong module. Phase 20.29 adds a quality check *before* the LLM sees the results: if the search results are low quality, Cortex auto-falls back to a web search. And instead of dumping whole documents into context, it decomposes each document and only keeps the relevant parts. Like a research assistant who checks a source before handing it to you — and cuts out the irrelevant paragraphs.
+
+**Technical Terms**
+Implements Corrective Retrieval Augmented Generation (CRAG) (Yan et al., arXiv:2401.15884, 2024). Three-stage pipeline:
+1. **Retrieval evaluator**: a lightweight T5-based or LLM-as-a-judge scorer assesses the overall relevance of retrieved documents for a query, returning a confidence score (0-1). Uses a single forward pass — no multi-step reasoning at evaluation time.
+2. **Action selection**: based on confidence:
+   - **High** (≥0.7): proceed with retrieved docs, applying the decompose-then-recompose filter.
+   - **Medium** (0.3-0.7): trigger web search fallback. Merge web results with vector results via reciprocal rank fusion (Phase 13.5 RRF).
+   - **Low** (<0.3): discard retrieved docs entirely, use web search only.
+3. **Decompose-then-recompose**: each retrieved document is split into "knowledge strips" (paragraph-level). Irrelevant strips (scored by the evaluator per-strip) are discarded. Remaining strips are recomposed into a coherent, noise-free context window.
+
+**How this differs from Phase 20.28 (Agentic Retrieval Loop)**
+Phase 20.28 is an *agent* that plans and iterates — it handles complex queries that need multi-hop reasoning. Phase 20.29 is a *quality gate* for single-pass retrieval — it handles the common failure mode where a simple query returns bad results. They stack: 20.29 evaluates and cleans each retrieval step *within* the 20.28 agentic loop.
+
+**Research grounding**: CRAG (Yan et al., arXiv:2401.15884, 2024); Self-RAG reflection tokens (Asai et al., ICLR 2024, arXiv:2310.11511) — retrieval evaluator design borrows the relevance/support token concept.
+
+**Core Components**: new `src/retrieval/crag/evaluator.ts` (lightweight relevance scorer), `src/retrieval/crag/actions.ts` (confidence-based action router: proceed / web-fallback / discard-and-web), `src/retrieval/crag/decompose.ts` (document → knowledge strips + per-strip scoring + recomposition), integration with web search tool (reuses existing web fetch infrastructure).
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (vector/BM25 search + RRF) is shipped.
+- Web fetch infrastructure exists (for web search fallback).
+
+**Definition of Done (DoD)**
+- When evaluated against a test set of 50 queries with intentionally poisoned retrieval (irrelevant docs inserted), CRAG detects low-relevance and falls back to web search with ≥90% accuracy.
+- Decompose-then-recompose reduces context window size by ≥40% vs. full-document retrieval while maintaining or improving answer quality (measured by LLM-as-a-judge).
+- Retrieval evaluator adds ≤50ms p99 latency per query (single forward pass design).
+- CLI flag `cortex query --correct` activates CRAG gating (enabled by default for Pro tier).
+
+**Pros & Cons**
+- ✅ **Pros**: Catches bad retrieval before it reaches the LLM; web fallback keeps answers grounded; decompose-then-recompose saves tokens and reduces noise.
+- ❌ **Cons**: Extra latency from evaluator pass; web fallback introduces variable latency. Mitigated by lightweight evaluator design and async web search that streams results.
+
+---
+
+## 🔄 Phase 20.30: Iterative RAG Refinement — ⏳ Planned
+
+**Layman's Terms**
+Cortex retrieves some context, generates an answer, then checks: "is anything missing?" If the answer has gaps, it searches again with a better question, merges the new evidence, and re-generates. It keeps going until the answer is solid or it's tried enough times. This is how a human expert works — read, think, realize you need more info, go find it, repeat.
+
+**Technical Terms**
+Implements Iterative RAG (Astaraki et al., arXiv:2601.19827, 2026; Lin et al., 2025), a multi-pass retrieve-reason-retrieve loop distinct from both Agentic RAG (which uses an agent) and CRAG (which uses an evaluator). The core loop:
+1. **Initial retrieval**: standard Phase 13.5 retrieval based on the user query.
+2. **Hypothesis generation**: the LLM generates a preliminary answer conditioned on the retrieved context.
+3. **Gap detection**: the LLM scores its own confidence (per-claim) and emits a list of specific missing information items ("I need to know what error handler middleware does when the DB connection fails").
+4. **Query reformulation**: each gap item is reformulated into a targeted search query by an LLM.
+5. **Re-retrieval**: new queries are executed. Results are merged with existing evidence via RRF (Phase 13.5).
+6. **Evidence-aware stopping**: if all claims have confidence above threshold (default 0.8) or max iterations (default 3) reached, the final answer is generated. Otherwise, loop back to step 3.
+
+**How this differs from Phase 20.28 (Agentic Retrieval Loop)**
+Phase 20.28 uses an *agent* that explicitly plans sub-queries and selects tools — it's structured, controllable, and explainable. Phase 20.30 is a *simpler, softer* loop: generate → self-assess gaps → re-retrieve → regenerate. No explicit planning or tool selection — just iterative refinement. 20.30 is cheaper and easier to implement; 20.28 is more powerful but more expensive. They are alternatives (choose one based on complexity budget), not stackable.
+
+**Research grounding**: When Iterative RAG Beats Ideal Evidence (Astaraki et al., arXiv:2601.19827, 2026); Iterative RAG Survey (Emergent Mind, 2026); Multi-cycle RAG (CLoaKY233, 2025).
+
+**Core Components**: new `src/retrieval/iterative/loop.ts` (gap detection prompt → query reformulation → re-retrieval → merge → retry), `src/retrieval/iterative/gap.ts` (per-claim confidence scoring and gap extraction), `src/retrieval/iterative/stop.ts` (evidence-aware termination policy), integration with Phase 13.5 RRF for evidence merging.
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (vector/BM25 search + RRF) is shipped.
+
+**Definition of Done (DoD)**
+- On a test set of 30 multi-hop queries where initial retrieval is intentionally incomplete, iterative refinement closes ≥70% of evidence gaps (measured by human evaluators).
+- Iterations terminate early (≤2) on 60%+ of simple queries; complex queries use up to 3.
+- Per-iteration latency ≤ the original retrieval latency (since re-retrieval queries are narrower).
+- CLI flag `cortex query --iterative` activates iterative refinement.
+
+**Pros & Cons**
+- ✅ **Pros**: Simple implementation (no agent, no tool routing); effective at closing evidence gaps; early termination saves cost on easy queries; composable with Phase 20.29 (CRAG as the per-iteration quality gate).
+- ❌ **Cons**: Can drift on very long loops (mitigated by max 3 iterations); gap detection quality depends on LLM calibration (mitigated by training-free confidence prompts).
 
 ---
 

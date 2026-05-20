@@ -214,6 +214,9 @@ No numeric limits — all caps are **unlimited**. Upgrade unlocks features, not 
 | 20.13 | Pattern skill library (VOYAGER) | Learns your patterns |
 | 20.19 | Surgical knowledge editing (ROME/MEMIT) | Precision edits |
 | 20.22 | Spaced repetition & forgetting curves | Memory hygiene |
+| 20.28 | Agentic retrieval loop (multi-hop, self-correcting) | Complex query mastery |
+| 20.29 | Corrective RAG module (quality gate + web fallback) | Hallucination prevention |
+| 20.30 | Iterative RAG refinement (gap detection + re-retrieval) | Evidence completeness |
 | 33 | Deep bootstrap | Deep first-run |
 
 No numeric limits — all caps are **unlimited**.
@@ -238,6 +241,8 @@ No numeric limits — all caps are **unlimited**.
 | 11 | Monorepo federation | Multi-package repos |
 | 16 | Contradiction-aware retrieval | Conflict detection |
 | 20.7 | Personalized per-developer memory | Per-dev profiles |
+| 20.7.2 | Mem0-style memory consolidation pipeline | Self-curating memory |
+| 20.7.3 | Prospective memory & belief revision (Kumiho-inspired) | Future-aware memory |
 | 53.2 | Universal Librarian definition schema | Shared agents |
 | 56 | Multi-operator session coordination | Concurrency |
 
@@ -991,6 +996,7 @@ export const PHASE_TIER_MAP: Record<string, Tier> = {
   "14": "pro",
   "20": "pro", "20.1": "pro", "20.3": "pro", "20.5": "pro",
   "20.5.1": "pro", "20.13": "pro", "20.19": "pro", "20.22": "pro",
+  "20.28": "pro", "20.29": "pro", "20.30": "pro",
 
   // ── Startup ────────────────────────────────────────
   "4.6": "startup", "4.8": "startup",
@@ -999,7 +1005,7 @@ export const PHASE_TIER_MAP: Record<string, Tier> = {
   "10.2": "startup",
   "11": "startup",
   "16": "startup",
-  "20.7": "startup",
+  "20.7": "startup", "20.7.2": "startup", "20.7.3": "startup",
   "53.2": "startup",
   "56": "startup",
 
