@@ -2497,20 +2497,204 @@ Implement adaptive retrieval verification and local grep-fallback engines inside
 
 ---
 
-## 💸 Phase 13.8: Persistent Experience & Cognitive Mode-Adaptive Context — ⏳ Planned
+## 💸 Phase 13.8: Persistent Experience & Cognitive Mode-Adaptive Context (Cortex Soul Implementation Spec) — ⏳ Planned
 
 **Layman's Terms**
-When you use an AI assistant, it forgets everything you did in the previous task. If you run into a bug, fix it, and then try another change, the AI doesn't remember what failed last time. Phase 13.8 adds a local persistent "co-pilot memory" to Cortex. It stores your custom development rules, logs a transaction ledger of past refactoring decisions and reverts, and dynamically selects a "thinking mode" (like Debug or Planning) to change how it prioritizes search results. This prevents the AI from repeating historical code errors and slashes token costs by only delivering context relevant to your active task.
+When you use an AI assistant, it forgets everything you did in the previous task. If you run into a bug, fix it, and then try another change, the AI doesn't remember what failed last time. Phase 13.8 adds a local persistent, self-evolving "co-pilot memory" (the Cortex Soul) to your workspace. It stores a history of past attempts, tracks what approaches worked and what failed (Nemesis system), and adjusts the "cognitive lens" (Pharmaicy system) to reweight how it retrieves code context based on your active mode (like Debug, Forensic, or Planning). This prevents the AI from repeating mistakes and slashes your token bills by up to 70% by delivering only the most relevant, proven files.
 
-**Technical Terms**
+**Technical Terms & Engineering Spec**
+
+Implement the dynamic context orchestration framework alongside the deterministic, vector-and-graph-hybrid memory and reinforcement engine (Cortex Soul v1):
+
+### A. Core Co-Pilot Context Framework
 - **User Profile Model (`src/knowledge/profile.ts`)**: Loads and validates `user_profile.json` at the workspace root to check for team constraints (e.g. disallowed libraries) and risk tolerances.
 - **Experience Ledger (`src/knowledge/experience.ts`)**: Append-only telemetry manager logging sync decisions, validation outcomes, and reverted commits in `experience.jsonl`.
 - **Cognitive Search Ranker (`src/knowledge/find.ts` & `src/knowledge/packer.ts`)**: Reweights graph search and context-packing candidates dynamically based on the active task mode (`DEBUG` prioritizes past violations and reverts; `PLANNING` prioritizes high-centrality interfaces and parent structures).
 - **Mode-Adaptive Ingestion (`src/knowledge/writer.ts`)**: Applies sub-millisecond local regex heuristics against git diffs/commit messages to swap Librarian system prompts dynamically during synchronization (e.g. Debug prompt for emergency fixes).
 - **Relation Graph Hopping (`src/knowledge/graph.ts` & `src/knowledge/packer.ts`)**: Traverses explicit WikiLinks (1-2 hops) for creative architectural exploration, preventing vector hallucination.
 
+### B. Deterministic Cortex Soul Memory & Reinforcement Spec
+
+> **Cortex Soul** is a persistent memory graph system where memory nodes are weighted by outcome-based reinforcement (Nemesis-style evolution) and retrieved through lens-dependent scoring functions with optional controlled stochastic drift (Pharmaicy-style interpretation modes).
+
+#### 1. Memory Graph Data Structures (`src/knowledge/soul.ts`)
+```typescript
+export type MemoryNode = {
+  id: string;
+  type: "decision" | "event" | "insight" | "failure" | "success";
+  content: string;
+  timestamp: number;
+  embedding?: number[];
+  metadata: {
+    domain?: string;
+    source?: string;
+  };
+  // Nemesis-style evolution metrics
+  weights: {
+    salience: number;        // Importance score [0.0 - 1.0]
+    successBias: number;     // Reinforced if outcome is successful
+    failureBias: number;     // Reinforced if outcome is unsuccessful
+    decay: number;           // Time decay factor
+  };
+};
+
+export type MemoryEdge = {
+  from: string;
+  to: string;
+  type: "causal" | "contradiction" | "reinforcement" | "dependency" | "association";
+  strength: number;          // Edge relationship strength [0.0 - 1.0]
+};
+
+export type SoulState = {
+  globalBiases: {
+    riskTolerance: number;   // Affects code generation adventurousness [0.0 (cautious) - 1.0 (creative)]
+    creativityBias: number;  // Multiplier for semantic distance exploration
+    precisionBias: number;   // Weighting multiplier for strict static checks
+  };
+  memoryWeightMultiplier: Record<string, number>;
+};
+
+export type CognitiveLens = "ENGINEERING" | "FORENSIC" | "STRATEGIC" | "CREATIVE" | "EXECUTION";
+```
+
+#### 2. Weighted Memory Retrieval (Pharmaicy Logic)
+Compute candidate relevance by combining semantic similarity, node weights, active cognitive lenses, and evolving global biases:
+```typescript
+export function retrieveMemory(
+  query: string,
+  candidates: MemoryNode[],
+  lens: CognitiveLens,
+  soul: SoulState,
+  similarityFunc: (a: MemoryNode, q: string) => number,
+  K: number
+): { node: MemoryNode; score: number }[] {
+  return candidates
+    .map(node => ({
+      node,
+      score:
+        similarityFunc(node, query) *
+        node.weights.salience *
+        node.weights.decay *
+        getLensWeight(node, lens) *
+        getSoulBias(node, soul)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, K);
+}
+
+function getLensWeight(node: MemoryNode, lens: CognitiveLens): number {
+  switch (lens) {
+    case "ENGINEERING": return node.type === "decision" ? 1.2 : 1.0;
+    case "FORENSIC":    return node.type === "failure" ? 1.5 : 1.0;
+    case "STRATEGIC":   return node.metadata.domain ? 1.3 : 1.0;
+    case "CREATIVE":    return node.type === "insight" ? 1.4 : 1.1;
+    case "EXECUTION":   return node.type === "decision" ? 1.5 : 0.8;
+    default:            return 1.0;
+  }
+}
+
+function getSoulBias(node: MemoryNode, soul: SoulState): number {
+  let bias = 1.0;
+  if (node.type === "failure") bias *= (2.0 - soul.globalBiases.riskTolerance);
+  if (node.type === "insight") bias *= (1.0 + soul.globalBiases.creativityBias);
+  return bias;
+}
+```
+
+#### 3. Soul Evolution & Blocker Reinforcement Loop (Nemesis Logic)
+Runs immediately after code modifications, test executions, or commit verification loops to adapt weights based on outcome feedback:
+```typescript
+export function updateSoul(memoryNode: MemoryNode, outcome: { success: boolean }): void {
+  if (outcome.success) {
+    memoryNode.weights.salience += 0.1;
+    memoryNode.weights.successBias += 0.2;
+  } else {
+    memoryNode.weights.failureBias += 0.2;
+    memoryNode.weights.salience -= 0.05; // Slightly dampen salience to prevent locking onto failures
+  }
+  memoryNode.weights.salience = Math.min(Math.max(memoryNode.weights.salience, 0), 1);
+}
+
+export function applyDecay(node: MemoryNode, deltaTime: number): void {
+  node.weights.salience *= Math.exp(-node.weights.decay * deltaTime);
+}
+
+export function applyDrift(nodes: { node: MemoryNode; score: number }[], driftLevel: number): { node: MemoryNode; score: number }[] {
+  if (driftLevel === 0) return nodes;
+  return nodes.map(n => ({
+    ...n,
+    score: n.score + (Math.random() - 0.5) * 2 * driftLevel // Pseudo-Gaussian stochastic exploration
+  }));
+}
+```
+
+#### 4. Advanced Cortex Soul Enhancements (Lightweight & Safe)
+
+##### A. Co-Occurrence Graph Reinforcement (Undocumented File Connection Engine)
+- **Layman's Terms**: The system remembers which files you edit together. If you change a database file and always end up editing a specific UI handler, Cortex automatically links them. The next time you edit that database file, it warns you: *"Hey, you usually edit this UI file too, don't forget it!"*
+- **Technical Terms**: `association` type memory edges are created or reinforced during ingestion whenever multiple files are modified in a single successful sync pass. This implements implicit behavior mapping without LLM calls.
+```typescript
+export function reinforceCoOccurrence(modifiedEntityIds: string[], edges: MemoryEdge[]): MemoryEdge[] {
+  for (let i = 0; i < modifiedEntityIds.length; i++) {
+    for (let j = i + 1; j < modifiedEntityIds.length; j++) {
+      const from = modifiedEntityIds[i];
+      const to = modifiedEntityIds[j];
+      let edge = edges.find(e => (e.from === from && e.to === to) || (e.from === to && e.to === from));
+      if (edge) {
+        edge.strength = Math.min(edge.strength + 0.05, 1.0);
+      } else {
+        edges.push({ from, to, type: "association", strength: 0.1 });
+      }
+    }
+  }
+  return edges;
+}
+```
+
+##### B. Adaptive Forensic Guardrail (Dynamic Risk Clamping)
+- **Layman's Terms**: If a specific section of code has broken your tests or compilation loops in the past, Cortex gets extremely cautious. It automatically activates strict validation modes and forces rigorous checks so you don't repeat the mistake.
+- **Technical Terms**: Scan matching historic `failure` memory nodes for a target entity. If the maximum historical failure bias exceeds a safe threshold, the workspace risk tolerance is dynamically clamped to maximum strictness.
+```typescript
+export function evaluateRiskClamping(targetEntity: string, candidates: MemoryNode[], soul: SoulState): number {
+  const matchingFailures = candidates.filter(n => n.metadata.source === targetEntity && n.type === "failure");
+  const maxFailureBias = Math.max(...matchingFailures.map(n => n.weights.failureBias), 0);
+  if (maxFailureBias > 0.6) {
+    soul.globalBiases.riskTolerance = 0.1; // Force maximum caution
+  }
+  return soul.globalBiases.riskTolerance;
+}
+```
+
+##### C. Temporal Landmark Compression (Memory Chunking)
+- **Layman's Terms**: Instead of remembering every tiny detail of your 500 past edits (which would slow the AI down and cost you money), Cortex compresses older history into "Story Chapters" (like "Module A Redesign"). It keeps the high-level lesson but drops the microscopic file-by-file clutter.
+- **Technical Terms**: Compresses episodic memory nodes within a temporal window into a single parent landmark node when an ingestion boundary stabilizes, reducing active memory search overhead.
+```typescript
+export function compressMilestone(nodes: MemoryNode[], milestoneName: string): MemoryNode {
+  return {
+    id: `milestone-${Date.now()}`,
+    type: "insight",
+    content: `Compressed Milestone: ${milestoneName}. Unified lessons from ${nodes.length} historical modifications.`,
+    timestamp: Date.now(),
+    metadata: { domain: "milestone" },
+    weights: { salience: 0.8, successBias: 0.5, failureBias: 0.0, decay: 0.01 }
+  };
+}
+```
+
+#### 5. Dynamic Run-Loop Execution Flow
+```mermaid
+graph TD
+    Query["User Task / Code Commit"] --> Lens["Select Cognitive Lens (e.g. FORENSIC on tests)"]
+    Lens --> Retrieve["Retrieve Memory (Similarity × Salience × Decay × Lens × SoulBias)"]
+    Retrieve --> Drift["Apply Stochastic Drift (Creative exploration)"]
+    Drift --> LLM["Assemble Context & Generate Response"]
+    LLM --> Exec["Evaluate Outcome (CI validation, compiler, or user feedback)"]
+    Exec --> Update["Update Soul State (Nemesis success/failure reinforcement)"]
+    Update --> Store["Commit new MemoryNode to physical state"]
+```
+
 **Definition of Ready (DoR)**
-- Phase 13.5 (Fuzzy Levenshtein & RRF Search Ranker) and Phase 13.2 (Brevity Engine) are completed.
+- Phase 13.5 (Fuzzy Search Ranker) and Phase 13.7.2 (Speculative Retrieval Guardrails) are completed.
 
 **Definition of Done (DoD)**
 - **User Profile Modeling (`user_profile.json`)**: A structured `.knowledge/user_profile.json` is created and parsed to inject developer rules, disallowed libraries, and preferred brevity styles without context window pollution.
@@ -2518,10 +2702,17 @@ When you use an AI assistant, it forgets everything you did in the previous task
 - **Cognitive Mode-Based Reranking (`cognitive.ts`)**: The search ranker adjusts node weights dynamically based on active intent modes (e.g. `DEBUG` prioritizes past faults, `PLANNING` prioritizes parent structures), delivering 3x higher relevance in the exact same token limits.
 - **Mode-Adaptive Ingestion**: Sub-millisecond regex checks of git diffs swap Librarian prompts dynamically during synchronizations (e.g., swapping to a specialized Debug prompt on bug-fix code commits).
 - **Relation-Based Graph Hopping**: The query traversal engine navigates 1-2 hops along explicit conceptual `[[WikiLink]]` paths when in `CREATIVE` mode to recommend architectural parallels without semantic vector hallucinations.
+- **Deterministic Schema Enforcement**: The memory graph, nodes, and weights are successfully serialized in `.knowledge/soul_state.json` and validated using strict schemas.
+- **Outcome-Based Weight Reinforcement**: Running a sync with a test failure or code revert successfully updates `failureBias` and `salience` on the targeted entities.
+- **Dynamic Retrieval Re-ranking**: Search and context extraction queries with the `FORENSIC` lens boost past failures by a verified factor of >= 1.5 in retrieval scores.
+- **Co-Occurrence Graph Mapping**: Successful edits to multiple files automatically create or increment `association` edge strengths without LLM overhead.
+- **Adaptive Risk Clamping**: Accessing an entity with `max(failureBias) > 0.6` clamps `riskTolerance` to `0.1`, verified by test suites.
+- **Milestone Compression**: Epoch execution runs correctly collapse older log arrays into consolidated landmark `insight` nodes.
+- Tests verify retrieval scoring correctness, lens weight amplification, outcome bias updates, and decay/drift operations.
 
 **Pros & Cons**
-- ✅ **Pros**: Proves massive ROI for paid Indie Pro tier; stops AI hallucination loops by grounding it in real-world sync history; slashes token costs via dynamic reranking.
-- ❌ **Cons**: Adds two local JSON state files that must be protected from formatting corruption and kept in sync.
+- ✅ **Pros**: Prevents repetitive AI coding failure loops by grounding it in local workspace history; slashes token overhead by 50% via high-relevance lens filtering; creates a persistent codebase experience.
+- ❌ **Cons**: Requires structuring output feedback (success/failure) from local compiler runs or IDE commands to trigger the update loop reliably.
 
 ---
 
