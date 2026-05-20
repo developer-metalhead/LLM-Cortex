@@ -32,6 +32,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
+| 8.3   | GPU-Accelerated Knowledge Graph Rendering               | ⏳ Planned                           |
+| 8.4   | Hyperbolic Graph Layout (Poincaré Disk)                 | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
@@ -176,6 +178,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 40.6  | Architectural Fossilization (Cold Storage)             | ⏳ Planned (research-grade)          |
 | 40.7  | Borges Exhaustive Design-Space Generation              | ⏳ Planned (research-grade)          |
 | 40.8  | Gödel Self-Improving Synthesis Loop                    | ⏳ Planned (research-grade)          |
+| 40.9  | JIT-Compiled Synthesis Fast-Path (0-Token Det.)        | ⏳ Planned (research-grade)          |
 | 41    | Cognitive Cache Invalidation Engine                    | ⏳ Planned (research-grade)          |
 | 42    | Fractal Memory Summarization (Multi-Level)             | ⏳ Planned (research-grade)          |
 | 43    | Information Thermodynamics & Entropy Scoring           | ⏳ Planned (research-grade)          |
@@ -950,6 +953,8 @@ Inspired by Nexus Phase 33.3 (Session Leadership & Concurrency Control). A leade
 - ✅ **Pros**: **Makes Cortex safe for multi-operator enterprise teams.** Without this, two operators editing the same workspace simultaneously is a guaranteed data inconsistency event. Simple model (one leader, others observers) avoids distributed-consensus complexity for the small N this targets. Approvals working as observer keeps Phase 23 + Phase 43.3 review flows functional. Identity-based PWA+CLI merging means same operator on multiple devices is one session, not two competitors.
 - ❌ **Cons**: Single-operator usage adds zero friction (auto-leadership) but adds operational concept (some users will encounter "you are observer" the first time they collaborate). Mitigated by clear error messages with claim-leader instructions and by Phase 33.2 PWA badge surfacing role prominently. Forced takeover is a potential audit surface (one operator can disrupt another); mitigated by high-severity audit logging and optional configurable approval requirement.
 
+**Entity-Graph Branching for Offline Divergence**: When an operator goes offline, their `.knowledge/` continues to evolve independently from the remote canonical graph. On reconnect, this extension detects divergent entity graphs, tracks them as named branches at the entity-graph level (recording fork-point commit hash and last common ancestor in `state.json`), and merges via CRDT-style semantics (building on Phase 35.2). `cortex session merge --branch <name>` reconciles a divergent graph with the canonical one, flagging conflicts where the same entity was mutated in both branches. Conflicts are surfaced for Phase 23 human review or resolved via Phase 17's active disambiguation if available. Branch history is retained in `.knowledge/meta/branches.jsonl` for audit traceability.
+
 ---
 
 ## 💻 Phase 5.9: Shell Status Prompt Integration & Statusline Badge — ⏳ Planned
@@ -1625,6 +1630,62 @@ Open your Cortex architectural memory vault directly inside Obsidian for free. P
 **Pros & Cons**
 - ✅ **Pros**: Turns architectural understanding into a shareable, stunning, zero-overhead interactive graph viewer; clickable links in standard VS Code and GitHub previews; zero runtime desktop bloat.
 - ❌ **Cons**: Changing directory layout or names requires re-mapping link paths in the compilation pass (handled in-memory using `state.json` to preserve speed). Committing default `.obsidian/` folders to git could clutter developer preferences, mitigated by standard gitignore rules.
+
+---
+
+## 💾 Phase 8.3: GPU-Accelerated Knowledge Graph Rendering — ⏳ Planned
+
+**Layman's Terms**
+When your knowledge graph exceeds 300+ entities, Mermaid/Cytoscape CPU rendering slows to a crawl. Phase 8.3 adds a WebGL-based GPU-accelerated renderer that handles 1000+ entities at 60fps. Entity clusters flow and merge based on co-edit relationships, quality scores map to color temperature (green = high quality → red = decaying), and staleness renders as visual fading — all animated in real time via Phase 8.1's WebSocket stream.
+
+**Technical Terms**
+1. **WebGL Graph Renderer**: An alternative rendering mode using Three.js or raw WebGL. The graph is rendered as a GPU particle system where each entity is a billboarded sprite and each edge is a line primitive. Layout is computed on the GPU via a force-directed simulation running in vertex shaders.
+2. **Quality-to-Color Mapping**: Consumes Phase 7.5 quality scores as vertex attributes. Entities with score ≥ 0.8 render green, 0.5–0.8 amber, < 0.5 red. Staleness (staleSince flag) adds a pulsing desaturation effect.
+3. **Co-Edit Flow**: Edge spring tensions scale with Phase 13.8.2 co-edit weights — frequently co-edited entities cluster tightly; rarely co-edited pairs drift apart.
+4. **Fallback**: Automatically falls back to Mermaid rendering for graphs under 300 entities (no GPU needed). Configurable via `CORTEX_GRAPH_RENDERER=webgl|mermaid`.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+- Phase 8.1 WebSocket stream is active.
+
+**Definition of Done (DoD)**
+- WebGL renderer renders 1000+ entity graphs at 60fps on modern GPU hardware.
+- Quality score color mapping is implemented and reacts to Phase 7.5 score changes.
+- Co-edit weight spring tension is implemented.
+- Fallback to Mermaid rendering when GPU unavailable or graph < 300 entities.
+- Tests cover: renderer selection, quality-color mapping, fallback trigger.
+
+**Pros & Cons**
+- ✅ **Pros**: Solves the large-graph rendering problem for Phase 11 monorepo federations and Phase 21 polyrepo setups. Real-time animation makes co-edit patterns visually intuitive. High dashboard wow-factor for Phase 31 executive analytics.
+- ❌ **Cons**: Requires WebGL-compatible browser — falls back to Mermaid for terminal/SSH session users. GPU particle layout differs from force-directed CPU layout, potentially confusing users who switch between modes.
+
+---
+
+## 💾 Phase 8.4: Hyperbolic Graph Layout (Poincaré Disk) — ⏳ Planned
+
+**Layman's Terms**
+Phase 18 uses hyperbolic (Poincaré) embeddings for internal math but never shows them visually. Phase 8.4 renders the knowledge graph on a Poincaré disk: the currently-edited entity sits at the center with full detail, direct dependencies occupy the middle ring, and distant entities shrink toward the perimeter. This maps 1:1 to Phase 20.6's hot/cold memory tiering — the visual layout IS the memory hierarchy.
+
+**Technical Terms**
+1. **Poincaré Disk Projection**: Each entity's hyperbolic embedding (from Phase 18) is projected onto the unit disk via the Poincaré metric. The selected entity is translated to the origin; all other entities are Möbius-transformed relative to it. Entities near the origin render at full size; entities approaching the boundary shrink according to their hyperbolic distance.
+2. **Memory Tier Visualization**: Hot-tier entities (in Phase 20.6 working set) cluster within the inner third of the disk. Cold-tier entities spread toward the boundary. Pinned entities (centrality > 0.8) are highlighted with a glow ring.
+3. **Pan & Zoom**: Clicking any entity re-centers the disk on that entity, re-running the Möbius transform server-side and streaming the updated layout via Phase 8.1 WebSocket.
+4. **Implementation**: Layout computation is a fast server-side matrix operation (no LLM needed). Rendering via D3.js canvas with hyperbolic transform helpers, or optionally via the Phase 8.3 WebGL renderer.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+- Phase 18 hyperbolic embeddings are computed for all entities.
+
+**Definition of Done (DoD)**
+- Poincaré disk renders all entities with correct hyperbolic distances from the selected center entity.
+- Click-to-recenter works and streams updated layout via WebSocket.
+- Memory tier clustering (hot/inner, cold/outer) is visually distinct.
+- Pinned entity glow ring is implemented.
+- Tests cover: Möbius transform correctness, tier visibility, center selection round-trip.
+
+**Pros & Cons**
+- ✅ **Pros**: Makes the memory hierarchy (Phase 20.6) visually self-evident — no separate "show me hot entities" command needed. Hyperbolic space naturally fits hierarchical codebases. Leverages existing Phase 18 math; no new embedding computation.
+- ❌ **Cons**: Requires Phase 18 embeddings to exist — not available until Phase 18 is implemented. Poincaré disk can be disorienting for users unfamiliar with hyperbolic space; mitigated by a optional Euclidean toggle `--layout euclidean`.
 
 ---
 
@@ -4207,6 +4268,7 @@ A two-tier memory architecture over `state.json`:
 - **Cold tier (paged out)**: all other entities. Listed in the index as header + one-line description only ("read on demand via `page_in(entity)`"). Full entity content is paged in on explicit MCP tool calls.
 - **Self-paging tool surface**: new MCP tools `page_in(entity)`, `page_out(entity)`, `working_set_status()`. The AI agent decides what to load and evict based on the current task — the LLM is in control, not Cortex.
 - **Eviction policy**: LRU within the hot tier, with "pinned" override for entities marked `centrality > 0.8` (always-resident high-centrality hubs).
+- **Speculative page-in**: when an entity is requested, pre-fetch its co-edit neighbors (by Phase 13.8.2 co-edit weight, descending) into the hot tier. The working set expands to likely-next entities before the LLM explicitly pages them. Controlled by `CORTEX_SPECULATIVE_PAGE_IN=true` (default: false — opt-in, use judiciously to avoid needless paging for simple queries).
 - **Pressure signal**: when the hot tier is full, `page_in` returns a "pressure" warning listing the LRU eviction candidates so the LLM can make an informed choice.
 
 **Architecture & System Design**
@@ -8675,6 +8737,8 @@ This phase pulls extreme optimizations from Google's PageRank, mathematical Cate
 **Technical Terms**: An invariant "Zero-Dependency Mode." If the network is severed, Cortex instantly degrades gracefully, rips out telemetry, and falls back to a locally quantized model running purely on local silicon.
 **Engineering ROI**: Ultimate Reliability & Security. Cortex becomes immune to cloud outages and acceptable for extreme high-security (defense, finance) air-gapped environments.
 
+**New: `cortex autarky audit`** — scans `package.json`/`requirements.txt`/equivalent for every external dependency and scores replaceability on API surface size, bus factor, and native-alternative availability. Produces a ranked self-sufficiency roadmap (easiest-to-replace first) stored in `.knowledge/meta/autarky_report.json`. Acts as the pre-flight checklist before disconnecting from the network.
+
 ---
 
 ## 🌀 Phase 36: Exotic Architecture Optimizations (Deep Tech Inspired) — ⏳ Planned (research-grade)
@@ -8905,6 +8969,15 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 **Technical Terms**: Builds on `log.jsonl` quality trail and Phase 7.5 quality scores. A meta-synthesis pass computes per-entity-type quality trend vectors (e.g., "service boundary entities in this repo have 23% lower quality scores than the baseline"). Detects systematic under/over-extraction patterns. Generates candidate Librarian prompt mutations, scores them against a held-out golden corpus, and promotes winners via Phase 23 (human-in-loop gate). Mutation history stored in `.knowledge/meta/prompt_evolution.jsonl`.
 
 **Engineering ROI**: Each enterprise deployment becomes uniquely self-tuned. Cortex adapts to a React monorepo differently than a Go microservices repo — no manual prompt engineering. The system gets measurably better over time, creating a genuine deployment moat.
+
+---
+
+### Phase 40.9: JIT-Compiled Synthesis Fast-Path (0-Token Deterministic Route)
+**Layman's Terms**: Currently, every synthesis goes through an LLM call. But many synthesis events are mechanical — file renames, import path updates, simple relationship changes — that don't need LLM judgment at all. Phase 40.9 observes repeated synthesis patterns (same graph mutation shape on same entity types), compiles them into deterministic TypeScript functions, and routes matching events through the function instead of the LLM. Zero tokens, zero latency, zero API cost for those operations.
+
+**Technical Terms**: Builds on the `log.jsonl` synthesis trail. A pattern-detection pass monitors synthesis events grouped by (mutation_type, entity_type, subgraph_shape). When a pattern exceeds `CORTEX_JIT_THRESHOLD` occurrences (default 5), the JIT compiler generates a deterministic function that applies the same graph mutation (add edge, rename node, update field) without invoking any model. Compiled functions are stored in `.knowledge/meta/jit_patterns/` and loaded at MCP server start. The synthesis router checks the JIT cache before any LLM call: JIT (0 tokens, µs) → Distilled model (Phase 19, cheap, ms) → Frontier model (expensive, s). A `cortex jit stats` CLI command shows hit rate, pattern inventory, and token savings.
+
+**Engineering ROI**: Eliminates LLM cost entirely for mechanical synthesis operations (estimated ~25-35% of all synthesis events in codebases with active renaming/refactoring). Creates a zero-token fast-path that deepens Phase 35.7 air-gapped autarky — core mechanical operations work offline without any model. Pattern library grows as the codebase evolves; hits compound over time.
 
 ---
 
