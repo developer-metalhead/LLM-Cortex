@@ -31,6 +31,7 @@ import { runExportGraph } from "../cli/export.js";
 import { compressResponse, resolveRefs } from "./compression.js";
 import { buildContextPack } from "../knowledge/packer.js";
 import { computeCostEstimate } from "../cli/test-cost.js";
+import { loadSafeguardConfig } from "../knowledge/safeguards.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -268,6 +269,15 @@ export class CortexMCPServer {
           description: "Display cumulative token and cost savings ledger analytics.",
           arguments: [
             { name: "graph", description: "Set to 'true' to render the rolling 30-day savings ASCII chart instead of the summary table", required: false }
+          ]
+        },
+        {
+          name: "safeguards",
+          description: "Check or configure your active budget limits and runaway protection settings.",
+          arguments: [
+            { name: "action", description: "The action to perform: 'view' to inspect current safeguards, or 'configure' to update limits", required: false },
+            { name: "maxCost", description: "Optional: Max session cost limit to set (or 'none' to clear)", required: false },
+            { name: "maxSyncsHour", description: "Optional: Max hourly sync frequency limit to set (or 'none' to clear)", required: false },
           ]
         },
       ],
@@ -679,6 +689,65 @@ export class CortexMCPServer {
               type: "text",
               text: `Call the 'get_savings' tool${graphPart}. Present the resulting metrics table or ASCII chronological graph beautifully formatted in markdown so the user can see their total ROI and category details. Explicitly inform the user that this full savings report has been automatically exported to 'ARCH_SAVINGS.md' in their project root for their convenience.`,
             },
+          }],
+        };
+      }
+
+      if (request.params.name === "safeguards") {
+        const action = request.params.arguments?.action;
+        const maxCost = request.params.arguments?.maxCost;
+        const maxSyncsHour = request.params.arguments?.maxSyncsHour;
+
+        if (!action) {
+          return {
+            description: "Check or configure your active budget limits and runaway protection settings — asks for action.",
+            messages: [{
+              role: "user",
+              content: {
+                type: "text",
+                text: "Ask the user: 'Would you like to **view** your active budget settings and sync stats, or **configure** new safety limits?' and wait for their response. Once they reply, reload this prompt with action set to 'view' or 'configure'."
+              }
+            }],
+          };
+        }
+
+        if (action === "view") {
+          return {
+            description: "Inspect current safeguards and spend telemetry.",
+            messages: [{
+              role: "user",
+              content: {
+                type: "text",
+                text: "Step 1: Check the status. Call get_cortex_status. Step 2: Present the active budget gating status: Session Limit, Hourly Limit, Session Spent, Quota Remaining, and Hourly Syncs. If any limits are active, explain how they prevent runaway LLM sync loops."
+              }
+            }],
+          };
+        }
+
+        // action === "configure"
+        if (maxCost === undefined && maxSyncsHour === undefined) {
+          return {
+            description: "Configure safeguards limits.",
+            messages: [{
+              role: "user",
+              content: {
+                type: "text",
+                text: "Ask the user: 'What new safety limits would you like to set? Please provide: (1) Max Session Cost in USD (e.g. 0.05 or 'none' to disable), and (2) Max Sync Calls per Hour (e.g. 5 or 'none' to disable).' Wait for their response, then call the configure_safeguards tool with their choices."
+              }
+            }],
+          };
+        }
+
+        const costPart = maxCost !== undefined ? `, maxCost='${maxCost}'` : "";
+        const syncPart = maxSyncsHour !== undefined ? `, maxSyncsHour='${maxSyncsHour}'` : "";
+        return {
+          description: `Configure safeguards with maxCost: ${maxCost || "unchanged"}, maxSyncsHour: ${maxSyncsHour || "unchanged"}.`,
+          messages: [{
+            role: "user",
+            content: {
+              type: "text",
+              text: `Call the 'configure_safeguards' tool with${costPart}${syncPart} to update the safeguards limits. Present the success response clearly.`
+            }
           }],
         };
       }
@@ -1181,6 +1250,23 @@ export class CortexMCPServer {
             },
           },
         },
+        {
+          name: "configure_safeguards",
+          description: "Configure or check active budget gating and runaway rate limits. Set maxCost or maxSyncsHour to 'none', 'clear', 'off', or '0' to disable/remove that constraint.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              maxCost: {
+                type: "string",
+                description: "Maximum session cost in USD. Set to 'none', 'clear', 'off', or '0' to disable.",
+              },
+              maxSyncsHour: {
+                type: "string",
+                description: "Maximum rolling hourly sync calls limit. Set to 'none', 'clear', 'off', or '0' to disable.",
+              },
+            },
+          },
+        },
       ];
       if (brevity === "lite" || brevity === "ultra") {
         for (const t of tools) {
@@ -1256,6 +1342,106 @@ export class CortexMCPServer {
             {
               type: "text",
               text: `✅ Dynamic Brevity Level successfully configured to: **${level}** in cortex.json. All subsequent MCP responses and tool descriptions will automatically adapt!`,
+            },
+          ],
+        };
+      }
+
+      if (name === "configure_safeguards") {
+        const maxCost = (args as any)?.maxCost;
+        const maxSyncsHour = (args as any)?.maxSyncsHour;
+
+        const isClearVal = (str: string): boolean => {
+          const normalized = String(str).trim().toLowerCase();
+          return normalized === "none" || normalized === "clear" || normalized === "off" || normalized === "0";
+        };
+
+        const configPath = path.join(this.projectRoot, "cortex.json");
+        const envPath = path.join(this.projectRoot, ".env");
+
+        let cortexJson: any = {};
+        try {
+          const raw = await fs.readFile(configPath, "utf-8");
+          cortexJson = JSON.parse(raw);
+        } catch {}
+
+        let envContent = "";
+        try {
+          envContent = await fs.readFile(envPath, "utf-8");
+        } catch {}
+
+        const lines = envContent.split("\n");
+        const envConfig: Record<string, string> = {};
+        for (const line of lines) {
+          const [key, value] = line.split("=");
+          if (key && value) envConfig[key.trim()] = value.trim();
+        }
+
+        const reports: string[] = [];
+
+        if (maxCost !== undefined) {
+          const costStr = String(maxCost).trim();
+          if (isClearVal(costStr)) {
+            delete envConfig["CORTEX_MAX_SESSION_COST_USD"];
+            if (cortexJson.safeguards) {
+              delete cortexJson.safeguards.maxSessionCostUsd;
+            }
+            reports.push("Cost-limit safeguard **disabled**.");
+          } else {
+            const val = parseFloat(costStr);
+            if (!isNaN(val)) {
+              envConfig["CORTEX_MAX_SESSION_COST_USD"] = val.toString();
+              cortexJson.safeguards = cortexJson.safeguards || {};
+              cortexJson.safeguards.maxSessionCostUsd = val;
+              reports.push(`Cost-limit safeguard configured to **$${val.toFixed(4)}**.`);
+            } else {
+              return {
+                content: [{ type: "text", text: "Error: maxCost must be a numeric string or 'none'." }],
+                isError: true,
+              };
+            }
+          }
+        }
+
+        if (maxSyncsHour !== undefined) {
+          const syncStr = String(maxSyncsHour).trim();
+          if (isClearVal(syncStr)) {
+            delete envConfig["CORTEX_MAX_SYNC_CALLS_PER_HOUR"];
+            if (cortexJson.safeguards) {
+              delete cortexJson.safeguards.maxSyncCallsPerHour;
+            }
+            reports.push("Hourly sync frequency safeguard **disabled**.");
+          } else {
+            const val = parseInt(syncStr, 10);
+            if (!isNaN(val)) {
+              envConfig["CORTEX_MAX_SYNC_CALLS_PER_HOUR"] = val.toString();
+              cortexJson.safeguards = cortexJson.safeguards || {};
+              cortexJson.safeguards.maxSyncCallsPerHour = val;
+              reports.push(`Hourly sync frequency safeguard configured to **${val} syncs/hour**.`);
+            } else {
+              return {
+                content: [{ type: "text", text: "Error: maxSyncsHour must be an integer string or 'none'." }],
+                isError: true,
+              };
+            }
+          }
+        }
+
+        if (cortexJson.safeguards && Object.keys(cortexJson.safeguards).length === 0) {
+          delete cortexJson.safeguards;
+        }
+
+        await fs.writeFile(configPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+        const newEnvContent = Object.entries(envConfig)
+          .map(([key, value]) => `${key}=${value}`)
+          .join("\n") + "\n";
+        await fs.writeFile(envPath, newEnvContent, "utf-8");
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ Safeguards updated successfully:\n\n${reports.map(r => `- ${r}`).join("\n")}`,
             },
           ],
         };
@@ -2149,7 +2335,13 @@ export class CortexMCPServer {
         if (!estimate.hasDiff) {
           return { content: [{ type: "text", text: "No pending changes since last sync. Estimated cost: $0.00." }] };
         }
-        const budget = typeof (args as any)?.budget === "number" ? (args as any).budget as number : null;
+        let budget = typeof (args as any)?.budget === "number" ? (args as any).budget as number : null;
+        if (budget === null) {
+          const config = loadSafeguardConfig(this.projectRoot);
+          if (config.maxSessionCostUsd !== undefined) {
+            budget = config.maxSessionCostUsd;
+          }
+        }
         const lines: string[] = [
           `Estimated Input Tokens:  ~${estimate.inputTokens.toLocaleString()}`,
           `Estimated Output Tokens: ~${estimate.outputTokens.toLocaleString()}`,

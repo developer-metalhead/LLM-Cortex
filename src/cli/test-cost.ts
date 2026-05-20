@@ -4,6 +4,7 @@ import { LIBRARIAN_SYSTEM_PROMPT } from "../llm/prompts.js";
 import { estimateTokens } from "../knowledge/packer.js";
 import fs from "fs/promises";
 import path from "path";
+import { loadSafeguardConfig } from "../knowledge/safeguards.js";
 
 export const PRICING: Record<string, { input: number; output: number }> = {
   "gpt-4o":             { input: 5.00,  output: 15.00 },
@@ -207,17 +208,26 @@ export async function runTestCost(
     }
   }
 
+  let budgetVal: number | undefined = undefined;
   if (options.budget) {
-    const budget = parseFloat(options.budget);
-    if (isNaN(budget)) {
+    budgetVal = parseFloat(options.budget);
+    if (isNaN(budgetVal)) {
       console.error(`❌ Invalid budget: ${options.budget}`);
       process.exit(1);
     }
-    if (estimate.maxCost > budget) {
-      console.error(`\n🚨 BUDGET EXCEEDED: Estimated cost ($${estimate.maxCost.toFixed(4)}) is higher than budget ($${budget.toFixed(4)})`);
+  } else {
+    const config = loadSafeguardConfig(projectRoot);
+    if (config.maxSessionCostUsd !== undefined) {
+      budgetVal = config.maxSessionCostUsd;
+    }
+  }
+
+  if (budgetVal !== undefined) {
+    if (estimate.maxCost > budgetVal) {
+      console.error(`\n🚨 BUDGET EXCEEDED: Estimated cost ($${estimate.maxCost.toFixed(4)}) is higher than budget ($${budgetVal.toFixed(4)})`);
       process.exit(1);
     } else {
-      console.log(`\n✅ Within budget ($${budget.toFixed(4)}).`);
+      console.log(`\n✅ Within budget ($${budgetVal.toFixed(4)}).`);
     }
   }
 }

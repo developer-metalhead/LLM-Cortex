@@ -7,27 +7,33 @@ function ask(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => rl.question(question, resolve));
 }
 
+function isClearValue(str: string): boolean {
+  const normalized = str.trim().toLowerCase();
+  return normalized === "none" || normalized === "clear" || normalized === "off" || normalized === "0";
+}
+
 export async function runConfig(
   projectRoot: string,
-  options: { provider?: string; model?: string; mode?: string; brevity?: string }
+  options: { provider?: string; model?: string; mode?: string; brevity?: string; maxCost?: string; maxSyncsHour?: string }
 ): Promise<void> {
   loadCortexEnv(projectRoot);
   const envPath = path.join(projectRoot, ".env");
   let envContent = "";
+  let hasEnv = true;
 
   try {
     envContent = await fs.readFile(envPath, "utf-8");
   } catch {
-    console.error("  Error: .env file not found. Run `cortex init` first.");
-    return;
+    hasEnv = false;
   }
 
-  const lines = envContent.split("\n");
   const config: Record<string, string> = {};
-
-  for (const line of lines) {
-    const [key, value] = line.split("=");
-    if (key && value) config[key.trim()] = value.trim();
+  if (hasEnv) {
+    const lines = envContent.split("\n");
+    for (const line of lines) {
+      const [key, value] = line.split("=");
+      if (key && value) config[key.trim()] = value.trim();
+    }
   }
 
   // Update with flags if provided
@@ -51,8 +57,82 @@ export async function runConfig(
     await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
   }
 
+  if (options.maxCost !== undefined) {
+    const rawVal = options.maxCost.trim();
+    if (isClearValue(rawVal)) {
+      delete config["CORTEX_MAX_SESSION_COST_USD"];
+      
+      const cortexJsonPath = path.join(projectRoot, "cortex.json");
+      let cortexJson: Record<string, any> = {};
+      try {
+        cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+      } catch {}
+      if (cortexJson.safeguards) {
+        delete cortexJson.safeguards.maxSessionCostUsd;
+        if (Object.keys(cortexJson.safeguards).length === 0) {
+          delete cortexJson.safeguards;
+        }
+      }
+      await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+    } else {
+      const val = parseFloat(rawVal);
+      if (!isNaN(val)) {
+        config["CORTEX_MAX_SESSION_COST_USD"] = val.toString();
+        
+        const cortexJsonPath = path.join(projectRoot, "cortex.json");
+        let cortexJson: Record<string, any> = {};
+        try {
+          cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+        } catch {}
+        cortexJson.safeguards = cortexJson.safeguards || {};
+        cortexJson.safeguards.maxSessionCostUsd = val;
+        await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+      } else {
+        console.error("  Error: max-cost must be a numeric value, or 'none', 'clear', 'off', '0' to disable.");
+        process.exit(1);
+      }
+    }
+  }
+
+  if (options.maxSyncsHour !== undefined) {
+    const rawVal = options.maxSyncsHour.trim();
+    if (isClearValue(rawVal)) {
+      delete config["CORTEX_MAX_SYNC_CALLS_PER_HOUR"];
+      
+      const cortexJsonPath = path.join(projectRoot, "cortex.json");
+      let cortexJson: Record<string, any> = {};
+      try {
+        cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+      } catch {}
+      if (cortexJson.safeguards) {
+        delete cortexJson.safeguards.maxSyncCallsPerHour;
+        if (Object.keys(cortexJson.safeguards).length === 0) {
+          delete cortexJson.safeguards;
+        }
+      }
+      await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+    } else {
+      const val = parseInt(rawVal, 10);
+      if (!isNaN(val)) {
+        config["CORTEX_MAX_SYNC_CALLS_PER_HOUR"] = val.toString();
+        
+        const cortexJsonPath = path.join(projectRoot, "cortex.json");
+        let cortexJson: Record<string, any> = {};
+        try {
+          cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+        } catch {}
+        cortexJson.safeguards = cortexJson.safeguards || {};
+        cortexJson.safeguards.maxSyncCallsPerHour = val;
+        await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+      } else {
+        console.error("  Error: max-syncs-hour must be an integer value, or 'none', 'clear', 'off', '0' to disable.");
+        process.exit(1);
+      }
+    }
+  }
+
   // Interactive mode if no flags
-  if (!options.provider && !options.model && !options.mode && !options.brevity) {
+  if (!options.provider && !options.model && !options.mode && !options.brevity && options.maxCost === undefined && options.maxSyncsHour === undefined) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     console.log("\n  Project Cortex — Configuration Editor\n");
 
@@ -83,14 +163,81 @@ export async function runConfig(
       }
     }
 
+    const maxCostInput = await ask(rl, `  Max Session Cost USD [${config["CORTEX_MAX_SESSION_COST_USD"] || "none"}]: `);
+    if (maxCostInput.trim()) {
+      const inputStr = maxCostInput.trim();
+      if (isClearValue(inputStr)) {
+        delete config["CORTEX_MAX_SESSION_COST_USD"];
+        const cortexJsonPath = path.join(projectRoot, "cortex.json");
+        let cortexJson: Record<string, any> = {};
+        try {
+          cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+        } catch {}
+        if (cortexJson.safeguards) {
+          delete cortexJson.safeguards.maxSessionCostUsd;
+          if (Object.keys(cortexJson.safeguards).length === 0) {
+            delete cortexJson.safeguards;
+          }
+        }
+        await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+      } else {
+        const val = parseFloat(inputStr);
+        if (!isNaN(val)) {
+          config["CORTEX_MAX_SESSION_COST_USD"] = val.toString();
+          const cortexJsonPath = path.join(projectRoot, "cortex.json");
+          let cortexJson: Record<string, any> = {};
+          try {
+            cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+          } catch {}
+          cortexJson.safeguards = cortexJson.safeguards || {};
+          cortexJson.safeguards.maxSessionCostUsd = val;
+          await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+        }
+      }
+    }
+
+    const maxSyncsHourInput = await ask(rl, `  Max Sync Calls Per Hour [${config["CORTEX_MAX_SYNC_CALLS_PER_HOUR"] || "none"}]: `);
+    if (maxSyncsHourInput.trim()) {
+      const inputStr = maxSyncsHourInput.trim();
+      if (isClearValue(inputStr)) {
+        delete config["CORTEX_MAX_SYNC_CALLS_PER_HOUR"];
+        const cortexJsonPath = path.join(projectRoot, "cortex.json");
+        let cortexJson: Record<string, any> = {};
+        try {
+          cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+        } catch {}
+        if (cortexJson.safeguards) {
+          delete cortexJson.safeguards.maxSyncCallsPerHour;
+          if (Object.keys(cortexJson.safeguards).length === 0) {
+            delete cortexJson.safeguards;
+          }
+        }
+        await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+      } else {
+        const val = parseInt(inputStr, 10);
+        if (!isNaN(val)) {
+          config["CORTEX_MAX_SYNC_CALLS_PER_HOUR"] = val.toString();
+          const cortexJsonPath = path.join(projectRoot, "cortex.json");
+          let cortexJson: Record<string, any> = {};
+          try {
+            cortexJson = JSON.parse(await fs.readFile(cortexJsonPath, "utf-8"));
+          } catch {}
+          cortexJson.safeguards = cortexJson.safeguards || {};
+          cortexJson.safeguards.maxSyncCallsPerHour = val;
+          await fs.writeFile(cortexJsonPath, JSON.stringify(cortexJson, null, 2), "utf-8");
+        }
+      }
+    }
+
     rl.close();
   }
 
   // Write back
-  const newEnvContent = Object.entries(config)
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n") + "\n";
-
-  await fs.writeFile(envPath, newEnvContent, "utf-8");
+  if (hasEnv || Object.entries(config).length > 0) {
+    const newEnvContent = Object.entries(config)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n") + "\n";
+    await fs.writeFile(envPath, newEnvContent, "utf-8");
+  }
   console.log("\n  Configuration updated successfully.");
 }

@@ -644,13 +644,16 @@ export class KnowledgeManager {
     // Ingest-bypass token savings ledger logging
     try {
       const { computeCostEstimate } = await import("../cli/test-cost.js");
-      const { appendTransaction, calculateSavedUsd } = await import("./ledger.js");
+      const { appendTransaction, calculateSavedUsd, calculateSpentUsd } = await import("./ledger.js");
       const estimate = await computeCostEstimate(this.projectRoot);
       if (estimate && estimate.hasDiff && estimate.savingsTokens > 0) {
         const provider = process.env.CORTEX_PROVIDER || "openai";
         const model = process.env.CORTEX_MODEL || "gpt-4o";
         const savedUsd = calculateSavedUsd(estimate.savingsTokens, provider, this.projectRoot);
         
+        const spentTokens = estimate.inputTokens + estimate.outputTokens;
+        const spentUsd = calculateSpentUsd(estimate.inputTokens, estimate.outputTokens, provider, this.projectRoot);
+
         const uniqueFiles = Array.from(new Set(
           synthesis.entities
             .map(e => e.sourceFile)
@@ -669,6 +672,8 @@ export class KnowledgeManager {
           savedTokens: estimate.savingsTokens,
           savedUsd,
           details: `${fileDetail}`,
+          spentTokens,
+          spentUsd,
         });
       }
     } catch (err: any) {
