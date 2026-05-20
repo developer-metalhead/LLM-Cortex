@@ -262,6 +262,14 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [ ] AST Skeleton Parser — return syntax outline structure for unchanged read-cached files to slash re-read cost by 95%
 - [ ] Delta Diffing Engine — return unified diffs for modified read-cached files
 
+### Phase 13.8 — Persistent Experience & Cognitive Mode-Adaptive Context (Adaptive Context Core)
+- [ ] `src/knowledge/profile.ts` — User Profile Modeling: Load/verify clean developer rules, disallowed third-party libraries, and preferred brevity styles via `user_profile.json`
+- [ ] `src/knowledge/experience.ts` — Systemic Experience Ledger: Append-only transaction stream `experience.jsonl` logging decisions, validation runs, and reverts
+- [ ] `src/knowledge/cognitive.ts` — Cognitive Mode-Based Reranking: Dynamically adjust graph node weights based on task modes (`DEBUG`, `PLANNING`, `ENGINEERING`, `CREATIVE`, `EXECUTION`) in `find.ts` & `packer.ts`
+- [ ] `src/knowledge/writer.ts` — Mode-Adaptive Ingestion: Swap Librarian system prompts based on sub-millisecond local regex checks of Git diffs
+- [ ] `src/knowledge/graph.ts` — Relation-Based Graph Hopping: Navigates explicit `[[WikiLink]]` conceptual paths (1-2 hops) in `CREATIVE` mode for creative Discovery without vector drift
+
+
 
 ### Phase 11 — Monorepo Federation
 - [ ] `cortex init --monorepo` — auto-detect pnpm/yarn/turbo workspaces; scaffold `.cortex/workspaces.json`

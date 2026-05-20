@@ -114,6 +114,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 ✓ | ✅ **Done 2026-05-20** |
 | 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | ⏳ Planned |
 | 2.8 | **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression | Intercepts file reads to return diffs and skeletons (Delta Mode & Structure Map) | Phase 10.3 | ⏳ Planned |
+| 2.9 | **Phase 13.8** — Persistent Experience & Cognitive Mode-Adaptive Context | Active, local-first co-pilot memory tracking developer preferences, past reverts, and task intent | Phase 13.5 ✓, Phase 13.2 ✓ | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
 | 4.1 | **Phase 4.7** — OpenAI-Compatible REST Gateway | Proxy local RAG queries to any standard OpenAI-compatible client | Phase 33.1 | ⏳ Planned |

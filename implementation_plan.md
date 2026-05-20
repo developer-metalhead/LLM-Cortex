@@ -51,6 +51,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.4  | API Budget Gating & Runaway Safeguards                | ✅ Done                              |
 | 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
 | 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
+| 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
@@ -2420,6 +2421,34 @@ During a coding session, the AI reads the same source code files over and over a
 **Pros & Cons**
 - ✅ **Pros**: Substantial token savings during iterative file editing; fits directly inside existing Claude Code hooks.
 - ❌ **Cons**: AI must be able to work off of structural summaries and diffs. If the AI needs full implementation details, it must trigger a bypass read.
+
+---
+
+## 💸 Phase 13.8: Persistent Experience & Cognitive Mode-Adaptive Context — ⏳ Planned
+
+**Layman's Terms**
+When you use an AI assistant, it forgets everything you did in the previous task. If you run into a bug, fix it, and then try another change, the AI doesn't remember what failed last time. Phase 13.8 adds a local persistent "co-pilot memory" to Cortex. It stores your custom development rules, logs a transaction ledger of past refactoring decisions and reverts, and dynamically selects a "thinking mode" (like Debug or Planning) to change how it prioritizes search results. This prevents the AI from repeating historical code errors and slashes token costs by only delivering context relevant to your active task.
+
+**Technical Terms**
+- **User Profile Model (`src/knowledge/profile.ts`)**: Loads and validates `user_profile.json` at the workspace root to check for team constraints (e.g. disallowed libraries) and risk tolerances.
+- **Experience Ledger (`src/knowledge/experience.ts`)**: Append-only telemetry manager logging sync decisions, validation outcomes, and reverted commits in `experience.jsonl`.
+- **Cognitive Search Ranker (`src/knowledge/find.ts` & `src/knowledge/packer.ts`)**: Reweights graph search and context-packing candidates dynamically based on the active task mode (`DEBUG` prioritizes past violations and reverts; `PLANNING` prioritizes high-centrality interfaces and parent structures).
+- **Mode-Adaptive Ingestion (`src/knowledge/writer.ts`)**: Applies sub-millisecond local regex heuristics against git diffs/commit messages to swap Librarian system prompts dynamically during synchronization (e.g. Debug prompt for emergency fixes).
+- **Relation Graph Hopping (`src/knowledge/graph.ts` & `src/knowledge/packer.ts`)**: Traverses explicit WikiLinks (1-2 hops) for creative architectural exploration, preventing vector hallucination.
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (Fuzzy Levenshtein & RRF Search Ranker) and Phase 13.2 (Brevity Engine) are completed.
+
+**Definition of Done (DoD)**
+- **User Profile Modeling (`user_profile.json`)**: A structured `.knowledge/user_profile.json` is created and parsed to inject developer rules, disallowed libraries, and preferred brevity styles without context window pollution.
+- **Systemic Experience Ledger (`experience.jsonl`)**: An append-only transaction stream `.knowledge/experience.jsonl` logs sync decisions, verification results, and reverts to identify unstable patterns and prevent repetitive AI errors.
+- **Cognitive Mode-Based Reranking (`cognitive.ts`)**: The search ranker adjusts node weights dynamically based on active intent modes (e.g. `DEBUG` prioritizes past faults, `PLANNING` prioritizes parent structures), delivering 3x higher relevance in the exact same token limits.
+- **Mode-Adaptive Ingestion**: Sub-millisecond regex checks of git diffs swap Librarian prompts dynamically during synchronizations (e.g., swapping to a specialized Debug prompt on bug-fix code commits).
+- **Relation-Based Graph Hopping**: The query traversal engine navigates 1-2 hops along explicit conceptual `[[WikiLink]]` paths when in `CREATIVE` mode to recommend architectural parallels without semantic vector hallucinations.
+
+**Pros & Cons**
+- ✅ **Pros**: Proves massive ROI for paid Indie Pro tier; stops AI hallucination loops by grounding it in real-world sync history; slashes token costs via dynamic reranking.
+- ❌ **Cons**: Adds two local JSON state files that must be protected from formatting corruption and kept in sync.
 
 ---
 
