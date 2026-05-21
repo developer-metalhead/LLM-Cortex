@@ -84,6 +84,10 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
 - [**35. API Budget & Runaway Safeguards**](./feature.md#35-api-budget--runaway-safeguards)
   *Defends your wallet by enforcing hard session budget caps and rolling frequency gates, encouraging emergent cost-optimal tool routing.*
 
+### Safety, Governance & Traceability
+- [**45. Pre-Tool Call Knowledge Context Injection**](./feature.md#45-pre-tool-call-knowledge-context-injection)
+  *Automatically injects the Cortex knowledge index into every AI session before Read/Grep tool calls.*
+
 ### Emergent & Synergetic Superpowers
 - [**36. Time-Travel Architectural Autopsy**](./feature.md#36-time-travel-architectural-autopsy)
   *Checkout past commit hashes from failed approaches to inspect exact offending code in the editor.*
@@ -92,17 +96,17 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
 - [**38. Automatic Stale Repair Guide**](./feature.md#38-automatic-stale-repair-guide)
   *Onboarding guides automatically transform into custom repair roadmaps when active technical debt exists.*
 - [**39. Self-Vaccinating Architectural Immune System**](./feature.md#39-self-vaccinating-architectural-immune-system)
-  *Pre-commit blocks write failed attempts into the AI's long-term memory to pre-emptively guide future designs.*
+  *Logs failed architectural attempts and constraint violations into the AI's long-term memory to pre-emptively guide future designs.*
 - [**40. Centrality-Weighted Semantic Pruning**](./feature.md#40-centrality-weighted-semantic-pruning)
   *Prunes token budgets by prioritizing central architecture hubs over isolated leaf utility components.*
 - [**41. Zero-Cost Human Curation Loop**](./feature.md#41-zero-cost-human-curation-loop)
   *Prune stale warnings and verify downstream blast-radii using fast, completely offline local commands.*
-- [**42. Graph Linting as a PR Quality Gate**](./feature.md#42-graph-linting-as-a-pr-quality-gate)
-  *Treat cyclical dependencies and god-module anti-patterns as PR build failures in your CI pipeline.*
+- [**42. Graph Linting as a CI Quality Gate**](./feature.md#42-graph-linting-as-a-ci-quality-gate)
+  *Scan for cyclical dependencies and god-module anti-patterns — exits 1 on violations, ready for your CI pipeline.*
 - [**43. Verbatim Source-Code Grounding (Deterministic Proofs)**](./feature.md#43-verbatim-source-code-grounding-deterministic-proofs)
   *Prevent AI hallucinations by grounding memory in physical code snippets verified via drift checks.*
 - [**44. Automated Structural Contradiction Alarms**](./feature.md#44-automated-structural-contradiction-alarms)
-  *Drop Quality Scores and block PR merges when new implementation contradicts documented contracts.*
+  *Drop Quality Scores when new implementation contradicts documented contracts — surfaced via `cortex audit quality`.*
 
 ---
 *Built incrementally to solve the hardest problem in Agentic AI: **Maintained Architectural Context**.*

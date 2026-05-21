@@ -348,11 +348,11 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 ---
 
 ## 39. Self-Vaccinating Architectural Immune System
-**What it does:** An emergent cycle that turns failed architectural attempts into active AI wisdom. If an agent or human tries a quick hack that violates constraints, the hook blocks it, the system logs the failure, and the AI pre-emptively warns future attempts about this specific dead end.
+**What it does:** An emergent cycle that turns failed architectural attempts into active AI wisdom. When a constraint violation is detected during sync, the failed approach is automatically logged into long-term memory via `## Failed Approaches`, so future AI agents can pre-emptively avoid repeating the same design mistakes.
 **How to use it:**
-- Attempt to commit code that violates active constraints in `cortex.constraints.json`.
-- The git hook automatically blocks the commit and prompts the AI to log the failed approach.
-- In subsequent tasks, the AI reads `failedApproaches` before writing code, dynamically guiding you away from making the same mistake twice.
+- Run `cortex hook` to install a pre-commit hook that reminds developers to sync before pushing changes.
+- When a constraint violation is detected during `cortex sync` or `ingest`, the AI Librarian automatically logs the failed approach into the entity's `## Failed Approaches` section.
+- In subsequent tasks, the AI reads `failedApproaches` before writing code (via `getEntityGuardrails()`), dynamically guiding you away from making the same mistake twice.
 
 ---
 
@@ -374,12 +374,12 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 42. Graph Linting as a PR Quality Gate
-**What it does:** Treats structural technical debt (like cyclical dependencies or bloated god modules) as a PR compile-time test failure. Because graph lint warnings automatically degrade the deterministic Quality Score, you can block PR merges that violate structural integrity.
+## 42. Graph Linting as a CI Quality Gate
+**What it does:** Treats structural technical debt (like cyclical dependencies or bloated god modules) as a CI test failure. Graph lint warnings and Quality Score degradation give you the tools to enforce architectural integrity in your pipeline.
 **How to use it:**
-- Add `cortex audit quality` or `cortex lint` to your CI/CD pipeline (e.g. GitHub Actions).
-- Configure your runner to exit with a non-zero status if any active entity's Quality Score falls below your configured threshold (e.g., `0.5`).
-- Any PR that introduces circular imports or unmaintained orphans will fail the build, preventing architectural decay natively!
+- Run `cortex lint` — it scans the graph and exits 1 on `error`-severity findings (cycles, orphans, god modules, silos).
+- Run `cortex audit quality` — it exits 1 if any entity's Quality Score falls below your configured threshold (default 0.5).
+- Plug these commands into your CI/CD pipeline to block PRs that introduce architectural decay.
 
 ---
 
@@ -392,10 +392,19 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 ---
 
 ## 44. Automated Structural Contradiction Alarms
-**What it does:** Actively flags logical contradictions between your implementation and documented contracts. If a developer implements a method that contradicts an active constraint or parent interface, Cortex instantly drops the entity's Quality Score below the safety gate.
+**What it does:** Actively flags logical contradictions between your implementation and documented contracts. When the AI Librarian detects a contradiction during sync, it drops the entity's Quality Score below the safety gate, surfacing structural drift.
 **How to use it:**
 - **How it triggers:** Automatically evaluated during `cortex sync` or `ingest` using the AI Librarian's contradiction engine.
-- **Action:** If a logical contradiction is detected, the Quality Score degrades below `0.5`, failing the PR merge and alerting the team of structural contract drift.
+- **Detection:** If a logical contradiction is detected, the Quality Score degrades below `0.5` and the entity is flagged in `cortex audit quality`.
+- **CI Integration:** Add `cortex audit quality` to your pipeline — any PR introducing contradictions will fail the build.
 
+---
+
+## 45. Pre-Tool Call Knowledge Context Injection
+**What it does:** Automatically injects the Cortex knowledge index into every AI session before Read or Grep tool calls. The PreToolUse hook (`inject-knowledge.js`) runs as a cross-platform Node.js script triggered by Claude Code, reading the knowledge index and appending relevant context to the system prompt — no manual `/read` needed. Each session gets fresh context via PPID-based session key tracking.
+**How to use it:**
+- **CLI Command:** `cortex setup claude-code` (automatically writes the hook into `.claude/hooks/inject-knowledge.js` and registers the `PreToolUse` matcher in `.claude/settings.json`)
+- **MCP Tool Call:** N/A (runs automatically as a Claude Code hook)
+- **MCP Prompt Trigger:** N/A
 
 
