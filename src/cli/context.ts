@@ -30,7 +30,8 @@ export async function runContextBuild(
     budget,
     scope: options.scope,
     depth,
-    format
+    format,
+    projectRoot,
   });
 
   const outputContent = pack.output;
@@ -49,5 +50,11 @@ export async function runContextBuild(
     console.log(`   - Elided items: ${pack.elided.length} (due to budget constraints)`);
   } else {
     console.log(`   - Elided items: 0`);
+  }
+  if (pack.expanded && pack.expanded.length > 0) {
+    console.log(`   - 🔄 Dynamic Expansion: ${pack.expanded.length} entity(s) re-included: ${pack.expanded.join(", ")}`);
+  }
+  if (pack.groundedFallbacks && pack.groundedFallbacks.length > 0) {
+    console.log(`   - ⚡ Grounded Fallbacks: ${pack.groundedFallbacks.length} entity(s) resolved from source: ${pack.groundedFallbacks.map(f => `${f.name} (${f.confidence})`).join(", ")}`);
   }
 }
