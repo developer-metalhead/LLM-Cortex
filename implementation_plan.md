@@ -3890,6 +3890,22 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 
 ---
 
+## 🗜️ Phase 13.13: Agent Workflow Friction Reductions (Agent Feedback) — ⏳ Planned
+
+**Layman's Terms**: AI agents get frustrated too. When Cortex forces them to make multiple tool calls just to fix a typo, or alerts them that 15 files are "stale" because of a formatting change, it wastes their time and the user's tokens. Phase 13.13 acts on direct AI feedback to smooth out these workflow blockers: making pre-flight checks one-shot, allowing precise method-level reads, and ignoring harmless formatting changes.
+
+**Technical Terms**: Implement a set of UX and workflow improvements derived from direct agent feedback to reduce token waste and latency:
+1. **One-Shot Pre-Flight (`before_change`)**: Promote the unified `before_change` tool in `AGENTS.md` and deprecate manual sequential calls (`read_index` -> `read_entity` -> `read_concept`) to reduce pre-flight latency.
+2. **Method-Level AST Reads (`read_method`)**: Enhance the `source` tool (or add `read_method`) to extract the full logic body of a specific function. This prevents agents from having to use `bypass=true` on a 500-line file just to debug a single loop stripped by the AST skeleton.
+3. **Semantic Diffing**: Upgrade the ingestion engine to parse AST deltas. If a change only affects whitespace, formatting, or comments without altering the public interface or logic, it bypasses the stale cascade, eliminating alert fatigue (False Alarms).
+4. **Lazy Ingestion / Async Worker**: Decouple LLM prose synthesis from the active coding loop. Update AST signatures instantly (which is cheap/free), but queue the LLM `save_synthesis` calls to a background `cortex watch` worker so the active coding agent isn't blocked by ingestion latency.
+
+**DoR**: Phase 13.7 (AST Skeleton) and Phase 6 (Staleness) are stable.
+
+**DoD**: `AGENTS.md` instructs using `before_change`. `source` tool accepts method-level targeting. Formatting changes no longer trigger downstream stale flags. Ingestion workflow supports asynchronous background synthesis.
+
+---
+
 ## 🗂️ Phase 14: Large-Diff Clustering — ⏳ Planned
 
 **Layman's Terms**
