@@ -25,7 +25,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 19 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, 13, 13.1, 13.2, 13.3, 13.4, 13.5, 13.6 (verified 2026-05-21) |
+| ✅ Done | 20 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, 13, 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7 (verified 2026-05-21) |
 | 🚧 In Progress | 0 | (none) |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~23 | Phases 14-20.24, drive differentiation |
@@ -113,7 +113,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.5 | **Phase 13.4** — API Budget Gating & Runaway Safeguards | Hard limits on session spending and sync count to avoid API budget draining | Phase 13.3 ✓ | ✅ **Done 2026-05-20** |
 | 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 ✓ | ✅ **Done 2026-05-20** |
 | 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | ✅ **Done 2026-05-21** |
-| 2.8 | **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression | Intercepts file reads to return diffs and skeletons (Delta Mode & Structure Map) | Phase 10.3 | ⏳ Planned |
+| 2.8 | **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression | Intercepts file reads to return diffs and skeletons (Delta Mode & Structure Map) | Phase 10.3 ✓ | ✅ **Done 2026-05-21** |
 | 2.9 | **Phase 13.8** — Persistent Experience & Cognitive Mode-Adaptive Context | Active, local-first co-pilot memory tracking developer preferences, past reverts, and task intent | Phase 13.5 ✓, Phase 13.2 ✓ | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
@@ -394,6 +394,7 @@ Each sprint is roughly 4-8 weeks of focused engineering, designed to produce a s
 - ✅ **Phase 13.4** (API budget gating & runaway safeguards) — Done 2026-05-20
 - ✅ **Phase 13.5** (fuzzy Levenshtein & RRF search ranker) — Done 2026-05-20
 - ✅ **Phase 13.6** (proximity reranking & smart snippets) — Done 2026-05-21
+- ✅ **Phase 13.7** (hooks-based smart read cache & AST skeleton delta) — Done 2026-05-21
 - Phase 14 (clustering)
 - Phase 16 (contradictions, research)
 - Phase 18 (embeddings, research)
@@ -577,7 +578,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 10.4** — Managed `CLAUDE.md` & AI Rules Orchestration · deps: 10.3
 - **Phase 10.5** — Attention-Curve Rule Reordering & Position Optimization · deps: 10.4
 - **Phase 10.7** — Rules File Size Guardrail & Auto-Splitting · deps: 10.4
-- **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression · deps: 10.3
+- ~~**Phase 13.7** —~~ Hooks-Based Smart Read Cache & AST Skeleton Delta Compression · (✅ Done 2026-05-21)
 - **Phase 17.1** — Multi-Model Architectural Debate · deps: 33.1
 - **Phase 20.5.1** — Automated ADR Engine · deps: 20.5
 - **Phase 20.6** — MemGPT Hierarchical Memory Tiering · deps: 4 ✓, 8, 10

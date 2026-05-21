@@ -69,43 +69,45 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
   *Generates personalized 5-minute codebase tours using PageRank math.*
 
 ### Economics & Token Optimization
-- [**29. Token-Bounded Context Packs**](./feature.md#29-token-bounded-context-packs)
+- [**29. AST Skeleton Smart Read Cache**](./feature.md#29-ast-skeleton-smart-read-cache)
+  *Intercepts file reads to return compact AST skeletons (~90% smaller) or unified diffs, slashing re-read costs.*
+- [**30. Token-Bounded Context Packs**](./feature.md#30-token-bounded-context-packs)
   *Packs context into strict token limits using graph centrality algorithms.*
-- [**30. API Cost Estimation & Projections**](./feature.md#30-api-cost-estimation--projections)
+- [**31. API Cost Estimation & Projections**](./feature.md#31-api-cost-estimation--projections)
   *Estimates ingestion costs without hitting APIs and prints weekly ROI.*
-- [**31. Tokenized Reference Hashing**](./feature.md#31-tokenized-reference-hashing)
+- [**32. Tokenized Reference Hashing**](./feature.md#32-tokenized-reference-hashing)
   *Dynamically replaces repetitive text with hashes to save massive API tokens.*
-- [**32. Telegraphic Brevity Engine**](./feature.md#32-telegraphic-brevity-engine)
+- [**33. Telegraphic Brevity Engine**](./feature.md#33-telegraphic-brevity-engine)
   *Actively strips conversational fluff from AI responses over the wire.*
-- [**33. Markdown Compression Engine**](./feature.md#33-markdown-compression-engine)
+- [**34. Markdown Compression Engine**](./feature.md#34-markdown-compression-engine)
   *Physically compresses `.knowledge/` or raw rule files on disk (`cortex compress`).*
-- [**34. Token & Cost Savings Ledger**](./feature.md#34-token--cost-savings-ledger)
+- [**35. Token & Cost Savings Ledger**](./feature.md#35-token--cost-savings-ledger)
   *A live financial dashboard showing exactly how much Cortex has saved you.*
-- [**35. API Budget & Runaway Safeguards**](./feature.md#35-api-budget--runaway-safeguards)
+- [**36. API Budget & Runaway Safeguards**](./feature.md#36-api-budget--runaway-safeguards)
   *Defends your wallet by enforcing hard session budget caps and rolling frequency gates, encouraging emergent cost-optimal tool routing.*
 
 ### Safety, Governance & Traceability
-- [**45. Pre-Tool Call Knowledge Context Injection**](./feature.md#45-pre-tool-call-knowledge-context-injection)
+- [**46. Pre-Tool Call Knowledge Context Injection**](./feature.md#46-pre-tool-call-knowledge-context-injection)
   *Automatically injects the Cortex knowledge index into every AI session before Read/Grep tool calls.*
 
 ### Emergent & Synergetic Superpowers
-- [**36. Time-Travel Architectural Autopsy**](./feature.md#36-time-travel-architectural-autopsy)
+- [**37. Time-Travel Architectural Autopsy**](./feature.md#37-time-travel-architectural-autopsy)
   *Checkout past commit hashes from failed approaches to inspect exact offending code in the editor.*
-- [**37. Historical Quality & Debt Progression**](./feature.md#37-historical-quality--debt-progression)
+- [**38. Historical Quality & Debt Progression**](./feature.md#38-historical-quality--debt-progression)
   *Compare visual graphs and audits of your codebase month-over-month using Git-committed memory state.*
-- [**38. Automatic Stale Repair Guide**](./feature.md#38-automatic-stale-repair-guide)
+- [**39. Automatic Stale Repair Guide**](./feature.md#39-automatic-stale-repair-guide)
   *Onboarding guides automatically transform into custom repair roadmaps when active technical debt exists.*
-- [**39. Self-Vaccinating Architectural Immune System**](./feature.md#39-self-vaccinating-architectural-immune-system)
+- [**40. Self-Vaccinating Architectural Immune System**](./feature.md#40-self-vaccinating-architectural-immune-system)
   *Logs failed architectural attempts and constraint violations into the AI's long-term memory to pre-emptively guide future designs.*
-- [**40. Centrality-Weighted Semantic Pruning**](./feature.md#40-centrality-weighted-semantic-pruning)
+- [**41. Centrality-Weighted Semantic Pruning**](./feature.md#41-centrality-weighted-semantic-pruning)
   *Prunes token budgets by prioritizing central architecture hubs over isolated leaf utility components.*
-- [**41. Zero-Cost Human Curation Loop**](./feature.md#41-zero-cost-human-curation-loop)
+- [**42. Zero-Cost Human Curation Loop**](./feature.md#42-zero-cost-human-curation-loop)
   *Prune stale warnings and verify downstream blast-radii using fast, completely offline local commands.*
-- [**42. Graph Linting as a CI Quality Gate**](./feature.md#42-graph-linting-as-a-ci-quality-gate)
+- [**43. Graph Linting as a CI Quality Gate**](./feature.md#43-graph-linting-as-a-ci-quality-gate)
   *Scan for cyclical dependencies and god-module anti-patterns — exits 1 on violations, ready for your CI pipeline.*
-- [**43. Verbatim Source-Code Grounding (Deterministic Proofs)**](./feature.md#43-verbatim-source-code-grounding-deterministic-proofs)
+- [**44. Verbatim Source-Code Grounding (Deterministic Proofs)**](./feature.md#44-verbatim-source-code-grounding-deterministic-proofs)
   *Prevent AI hallucinations by grounding memory in physical code snippets verified via drift checks.*
-- [**44. Automated Structural Contradiction Alarms**](./feature.md#44-automated-structural-contradiction-alarms)
+- [**45. Automated Structural Contradiction Alarms**](./feature.md#45-automated-structural-contradiction-alarms)
   *Drop Quality Scores when new implementation contradicts documented contracts — surfaced via `cortex audit quality`.*
 
 ---
