@@ -50,6 +50,140 @@ function getLevenshteinDistance(a: string, b: string, maxThreshold: number = 3):
   return prevRow[a.length] <= maxThreshold ? prevRow[a.length] : Infinity;
 }
 
+const PROXIMITY_BONUS_BASE = 0.01;
+
+function computeProximityBonus(text: string, queryTokens: string[], window: number): number {
+  if (queryTokens.length < 2) return 0;
+
+  const lowerText = text.toLowerCase();
+  const words = lowerText.split(/\s+/);
+
+  const tokenIndices: number[][] = [];
+  for (let wi = 0; wi < words.length; wi++) {
+    const matchedTokens: number[] = [];
+    for (let ti = 0; ti < queryTokens.length; ti++) {
+      if (words[wi].includes(queryTokens[ti])) {
+        matchedTokens.push(ti);
+      }
+    }
+    if (matchedTokens.length > 0) {
+      tokenIndices[wi] = matchedTokens;
+    }
+  }
+
+  const positions = Object.keys(tokenIndices).map(Number);
+  if (positions.length < 1) return 0;
+
+  let bonus = 0;
+
+  // Same-word bonus: multiple query tokens matching the same word (distance 0)
+  for (let wi = 0; wi < tokenIndices.length; wi++) {
+    if (tokenIndices[wi] && tokenIndices[wi].length >= 2) {
+      const indices = tokenIndices[wi];
+      for (let ti = 0; ti < indices.length; ti++) {
+        for (let tj = ti + 1; tj < indices.length; tj++) {
+          bonus += PROXIMITY_BONUS_BASE;
+        }
+      }
+    }
+  }
+
+  if (positions.length < 2) return bonus;
+
+  // Cross-word bonus: different tokens at different word positions within window
+  for (let i = 0; i < positions.length; i++) {
+    const pi = positions[i];
+    for (let j = i + 1; j < positions.length; j++) {
+      const pj = positions[j];
+      const distance = pj - pi;
+      if (distance >= window) break;
+
+      for (const ti of tokenIndices[pi]) {
+        for (const tj of tokenIndices[pj]) {
+          if (ti !== tj) {
+            const decay = 1 - ((distance - 1) / (window - 1)) * 0.75;
+            bonus += PROXIMITY_BONUS_BASE * decay;
+          }
+        }
+      }
+    }
+  }
+
+  return bonus;
+}
+
+function extractSnippet(text: string, queryTokens: string[], maxLength: number): string {
+  const trimmed = text.trim().replace(/\n/g, " ");
+  if (trimmed.length <= maxLength) return trimmed;
+
+  const lowerText = trimmed.toLowerCase();
+
+  const matchPositions: number[] = [];
+  for (const token of queryTokens) {
+    let startFrom = 0;
+    while (startFrom < lowerText.length) {
+      const idx = lowerText.indexOf(token, startFrom);
+      if (idx === -1) break;
+      matchPositions.push(idx);
+      startFrom = idx + 1;
+    }
+  }
+
+  if (matchPositions.length === 0) {
+    return trimmed.slice(0, maxLength - 3) + "...";
+  }
+
+  matchPositions.sort((a, b) => a - b);
+
+  const halfWindow = Math.floor(maxLength / 2);
+  let bestCenter = matchPositions[0];
+  let bestScore = 0;
+
+  for (const center of matchPositions) {
+    const winStart = center - halfWindow;
+    const winEnd = center + halfWindow;
+
+    let score = 1;
+    for (const pos of matchPositions) {
+      if (pos === center) continue;
+      if (pos >= winStart && pos <= winEnd) {
+        const distance = Math.abs(pos - center);
+        score += Math.max(0, 1 - distance / halfWindow);
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCenter = center;
+    }
+  }
+
+  const needsPrefix = bestCenter - halfWindow > 0;
+  const needsSuffix = bestCenter + halfWindow < trimmed.length;
+  const ellipsisBudget = (needsPrefix ? 3 : 0) + (needsSuffix ? 3 : 0);
+  const windowBudget = maxLength - ellipsisBudget;
+  const adjHalf = Math.floor(windowBudget / 2);
+
+  let start = bestCenter - adjHalf;
+  let end = start + windowBudget;
+
+  if (start < 0) {
+    end -= start;
+    start = 0;
+  }
+  if (end > trimmed.length) {
+    start -= (end - trimmed.length);
+    end = trimmed.length;
+    start = Math.max(0, start);
+  }
+
+  let result = trimmed.slice(start, end);
+  if (start > 0) result = "..." + result;
+  if (end < trimmed.length) result += "...";
+
+  return result;
+}
+
 interface Candidate {
   name: string;
   description: string;
@@ -59,6 +193,7 @@ interface Candidate {
   levensDist: number;
   tokenRank?: number;
   fuzzyRank?: number;
+  proximityBonus: number;
 }
 
 export class FindManager {
@@ -73,6 +208,8 @@ export class FindManager {
     const lowerQuery = query.toLowerCase().trim();
     const queryTokens = lowerQuery.split(/\s+/).filter(t => t.length > 0);
     const queryForFuzzy = lowerQuery.replace(/\s+/g, '');
+    const proxWindow = parseInt(process.env.CORTEX_PROXIMITY_WINDOW || "5", 10);
+    const snippetLength = parseInt(process.env.CORTEX_SNIPPET_LENGTH || "120", 10);
 
     if (queryTokens.length === 0) {
       return [];
@@ -128,13 +265,19 @@ export class FindManager {
         return;
       }
 
+      const searchText = lowerName + " " + lowerDesc + " " + lowerExtra;
+      const proximityBonus = queryTokens.length >= 2
+        ? computeProximityBonus(searchText, queryTokens, proxWindow)
+        : 0;
+
       candidates.push({
         name,
         description,
         type: nodeType,
         extraText,
         tokenScore,
-        levensDist
+        levensDist,
+        proximityBonus
       });
     };
 
@@ -198,16 +341,9 @@ export class FindManager {
       let rrfScore = 0;
       if (c.tokenRank) rrfScore += 1 / (RRF_CONSTANT + c.tokenRank);
       if (c.fuzzyRank) rrfScore += 1 / (RRF_CONSTANT + c.fuzzyRank);
+      rrfScore += c.proximityBonus;
 
-      // Build a premium one-line preview: take first sentence or first 120 characters
-      let preview = c.description.trim();
-      const firstPeriod = preview.indexOf(".");
-      if (firstPeriod !== -1 && firstPeriod > 10 && firstPeriod < 150) {
-        preview = preview.slice(0, firstPeriod + 1);
-      } else if (preview.length > 120) {
-        preview = preview.slice(0, 120) + "...";
-      }
-      preview = preview.replace(/\n/g, " ");
+      let preview = extractSnippet(c.description, queryTokens, snippetLength);
 
       results.push({
         name: c.name,
