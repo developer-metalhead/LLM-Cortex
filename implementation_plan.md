@@ -28,6 +28,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 6.5   | Plasma Filaments — Structural Edge Flag                 | ⏳ Planned                           |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
+| 7.5.1 | Agentic Verification Loop (CI-Driven Quality Boost)    | ⏳ Planned                           |
+| 7.5.2 | Mandatory Evidence Anchoring for High-Centrality Nodes | ⏳ Planned                           |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
 | 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
 | 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
@@ -64,6 +66,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 12.7  | Smart Code Outliner & Signature-Only Reader            | ⏳ Planned                           |
 | 12.8  | Log Deduplicator & Web Fetch Parser                    | ⏳ Planned                           |
 | 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
+| 12.15 | External Dependency & Ecosystem Change Tracking        | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ✅ Done                              |
 | 13.1  | Dense & Raw Token-Reduction Projections                | ✅ Done                              |
 | 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ✅ Done                              |
@@ -1502,6 +1505,49 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 
 ---
 
+## 🤖 Phase 7.5.1: Agentic Verification Loop (CI-Driven Quality Boost) — ⏳ Planned
+
+**Layman's Terms**: The `review_entity` tool requires a human to manually hit "accept" before an entity's quality score reaches 1.0. An autonomous AI agent can never meaningfully do this on its own — it has no way to verify the documentation is accurate. This phase introduces an alternative: if the entity's `## Verification` section links to a test file, and that test suite passes in CI, Cortex automatically grants the same `humanReview: 1.0` boost as a human approval. No human bottleneck. No permanently low quality scores in autonomous pipelines.
+
+**Technical Terms**: Add an `agenticVerification` mechanism to the quality scoring pipeline:
+
+- **CI Signal Ingestion**: When `cortex sync` or `/ingest` is triggered from a CI environment, accept a `--ci-pass-report <json>` flag pointing to a test results file (JUnit XML or JSON). Cortex parses passing test suite names.
+- **Entity-Test Linking**: If an entity's `## Verification` section references a test file (e.g. `[[bookingService.test.js]]`) and that file's suite appears in the passing CI report → set `agenticVerified: true` on the entity record.
+- **Quality Score Update**: `agenticVerified: true` provides the same `humanReview` dimension score as `human_reviewed: true` (1.0). The two are stored as separate flags so human reviews are never lost when CI state changes.
+- **CLI surface**: `cortex status --quality` shows entities eligible for agentic verification but not yet linked to a passing test suite.
+- **Governance**: Org-level `cortex.constraints.yaml` can restrict agentic verification to specific CI environments (e.g. only `github-actions`, not local runs) to prevent agents from gaming the score.
+
+**DoR**: Phase 7.5 (Quality Evaluator) is stable. Phase 5 `## Verification` entity section is shipped.
+
+**DoD**: Passing a CI test report auto-sets `agenticVerified` on linked entities. Quality dimension reflects the boost identically to human review. `cortex status --quality` surfaces verification gaps. Tests: entity with no `## Verification` link (no boost), entity linked to passing test (boost applied), entity linked to failing test (no boost), human review flag preserved when CI state changes.
+
+**Pros & Cons**:
+- ✅ **Pros**: Unblocks fully autonomous agent pipelines. Removes the last human-gated bottleneck from quality governance. Deterministic — based on test pass/fail, not LLM sentiment.
+- ❌ **Cons**: Requires test suites to exist and be linked in entity pages. An entity with no tests stays quality-capped until a human reviews it (correct behavior — no tests means genuinely lower confidence).
+
+---
+
+## 📌 Phase 7.5.2: Mandatory Evidence Anchoring for High-Centrality Nodes — ⏳ Planned
+
+**Layman's Terms**: AI-generated documentation summaries quietly drift from reality over time. The AI writes a description once, but the code it describes evolves. Phase 7.5.2 fights this "semantic drift" by requiring that the most critical, highly-referenced modules in your project must always have at least one real code snippet attached to them — not just a prose summary. If the snippet no longer matches the source file, Cortex raises an alert before the drift causes a bug.
+
+**Technical Terms**: Introduce mandatory evidence enforcement for entities above a centrality threshold:
+
+- **Centrality Gate**: Using Phase 10's PageRank centrality scores, entities with `centralityScore > 0.6` (top ~20% by inbound reference count) are classified as **Anchor-Required**.
+- **Evidence Mandate**: Anchor-Required entities must have at least one `evidence` block in their entity page with a linked `sourceFile` and a `content` snippet (≤10 lines). Enforced during `save_synthesis`: if an Anchor-Required entity has no evidence block, a `WARNING: missing evidence anchor` is appended to the synthesis warnings and surfaced by `cortex lint`.
+- **Drift Detection**: The existing `audit_evidence` tool already detects when a snippet drifts from its source file. Phase 7.5.2 makes that check **mandatory** rather than opt-in for Anchor-Required entities. If a snippet's hash mismatches the current source line range, it emits a `STALE_EVIDENCE` warning in `cortex lint` and degrades the `evidenceFreshness` quality dimension.
+- **Librarian Prompt Update**: The Librarian synthesis prompt is updated to include a mandatory `OUTPUT QUALITY BAR` instruction: for any entity with inbound link count > 3, the Librarian must emit at least one `evidence` block pointing at a real source line range.
+
+**DoR**: Phase 7.5 (Quality Evaluator + `evidenceFreshness` dimension) is stable. Phase 10 (PageRank centrality) is stable.
+
+**DoD**: Entities above the centrality threshold without evidence blocks emit `cortex lint` warnings. `save_synthesis` appends warnings for missing evidence on Anchor-Required entities. Librarian prompt enforces evidence for high-inbound entities. `audit_evidence` runs automatically as part of `cortex audit` for Anchor-Required entities. Tests: low-centrality entity with no evidence (no warning), high-centrality entity with no evidence (warning emitted), high-centrality entity with fresh evidence (no warning), high-centrality entity with stale evidence (STALE_EVIDENCE warning).
+
+**Pros & Cons**:
+- ✅ **Pros**: Directly combats semantic drift on the modules that matter most. The most-referenced entities have the highest blast radius when documentation drifts — making evidence mandatory exactly where it counts. Keeps the knowledge base honest as the codebase evolves.
+- ❌ **Cons**: Adds Librarian prompt overhead for high-centrality entities during ingestion. Mitigated by restricting the mandate to the top ~20% by centrality, not all entities.
+
+---
+
 ## 🎲 Phase 7.6: Global Architectural Lessons & Retrospective Log — ⏳ Planned
 
 **Layman's Terms**
@@ -2696,6 +2742,29 @@ When using AI agents, developers often waste thousands of tokens because the age
 **Pros & Cons**
 - ✅ **Pros**: Identifies invisible context-bloat and high-cost behavior, enabling developers to iteratively prune their agent prompts and rules.
 - ❌ **Cons**: Relying on parsing third-party agent log paths requires handling minor JSONL format differences between different CLI tools (Claude Code vs Cursor).
+
+---
+
+## 📦 Phase 12.15: External Dependency & Ecosystem Change Tracking — ⏳ Planned
+
+**Layman's Terms**: Cortex tracks changes to your own code, but it is completely blind to changes in the external libraries your code depends on. If you upgrade `express` from v4 to v5, or a library silently deprecates an API you use, Cortex has no idea — and your architectural knowledge base silently becomes wrong. Phase 12.15 fixes this by watching your dependency manifests (`package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`) and mapping external package changes to the internal entities that import them.
+
+**Technical Terms**: Add a dependency manifest change-tracking layer alongside the existing git diff watcher:
+
+- **Manifest Watcher**: Extend `src/core/watcher.ts` to also watch common dependency manifest files (`package.json`, `package-lock.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `Cargo.toml`). Treat manifest changes as a new diff type: `MANIFEST_CHANGED`.
+- **Dependency Delta Extraction**: When a manifest change is detected, diff the old vs. new versions to extract: added packages, removed packages, and version bumps (semver major, minor, patch classified separately).
+- **Internal Entity Mapping**: Scan `state.json` entities for `sourceFile` fields. For each changed external package, grep entity source files for `import`/`require`/`from` statements referencing that package name. Build a map: `{ packageName -> [affectedEntityNames] }`.
+- **Staleness Propagation**: Mark all affected entities as `[STALE]` with `staleSince` reason: `external dependency bumped: <package>@<old> -> <new>`. This surfaces in `cortex audit` and `cortex lint`.
+- **Major Version Alert**: For semver major bumps (e.g. `express@4` -> `express@5`), emit a high-severity warning in `state.json` warnings: `"MAJOR VERSION BUMP: <package> may have breaking API changes affecting [[EntityA]], [[EntityB]]"`.
+- **Librarian Hint**: When synthesizing after a manifest change, inject a CURRENT CONTEXT block: `External dependency changed: <package>@<version>. Internal consumers: <entity list>. Check for breaking API changes.`
+
+**DoR**: Phase 6 (staleness cascade) and Phase 1 (file watcher) are stable. Phase 12 (Git integration) is scoped.
+
+**DoD**: Bumping a package version in `package.json` marks all entities that import it as `[STALE]` with the correct reason. Major version bumps emit high-severity warnings. `cortex lint` surfaces affected entities. Tests: minor bump (stale, no warning), major bump (stale + high-severity warning), package removal (stale + removal warning), unrelated manifest change (no stale cascade), entity with no import of changed package (unaffected).
+
+**Pros & Cons**:
+- ✅ **Pros**: Closes the ecosystem blindness gap — architectural memory now knows when external API contracts may have changed. Prevents agents from using deprecated external APIs because "Cortex said it was fine." Particularly valuable for teams running automated dependency updates (Renovate, Dependabot).
+- ❌ **Cons**: Import scanning via grep is heuristic — dynamic imports, aliased package names, and barrel re-exports can be missed. Mitigated by flagging affected entities conservatively (prefer false-positive staleness over silent drift).
 
 ---
 
@@ -3900,9 +3969,12 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 3. **Semantic Diffing**: Upgrade the ingestion engine to parse AST deltas. If a change only affects whitespace, formatting, or comments without altering the public interface or logic, it bypasses the stale cascade, eliminating alert fatigue (False Alarms).
 4. **Lazy Ingestion / Async Worker**: Decouple LLM prose synthesis from the active coding loop. Update AST signatures instantly (which is cheap/free), but queue the LLM `save_synthesis` calls to a background `cortex watch` worker so the active coding agent isn't blocked by ingestion latency.
 
+5. **File-Reader Ban Lift for Non-Code Assets**: Relax the strict `view_file` ban in `AGENTS.md` to apply **only** to AST-parseable source code extensions (`.ts`, `.js`, `.py`, `.go`, etc.). Non-parseable files — JSON configs, Makefiles, `.env.example`, `package.json`, YAML — may be read with native readers since `source` adds zero value for these file types and only introduces friction.
+6. **Lite Mode Pre-Flight Bypass Heuristic**: Introduce a `CORTEX_LITE_MODE` escape hatch. When the intended diff scope is ≤1 file AND ≤5 lines (detectable by the agent from the task description or from `git diff --stat`), agents may skip the full `before_change` pre-flight and proceed directly. A lightweight disclaimer is added to the response noting the pre-flight was skipped. This prevents bureaucratic overhead for genuinely trivial changes like CSS color tweaks, typo fixes, or single-line comment corrections.
+
 **DoR**: Phase 13.7 (AST Skeleton) and Phase 6 (Staleness) are stable.
 
-**DoD**: `AGENTS.md` instructs using `before_change`. `source` tool accepts method-level targeting. Formatting changes no longer trigger downstream stale flags. Ingestion workflow supports asynchronous background synthesis.
+**DoD**: `AGENTS.md` instructs using `before_change` as primary one-shot pre-flight. `AGENTS.md` explicitly scopes the file-reader ban to source code extensions only. `source` tool accepts method name as optional targeting parameter. Formatting changes no longer trigger downstream stale flags. Ingestion workflow supports asynchronous background synthesis. `CORTEX_LITE_MODE` flag skips pre-flight for ≤5-line single-file changes.
 
 ---
 
