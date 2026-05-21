@@ -1,6 +1,7 @@
 import { buildGraph, KnowledgeGraph, GraphNode } from "./graph.js";
 import fs from "fs";
 import path from "path";
+import { SmartReadCache } from "./readCache.js";
 
 export interface ContextPackOptions {
   budget?: number;       // token budget
@@ -118,6 +119,17 @@ function searchFile(filePath: string, entityName: string): { snippet: string; co
       const line = searchLines[i];
       for (const { re, confidence } of ENTITY_PATTERNS) {
         if (re(entityName).test(line)) {
+          // Use AST skeleton extraction if possible
+          try {
+            const cache = new SmartReadCache();
+            cache.get(filePath, "skeleton"); // Populates cache
+            const res = cache.get(filePath, "skeleton"); // Returns cached skeleton
+            if (res && res.content && res.content.trim()) {
+              return { snippet: res.content, confidence };
+            }
+          } catch {}
+
+          // Fallback to single line signature
           const sig = line.trim().endsWith("{") ? line.trim() + " ..." : line.trim();
           return { snippet: sig, confidence };
         }
@@ -127,13 +139,40 @@ function searchFile(filePath: string, entityName: string): { snippet: string; co
   return null;
 }
 
-function grepEntityInSource(entityName: string, projectRoot: string): { snippet: string; confidence: string; filePath: string } | null {
-  const queue: string[] = [projectRoot];
+function grepEntityInSource(
+  entityName: string,
+  projectRoot: string,
+  callerSourceFile?: string
+): { snippet: string; confidence: string; filePath: string } | null {
+  const queue: string[] = [];
+  const visited = new Set<string>();
+
+  if (callerSourceFile) {
+    const absolutePath = path.isAbsolute(callerSourceFile)
+      ? callerSourceFile
+      : path.join(projectRoot, callerSourceFile);
+    const callerDir = path.dirname(absolutePath);
+    if (fs.existsSync(callerDir)) {
+      queue.push(callerDir);
+    }
+  }
+  queue.push(projectRoot);
+
   let scanned = 0;
   const MAX_FILES = 200;
+  const startTime = Date.now();
+  const TIMEOUT_MS = 15;
 
   while (queue.length > 0 && scanned < MAX_FILES) {
-    const dir = queue.shift()!;
+    if (Date.now() - startTime > TIMEOUT_MS) {
+      break;
+    }
+
+    const dir = path.resolve(queue.shift()!);
+    const dirKey = process.platform === "win32" ? dir.toLowerCase() : dir;
+    if (visited.has(dirKey)) continue;
+    visited.add(dirKey);
+
     let entries: any[];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -232,8 +271,9 @@ export function buildContextPack(
       }
     }
 
+    const softLimit = Math.max(budget - 1000, Math.floor(budget * 0.85));
     const blockTokens = estimateTokens(block);
-    if (currentTokens + blockTokens > budget) {
+    if (currentTokens + blockTokens > softLimit && included.size > 0) {
       elided.add(node.id);
       continue;
     }
@@ -281,8 +321,7 @@ export function buildContextPack(
             block += `\n`;
           }
           const blockTokens = estimateTokens(block);
-          const totalOverage = currentTokens + blockTokens - budget;
-          if (totalOverage <= maxOverage) {
+          if (currentTokens + blockTokens <= budget) {
             finalOutput += block;
             currentTokens += blockTokens;
             included.add(target);
@@ -291,12 +330,11 @@ export function buildContextPack(
         } else {
           // Grounded Fallback: target not in KB at all — grep source code
           if (groundedFallbacks.some(f => f.name === target)) continue;
-          const fallback = grepEntityInSource(target, options.projectRoot);
+          const fallback = grepEntityInSource(target, options.projectRoot, entity.sourceFile);
           if (fallback) {
             const block = `\n### ⚡ Grounded Fallback Context: ${target}\n> Resolved via live source search in \`${fallback.filePath}\` (confidence: ${fallback.confidence}). Not yet in \`.knowledge/\` — run \`ingest\` to promote.\n\n\`\`\`typescript\n${fallback.snippet}\n\`\`\`\n\n`;
             const blockTokens = estimateTokens(block);
-            const totalOverage = currentTokens + blockTokens - budget;
-            if (totalOverage <= maxOverage) {
+            if (currentTokens + blockTokens <= budget) {
               finalOutput += block;
               currentTokens += blockTokens;
               groundedFallbacks.push({ name: target, snippet: fallback.snippet, confidence: fallback.confidence });
@@ -331,8 +369,7 @@ export function buildContextPack(
       summary += `- ⚡ Live Source Fallback: ${groundedFallbacks.length} entity(s) resolved from source code (not yet in .knowledge/): ${groundedFallbacks.map(f => `${f.name} (${f.confidence})`).join(", ")}\n`;
     }
     const summaryTokens = estimateTokens(summary);
-    const totalOverage = currentTokens + summaryTokens - budget;
-    if (totalOverage <= maxOverage) {
+    if (currentTokens + summaryTokens <= budget) {
       finalOutput += summary;
       currentTokens += summaryTokens;
     }

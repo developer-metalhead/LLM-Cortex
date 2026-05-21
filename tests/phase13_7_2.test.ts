@@ -122,7 +122,41 @@ describe("Phase 13.7.2 — Speculative Static Verification & Grounded Fallback",
       assert.equal(pack.groundedFallbacks![0].name, "FreshModule");
       assert(pack.groundedFallbacks![0].confidence === "high", "class match should be high confidence");
       assert(pack.output.includes("Grounded Fallback Context"), "output should contain fallback marker");
-      assert(pack.output.includes("FreshModule"), "output should contain the resolved name");
+      assert(pack.groundedFallbacks![0].snippet.includes("import { z } from 'zod'"), "should contain AST imports");
+      assert(pack.groundedFallbacks![0].snippet.includes("export class FreshModule"), "should contain the class signature");
+    });
+
+    it("prioritizes sibling files in subtree before looking at projectRoot", async () => {
+      const state = makeState({
+        CallingEntity: {
+          description: "Calling entity",
+          sourceFile: "src/controllers/caller.ts",
+          relationships: [{ target: "TargetHelper", kind: "depends_on" }],
+        },
+      });
+
+      const siblingDir = path.join(tmp, "src", "controllers");
+      const otherDir = path.join(tmp, "other");
+      await fs.mkdir(siblingDir, { recursive: true });
+      await fs.mkdir(otherDir, { recursive: true });
+
+      await fs.writeFile(
+        path.join(siblingDir, "helper.ts"),
+        "export class TargetHelper { sibling = true; }",
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        path.join(otherDir, "target-helper.ts"),
+        "export class TargetHelper { other = true; }",
+        "utf-8"
+      );
+
+      const pack = buildContextPack(state, { budget: 8000, projectRoot: tmp });
+      
+      assert(pack.groundedFallbacks!.length > 0, "should resolve TargetHelper");
+      const resolved = pack.groundedFallbacks![0];
+      assert(resolved.snippet.includes("sibling = true"), "should have resolved the sibling helper");
     });
 
     it("returns medium confidence for function matches", async () => {
