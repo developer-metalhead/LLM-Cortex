@@ -293,7 +293,7 @@ export class CortexMCPServer {
           name: "source",
           description: "Efficiently read source code files — the source tool caches files and returns compact AST skeletons on re-read (~90% smaller) instead of full content. Pass bypass=true or mode='full' to force the complete file. Pass mode='diff' to see changes since first read.",
           arguments: [
-            { name: "filePath", description: "Repo-relative path to the source file (e.g. src/auth/service.ts)", required: true },
+            { name: "file", description: "Repo-relative path to the source file (e.g. src/auth/service.ts). MUST be a repo-relative path, not absolute.", required: true },
             { name: "mode", description: "'auto' (default): first read returns full, re-reads return skeleton/diff; 'full': bypass cache; 'skeleton': force skeleton; 'diff': force diff view", required: false },
             { name: "bypass", description: "Set to true to force full file content regardless of cache state", required: false },
           ]
@@ -1939,9 +1939,10 @@ export class CortexMCPServer {
       }
 
       if (name === "source") {
-        const { filePath, mode, bypass } = (args || {}) as any;
+        const { file, filePath: oldFilePath, mode, bypass } = (args || {}) as any;
+        const filePath = file || oldFilePath;
         if (!filePath || typeof filePath !== "string") {
-          return { content: [{ type: "text", text: "source requires a 'filePath' string (repo-relative path)." }], isError: true };
+          return { content: [{ type: "text", text: "source requires a 'file' string (repo-relative path)." }], isError: true };
         }
         const absolutePath = path.resolve(this.projectRoot, filePath);
         try {
@@ -1949,7 +1950,7 @@ export class CortexMCPServer {
         } catch {
           return { content: [{ type: "text", text: `Error: file not found — ${filePath}` }], isError: true };
         }
-        const result = this.readCache.get(absolutePath, bypass ? "full" : (mode || "auto"));
+        const result = this.readCache.get(absolutePath, bypass ? "full" : (mode || "auto"), filePath);
         if (result.cacheStatus !== "first_read" && result.tokenSavings > 0) {
           import("../knowledge/ledger.js").then(({ appendTransaction }) => {
             appendTransaction(this.projectRoot, {
@@ -1965,8 +1966,7 @@ export class CortexMCPServer {
           });
         }
         return {
-          content: [{ type: "text", text: result.content }],
-          meta: { cacheStatus: result.cacheStatus, tokenSavings: result.tokenSavings },
+          content: [{ type: "text", text: result.content }]
         };
       }
 

@@ -11,6 +11,7 @@ interface CacheEntry {
   skeleton: string;
   mtime: number;
   readCount: number;
+  lastAccessed: number;
   language: string;
 }
 
@@ -36,18 +37,19 @@ export class SmartReadCache {
   private totalReads = 0;
   private totalSavingsChars = 0;
 
-  get(filePath: string, mode: "auto" | "full" | "skeleton" | "diff" = "auto"): CacheResult {
+  get(filePath: string, mode: "auto" | "full" | "skeleton" | "diff" = "auto", displayPath?: string): CacheResult {
     const resolved = path.resolve(filePath);
+    const display = displayPath || filePath;
 
     if (!fs.existsSync(resolved)) {
       return {
-        content: `Error: file not found — ${filePath}`,
+        content: `Error: file not found — ${display}`,
         mode: "full",
         cacheStatus: "fallback_full",
         originalChars: 0,
         returnedChars: 0,
         tokenSavings: 0,
-        filePath,
+        filePath: display,
       };
     }
 
@@ -66,7 +68,7 @@ export class SmartReadCache {
         originalChars: content.length,
         returnedChars: content.length,
         tokenSavings: 0,
-        filePath,
+        filePath: display,
       };
     }
 
@@ -76,12 +78,13 @@ export class SmartReadCache {
     if (!existing) {
       const content = fs.readFileSync(resolved, "utf-8");
       const lang = this.detectLanguage(ext);
-      const skeleton = this.extractSkeleton(content, lang, resolved);
+      const skeleton = this.extractSkeleton(content, lang, display);
       this.store.set(resolved, {
         content,
         skeleton,
         mtime: stat.mtimeMs,
         readCount: 1,
+        lastAccessed: Date.now(),
         language: lang,
       });
       this.enforceLimit();
@@ -93,7 +96,7 @@ export class SmartReadCache {
         originalChars: content.length,
         returnedChars: content.length,
         tokenSavings: 0,
-        filePath,
+        filePath: display,
       };
     }
 
@@ -102,6 +105,7 @@ export class SmartReadCache {
     // Re-read unchanged
     if (currentMtime === existing.mtime) {
       existing.readCount++;
+      existing.lastAccessed = Date.now();
       this.totalReads++;
 
       if (mode === "full") {
@@ -112,7 +116,7 @@ export class SmartReadCache {
           originalChars: existing.content.length,
           returnedChars: existing.content.length,
           tokenSavings: 0,
-          filePath,
+            filePath: display,
         };
       }
 
@@ -127,7 +131,7 @@ export class SmartReadCache {
             originalChars: existing.content.length,
             returnedChars: existing.content.length,
             tokenSavings: 0,
-            filePath,
+            filePath: display,
           };
         }
         const savings = existing.content.length - existing.skeleton.length;
@@ -139,7 +143,7 @@ export class SmartReadCache {
           originalChars: existing.content.length,
           returnedChars: existing.skeleton.length,
           tokenSavings: savings,
-          filePath,
+            filePath: display,
         };
       }
 
@@ -151,7 +155,7 @@ export class SmartReadCache {
         originalChars: existing.content.length,
         returnedChars: 0,
         tokenSavings: existing.content.length,
-        filePath,
+        filePath: display,
       };
     }
 
@@ -165,13 +169,13 @@ export class SmartReadCache {
         originalChars: freshContent.length,
         returnedChars: freshContent.length,
         tokenSavings: 0,
-        filePath,
+        filePath: display,
       };
     }
 
-    const diff = this.computeDiff(existing.content, freshContent, filePath);
+    const diff = this.computeDiff(existing.content, freshContent, display);
     const diffLen = diff.length;
-    const skeleton = this.extractSkeleton(freshContent, existing.language, resolved);
+    const skeleton = this.extractSkeleton(freshContent, existing.language, display);
 
     // Bypass: diff is too large
     if (diffLen > 1500) {
@@ -180,6 +184,7 @@ export class SmartReadCache {
         skeleton,
         mtime: currentMtime,
         readCount: existing.readCount + 1,
+        lastAccessed: Date.now(),
         language: existing.language,
       });
       this.totalReads++;
@@ -190,7 +195,7 @@ export class SmartReadCache {
         originalChars: freshContent.length,
         returnedChars: freshContent.length,
         tokenSavings: 0,
-        filePath,
+        filePath: display,
       };
     }
 
@@ -201,6 +206,7 @@ export class SmartReadCache {
       skeleton,
       mtime: currentMtime,
       readCount: existing.readCount + 1,
+      lastAccessed: Date.now(),
       language: existing.language,
     });
     this.totalReads++;
@@ -211,7 +217,7 @@ export class SmartReadCache {
       originalChars: freshContent.length,
       returnedChars: diffLen,
       tokenSavings: Math.max(0, savings),
-      filePath,
+      filePath: display,
     };
   }
 
@@ -234,10 +240,10 @@ export class SmartReadCache {
   private enforceLimit(): void {
     if (this.store.size <= this.maxEntries) return;
     let oldest: string | null = null;
-    let oldestCount = Infinity;
+    let oldestTime = Infinity;
     for (const [key, entry] of this.store) {
-      if (entry.readCount < oldestCount) {
-        oldestCount = entry.readCount;
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
         oldest = key;
       }
     }
@@ -267,7 +273,7 @@ export class SmartReadCache {
         case "tsx":
         case "js":
         case "jsx":
-          return this.extractTsJsSkeleton(content, lines, lang);
+          return this.extractTsJsSkeleton(content, lines, lang, filePath);
         case "py":
           return this.extractPythonSkeleton(lines);
         default:
@@ -278,11 +284,11 @@ export class SmartReadCache {
     }
   }
 
-  private extractTsJsSkeleton(content: string, lines: string[], lang: string): string {
+  private extractTsJsSkeleton(content: string, lines: string[], lang: string, filePath: string): string {
     const result: string[] = [];
     const comment = lang.startsWith("ts") ? "//" : "//";
 
-    result.push(`${comment} ${path.basename(path.resolve(content) || "file")} — ${lines.length} lines (cached skeleton)`);
+    result.push(`${comment} ${path.basename(filePath) || "file"} — ${lines.length} lines (cached skeleton)`);
     result.push("");
 
     // Extract imports

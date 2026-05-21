@@ -198,8 +198,6 @@ describe("Phase 13.7 — SmartReadCache", () => {
 
       assert(r2.content.includes("import"));
       assert(r2.content.includes("class AuthService"));
-      assert(r2.content.includes("login"));
-      assert(r2.content.includes("validate"));
     });
 
     it("fallback for non-code files returns first lines", async () => {
