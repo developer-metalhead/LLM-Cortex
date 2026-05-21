@@ -96,7 +96,7 @@ function computeProximityBonus(text: string, queryTokens: string[], window: numb
     for (let j = i + 1; j < positions.length; j++) {
       const pj = positions[j];
       const distance = pj - pi;
-      if (distance >= window) break;
+      if (distance > window) break;
 
       for (const ti of tokenIndices[pi]) {
         for (const tj of tokenIndices[pj]) {
@@ -152,7 +152,8 @@ function extractSnippet(text: string, queryTokens: string[], maxLength: number):
       }
     }
 
-    if (score > bestScore) {
+    const midDist = Math.abs(center - trimmed.length / 2);
+    if (score > bestScore || (score === bestScore && midDist < Math.abs(bestCenter - trimmed.length / 2))) {
       bestScore = score;
       bestCenter = center;
     }
@@ -196,6 +197,23 @@ interface Candidate {
   proximityBonus: number;
 }
 
+const DEFAULT_PROXIMITY_WINDOW = 5;
+const DEFAULT_SNIPPET_LENGTH = 120;
+
+function resolveWindow(): number {
+  const raw = process.env.CORTEX_PROXIMITY_WINDOW;
+  if (raw === undefined) return DEFAULT_PROXIMITY_WINDOW;
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? DEFAULT_PROXIMITY_WINDOW : Math.max(2, parsed);
+}
+
+function resolveSnippetLength(): number {
+  const raw = process.env.CORTEX_SNIPPET_LENGTH;
+  if (raw === undefined) return DEFAULT_SNIPPET_LENGTH;
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? DEFAULT_SNIPPET_LENGTH : Math.max(10, parsed);
+}
+
 export class FindManager {
   private manager: KnowledgeManager;
 
@@ -208,8 +226,8 @@ export class FindManager {
     const lowerQuery = query.toLowerCase().trim();
     const queryTokens = lowerQuery.split(/\s+/).filter(t => t.length > 0);
     const queryForFuzzy = lowerQuery.replace(/\s+/g, '');
-    const proxWindow = parseInt(process.env.CORTEX_PROXIMITY_WINDOW || "5", 10);
-    const snippetLength = parseInt(process.env.CORTEX_SNIPPET_LENGTH || "120", 10);
+    const proxWindow = resolveWindow();
+    const snippetLength = resolveSnippetLength();
 
     if (queryTokens.length === 0) {
       return [];

@@ -37,6 +37,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex status` (health check), `cortex status --next` (next action suggestion), or `cortex config` (interactive config manager)
 - **MCP Tool Call:** `get_cortex_status`
 - **MCP Prompt Trigger:** `/status` or select `status` prompt
+- **Tuning:** `CORTEX_PROVIDER` (default `"openai"`) — LLM provider; `CORTEX_MODEL` — model name for that provider. Override the interactive config without touching CLI. Set in `.env` or `~/.cortexrc`.
 
 ---
 
@@ -64,6 +65,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex find <query> --type <entity|concept|parent|all>`
 - **MCP Tool Call:** `cortex_find` with argument `query="<term>"` and optional `type="all"`
 - **MCP Prompt Trigger:** N/A
+- **Tuning:** `CORTEX_PROXIMITY_WINDOW` (default `5`) — how close multi-word terms must be to get a ranking boost; `CORTEX_SNIPPET_LENGTH` (default `120`) — character length of centered preview snippets. Set in `.env` or `~/.cortexrc`.
 
 ---
 
@@ -154,6 +156,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex audit quality` (prints a ranked list of entities, highlighting anything below the gate threshold)
 - **MCP Tool Call:** `audit_quality` (returns the full score table) or `get_entity_quality` with `entity="<entityName>"`
 - **MCP Prompt Trigger:** N/A
+- **Tuning:** `CORTEX_QUALITY_GATE` (default `0.5`) — score below this exits 1 in CI; `CORTEX_QUALITY_AGE_DECAY_DAYS` (default `180`) — days before age score decays to minimum. Set in `.env` or `~/.cortexrc`.
 
 ---
 
@@ -181,6 +184,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex lint` (scans the entire active graph)
 - **MCP Tool Call:** `lint`
 - **MCP Prompt Trigger:** N/A
+- **Tuning:** `CORTEX_GOD_MODULE_THRESHOLD` (default `10`) — inbound+outbound edges before an entity is flagged as a god module. Set in `.env` or `~/.cortexrc`.
 
 ---
 
@@ -289,6 +293,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex config --brevity <off|lite|ultra>`
 - **MCP Tool Call:** `configure_brevity` with argument `level="off|lite|ultra"`
 - **MCP Prompt Trigger:** `/brevity` or select `brevity` prompt (pass `level` argument)
+- **Tuning:** `CORTEX_BREVITY_LEVEL` (default `"off"`) — overrides CLI config when set. Values: `off`, `lite`, `ultra`. Set in `.env` or `~/.cortexrc`.
 
 ---
 
@@ -317,6 +322,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **CLI Command:** `cortex config --max-cost <usd> --max-syncs-hour <count>` (configure), `cortex config -c none` (clear limit), or `cortex status` (view spent real-time usage)
 - **MCP Tool Call:** `configure_safeguards` with arguments `maxCost` and `maxSyncsHour`
 - **MCP Prompt Trigger:** select `safeguards` prompt
+- **Tuning:** `CORTEX_MAX_SESSION_COST_USD` — hard session spend cap; `CORTEX_MAX_SYNC_CALLS_PER_HOUR` — rolling sync frequency gate. Override CLI config in CI. Set in `.env` or `~/.cortexrc`.
 
 ---
 
