@@ -28,6 +28,8 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 6.5   | Plasma Filaments — Structural Edge Flag                 | ⏳ Planned                           |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
+| 7.5.1 | Agentic Verification Loop (CI-Driven Quality Boost)    | ⏳ Planned                           |
+| 7.5.2 | Mandatory Evidence Anchoring for High-Centrality Nodes | ⏳ Planned                           |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
 | 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
 | 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
@@ -64,6 +66,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 12.7  | Smart Code Outliner & Signature-Only Reader            | ⏳ Planned                           |
 | 12.8  | Log Deduplicator & Web Fetch Parser                    | ⏳ Planned                           |
 | 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
+| 12.15 | External Dependency & Ecosystem Change Tracking        | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ✅ Done                              |
 | 13.1  | Dense & Raw Token-Reduction Projections                | ✅ Done                              |
 | 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ✅ Done                              |
@@ -72,7 +75,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
 | 13.6  | Proximity Reranking & Smart Snippets                   | ✅ Done                              |
 | 13.7  | Hooks-Based Smart Read Cache & AST Skeleton Delta      | ✅ Done                              |
-| 13.7.2| Speculative Static Verification & Grounded Fallback    | ⏳ Planned                           |
+| 13.7.2| Speculative Static Verification & Grounded Fallback    | ✅ Done                              |
 | 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
 | 13.8.8| Unified Edge Confidence (Synaptic Plasticity)         | ⏳ Planned                           |
 | 13.9   | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
@@ -1502,6 +1505,49 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 
 ---
 
+## 🤖 Phase 7.5.1: Agentic Verification Loop (CI-Driven Quality Boost) — ⏳ Planned
+
+**Layman's Terms**: The `review_entity` tool requires a human to manually hit "accept" before an entity's quality score reaches 1.0. An autonomous AI agent can never meaningfully do this on its own — it has no way to verify the documentation is accurate. This phase introduces an alternative: if the entity's `## Verification` section links to a test file, and that test suite passes in CI, Cortex automatically grants the same `humanReview: 1.0` boost as a human approval. No human bottleneck. No permanently low quality scores in autonomous pipelines.
+
+**Technical Terms**: Add an `agenticVerification` mechanism to the quality scoring pipeline:
+
+- **CI Signal Ingestion**: When `cortex sync` or `/ingest` is triggered from a CI environment, accept a `--ci-pass-report <json>` flag pointing to a test results file (JUnit XML or JSON). Cortex parses passing test suite names.
+- **Entity-Test Linking**: If an entity's `## Verification` section references a test file (e.g. `[[bookingService.test.js]]`) and that file's suite appears in the passing CI report → set `agenticVerified: true` on the entity record.
+- **Quality Score Update**: `agenticVerified: true` provides the same `humanReview` dimension score as `human_reviewed: true` (1.0). The two are stored as separate flags so human reviews are never lost when CI state changes.
+- **CLI surface**: `cortex status --quality` shows entities eligible for agentic verification but not yet linked to a passing test suite.
+- **Governance**: Org-level `cortex.constraints.yaml` can restrict agentic verification to specific CI environments (e.g. only `github-actions`, not local runs) to prevent agents from gaming the score.
+
+**DoR**: Phase 7.5 (Quality Evaluator) is stable. Phase 5 `## Verification` entity section is shipped.
+
+**DoD**: Passing a CI test report auto-sets `agenticVerified` on linked entities. Quality dimension reflects the boost identically to human review. `cortex status --quality` surfaces verification gaps. Tests: entity with no `## Verification` link (no boost), entity linked to passing test (boost applied), entity linked to failing test (no boost), human review flag preserved when CI state changes.
+
+**Pros & Cons**:
+- ✅ **Pros**: Unblocks fully autonomous agent pipelines. Removes the last human-gated bottleneck from quality governance. Deterministic — based on test pass/fail, not LLM sentiment.
+- ❌ **Cons**: Requires test suites to exist and be linked in entity pages. An entity with no tests stays quality-capped until a human reviews it (correct behavior — no tests means genuinely lower confidence).
+
+---
+
+## 📌 Phase 7.5.2: Mandatory Evidence Anchoring for High-Centrality Nodes — ⏳ Planned
+
+**Layman's Terms**: AI-generated documentation summaries quietly drift from reality over time. The AI writes a description once, but the code it describes evolves. Phase 7.5.2 fights this "semantic drift" by requiring that the most critical, highly-referenced modules in your project must always have at least one real code snippet attached to them — not just a prose summary. If the snippet no longer matches the source file, Cortex raises an alert before the drift causes a bug.
+
+**Technical Terms**: Introduce mandatory evidence enforcement for entities above a centrality threshold:
+
+- **Centrality Gate**: Using Phase 10's PageRank centrality scores, entities with `centralityScore > 0.6` (top ~20% by inbound reference count) are classified as **Anchor-Required**.
+- **Evidence Mandate**: Anchor-Required entities must have at least one `evidence` block in their entity page with a linked `sourceFile` and a `content` snippet (≤10 lines). Enforced during `save_synthesis`: if an Anchor-Required entity has no evidence block, a `WARNING: missing evidence anchor` is appended to the synthesis warnings and surfaced by `cortex lint`.
+- **Drift Detection**: The existing `audit_evidence` tool already detects when a snippet drifts from its source file. Phase 7.5.2 makes that check **mandatory** rather than opt-in for Anchor-Required entities. If a snippet's hash mismatches the current source line range, it emits a `STALE_EVIDENCE` warning in `cortex lint` and degrades the `evidenceFreshness` quality dimension.
+- **Librarian Prompt Update**: The Librarian synthesis prompt is updated to include a mandatory `OUTPUT QUALITY BAR` instruction: for any entity with inbound link count > 3, the Librarian must emit at least one `evidence` block pointing at a real source line range.
+
+**DoR**: Phase 7.5 (Quality Evaluator + `evidenceFreshness` dimension) is stable. Phase 10 (PageRank centrality) is stable.
+
+**DoD**: Entities above the centrality threshold without evidence blocks emit `cortex lint` warnings. `save_synthesis` appends warnings for missing evidence on Anchor-Required entities. Librarian prompt enforces evidence for high-inbound entities. `audit_evidence` runs automatically as part of `cortex audit` for Anchor-Required entities. Tests: low-centrality entity with no evidence (no warning), high-centrality entity with no evidence (warning emitted), high-centrality entity with fresh evidence (no warning), high-centrality entity with stale evidence (STALE_EVIDENCE warning).
+
+**Pros & Cons**:
+- ✅ **Pros**: Directly combats semantic drift on the modules that matter most. The most-referenced entities have the highest blast radius when documentation drifts — making evidence mandatory exactly where it counts. Keeps the knowledge base honest as the codebase evolves.
+- ❌ **Cons**: Adds Librarian prompt overhead for high-centrality entities during ingestion. Mitigated by restricting the mandate to the top ~20% by centrality, not all entities.
+
+---
+
 ## 🎲 Phase 7.6: Global Architectural Lessons & Retrospective Log — ⏳ Planned
 
 **Layman's Terms**
@@ -2699,6 +2745,29 @@ When using AI agents, developers often waste thousands of tokens because the age
 
 ---
 
+## 📦 Phase 12.15: External Dependency & Ecosystem Change Tracking — ⏳ Planned
+
+**Layman's Terms**: Cortex tracks changes to your own code, but it is completely blind to changes in the external libraries your code depends on. If you upgrade `express` from v4 to v5, or a library silently deprecates an API you use, Cortex has no idea — and your architectural knowledge base silently becomes wrong. Phase 12.15 fixes this by watching your dependency manifests (`package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`) and mapping external package changes to the internal entities that import them.
+
+**Technical Terms**: Add a dependency manifest change-tracking layer alongside the existing git diff watcher:
+
+- **Manifest Watcher**: Extend `src/core/watcher.ts` to also watch common dependency manifest files (`package.json`, `package-lock.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `Cargo.toml`). Treat manifest changes as a new diff type: `MANIFEST_CHANGED`.
+- **Dependency Delta Extraction**: When a manifest change is detected, diff the old vs. new versions to extract: added packages, removed packages, and version bumps (semver major, minor, patch classified separately).
+- **Internal Entity Mapping**: Scan `state.json` entities for `sourceFile` fields. For each changed external package, grep entity source files for `import`/`require`/`from` statements referencing that package name. Build a map: `{ packageName -> [affectedEntityNames] }`.
+- **Staleness Propagation**: Mark all affected entities as `[STALE]` with `staleSince` reason: `external dependency bumped: <package>@<old> -> <new>`. This surfaces in `cortex audit` and `cortex lint`.
+- **Major Version Alert**: For semver major bumps (e.g. `express@4` -> `express@5`), emit a high-severity warning in `state.json` warnings: `"MAJOR VERSION BUMP: <package> may have breaking API changes affecting [[EntityA]], [[EntityB]]"`.
+- **Librarian Hint**: When synthesizing after a manifest change, inject a CURRENT CONTEXT block: `External dependency changed: <package>@<version>. Internal consumers: <entity list>. Check for breaking API changes.`
+
+**DoR**: Phase 6 (staleness cascade) and Phase 1 (file watcher) are stable. Phase 12 (Git integration) is scoped.
+
+**DoD**: Bumping a package version in `package.json` marks all entities that import it as `[STALE]` with the correct reason. Major version bumps emit high-severity warnings. `cortex lint` surfaces affected entities. Tests: minor bump (stale, no warning), major bump (stale + high-severity warning), package removal (stale + removal warning), unrelated manifest change (no stale cascade), entity with no import of changed package (unaffected).
+
+**Pros & Cons**:
+- ✅ **Pros**: Closes the ecosystem blindness gap — architectural memory now knows when external API contracts may have changed. Prevents agents from using deprecated external APIs because "Cortex said it was fine." Particularly valuable for teams running automated dependency updates (Renovate, Dependabot).
+- ❌ **Cons**: Import scanning via grep is heuristic — dynamic imports, aliased package names, and barrel re-exports can be missed. Mitigated by flagging affected entities conservatively (prefer false-positive staleness over silent drift).
+
+---
+
 ## 💸 Phase 13: Token Economics & Context Packs — ✅ Completed
 
 **Layman's Terms**
@@ -2939,7 +3008,7 @@ During a coding session, the AI reads the same source code files over and over a
 
 ---
 
-## 💸 Phase 13.7.2: Speculative Static Verification & Grounded Fallback Resolution (Adaptive Retrieval Guardrails) — ⏳ Planned
+## 💸 Phase 13.7.2: Speculative Static Verification & Grounded Fallback Resolution (Adaptive Retrieval Guardrails) — ✅ Done (verified 2026-05-21)
 
 **Layman's Terms**
 Make your AI co-pilot incredibly reliable and self-healing. When gathering files to help you code, Cortex runs a super-fast check behind the scenes: *"Do the gathered files contain everything the AI needs to understand the changes?"* If the system detects a missing piece (like a reference to a newly added utility that hasn't been documented yet), instead of letting the AI guess or throw a blind error, it instantly runs a local "grep" search across your files, extracts the missing code, and feeds it to the AI as a real-time safety net. You get perfect answers even if the project documentation is momentarily out of sync.
@@ -3890,7 +3959,279 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 
 ---
 
+## 🗜️ Phase 13.13: Agent Workflow Friction Reductions (Agent Feedback) — ⏳ Planned
+
+**Layman's Terms**: AI agents get frustrated too. When Cortex forces them to make multiple tool calls just to fix a typo, or alerts them that 15 files are "stale" because of a formatting change, it wastes their time and the user's tokens. Phase 13.13 acts on direct AI feedback to smooth out these workflow blockers: making pre-flight checks one-shot, allowing precise method-level reads, and ignoring harmless formatting changes.
+
+**Technical Terms**: Implement a set of UX and workflow improvements derived from direct agent feedback to reduce token waste and latency:
+1. **One-Shot Pre-Flight (`before_change`)**: Promote the unified `before_change` tool in `AGENTS.md` and deprecate manual sequential calls (`read_index` -> `read_entity` -> `read_concept`) to reduce pre-flight latency.
+2. **Method-Level AST Reads (`read_method`)**: Enhance the `source` tool (or add `read_method`) to extract the full logic body of a specific function. This prevents agents from having to use `bypass=true` on a 500-line file just to debug a single loop stripped by the AST skeleton.
+3. **Semantic Diffing**: Upgrade the ingestion engine to parse AST deltas. If a change only affects whitespace, formatting, or comments without altering the public interface or logic, it bypasses the stale cascade, eliminating alert fatigue (False Alarms).
+4. **Lazy Ingestion / Async Worker**: Decouple LLM prose synthesis from the active coding loop. Update AST signatures instantly (which is cheap/free), but queue the LLM `save_synthesis` calls to a background `cortex watch` worker so the active coding agent isn't blocked by ingestion latency.
+
+5. **File-Reader Ban Lift for Non-Code Assets**: Relax the strict `view_file` ban in `AGENTS.md` to apply **only** to AST-parseable source code extensions (`.ts`, `.js`, `.py`, `.go`, etc.). Non-parseable files — JSON configs, Makefiles, `.env.example`, `package.json`, YAML — may be read with native readers since `source` adds zero value for these file types and only introduces friction.
+6. **Lite Mode Pre-Flight Bypass Heuristic**: Introduce a `CORTEX_LITE_MODE` escape hatch. When the intended diff scope is ≤1 file AND ≤5 lines (detectable by the agent from the task description or from `git diff --stat`), agents may skip the full `before_change` pre-flight and proceed directly. A lightweight disclaimer is added to the response noting the pre-flight was skipped. This prevents bureaucratic overhead for genuinely trivial changes like CSS color tweaks, typo fixes, or single-line comment corrections.
+
+**DoR**: Phase 13.7 (AST Skeleton) and Phase 6 (Staleness) are stable.
+
+**DoD**: `AGENTS.md` instructs using `before_change` as primary one-shot pre-flight. `AGENTS.md` explicitly scopes the file-reader ban to source code extensions only. `source` tool accepts method name as optional targeting parameter. Formatting changes no longer trigger downstream stale flags. Ingestion workflow supports asynchronous background synthesis. `CORTEX_LITE_MODE` flag skips pre-flight for ≤5-line single-file changes.
+
+---
+
+## 💰 Phase 13.14: Economic Viability & Zero-Overhead Ingestion — ⏳ Planned
+
+**Layman's Terms**: Right now, every time an AI agent syncs your knowledge base, it is doing the most expensive thing possible — paying for the smartest, most expensive AI model to read documentation it barely changes. Phase 13.14 fixes this by routing all automatic background work through dirt-cheap local or free AI models, moving the expensive "thinking" work off the agent entirely, and teaching the system to skip syncs when nothing architecturally meaningful changed. The result is that the hidden cost of *running* Cortex drops by 95%, making it financially positive even on small codebases.
+
+**Technical Terms**: A set of four targeted architectural changes that address the three root causes of Cortex's negative ROI on small codebases: (1) agent-executed synthesis charged at Opus/Sonnet rates, (2) unlimited auto-sync firehoses, and (3) no pre-screen filter to detect non-architectural changes.
+
+### Sub-phase 13.14.1 — Server-Side Synthesis (Highest Impact)
+
+**The problem**: When the agent calls the `ingest` MCP tool, the MCP server returns the raw Librarian prompt + full diff back to the agent. The *agent* then synthesizes the result and calls `save_synthesis`. This means ingestion is billed at whatever model the agent is — currently Sonnet or Opus at $3–$75/M tokens. A single agent-executed ingest can cost $0.50–$1.00.
+
+**The fix**: Move all synthesis work inside the MCP server process.
+
+- When `ingest` is called, the MCP server fetches the diff, constructs the Librarian prompt, and makes an **internal, server-side LLM call** using the configured `CORTEX_INGEST_MODEL` (defaulting to `gemini-2.0-flash` at $0.075/$0.30 per M).
+- The server calls `save_synthesis` itself and returns only a one-line confirmation to the agent: `"Sync complete. 3 entities updated, 1 concept added."`
+- The agent never sees the diff, never synthesizes, and is billed nothing for the ingestion work.
+- **New env var**: `CORTEX_INGEST_MODEL` — decouples the ingestion model from the agent model. Default: `gemini-2.0-flash`. Set to `ollama/llama3.1` for fully offline $0.00 ingestion.
+- **Fallback**: if `CORTEX_INGEST_MODEL` is not set and no API key is available, surface a clear error rather than silently falling back to the agent model.
+- **Tool description guardrail**: Until server-side synthesis is shipped, update the `ingest` MCP tool description to include: `⚠️ Never call this autonomously. Only invoke when the user explicitly types /ingest.` This prevents agents from auto-triggering costly syncs mid-task.
+
+**Cost delta**: $0.50–$1.00 per agent-triggered sync → $0.002 per server-side sync. **~500x reduction.**
+
+### Sub-phase 13.14.2 — Two-Tier Model Routing
+
+**The problem**: The `cortex watch` daemon uses the same model as manual `cortex sync`, even though auto-saves are incremental and low-stakes.
+
+**The fix**: Introduce explicit model tiers:
+
+| Trigger | Default Model | Rationale |
+|---|---|---|
+| `cortex watch` (auto on file save) | `gemini-2.0-flash` or `ollama/llama3.1` | Frequent, incremental, low-stakes |
+| `cortex sync` (manual CLI) | User-configured model | Intentional, batch, quality matters |
+| Agent `ingest` MCP tool | `CORTEX_INGEST_MODEL` (server-side) | Never the agent's model |
+
+- **New env vars**: `CORTEX_WATCH_MODEL` (default: `gemini-2.0-flash`), `CORTEX_SYNC_MODEL` (default: user's `CORTEX_MODEL`).
+- Both can be set to `none` to disable LLM synthesis for that trigger path entirely.
+
+### Sub-phase 13.14.3 — Local Diff Significance Filter
+
+**The problem**: Every file save triggers a sync, even when only whitespace, comments, or markdown docs changed. These changes have zero architectural impact but consume the full ingestion pipeline.
+
+**The fix**: A deterministic, LLM-free pre-screen pass that runs before any sync:
+
+- Parse the accumulated git diff with a local regex/AST pass (<1ms, zero API cost).
+- Classify each changed file into one of three buckets:
+  - **Skip** (no LLM call): whitespace-only, comment-only, `.md` docs, CSS formatting, `.gitignore`, `package-lock.json`, `*.json` config files with no schema changes.
+  - **Lightweight sync**: single-file changes under 10 lines with no import/export signature changes.
+  - **Full sync**: new files, deleted files, import changes, function signature changes, type changes.
+- If 100% of changed files fall into the **Skip** bucket, log `"skipped — no architectural impact"` and exit without any API call.
+- **New env var**: `CORTEX_DIFF_FILTER=true` (default: `true`). Set to `false` to disable the filter and always run full syncs.
+
+**Expected savings**: Approximately 40–60% of developer file saves are whitespace/doc/formatting changes. This filter eliminates those syncs entirely at zero cost.
+
+### Sub-phase 13.14.4 — Commit-Gated Auto-Sync Mode
+
+**The problem**: `CORTEX_WATCH_MODE=on_save` (the current default) can fire 60+ syncs per hour if a developer saves frequently. Even with cheap models, this is wasteful.
+
+**The fix**: Change the default watch mode and add explicit options:
+
+- **`on_save`**: Current behavior. Syncs on every file save after a debounce window.
+- **`on_commit`** (new default): Syncs only when a `git commit` is detected via the pre-commit hook. Naturally batches all changes from an editing session into one meaningful sync. **Recommended for all developers.**
+- **`manual`**: Disables the watcher entirely. Sync only via `cortex sync` or `/ingest`.
+- **New env var**: `CORTEX_WATCH_MODE` (default: `on_commit`).
+- **Debounce improvement**: When `on_save` is explicitly chosen, increase the default debounce window from the current near-instant fire to **15 minutes of quiet**, accumulating all changes into one batch sync rather than firing per-save.
+
+**Expected savings**: A developer making 10 commits/day instead of 60 saves/hour: **6× fewer syncs at most**, potentially **60× fewer** in heavy editing sessions.
+
+**DoR**: Phase 13.7 (AST Skeleton) is stable. Phase 33.1 (Model Provider Registry) is preferred but not required — two-tier routing can be implemented with direct provider checks before Phase 33.1 lands.
+
+**DoD**:
+- `ingest` MCP tool performs synthesis server-side; agent receives only a one-line confirmation. Agent billing for ingestion = $0.
+- `CORTEX_INGEST_MODEL` defaults to `gemini-2.0-flash`; setting to an Ollama model produces $0.00 ingestion.
+- `CORTEX_WATCH_MODEL` and `CORTEX_SYNC_MODEL` route to separate models.
+- Diff significance filter correctly classifies whitespace/comment/markdown changes as Skip and produces no API call.
+- `CORTEX_WATCH_MODE=on_commit` is the new default; `on_save` with 15-minute debounce is available.
+- Tests cover: server-side synthesis return shape, two-tier model routing, filter correctly skipping whitespace diffs, filter passing through signature changes, commit-mode trigger detection, debounce window batching.
+
+**Pros & Cons**:
+- ✅ **Pros**: Flips Cortex from net-negative to net-positive ROI even on small single-developer codebases. Makes ingestion costs effectively invisible. Eliminates the single largest hidden cost (agent-executed synthesis at Opus rates).
+- ❌ **Cons**: Server-side synthesis removes the agent's ability to review or steer the synthesis output mid-run. The diff significance filter may occasionally misclassify a meaningful change as architectural no-op (mitigated by conservative Skip criteria — only purely syntactic changes qualify).
+
+## 🚀 Phase 13.15: Multi-Output Pipeline & Universal ROI Elimination — ⏳ Planned
+
+**Layman's Terms**: Right now, every time Cortex runs a sync, it does one thing: updates its internal documentation. Phase 13.15 makes every sync produce multiple useful outputs simultaneously — a changelog entry, a draft PR description, a list of which tests to run, and a "what changed since last session" briefing for your AI assistant. The cost of the sync is the same, but instead of one output you get five. This makes Cortex financially valuable even on tiny codebases where the documentation benefit alone would never justify the overhead.
+
+**Technical Terms**: Transform the ingestion pipeline from a single-output documentation engine into a multi-artifact generator. The Librarian's existing synthesis data (diff analysis, entity relationships, blast-radius graph) is used as the source of truth for all outputs — no additional LLM calls for most of them. The goal is that every single git commit produces developer-useful artifacts as a zero-marginal-cost side effect of the sync that was already running.
+
+---
+
+### Sub-phase 13.15.1 — Auto-Changelog Generation
+
+**The problem**: Developers skip writing changelogs because it's tedious. AI agents can't generate accurate ones without reading all changed files. Cortex already has both the diff and the semantic summary in memory during ingestion.
+
+**The fix**: After every successful synthesis, append a structured entry to `CHANGELOG.md` (or create it if absent):
+- Format: standard Keep a Changelog (`## [Unreleased]` → `### Changed`, `### Added`, `### Fixed`)
+- Source: the `summary` field from the synthesis result + entity action types (`create`/`update`/`delete`)
+- Zero extra LLM calls — the summary is already generated as part of `save_synthesis`
+- **New env var**: `CORTEX_CHANGELOG=true` (default: `true`). Set to `false` to disable.
+- **New env var**: `CORTEX_CHANGELOG_PATH` (default: `./CHANGELOG.md`).
+
+**ROI**: A solo dev on a 50-file codebase releases once a week. Writing a changelog manually takes 10–20 minutes. At $60/hr that's $10–$20/release. Cortex auto-generates it for $0.002 in model cost. **Net benefit: +$10 per release regardless of codebase size.**
+
+---
+
+### Sub-phase 13.15.2 — PR Description Auto-Draft
+
+**The problem**: Developers write vague PR descriptions ("fixed stuff", "updated auth") because writing good ones is slow. Reviewers then spend 15+ minutes reverse-engineering what changed. AI agents asked to write PR descriptions cold have to read all changed files.
+
+**The fix**: When a `git commit` is detected, generate a draft PR description and write it to `.cortex/pr_draft.md`:
+- **Title**: derived from the synthesis summary (one sentence)
+- **What changed**: bullet list from entity actions (`create`/`update`/`delete` with entity names)
+- **Why** (optional): extracted from commit message if conventional commit format detected
+- **Test impact**: list of entities that depend on changed entities (from blast-radius graph — zero LLM cost)
+- **Breaking changes**: any entity marked with `contradicts` relationship or constraint violations flagged during synthesis
+- One cheap LLM formatting call (~200 tokens input/output) to assemble the template from structured data.
+- **CLI command**: `cortex pr` — prints the current draft or generates one from the last sync
+
+**ROI**: GitHub Copilot charges $10–$19/month partly to do this. Cortex does it as a side effect of a sync that was already happening.
+
+---
+
+### Sub-phase 13.15.3 — Affected Test Report
+
+**The problem**: Developers run full test suites when only 3 files changed, wasting minutes on every save. Agents have no way to know which test files cover which source entities without reading them all.
+
+**The fix**: After every synthesis, traverse the blast-radius graph to generate an affected test report:
+- **Algorithm**: find all entities in `state.json` whose source file path matches `*.test.*`, `*.spec.*`, or lives in a `tests/` directory. Cross-reference against the inbound dependency edges of changed entities.
+- **Output**: a ranked list written to `.cortex/affected_tests.txt`: `[HIGH] tests/auth.test.ts — directly covers AuthService (changed)`, `[MEDIUM] tests/booking.test.ts — covers BookingService (1-hop from changed AuthService)`
+- **Zero LLM calls** — pure graph traversal using existing Phase 6 typed edges
+- **CLI command**: `cortex tests` — prints affected tests for the last sync
+- **MCP tool**: `get_affected_tests` — returns the list for IDE integration
+
+**ROI**: Running 3 targeted tests instead of 50 saves 2–5 minutes per commit. At 10 commits/day that's 20–50 minutes/day saved. **+$20–$50/day in developer time at $60/hr, regardless of codebase size.**
+
+---
+
+### Sub-phase 13.15.4 — Session Warm-Up Injection
+
+**The problem**: Every new agent session cold-starts from zero. Even on a codebase the agent has seen before, it must re-read files to rebuild context. This costs 1,000–5,000 tokens of file reads before any useful work begins.
+
+**The fix**: On every sync, generate a compact "delta briefing" and store it in `.cortex/session_delta.md`:
+- **Content**: what changed since the last session — new entities, updated entities, deleted entities, and a one-paragraph architectural summary of the shift
+- **Size cap**: 500 tokens maximum. If more changed, summarize at the concept level only.
+- **Injection**: the existing `inject-knowledge.js` Claude Code hook (Phase 46) is extended to also prepend the session delta when a new PPID is detected
+- **Effect**: the agent starts every session knowing exactly what changed since it last worked on the codebase, without reading any source files
+
+**ROI**: Saves 1,000–3,000 tokens of cold-start file reads per session. At 3 sessions/day on Sonnet-class model ($3/M input): **+$0.01–$0.03/day**. Small but persistent. On Opus-class: **+$0.04–$0.12/day**.
+
+---
+
+### Sub-phase 13.15.5 — Smart Commit Message Generation
+
+**The problem**: Developers write vague commit messages. The conventional commit format (`feat:`, `fix:`, `refactor:`) carries semantic meaning but is rarely used correctly. AI agents can't generate accurate commit messages without reading all changed files.
+
+**The fix**: When `cortex sync` or `cortex watch` detects uncommitted staged changes (via `git diff --cached`), generate a suggested conventional commit message and print it to the terminal:
+- Infer type from entity actions: new entity → `feat:`, deleted entity → `refactor:`, constraint violation → `fix:`, docs-only → `docs:`
+- Scope: the primary directory of changed entities
+- Subject: one-sentence synthesis summary, truncated to 72 characters
+- **CLI command**: `cortex commit` — stages all changes and opens `$EDITOR` with the pre-filled message. Falls back to printing the message if no editor is configured.
+- **Git hook option**: `cortex hook --commit-msg` installs a `prepare-commit-msg` hook that auto-fills the editor with the suggested message (user can override)
+
+---
+
+### Sub-phase 13.15.6 — Dead Code & Orphan Entity Detector
+
+**The problem**: Small codebases accumulate dead code faster than large ones because there's no systematic review. An entity with zero inbound edges that hasn't been touched in 90+ days is almost certainly dead code — but neither the developer nor the agent has an easy way to surface this.
+
+**The fix**: During every synthesis, run a zero-cost graph pass:
+- Flag any entity with: (a) zero inbound `depends_on`/`called_by` edges AND (b) `lastModified` > 90 days ago AND (c) not in an entry point list (`main.ts`, `index.ts`, route files)
+- Surface these in `cortex lint` output under a new `dead_code` category
+- **New env var**: `CORTEX_DEAD_CODE_DAYS` (default: `90`) — age threshold before flagging
+- Write flagged entities to `.cortex/dead_code_candidates.md` after each sync
+- **ROI**: Removing dead code reduces codebase size, which directly reduces future ingestion cost and agent context size. Self-reinforcing benefit.
+
+---
+
+### Sub-phase 13.15.7 — Regression Risk Score per Commit
+
+**The problem**: Not all commits are equally risky. A change to a leaf utility with no dependents is safe. A change to a high-centrality entity with 20 downstream consumers is dangerous. Developers have no way to quickly assess commit risk before pushing.
+
+**The fix**: After every synthesis, compute a **Regression Risk Score** (0–10) for the commit:
+- **Factors** (all derived from existing graph data, zero LLM cost):
+  - Number of stale downstream entities triggered (blast-radius count)
+  - Quality score of changed entities (low quality = higher risk)
+  - PageRank centrality of changed entities (high centrality = higher risk)
+  - Number of constraint violations detected during synthesis
+- **Output**: printed to terminal after every sync: `⚠️ Regression Risk: 7/10 — AuthService has 14 downstream dependents and a quality score of 0.42. Consider running the full test suite before pushing.`
+- **CLI command**: `cortex risk` — shows the score and breakdown for the last commit
+- **CI integration**: `cortex risk --fail-above 8` exits 1 if score exceeds threshold — blocks high-risk pushes in CI
+
+---
+
+### Sub-phase 13.15.8 — Natural Language Architectural Query
+
+**The problem**: The only way to get architectural information out of Cortex is through structured tool calls (`read_entity`, `cortex_find`, etc.). Developers can't ask "why does the checkout flow import auth?" or "what would break if I deleted PaymentGuard?" in plain English.
+
+**The fix**: Add a `cortex ask "<question>"` CLI command and a `cortex_ask` MCP tool:
+- **Implementation**: takes the question, runs `cortex_find` to identify relevant entities, builds a context pack scoped to those entities, and passes the pack + question to a cheap model (Flash/local) for a grounded answer
+- **Grounding**: the answer must cite entity names and relationship types from the knowledge graph — hallucinations are structurally impossible because the model only has graph data, not raw code
+- **Cost**: ~$0.001–$0.003 per query using Flash
+- **Examples**: `cortex ask "what handles payment validation?"` → `"PaymentGuard (backendObfuscated/utils/paymentGuard.js) — called by checkoutService via validateTransaction()"`
+- **MCP tool**: `cortex_ask` with argument `question` — returns a grounded plain-English answer with entity citations
+
+---
+
+### Sub-phase 13.15.9 — Cross-Session Task Resumption State
+
+**The problem**: AI agents (and human developers) starting a new task often waste 5–10 turns reconstructing what was left unfinished in the previous session (e.g., "which files did I modify?", "what test failures were remaining?").
+
+**The fix**: Save task context state to `.cortex/session_state.json` at the end of each session:
+- **State captured**: Uncommitted changes, active branch name, last failed test file from testing tool history, last modified files sorted by timestamp, and a 1-sentence "remaining work" summary calculated during the final sync.
+- **Zero LLM cost**: Most metrics are gathered via fast, local git/system commands.
+- **MCP tool/CLI command**: `cortex resume` automatically reads and formats this state block to the AI agent upon new session initialization.
+- **ROI**: Avoids 5-10 redundant exploratory tool calls (git status, reading local files, list_dir) to understand state. **Saves ~10k+ input tokens and 1–2 minutes of developer alignment time per context switch.**
+
+---
+
+### Sub-phase 13.15.10 — PR Architecture & Fitness CI Gate
+
+**The problem**: Architecture rules (`mustNotImport`, quality gates) are only checked when a developer manually runs tests/audits. Violations are regularly committed and pushed, and only discovered later or during code review.
+
+**The fix**: Integrate Cortex checks into the CI/CD pipeline (e.g. GitHub Actions, GitLab CI):
+- **Command**: `cortex ci --check` parses the incoming PR diff against the target branch's architecture graph.
+- **Features**:
+  - Automatically posts a markdown comment on the PR containing the Regression Risk Score, affected downstream systems, and any constraint/dependency violations.
+  - Returns exit code 1 to block merging if critical architecture violations (like cyclic dependencies or banned imports) are introduced.
+  - Zero LLM cost: the CI action runs graph-comparison logic locally against the checked-in `.knowledge` index.
+- **ROI**: Prevents high-risk PR merges and architectural decay before it hits main branches. Saves engineering managers from manual architectural compliance reviews.
+
+---
+
+**DoR**: Phase 13.14 (Zero-Overhead Ingestion) is in progress. Phase 6 (Typed Relationships) is stable — graph traversal for tests/risk/dead-code depends on it.
+
+**DoD**:
+- `CHANGELOG.md` is auto-updated after every sync with a structured entry. No manual changelog writing needed.
+- `.cortex/pr_draft.md` is generated on every commit-detected sync and printed by `cortex pr`.
+- `cortex tests` prints a ranked affected-test list after every sync, derived from graph traversal with zero LLM calls.
+- `.cortex/session_delta.md` is generated after every sync and injected into new agent sessions via the existing Claude Code hook.
+- `cortex commit` generates a conventional commit message suggestion from synthesis data.
+- `cortex lint` surfaces dead code candidates after every sync under the `dead_code` category.
+- `cortex risk` prints a 0–10 regression risk score after every sync, with `--fail-above` CI gate.
+- `cortex ask "<question>"` returns a grounded plain-English answer with entity citations in <3 seconds.
+- `cortex resume` returns a JSON/Markdown task resumption state to immediately bootstrap agents.
+- `cortex ci --check` fails CI runs when PRs introduce cyclic dependencies or violate architectural import rules.
+- All sub-phases are independently shippable — each can be toggled via env vars without affecting others.
+- Tests cover: changelog append format, PR draft structure, test impact ranking, session delta size cap, commit message type inference, dead code age threshold, risk score factor weighting, natural language query grounding, session state structure, CI block behaviors.
+
+**Pros & Cons**:
+- ✅ **Pros**: Eliminates negative ROI for all codebase sizes by adding developer value that exists independent of context overflow. Each sub-phase produces concrete, measurable time savings. Most outputs require zero or near-zero additional LLM calls — they are computed from the graph data already built during ingestion. Transforms Cortex from "AI memory tool" to "git-commit pipeline with structured outputs."
+- ❌ **Cons**: Each sub-phase adds surface area to the sync pipeline — more output targets mean more failure modes. Changelog and PR draft quality depends on synthesis quality; if the Librarian produces a vague summary, the derived outputs are also vague. The natural language query tool (13.15.8) requires a secondary LLM call — it should never be called autonomously by the agent to avoid cost loops.
+
+---
+
 ## 🗂️ Phase 14: Large-Diff Clustering — ⏳ Planned
+
 
 **Layman's Terms**
 When you change 30+ files at once — say, touching auth, database, and UI all in one save — Cortex currently dumps everything on the AI in one go and asks for a summary. That produces vague, generic knowledge entries because the AI is trying to make sense of too many unrelated things at once. Phase 14 sorts the files into focused groups first (auth changes together, database changes together, UI changes together), then summarises each group separately. The result is sharper, more accurate knowledge entries for large codebases.

@@ -245,7 +245,7 @@ export class CortexMCPServer {
         },
         {
           name: "context",
-          description: "Build a token-bounded knowledge bundle and use it as the working knowledge source for this session.",
+          description: "Build a token-bounded knowledge bundle with automatic dependency verification — use it as the working knowledge source for this session. If something is missing, it auto-expands or greps source code as a live fallback.",
           arguments: [
             { name: "scope", description: "Entity or concept to focus the bundle around (optional — omit for full knowledge base)", required: false },
             { name: "budget", description: "Token budget (default: 8000)", required: false },
@@ -597,6 +597,7 @@ export class CortexMCPServer {
                 `Call build_context_pack with budget=${budget}${scopePart}.`,
                 "Once you receive the pack, treat its contents as your authoritative knowledge source for this session.",
                 "Prefer the pack over calling read_knowledge_index or read_entity — it is already ranked by importance and fits the token budget.",
+                "If the pack includes a `[Grounded Fallback Context]` block for an entity not yet in `.knowledge/`, trust the extracted signature but note that it hasn't been synthesized yet. Consider running `ingest` to promote it if you'll reference it repeatedly.",
                 "If the user asks about something not covered in the pack, say so explicitly rather than silently falling back to source files.",
               ].join(" "),
             },
@@ -1186,7 +1187,7 @@ export class CortexMCPServer {
         },
         {
           name: "build_context_pack",
-          description: "Build a token-bounded knowledge bundle optimised for AI context injection. Ranks entities by graph centrality (most-referenced first) so nothing important is buried, annotates low-quality entities with inline warnings, and hard-caps output at the token budget. Use this instead of read_knowledge_index when the knowledge base is large or when you need a focused slice — it guarantees the highest-signal content fits within the budget.",
+          description: "Build a token-bounded knowledge bundle optimised for AI context injection. Ranks entities by graph centrality (most-referenced first) so nothing important is buried, annotates low-quality entities with inline warnings, hard-caps output at the token budget, and auto-verifies structural completeness. If a dependency contract is missing due to budget limits, it expands to pull it in (Dynamic Context Expansion). If a dependency doesn't exist in .knowledge/ at all, falls back to live source grep to extract the real signature (Grounded Fallback). Use this instead of read_knowledge_index when the knowledge base is large or when you need a focused slice — it guarantees the highest-signal content fits within the budget.",
           inputSchema: {
             type: "object",
             properties: {
@@ -2378,7 +2379,7 @@ export class CortexMCPServer {
         const scope = (args as any)?.scope as string | undefined;
         const depth = typeof (args as any)?.depth === "number" ? (args as any).depth : undefined;
         const format = (args as any)?.format === "json" ? "json" as const : "markdown" as const;
-        const pack = buildContextPack(state, { budget, scope, depth, format });
+        const pack = buildContextPack(state, { budget, scope, depth, format, projectRoot: this.projectRoot });
         const stats = pack.elided.length > 0
           ? `\n\n---\n*Pack stats: ${pack.tokens}/${budget} tokens used. ${pack.elided.length} item(s) elided due to budget: ${pack.elided.join(", ")}*`
           : `\n\n---\n*Pack stats: ${pack.tokens}/${budget} tokens used. All items included.*`;

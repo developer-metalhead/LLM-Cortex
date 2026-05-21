@@ -1,16 +1,22 @@
 import { buildGraph, KnowledgeGraph, GraphNode } from "./graph.js";
+import fs from "fs";
+import path from "path";
+import { SmartReadCache } from "./readCache.js";
 
 export interface ContextPackOptions {
   budget?: number;       // token budget
   scope?: string;        // central entity/concept
   depth?: number;        // blast radius depth
   format?: "markdown" | "json";
+  projectRoot?: string;  // required for Phase 13.7.2 grounded fallback
 }
 
 export interface ContextPackResult {
   output: string;
   tokens: number;
   elided: string[];
+  expanded?: string[];   // Phase 13.7.2: entities pulled back in via Dynamic Context Expansion
+  groundedFallbacks?: { name: string; snippet: string; confidence: string }[];  // Phase 13.7.2: entities resolved via live grep
 }
 
 // Industry-standard simple heuristic for code tokenization without heavy libraries
@@ -82,6 +88,113 @@ function computeCentrality(graph: KnowledgeGraph): Map<string, number> {
   return ranks;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 13.7.2 — Speculative Static Verification & Grounded Fallback
+// ──────────────────────────────────────────────────────────────────────────
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const ENTITY_PATTERNS = [
+  { re: (name: string) => new RegExp(`(?:export\\s+)?(?:abstract\\s+)?class\\s+${escapeRegex(name)}(?:<[^>]*>)?(?:\\s+extends\\s+\\w+(?:<[^>]*>)?)?(?:\\s+implements\\s+[^{]+)?`), confidence: "high" },
+  { re: (name: string) => new RegExp(`(?:export\\s+)?interface\\s+${escapeRegex(name)}(?:<[^>]*>)?(?:\\s+extends\\s+[^{]+)?`), confidence: "high" },
+  { re: (name: string) => new RegExp(`(?:export\\s+)?enum\\s+${escapeRegex(name)}`), confidence: "high" },
+  { re: (name: string) => new RegExp(`(?:export\\s+)?type\\s+${escapeRegex(name)}\\s*=`), confidence: "medium" },
+  { re: (name: string) => new RegExp(`(?:export\\s+)?function\\s+${escapeRegex(name)}\\s*\\(`), confidence: "medium" },
+  { re: (name: string) => new RegExp(`(?:export\\s+)?(?:const|let|var)\\s+${escapeRegex(name)}\\s*[:=]`), confidence: "medium" },
+];
+
+const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
+const EXCLUDE_DIRS = new Set(["node_modules", "dist", "build", "out", ".git", ".knowledge", ".cortex", ".claude", ".agents", ".antigravity", ".cursor", ".vscode", ".windsurf", ".codeium", "coverage", ".next", ".nuxt", ".turbo", "__pycache__"]);
+
+function searchFile(filePath: string, entityName: string): { snippet: string; confidence: string } | null {
+  try {
+    const stat = fs.statSync(filePath);
+    if (stat.size > 500_000) return null;
+    const content = fs.readFileSync(filePath, "utf-8");
+    const lines = content.split("\n");
+    const searchLines = lines.slice(0, Math.min(lines.length, 200));
+    for (let i = 0; i < searchLines.length; i++) {
+      const line = searchLines[i];
+      for (const { re, confidence } of ENTITY_PATTERNS) {
+        if (re(entityName).test(line)) {
+          // Use AST skeleton extraction if possible
+          try {
+            const cache = new SmartReadCache();
+            cache.get(filePath, "skeleton"); // Populates cache
+            const res = cache.get(filePath, "skeleton"); // Returns cached skeleton
+            if (res && res.content && res.content.trim()) {
+              return { snippet: res.content, confidence };
+            }
+          } catch {}
+
+          // Fallback to single line signature
+          const sig = line.trim().endsWith("{") ? line.trim() + " ..." : line.trim();
+          return { snippet: sig, confidence };
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
+function grepEntityInSource(
+  entityName: string,
+  projectRoot: string,
+  callerSourceFile?: string
+): { snippet: string; confidence: string; filePath: string } | null {
+  const queue: string[] = [];
+  const visited = new Set<string>();
+
+  if (callerSourceFile) {
+    const absolutePath = path.isAbsolute(callerSourceFile)
+      ? callerSourceFile
+      : path.join(projectRoot, callerSourceFile);
+    const callerDir = path.dirname(absolutePath);
+    if (fs.existsSync(callerDir)) {
+      queue.push(callerDir);
+    }
+  }
+  queue.push(projectRoot);
+
+  let scanned = 0;
+  const MAX_FILES = 200;
+  const startTime = Date.now();
+  const TIMEOUT_MS = 15;
+
+  while (queue.length > 0 && scanned < MAX_FILES) {
+    if (Date.now() - startTime > TIMEOUT_MS) {
+      break;
+    }
+
+    const dir = path.resolve(queue.shift()!);
+    const dirKey = process.platform === "win32" ? dir.toLowerCase() : dir;
+    if (visited.has(dirKey)) continue;
+    visited.add(dirKey);
+
+    let entries: any[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch { continue; }
+
+    for (const entry of entries) {
+      if (EXCLUDE_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        queue.push(fullPath);
+      } else if (entry.isFile() && SOURCE_EXTS.has(path.extname(entry.name))) {
+        scanned++;
+        const match = searchFile(fullPath, entityName);
+        if (match) {
+          return { ...match, filePath: path.relative(projectRoot, fullPath) };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export function buildContextPack(
   state: { entities: Record<string, any>; concepts: Record<string, any> },
   options: ContextPackOptions = {}
@@ -112,7 +225,9 @@ export function buildContextPack(
     return {
       output: payload,
       tokens: estimateTokens(payload),
-      elided: []
+      elided: [],
+      expanded: [],
+      groundedFallbacks: [],
     };
   }
 
@@ -156,8 +271,9 @@ export function buildContextPack(
       }
     }
 
+    const softLimit = Math.max(budget - 1000, Math.floor(budget * 0.85));
     const blockTokens = estimateTokens(block);
-    if (currentTokens + blockTokens > budget) {
+    if (currentTokens + blockTokens > softLimit && included.size > 0) {
       elided.add(node.id);
       continue;
     }
@@ -167,7 +283,69 @@ export function buildContextPack(
     included.add(node.id);
   }
 
-  // Add elided footnotes
+  // ─── Phase 13.7.2: Speculative Static Verification & Grounded Fallback ───
+  const expanded: string[] = [];
+  const groundedFallbacks: { name: string; snippet: string; confidence: string }[] = [];
+  const stateEntityNames = new Set(Object.keys(state.entities));
+  const maxOverage = budget * 0.5;
+
+  if (options.projectRoot) {
+    for (const entityName of included) {
+      const entity = state.entities[entityName];
+      if (!entity?.relationships) continue;
+
+      for (const rel of entity.relationships) {
+        const usageKinds = new Set(["depends_on", "called_by", "parent_of"]);
+        if (!usageKinds.has(rel.kind)) continue;
+
+        const target = rel.target;
+        if (included.has(target)) continue;
+
+        if (stateEntityNames.has(target)) {
+          // Dynamic Context Expansion: target existed in KB but was elided by budget
+          if (expanded.includes(target)) continue;
+          const node = sortedNodes.find(n => n.id === target);
+          const rawEntity = state.entities[target];
+          if (!rawEntity) continue;
+
+          let block = `### 📄 Entity: ${target}\n`;
+          if (node && node.qualityScore < 0.4) {
+            block += `> **Warning**: Low confidence — not yet evidence-anchored or human-reviewed.\n`;
+          }
+          block += `\n${rawEntity.description || "(no description available)"}\n\n`;
+          if (rawEntity.relationships) {
+            block += `**Relationships**:\n`;
+            for (const r of rawEntity.relationships) {
+              block += `- ${r.kind} [[${r.target}]]\n`;
+            }
+            block += `\n`;
+          }
+          const blockTokens = estimateTokens(block);
+          if (currentTokens + blockTokens <= budget) {
+            finalOutput += block;
+            currentTokens += blockTokens;
+            included.add(target);
+            expanded.push(target);
+          }
+        } else {
+          // Grounded Fallback: target not in KB at all — grep source code
+          if (groundedFallbacks.some(f => f.name === target)) continue;
+          const fallback = grepEntityInSource(target, options.projectRoot, entity.sourceFile);
+          if (fallback) {
+            const block = `\n### ⚡ Grounded Fallback Context: ${target}\n> Resolved via live source search in \`${fallback.filePath}\` (confidence: ${fallback.confidence}). Not yet in \`.knowledge/\` — run \`ingest\` to promote.\n\n\`\`\`typescript\n${fallback.snippet}\n\`\`\`\n\n`;
+            const blockTokens = estimateTokens(block);
+            if (currentTokens + blockTokens <= budget) {
+              finalOutput += block;
+              currentTokens += blockTokens;
+              groundedFallbacks.push({ name: target, snippet: fallback.snippet, confidence: fallback.confidence });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Add elided footnotes (recalc after potential expansions above)
   const actuallyElided = Array.from(elided).filter(id => !included.has(id));
   if (actuallyElided.length > 0) {
     let footer = `---\n\n*The following items were elided to fit the ${budget} token budget:*\n`;
@@ -181,9 +359,27 @@ export function buildContextPack(
     }
   }
 
+  // Append expanded/grounded summary if any
+  if (expanded.length > 0 || groundedFallbacks.length > 0) {
+    let summary = `\n---\n\n**Pack Integrity Summary:**\n`;
+    if (expanded.length > 0) {
+      summary += `- 🔄 Dynamic Context Expansion: ${expanded.length} entity(s) re-included to satisfy dependency contracts: ${expanded.join(", ")}\n`;
+    }
+    if (groundedFallbacks.length > 0) {
+      summary += `- ⚡ Live Source Fallback: ${groundedFallbacks.length} entity(s) resolved from source code (not yet in .knowledge/): ${groundedFallbacks.map(f => `${f.name} (${f.confidence})`).join(", ")}\n`;
+    }
+    const summaryTokens = estimateTokens(summary);
+    if (currentTokens + summaryTokens <= budget) {
+      finalOutput += summary;
+      currentTokens += summaryTokens;
+    }
+  }
+
   return {
     output: finalOutput,
     tokens: currentTokens,
-    elided: actuallyElided
+    elided: actuallyElided,
+    expanded,
+    groundedFallbacks,
   };
 }

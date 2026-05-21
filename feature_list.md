@@ -85,6 +85,9 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
   *A live financial dashboard showing exactly how much Cortex has saved you.*
 - [**36. API Budget & Runaway Safeguards**](./feature.md#36-api-budget--runaway-safeguards)
   *Defends your wallet by enforcing hard session budget caps and rolling frequency gates, encouraging emergent cost-optimal tool routing.*
+- [**47. Speculative Context Verification & Grounded Fallback**](./feature.md#47-speculative-context-verification--grounded-fallback-adaptive-retrieval)
+  *Runs speculative static checks on compiled packs and executes a sub-millisecond local source grep fallback for missing signatures.*
+
 
 ### Safety, Governance & Traceability
 - [**46. Pre-Tool Call Knowledge Context Injection**](./feature.md#46-pre-tool-call-knowledge-context-injection)
