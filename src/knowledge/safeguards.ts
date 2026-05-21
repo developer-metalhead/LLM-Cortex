@@ -157,7 +157,7 @@ export async function writeSessionUsage(projectRoot: string, usage: SessionUsage
 
   const filePath = path.join(knowledgeDir, USAGE_FILE_NAME);
   const tmpPath = filePath + ".tmp";
-  
+
   // Auto-prune events older than 24 hours before writing
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   const prunedEvents = usage.events.filter(e => {
@@ -232,4 +232,3 @@ export async function recordSyncEvent(projectRoot: string, costUsd: number): Pro
     return event;
   });
 }
-
