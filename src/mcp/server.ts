@@ -25,7 +25,7 @@ import { loadCortexEnv } from "../core/env.js";
 import { AuditManager } from "../knowledge/audit.js";
 import { LintManager } from "../knowledge/lint.js";
 import { EvolutionManager } from "../knowledge/evolution.js";
-import { buildGraph, toMermaid, toJson, buildImpactReport } from "../knowledge/graph.js";
+import { buildGraph, toMermaid, toJson, buildImpactReport, graphHop } from "../knowledge/graph.js";
 import { readQualityGate } from "../knowledge/quality.js";
 import { runExportGraph } from "../cli/export.js";
 import { compressResponse, resolveRefs } from "./compression.js";
@@ -33,6 +33,10 @@ import { SmartReadCache } from "../knowledge/readCache.js";
 import { buildContextPack } from "../knowledge/packer.js";
 import { computeCostEstimate } from "../cli/test-cost.js";
 import { loadSafeguardConfig } from "../knowledge/safeguards.js";
+import { SoulEngine } from "../knowledge/soul.js";
+import { ProfileManager } from "../knowledge/profile.js";
+import { ExperienceManager } from "../knowledge/experience.js";
+import { rerankFindResults, rerankContextPackNodes } from "../knowledge/cognitive.js";
 
 export class CortexMCPServer {
   private server: Server;
@@ -50,6 +54,10 @@ export class CortexMCPServer {
   private projectRootExplicit: boolean;
   private readonly sessionId = randomUUID();
   private readonly readCache = new SmartReadCache();
+  private soul: SoulEngine;
+  private profileManager: ProfileManager;
+  private experienceManager: ExperienceManager;
+  private soulLoaded: boolean = false;
 
   constructor(
     projectRoot: string,
@@ -61,6 +69,10 @@ export class CortexMCPServer {
     this.knowledge = new KnowledgeManager(projectRoot);
     this.onAfterKnowledgeSave = onAfterKnowledgeSave;
     this.projectRootExplicit = projectRootExplicit;
+
+    this.soul = new SoulEngine(projectRoot);
+    this.profileManager = new ProfileManager(projectRoot);
+    this.experienceManager = new ExperienceManager(projectRoot);
 
     this.server = new Server(
       { name: "project-cortex", version: "1.0.0" },
@@ -89,6 +101,11 @@ export class CortexMCPServer {
     import("../knowledge/brevity.js").then(({ clearBrevityCache }) => {
       clearBrevityCache();
     }).catch(() => {});
+
+    this.soul = new SoulEngine(resolved);
+    this.profileManager = new ProfileManager(resolved);
+    this.experienceManager = new ExperienceManager(resolved);
+    this.soulLoaded = false;
 
     console.error(`[Cortex] Project root resolved via MCP roots: ${resolved}`);
   }
@@ -1280,6 +1297,12 @@ export class CortexMCPServer {
             },
           },
         },
+        {
+          name: "cortex_soul_status",
+          description:
+            "Check the current Soul state: active cognitive lens, risk tolerance, creativity/precision biases, memory node/edge counts, and whether a user profile is loaded.",
+          inputSchema: { type: "object", properties: {} },
+        },
       ];
       if (brevity === "lite" || brevity === "ultra") {
         for (const t of tools) {
@@ -1297,6 +1320,31 @@ export class CortexMCPServer {
 
       const executeHandler = async () => {
         const { name, arguments: args } = request.params;
+
+        // ─── SoulMiddleware ───
+        // Lazy-init the Soul engine on first tool call so the server starts
+        // fast and only pays persistence cost when actually needed.
+        if (!this.soulLoaded) {
+          await this.soul.load();
+          const profile = await this.profileManager.load();
+          if (Object.keys(profile).length > 0) {
+            await this.soul.loadProfile(profile);
+          }
+          this.soulLoaded = true;
+        }
+
+        // Log every tool call to the experience ledger (non-blocking).
+        if (name !== "save_synthesis" && name !== "ingest") {
+          this.experienceManager.append({
+            timestamp: new Date().toISOString(),
+            event: "tool_call",
+            toolName: name,
+            details: name,
+          }).catch(() => {});
+        }
+
+        const activeLens = this.soul.detectActiveLens();
+        console.error(`[Cortex:Soul] Lens=${activeLens} Tool=${name}`);
 
       if (name === "get_cortex_status") {
         const knowledgeExists = await this.knowledge.exists();
@@ -1326,6 +1374,17 @@ export class CortexMCPServer {
                 null,
                 2,
               ),
+            },
+          ],
+        };
+      }
+
+      if (name === "cortex_soul_status") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: this.soul.status() + `\nSoul Dirty: ${this.soul.isDirty() ? "Yes" : "No"}`,
             },
           ],
         };
@@ -1695,6 +1754,49 @@ export class CortexMCPServer {
           systemPrompt += "\n\nCRITICAL: Output MUST be extremely terse, telegraphic, and dense. Strip all conversational filler, preambles, and polite transitions. Keep descriptions and summaries direct, compact, and completely focused on key architectural facts.";
         }
 
+        // ─── Mode-Adaptive Ingestion: detect lens from diff ───
+        // Explicit CORTEX_LENS env var always wins over regex auto-detection.
+        const explicitLens = process.env.CORTEX_LENS;
+        let detectedLens: string | null = null;
+
+        if (explicitLens) {
+          detectedLens = explicitLens;
+        } else {
+          try {
+            const lastSync = await this.knowledge.getLastSyncCommit();
+            const { getPendingDiff } = await import("../core/diff.js");
+            const currentDiff = await getPendingDiff(this.projectRoot, lastSync);
+            if (currentDiff) {
+              const { detectLensFromDiff } = await import("../knowledge/cognitive.js");
+              const autoLens = detectLensFromDiff(currentDiff);
+              if (autoLens) detectedLens = autoLens;
+            }
+          } catch {
+            /* non-fatal — proceed with default */
+          }
+        }
+
+        if (detectedLens) {
+          systemPrompt += `\n\n### Active Cognitive Lens: ${detectedLens}\n`;
+          switch (detectedLens) {
+            case "FORENSIC":
+              systemPrompt += "Focus on identifying bugs, regressions, and past failure patterns. Prioritize stability and defensive patterns.";
+              break;
+            case "STRATEGIC":
+              systemPrompt += "Focus on architectural planning, module boundaries, and interface contracts. Prioritize long-term maintainability.";
+              break;
+            case "CREATIVE":
+              systemPrompt += "Focus on novel approaches, experimental patterns, and exploratory design. Highlight unconventional solutions.";
+              break;
+            case "EXECUTION":
+              systemPrompt += "Focus on concrete implementation decisions, code structure, and actionable next steps. Be direct and prescriptive.";
+              break;
+            default:
+              systemPrompt += "Focus on standard engineering best practices: clean APIs, separation of concerns, and testability.";
+              break;
+          }
+        }
+
         // BOOTSTRAP PATH: when the knowledge base is empty, never send a diff —
         // the most recent commits are usually just the installation of Cortex
         // itself (.knowledge/, .antigravity/, etc.), which would poison the
@@ -1889,6 +1991,29 @@ export class CortexMCPServer {
           } catch (err) {
             console.error("[Cortex MCP] onAfterKnowledgeSave failed:", err);
           }
+        }
+
+        // ─── Soul: record co-occurrence & outcome ───
+        const sourceFiles = parsed.data.entities
+          .map(e => e.sourceFile)
+          .filter((f): f is string => !!f);
+        const entityNames = parsed.data.entities.map(e => e.name);
+
+        if (sourceFiles.length > 1) {
+          this.soul.recordCoOccurrence(entityNames);
+        }
+
+        this.soul.logExperience({
+          timestamp: new Date().toISOString(),
+          event: "synthesis",
+          details: `Saved ${parsed.data.entities.length} entities, ${parsed.data.concepts.length} concepts`,
+          success: true,
+        });
+
+        try {
+          await this.soul.save();
+        } catch (err) {
+          console.error("[Cortex:Soul] save failed:", err);
         }
 
         return {
@@ -2379,7 +2504,26 @@ export class CortexMCPServer {
         const scope = (args as any)?.scope as string | undefined;
         const depth = typeof (args as any)?.depth === "number" ? (args as any).depth : undefined;
         const format = (args as any)?.format === "json" ? "json" as const : "markdown" as const;
-        const pack = buildContextPack(state, { budget, scope, depth, format, projectRoot: this.projectRoot });
+        let pack = buildContextPack(state, { budget, scope, depth, format, projectRoot: this.projectRoot });
+
+        // Phase 13.8 — Relation Graph Hopping for CREATIVE lens
+        if (scope && this.soul && this.soul.state.currentLens === "CREATIVE") {
+          const graph = buildGraph(state);
+          const hopEntities = graphHop(graph, scope, 2, new Set([...pack.elided, scope]));
+          if (hopEntities.length > 0) {
+            for (const hopName of hopEntities) {
+              if (pack.elided.includes(hopName)) continue;
+              for (const node of graph.nodes) {
+                if (node.id === hopName) {
+                  const extra = buildContextPack(state, { budget: 4096, scope: hopName, depth: 1, format: "markdown", projectRoot: this.projectRoot });
+                  pack.output += `\n<hr/>\n<h3>🔗 Creative Hop: ${hopName}</h3>\n${extra.output}`;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
         const stats = pack.elided.length > 0
           ? `\n\n---\n*Pack stats: ${pack.tokens}/${budget} tokens used. ${pack.elided.length} item(s) elided due to budget: ${pack.elided.join(", ")}*`
           : `\n\n---\n*Pack stats: ${pack.tokens}/${budget} tokens used. All items included.*`;

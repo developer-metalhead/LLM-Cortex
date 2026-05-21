@@ -336,3 +336,47 @@ export function buildImpactReport(
 
   return { target: targetName, direction, entries, totalCount: entries.length };
 }
+
+// Phase 13.8 — Relation Graph Hopping (WikiLink traversal)
+// Returns entity names reachable from `startEntity` via graph edges, up to
+// `hops` deep, excluding any names in the `exclude` set. Used by the context
+// packer in CREATIVE lens mode to suggest architectural parallels.
+export function graphHop(
+  graph: KnowledgeGraph,
+  startEntity: string,
+  hops: number = 2,
+  exclude: Set<string> = new Set(),
+): string[] {
+  const nodeIds = new Set(graph.nodes.map(n => n.id));
+  if (!nodeIds.has(startEntity)) return [];
+
+  const adj = new Map<string, Set<string>>();
+  for (const n of graph.nodes) {
+    adj.set(n.id, new Set());
+  }
+  for (const e of graph.edges) {
+    if (adj.has(e.source)) adj.get(e.source)!.add(e.target);
+    if (adj.has(e.target)) adj.get(e.target)!.add(e.source);
+  }
+
+  const visited = new Set<string>([startEntity, ...exclude]);
+  const queue: Array<{ id: string; hop: number }> = [{ id: startEntity, hop: 0 }];
+  const result: string[] = [];
+
+  while (queue.length > 0) {
+    const { id, hop } = queue.shift()!;
+    if (hop > 0 && hop <= hops) {
+      result.push(id);
+    }
+    if (hop < hops) {
+      for (const neighbor of adj.get(id) ?? []) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push({ id: neighbor, hop: hop + 1 });
+        }
+      }
+    }
+  }
+
+  return result;
+}
