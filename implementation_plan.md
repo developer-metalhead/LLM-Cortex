@@ -4058,9 +4058,152 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 - ✅ **Pros**: Flips Cortex from net-negative to net-positive ROI even on small single-developer codebases. Makes ingestion costs effectively invisible. Eliminates the single largest hidden cost (agent-executed synthesis at Opus rates).
 - ❌ **Cons**: Server-side synthesis removes the agent's ability to review or steer the synthesis output mid-run. The diff significance filter may occasionally misclassify a meaningful change as architectural no-op (mitigated by conservative Skip criteria — only purely syntactic changes qualify).
 
+## 🚀 Phase 13.15: Multi-Output Pipeline & Universal ROI Elimination — ⏳ Planned
+
+**Layman's Terms**: Right now, every time Cortex runs a sync, it does one thing: updates its internal documentation. Phase 13.15 makes every sync produce multiple useful outputs simultaneously — a changelog entry, a draft PR description, a list of which tests to run, and a "what changed since last session" briefing for your AI assistant. The cost of the sync is the same, but instead of one output you get five. This makes Cortex financially valuable even on tiny codebases where the documentation benefit alone would never justify the overhead.
+
+**Technical Terms**: Transform the ingestion pipeline from a single-output documentation engine into a multi-artifact generator. The Librarian's existing synthesis data (diff analysis, entity relationships, blast-radius graph) is used as the source of truth for all outputs — no additional LLM calls for most of them. The goal is that every single git commit produces developer-useful artifacts as a zero-marginal-cost side effect of the sync that was already running.
+
+---
+
+### Sub-phase 13.15.1 — Auto-Changelog Generation
+
+**The problem**: Developers skip writing changelogs because it's tedious. AI agents can't generate accurate ones without reading all changed files. Cortex already has both the diff and the semantic summary in memory during ingestion.
+
+**The fix**: After every successful synthesis, append a structured entry to `CHANGELOG.md` (or create it if absent):
+- Format: standard Keep a Changelog (`## [Unreleased]` → `### Changed`, `### Added`, `### Fixed`)
+- Source: the `summary` field from the synthesis result + entity action types (`create`/`update`/`delete`)
+- Zero extra LLM calls — the summary is already generated as part of `save_synthesis`
+- **New env var**: `CORTEX_CHANGELOG=true` (default: `true`). Set to `false` to disable.
+- **New env var**: `CORTEX_CHANGELOG_PATH` (default: `./CHANGELOG.md`).
+
+**ROI**: A solo dev on a 50-file codebase releases once a week. Writing a changelog manually takes 10–20 minutes. At $60/hr that's $10–$20/release. Cortex auto-generates it for $0.002 in model cost. **Net benefit: +$10 per release regardless of codebase size.**
+
+---
+
+### Sub-phase 13.15.2 — PR Description Auto-Draft
+
+**The problem**: Developers write vague PR descriptions ("fixed stuff", "updated auth") because writing good ones is slow. Reviewers then spend 15+ minutes reverse-engineering what changed. AI agents asked to write PR descriptions cold have to read all changed files.
+
+**The fix**: When a `git commit` is detected, generate a draft PR description and write it to `.cortex/pr_draft.md`:
+- **Title**: derived from the synthesis summary (one sentence)
+- **What changed**: bullet list from entity actions (`create`/`update`/`delete` with entity names)
+- **Why** (optional): extracted from commit message if conventional commit format detected
+- **Test impact**: list of entities that depend on changed entities (from blast-radius graph — zero LLM cost)
+- **Breaking changes**: any entity marked with `contradicts` relationship or constraint violations flagged during synthesis
+- One cheap LLM formatting call (~200 tokens input/output) to assemble the template from structured data.
+- **CLI command**: `cortex pr` — prints the current draft or generates one from the last sync
+
+**ROI**: GitHub Copilot charges $10–$19/month partly to do this. Cortex does it as a side effect of a sync that was already happening.
+
+---
+
+### Sub-phase 13.15.3 — Affected Test Report
+
+**The problem**: Developers run full test suites when only 3 files changed, wasting minutes on every save. Agents have no way to know which test files cover which source entities without reading them all.
+
+**The fix**: After every synthesis, traverse the blast-radius graph to generate an affected test report:
+- **Algorithm**: find all entities in `state.json` whose source file path matches `*.test.*`, `*.spec.*`, or lives in a `tests/` directory. Cross-reference against the inbound dependency edges of changed entities.
+- **Output**: a ranked list written to `.cortex/affected_tests.txt`: `[HIGH] tests/auth.test.ts — directly covers AuthService (changed)`, `[MEDIUM] tests/booking.test.ts — covers BookingService (1-hop from changed AuthService)`
+- **Zero LLM calls** — pure graph traversal using existing Phase 6 typed edges
+- **CLI command**: `cortex tests` — prints affected tests for the last sync
+- **MCP tool**: `get_affected_tests` — returns the list for IDE integration
+
+**ROI**: Running 3 targeted tests instead of 50 saves 2–5 minutes per commit. At 10 commits/day that's 20–50 minutes/day saved. **+$20–$50/day in developer time at $60/hr, regardless of codebase size.**
+
+---
+
+### Sub-phase 13.15.4 — Session Warm-Up Injection
+
+**The problem**: Every new agent session cold-starts from zero. Even on a codebase the agent has seen before, it must re-read files to rebuild context. This costs 1,000–5,000 tokens of file reads before any useful work begins.
+
+**The fix**: On every sync, generate a compact "delta briefing" and store it in `.cortex/session_delta.md`:
+- **Content**: what changed since the last session — new entities, updated entities, deleted entities, and a one-paragraph architectural summary of the shift
+- **Size cap**: 500 tokens maximum. If more changed, summarize at the concept level only.
+- **Injection**: the existing `inject-knowledge.js` Claude Code hook (Phase 46) is extended to also prepend the session delta when a new PPID is detected
+- **Effect**: the agent starts every session knowing exactly what changed since it last worked on the codebase, without reading any source files
+
+**ROI**: Saves 1,000–3,000 tokens of cold-start file reads per session. At 3 sessions/day on Sonnet-class model ($3/M input): **+$0.01–$0.03/day**. Small but persistent. On Opus-class: **+$0.04–$0.12/day**.
+
+---
+
+### Sub-phase 13.15.5 — Smart Commit Message Generation
+
+**The problem**: Developers write vague commit messages. The conventional commit format (`feat:`, `fix:`, `refactor:`) carries semantic meaning but is rarely used correctly. AI agents can't generate accurate commit messages without reading all changed files.
+
+**The fix**: When `cortex sync` or `cortex watch` detects uncommitted staged changes (via `git diff --cached`), generate a suggested conventional commit message and print it to the terminal:
+- Infer type from entity actions: new entity → `feat:`, deleted entity → `refactor:`, constraint violation → `fix:`, docs-only → `docs:`
+- Scope: the primary directory of changed entities
+- Subject: one-sentence synthesis summary, truncated to 72 characters
+- **CLI command**: `cortex commit` — stages all changes and opens `$EDITOR` with the pre-filled message. Falls back to printing the message if no editor is configured.
+- **Git hook option**: `cortex hook --commit-msg` installs a `prepare-commit-msg` hook that auto-fills the editor with the suggested message (user can override)
+
+---
+
+### Sub-phase 13.15.6 — Dead Code & Orphan Entity Detector
+
+**The problem**: Small codebases accumulate dead code faster than large ones because there's no systematic review. An entity with zero inbound edges that hasn't been touched in 90+ days is almost certainly dead code — but neither the developer nor the agent has an easy way to surface this.
+
+**The fix**: During every synthesis, run a zero-cost graph pass:
+- Flag any entity with: (a) zero inbound `depends_on`/`called_by` edges AND (b) `lastModified` > 90 days ago AND (c) not in an entry point list (`main.ts`, `index.ts`, route files)
+- Surface these in `cortex lint` output under a new `dead_code` category
+- **New env var**: `CORTEX_DEAD_CODE_DAYS` (default: `90`) — age threshold before flagging
+- Write flagged entities to `.cortex/dead_code_candidates.md` after each sync
+- **ROI**: Removing dead code reduces codebase size, which directly reduces future ingestion cost and agent context size. Self-reinforcing benefit.
+
+---
+
+### Sub-phase 13.15.7 — Regression Risk Score per Commit
+
+**The problem**: Not all commits are equally risky. A change to a leaf utility with no dependents is safe. A change to a high-centrality entity with 20 downstream consumers is dangerous. Developers have no way to quickly assess commit risk before pushing.
+
+**The fix**: After every synthesis, compute a **Regression Risk Score** (0–10) for the commit:
+- **Factors** (all derived from existing graph data, zero LLM cost):
+  - Number of stale downstream entities triggered (blast-radius count)
+  - Quality score of changed entities (low quality = higher risk)
+  - PageRank centrality of changed entities (high centrality = higher risk)
+  - Number of constraint violations detected during synthesis
+- **Output**: printed to terminal after every sync: `⚠️ Regression Risk: 7/10 — AuthService has 14 downstream dependents and a quality score of 0.42. Consider running the full test suite before pushing.`
+- **CLI command**: `cortex risk` — shows the score and breakdown for the last commit
+- **CI integration**: `cortex risk --fail-above 8` exits 1 if score exceeds threshold — blocks high-risk pushes in CI
+
+---
+
+### Sub-phase 13.15.8 — Natural Language Architectural Query
+
+**The problem**: The only way to get architectural information out of Cortex is through structured tool calls (`read_entity`, `cortex_find`, etc.). Developers can't ask "why does the checkout flow import auth?" or "what would break if I deleted PaymentGuard?" in plain English.
+
+**The fix**: Add a `cortex ask "<question>"` CLI command and a `cortex_ask` MCP tool:
+- **Implementation**: takes the question, runs `cortex_find` to identify relevant entities, builds a context pack scoped to those entities, and passes the pack + question to a cheap model (Flash/local) for a grounded answer
+- **Grounding**: the answer must cite entity names and relationship types from the knowledge graph — hallucinations are structurally impossible because the model only has graph data, not raw code
+- **Cost**: ~$0.001–$0.003 per query using Flash
+- **Examples**: `cortex ask "what handles payment validation?"` → `"PaymentGuard (backendObfuscated/utils/paymentGuard.js) — called by checkoutService via validateTransaction()"`
+- **MCP tool**: `cortex_ask` with argument `question` — returns a grounded plain-English answer with entity citations
+
+---
+
+**DoR**: Phase 13.14 (Zero-Overhead Ingestion) is in progress. Phase 6 (Typed Relationships) is stable — graph traversal for tests/risk/dead-code depends on it.
+
+**DoD**:
+- `CHANGELOG.md` is auto-updated after every sync with a structured entry. No manual changelog writing needed.
+- `.cortex/pr_draft.md` is generated on every commit-detected sync and printed by `cortex pr`.
+- `cortex tests` prints a ranked affected-test list after every sync, derived from graph traversal with zero LLM calls.
+- `.cortex/session_delta.md` is generated after every sync and injected into new agent sessions via the existing Claude Code hook.
+- `cortex commit` generates a conventional commit message suggestion from synthesis data.
+- `cortex lint` surfaces dead code candidates after every sync under the `dead_code` category.
+- `cortex risk` prints a 0–10 regression risk score after every sync, with `--fail-above` CI gate.
+- `cortex ask "<question>"` returns a grounded plain-English answer with entity citations in <3 seconds.
+- All sub-phases are independently shippable — each can be toggled via env vars without affecting others.
+- Tests cover: changelog append format, PR draft structure, test impact ranking, session delta size cap, commit message type inference, dead code age threshold, risk score factor weighting, natural language query grounding.
+
+**Pros & Cons**:
+- ✅ **Pros**: Eliminates negative ROI for all codebase sizes by adding developer value that exists independent of context overflow. Each sub-phase produces concrete, measurable time savings. Most outputs require zero or near-zero additional LLM calls — they are computed from the graph data already built during ingestion. Transforms Cortex from "AI memory tool" to "git-commit pipeline with structured outputs."
+- ❌ **Cons**: Each sub-phase adds surface area to the sync pipeline — more output targets mean more failure modes. Changelog and PR draft quality depends on synthesis quality; if the Librarian produces a vague summary, the derived outputs are also vague. The natural language query tool (13.15.8) requires a secondary LLM call — it should never be called autonomously by the agent to avoid cost loops.
+
 ---
 
 ## 🗂️ Phase 14: Large-Diff Clustering — ⏳ Planned
+
 
 **Layman's Terms**
 When you change 30+ files at once — say, touching auth, database, and UI all in one save — Cortex currently dumps everything on the AI in one go and asks for a summary. That produces vague, generic knowledge entries because the AI is trying to make sense of too many unrelated things at once. Phase 14 sorts the files into focused groups first (auth changes together, database changes together, UI changes together), then summarises each group separately. The result is sharper, more accurate knowledge entries for large codebases.
