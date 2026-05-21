@@ -2890,7 +2890,7 @@ Implement a dual-strategy search ranker in `src/knowledge/find.ts` without datab
 
 ---
 
-## 💸 Phase 13.6: Proximity Reranking & Smart Snippets — 🚧 In progress
+## 💸 Phase 13.6: Proximity Reranking & Smart Snippets — ✅ Done 2026-05-21
 
 **Layman's Terms**
 When you search for multiple words (like "auth token"), Cortex boosts the rank of files where those words appear close to each other. It also updates the search preview to show a text window directly around the match, rather than just showing the beginning of the file's description.
