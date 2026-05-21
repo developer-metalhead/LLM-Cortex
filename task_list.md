@@ -226,7 +226,50 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] **MCP Integration** — integrated savings comparisons directly in `estimate_cost` Tool returns, and aligned MCP Prompt (`estimate_cost`) registration to generate beautifully structured formal reports.
 - [x] **Tests (2 passing)** in `tests/phase13_1.test.ts` covering character multipliers, raw context accumulation, and CLI routing logic.
 
-## ⏳ Planned — Phases 11–12
+## ✅ Phase 13.2 — Cortex Brevity Engine & Response Compression (verified 2026-05-20, all DoD met, 6 tests passing)
+
+- [x] **Terse MCP Payload Mode (`CORTEX_BREVITY_LEVEL`)** — implemented `off`, `lite`, `ultra` configurations stored in `cortex.json` and controlled via CLI and MCP
+- [x] **Telegraphic Response Compression** — added dynamic `minifyProse` regex compressor to strip conversational filler and prose fluff from entity reads, concepts, and audits
+- [x] **Brevity Exemption Rules** — designed `BREVITY_EXEMPT_TOOLS` set to preserve formatting for JSON-returning tools, file-writing tools (`cortex_onboard`, `export`, etc.), and instruction-heavy tools (`ingest`)
+- [x] **Brevity Cache Invalidation** — implemented caching with 5-second TTL on configured brevity settings with instant bust-on-write invalidation via `clearBrevityCache()`
+
+## ✅ Phase 13.3 — Token & Cost Savings Ledger & Analytics (verified 2026-05-20, all DoD met, 3 tests passing)
+
+- [x] **Transactional Ledger** — implemented append-only telemetry logging in the savings manager
+- [x] **Saved Token Audits** — tracked and compiled exact token savings from reference caching, brevity minification, and offline command tools
+- [x] **Auto-Generated Report** — automatically exports `ARCH_SAVINGS.md` to the workspace root with 30-day savings telemetry and provider ROI figures
+
+## ✅ Phase 13.4 — API Budget Gating & Runaway Safeguards (verified 2026-05-20, all DoD met, 4 tests passing)
+
+- [x] **Dynamic Cost and Limit Configuration** — supports `maxCost` and `maxSyncsHour` limit enforcement
+- [x] **Pre-flight Enforcement Gating** — automatically tracks rolling session invocations and spent budget, aborting runaway ingestion attempts before contacting provider APIs
+- [x] **Emergent Routing Support** — ensures limits block expensive sync runs but leave free local curation tools fully functional to heal state at zero cost
+
+## ✅ Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (verified 2026-05-20, all DoD met, 4 tests passing)
+
+- [x] **Fuzzy Match Engine** — implemented typo-tolerant Levenshtein edit distance lookup in `cortex_find`
+- [x] **Reciprocal Rank Fusion (RRF)** — designed an RRF scoring merger to combine exact token substring matches and fuzzy edit-distance candidates deterministically
+- [x] **Performance Optimization** — restricted edit-distance calculations with length differences and prefix gating to keep query response latency under 2ms
+
+## ⏳ Planned — Phases 11–12 & 13.6-13.7
+
+### Phase 13.6 — Proximity Reranking & Smart Snippets
+- [ ] Multi-word proximity boosting — boost rank of files where query words appear close to each other
+- [ ] Smart search result previews — display text window surrounding first matching keyword
+
+### Phase 13.7 — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression
+- [ ] Read Cache Hook — intercept file-reading commands inside AI assistant
+- [ ] AST Skeleton Parser — return syntax outline structure for unchanged read-cached files to slash re-read cost by 95%
+- [ ] Delta Diffing Engine — return unified diffs for modified read-cached files
+
+### Phase 13.8 — Persistent Experience & Cognitive Mode-Adaptive Context (Adaptive Context Core)
+- [ ] `src/knowledge/profile.ts` — User Profile Modeling: Load/verify clean developer rules, disallowed third-party libraries, and preferred brevity styles via `user_profile.json`
+- [ ] `src/knowledge/experience.ts` — Systemic Experience Ledger: Append-only transaction stream `experience.jsonl` logging decisions, validation runs, and reverts
+- [ ] `src/knowledge/cognitive.ts` — Cognitive Mode-Based Reranking: Dynamically adjust graph node weights based on task modes (`DEBUG`, `PLANNING`, `ENGINEERING`, `CREATIVE`, `EXECUTION`) in `find.ts` & `packer.ts`
+- [ ] `src/knowledge/writer.ts` — Mode-Adaptive Ingestion: Swap Librarian system prompts based on sub-millisecond local regex checks of Git diffs
+- [ ] `src/knowledge/graph.ts` — Relation-Based Graph Hopping: Navigates explicit `[[WikiLink]]` conceptual paths (1-2 hops) in `CREATIVE` mode for creative Discovery without vector drift
+
+
 
 ### Phase 11 — Monorepo Federation
 - [ ] `cortex init --monorepo` — auto-detect pnpm/yarn/turbo workspaces; scaffold `.cortex/workspaces.json`

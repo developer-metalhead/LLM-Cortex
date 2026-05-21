@@ -143,7 +143,8 @@ describe("Phase 13.4 — API Budget Gating & Runaway Safeguards Suite", () => {
           await checkBudgetBeforeSync(tmpDir, 0.015);
         },
         (err: Error) => {
-          assert.match(err.message, /Budget Exceeded: Cumulative session cost of \$0\.0550 exceeds the hard limit of \$0\.0500\./);
+          assert.match(err.message, /Budget Exceeded: Rolling 24h cost of \$0\.0550 exceeds the hard limit of \$0\.0500\./);
+
           return true;
         }
       );

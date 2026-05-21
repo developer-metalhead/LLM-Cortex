@@ -58,8 +58,8 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 7. Sub-millisecond Architectural Search
-**What it does:** Forget using `grep` to blindly search raw code. Cortex gives you a blazing-fast, sub-millisecond exact search engine that queries your *architecture* (Entities, Concepts, Parents) directly.
+## 7. Fuzzy Typo-Tolerant Architectural Search
+**What it does:** Forget using `grep` to blindly search raw code. Cortex gives you a blazing-fast, sub-millisecond typo-tolerant search engine combining token substring overlap and Levenshtein edit distance, ranked via Reciprocal Rank Fusion (RRF) to put the most relevant entities at the top despite severe spelling mistakes.
 **How to use it:**
 - **CLI Command:** `cortex find <query> --type <entity|concept|parent|all>`
 - **MCP Tool Call:** `cortex_find` with argument `query="<term>"` and optional `type="all"`

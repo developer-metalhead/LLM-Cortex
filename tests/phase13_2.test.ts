@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { minifyProse, getBrevityLevel } from "../src/knowledge/brevity.js";
+import { minifyProse, getBrevityLevel, clearBrevityCache } from "../src/knowledge/brevity.js";
 import { KnowledgeManager } from "../src/knowledge/writer.js";
 import { runCompress } from "../src/cli/compress.js";
 
@@ -50,6 +50,7 @@ describe("Phase 13.2 — Cortex Brevity Engine & Telegraphic Memory Compression 
       tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cortex-brevity-priority-"));
       // Clear process env overrides to test priority logic cleanly
       delete process.env.CORTEX_BREVITY_LEVEL;
+      clearBrevityCache();
     });
 
     afterEach(async () => {

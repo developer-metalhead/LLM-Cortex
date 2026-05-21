@@ -3,6 +3,14 @@ import path from "path";
 
 export type BrevityLevel = "lite" | "ultra" | "off";
 
+// In-memory cache for getBrevityLevel
+let brevityCache: { level: BrevityLevel; timestamp: number } | null = null;
+const CACHE_TTL_MS = 5000; // 5 seconds cache to avoid disk I/O on every call
+
+export function clearBrevityCache() {
+  brevityCache = null;
+}
+
 /**
  * Resolves the active brevity level in priority order:
  * 1. Environment variable CORTEX_BREVITY_LEVEL
@@ -15,12 +23,18 @@ export function getBrevityLevel(projectRoot: string): BrevityLevel {
     return envVal;
   }
 
+  const now = Date.now();
+  if (brevityCache && now - brevityCache.timestamp < CACHE_TTL_MS) {
+    return brevityCache.level;
+  }
+
   try {
     const configPath = path.join(projectRoot, "cortex.json");
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       const configVal = config.brevity || config.brevityLevel || config.CORTEX_BREVITY_LEVEL;
       if (configVal === "lite" || configVal === "ultra" || configVal === "off") {
+        brevityCache = { level: configVal, timestamp: now };
         return configVal;
       }
     }
@@ -28,17 +42,37 @@ export function getBrevityLevel(projectRoot: string): BrevityLevel {
     // Ignore parsing errors and fallback
   }
 
+  brevityCache = { level: "off", timestamp: now };
   return "off";
 }
 
 /**
  * Minifies markdown prose text by stripping conversational filler
- * while leaving code blocks, Mermaid diagrams, and links intact.
+ * while leaving code blocks, inline code, Mermaid diagrams, and links intact.
  */
 export function minifyProse(content: string): string {
   if (!content) return "";
 
-  const lines = content.split("\n");
+  // 1. Tokenize protected segments
+  const protectedTokens: string[] = [];
+  const tokenPrefix = "§§CORTEX_TOKEN_";
+  
+  // Protect markdown link URLs like ](url)
+  let text = content.replace(/\]\(([^)]+)\)/g, (match) => {
+    const id = protectedTokens.length;
+    // Push the (url) part, but keep the ] outside the token so it stays attached to the link text
+    protectedTokens.push(match.substring(1));
+    return `]${tokenPrefix}${id}§§`;
+  });
+
+  // Protect inline code blocks `code`
+  text = text.replace(/`([^`]+)`/g, (match) => {
+    const id = protectedTokens.length;
+    protectedTokens.push(match);
+    return `${tokenPrefix}${id}§§`;
+  });
+
+  const lines = text.split("\n");
   let inCodeBlock = false;
   const processedLines: string[] = [];
 
@@ -95,7 +129,14 @@ export function minifyProse(content: string): string {
     processedLines.push(next);
   }
 
-  return processedLines.join("\n");
+  let finalContent = processedLines.join("\n");
+
+  // Restore protected tokens
+  for (let i = 0; i < protectedTokens.length; i++) {
+    finalContent = finalContent.replace(`${tokenPrefix}${i}§§`, protectedTokens[i]);
+  }
+
+  return finalContent;
 }
 
 /**
@@ -111,7 +152,7 @@ export const COMPRESSED_TOOL_DESCRIPTIONS: Record<string, string> = {
   read_entity: "Read layered page (Role/Interface/Behavior/Wiring) for named entity.",
   read_concept: "Read page for a single architectural concept.",
   set_project_root: "Manually re-point Cortex to a project root.",
-  audit: "Find stale entities and blast-radius victims.",
+  audit: "Quick, cheap pass/fail check for stale entities (ideal for automation/CI).",
   export: "Export ARCH_SPEC.md or ARCH_GRAPH.md.",
   refresh_stale_entities: "Clear stale flag on verified-clean entities.",
   log_query: "Query JSONL architectural log.",
@@ -124,7 +165,7 @@ export const COMPRESSED_TOOL_DESCRIPTIONS: Record<string, string> = {
   impact_analysis: "Show entity dependents or dependencies with hops.",
   graph: "Generate Mermaid or JSON dependency graph.",
   before_change: "Get pre-flight entity page, blast-radius, and concepts in one call.",
-  smart_audit: "Get all stale entities, pages, and blast-radius in one call.",
+  smart_audit: "Get all stale entities, pages, and blast-radius in one call (for AI agents).",
   cortex_onboard: "Generate centrality-prioritized onboarding tour.",
   cortex_find: "Category-scoped fast search across knowledge names.",
   resolve_refs: "Resolve §ref:<hash>§ placeholder text.",

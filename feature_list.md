@@ -17,8 +17,8 @@ Click on any feature below to jump to the **Master Feature Guide**, which explai
   *Native connection to Claude Code, Cursor, VSCode, and Antigravity via MCP setup.*
 - [**6. Dynamic Root Rebasing**](./feature.md#6-dynamic-root-rebasing)
   *Auto-resolves broken paths when IDEs launch from unexpected root directories.*
-- [**7. Sub-millisecond Architectural Search**](./feature.md#7-sub-millisecond-architectural-search)
-  *Blazing-fast exact search engine (`cortex find`) that queries your architecture directly.*
+- [**7. Fuzzy Typo-Tolerant Architectural Search**](./feature.md#7-fuzzy-typo-tolerant-architectural-search)
+  *Blazing-fast fuzzy & RRF search (`cortex find`) that queries your architecture directly.*
 - [**8. Interactive Knowledge Exploration**](./feature.md#8-interactive-knowledge-exploration)
   *Lets the AI browse the knowledge graph by following wiki-links organically.*
 

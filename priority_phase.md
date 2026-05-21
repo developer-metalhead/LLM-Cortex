@@ -25,7 +25,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | Bucket | Count | Notes |
 |---|---|---|
-| ✅ Done | 14 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, 13, **13.1** (Phase 13.1 verified 2026-05-20) |
+| ✅ Done | 18 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, 13, 13.1, 13.2, 13.3, 13.4, 13.5 (verified 2026-05-20) |
 | 🚧 In Progress | 0 | None |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~23 | Phases 14-20.24, drive differentiation |
@@ -108,12 +108,13 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.05 | **Phase 13.1** — Dense & Raw Projections | Multi-provider tokenizer multipliers + full-file raw simulated baseline and ROI projections | Phase 13 ✓ | ✅ **Done 2026-05-20** |
 | 2.1 | **Phase 3.1** — LLM Caching Store | Sub-second cached response and zero-token consumption for identical prompts | Phase 3 ✓ | ⏳ Planned |
 | 2.2 | **Phase 8.1** — Live Graph Stream | Live WebSocket graph updates and transitions in the browser web UI | Phase 8 ✓ | ⏳ Planned |
-| 2.3 | **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression | Save up to 50% token cost by minifying Gemini.md and onboarding docs | Phase 13 ✓ | ⏳ Planned |
-| 2.4 | **Phase 13.3** — Token & Cost Savings Ledger & Analytics | Tracks exact cache hits and compressed tokens saved to show ROI statistics | Phase 13 ✓ | ⏳ Planned |
-| 2.5 | **Phase 13.4** — API Budget Gating & Runaway Safeguards | Hard limits on session spending and sync count to avoid API budget draining | Phase 13.3 | ⏳ Planned |
-| 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 | ⏳ Planned |
+| 2.3 | **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression | Save up to 50% token cost by minifying Gemini.md and onboarding docs | Phase 13 ✓ | ✅ **Done 2026-05-20** |
+| 2.4 | **Phase 13.3** — Token & Cost Savings Ledger & Analytics | Tracks exact cache hits and compressed tokens saved to show ROI statistics | Phase 13 ✓ | ✅ **Done 2026-05-20** |
+| 2.5 | **Phase 13.4** — API Budget Gating & Runaway Safeguards | Hard limits on session spending and sync count to avoid API budget draining | Phase 13.3 ✓ | ✅ **Done 2026-05-20** |
+| 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 ✓ | ✅ **Done 2026-05-20** |
 | 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | ⏳ Planned |
 | 2.8 | **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression | Intercepts file reads to return diffs and skeletons (Delta Mode & Structure Map) | Phase 10.3 | ⏳ Planned |
+| 2.9 | **Phase 13.8** — Persistent Experience & Cognitive Mode-Adaptive Context | Active, local-first co-pilot memory tracking developer preferences, past reverts, and task intent | Phase 13.5 ✓, Phase 13.2 ✓ | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
 | 4 | **Phase 33.1** — Model Provider Registry | Use local Ollama for free; cloud only when needed — direct cost reduction | Phase 33 (T0), Phase 26 partial |
 | 4.1 | **Phase 4.7** — OpenAI-Compatible REST Gateway | Proxy local RAG queries to any standard OpenAI-compatible client | Phase 33.1 | ⏳ Planned |
@@ -537,9 +538,9 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 7.6** — Global Architectural Lessons & Retrospective Log · deps: 7.5 ✓
 - **Phase 7.7** — Automated Technical Debt Register · deps: 7.5 ✓
 - **Phase 4.8** — Persona-Specific MCP Prompts · deps: 7.5 ✓
-- **Phase 13.2** — Cortex Brevity Engine & Telegraphic Memory Compression · deps: 13 ✓
+- ~~**Phase 13.2**~~ — Cortex Brevity Engine & Telegraphic Memory Compression · (✅ Done 2026-05-20)
 - **Phase 7.10** — Sensitive Data & API Secret Sanitization Guardrail · deps: 7.5 ✓
-- **Phase 13.3** — Token & Cost Savings Ledger & Analytics · deps: 13 ✓
+- ~~**Phase 13.3**~~ — Token & Cost Savings Ledger & Analytics · (✅ Done 2026-05-20)
 - **Phase 9.1** — Dependency Path Querying · deps: 9 ✓
 - **Phase 10** — Onboarding & Guided Reading · deps: 3 ✓
 - **Phase 10.3** — Zero-Token Startup & AI Ignore Scaffolding · deps: 10 ✓
@@ -565,8 +566,8 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 5.8** — Multi-Operator Session Coordination · deps: 5.6 (full version needs 25)
 - **Phase 12** — Git & CI Integration · deps: 6 ✓
 - **Phase 13** — Token Economics & Context Packs · deps: 8, 10
-- **Phase 13.4** — API Budget Gating & Runaway Safeguards · deps: 13.3
-- **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker · deps: 10
+- ~~**Phase 13.4**~~ — API Budget Gating & Runaway Safeguards · (✅ Done 2026-05-20)
+- ~~**Phase 13.5**~~ — Fuzzy Levenshtein & RRF Search Ranker · (✅ Done 2026-05-20)
 - **Phase 10.4** — Managed `CLAUDE.md` & AI Rules Orchestration · deps: 10.3
 - **Phase 10.5** — Attention-Curve Rule Reordering & Position Optimization · deps: 10.4
 - **Phase 10.7** — Rules File Size Guardrail & Auto-Splitting · deps: 10.4
@@ -798,7 +799,7 @@ These can be slotted into any sprint where bandwidth allows — useful when bloc
 - **Phase 7.6** (only needs Phase 7.5 ✓) — ship in Wave 1
 - **Phase 7.7** (only needs Phase 7.5 ✓) — ship in Wave 1
 - **Phase 4.8** (only needs Phase 7.5 ✓) — ship in Wave 1
-- **Phase 13.2** (only needs Phase 13 ✓) — ship in Wave 1
+- ~~**Phase 13.2**~~ (✅ Done 2026-05-20)
 - **Phase 16, 18, 20, 20.5, 20.7, 20.12, 20.14, 20.19** (only need Phase 6 ✓ + Phase 7 ✓) — **newly unblocked 2026-05-19; all safe parallel options for current sprint** *(Phase 7.5 already done)*
 
 If your team has spare cycles waiting on a long-running phase, these are the safe parallel options.
@@ -808,7 +809,7 @@ If your team has spare cycles waiting on a long-running phase, these are the saf
 ## Status of This Document
 
 - **Generated**: 2026-05-18 from `implementation_plan.md` (covering Phases 1 → 45 + all sub-phases + 6 Pro Modules)
-- **Last updated**: 2026-05-19 — Phase 9 marked ✅ Done (`cortex impact`, `cortex deps`, `impact_analysis` MCP tool + prompts; Phase 8 table entry also corrected to ✅ Done)
+- **Last updated**: 2026-05-20 — Phases 13.2, 13.3, 13.4, and 13.5 marked ✅ Done (brevity engine, savings ledger, safeguards gating, fuzzy RRF search, and package projectcortex@0.7.1 published)
 - **Strict source of truth**: phase definitions, DoR, DoD — see `implementation_plan.md`
 - **This document's job**: ordering + tier-mapping only; does not change phase semantics
 - **Refresh trigger**: any time a phase's status changes (✅ done, 🚧 in progress, ⏳ planned) or a new phase is added

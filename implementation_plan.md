@@ -18,9 +18,14 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 5     | CLI Polish & Daemonization                             | ✅ Done                              |
 | 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
 | 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
-| 5.8   | Multi-Operator Session Coordination                    | ⏳ Planned (production reliability)  |
+| 5.8   | ~~Multi-Operator Session Coordination~~ → see Phase 56 | ⏳ Planned (moved — agent coordination)    |
 | 5.9   | Shell Status Prompt Integration & Statusline Badge     | ⏳ Planned                           |
 | 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
+| 6.1   | Template Entities & Instantiated-From Relationships       | ⏳ Planned                           |
+| 6.2   | Arbitrary Predicate Relationships & Triple-Store Queries | ⏳ Planned                           |
+| 6.3   | Weak Measurements — Low-Certainty Hypothesis Tags      | ⏳ Planned                           |
+| 6.4   | Torsion Links — Context-Dependent Entity Meaning        | ⏳ Planned                           |
+| 6.5   | Plasma Filaments — Structural Edge Flag                 | ⏳ Planned                           |
 | 7     | Audit & Traceability Tools                             | ✅ Done                               |
 | 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
 | 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
@@ -28,11 +33,26 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
 | 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
 | 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
+| 7.11  | Epigenetic Memory Suppression                          | ⏳ Planned                           |
+| 7.12  | Astronomical Parallax — Perspective Shift Scoring       | ⏳ Planned                           |
+| 7.13  | Retrocausality — Backward Quality Propagation           | ⏳ Planned                           |
+| 7.14  | Intrinsic Redshift — Novelty-at-Creation Metric         | ⏳ Planned                           |
+| 7.15  | Verlinde Avoidance — Blind-Spot Detection               | ⏳ Planned                           |
+| 7.16  | Proteasome Atrophy — Targeted Knowledge Degradation      | ⏳ Planned                           |
+| 7.17  | Keystone Index — Entity Impact-to-Size Ratio             | ⏳ Planned                           |
+| 7.18  | Regulatory Suppression — Alert Correlation Dampening     | ⏳ Planned                           |
+| 7.19  | Synaptic Tagging — Retroactive Importance Boost           | ⏳ Planned                           |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
+| 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
+| 8.3   | GPU-Accelerated Knowledge Graph Rendering               | ⏳ Planned                           |
+| 8.4   | Hyperbolic Graph Layout (Poincaré Disk)                 | ⏳ Planned                           |
 | 9     | Refactoring Impact Preview                             | ✅ Done                              |
 | 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
+| 9.2   | Torstone Inertia — Refactor Resistance Metric          | ⏳ Planned                           |
+| 9.3   | Hyrum's Law — Implicit Dependency Detection            | ⏳ Planned                           |
 | 10    | Onboarding & Guided Reading                            | ✅ Done                              |
+| 10.1  | Spherification — Data Encapsulation for Entity Clusters | ⏳ Planned                           |
 | 10.2  | Smart Rule File Patching & Marker-Fenced Injection     | ⏳ Planned                           |
 | 11    | Monorepo Federation                                    | ⏳ Planned                           |
 | 12    | Git & CI Integration                                   | ⏳ Planned                           |
@@ -46,12 +66,21 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
 | 13    | Token Economics & Context Packs                        | ✅ Done                              |
 | 13.1  | Dense & Raw Token-Reduction Projections                | ✅ Done                              |
-| 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ⏳ Planned                           |
-| 13.3  | Token & Cost Savings Ledger & Analytics                | ⏳ Planned                           |
-| 13.4  | API Budget Gating & Runaway Safeguards                | ⏳ Planned                           |
-| 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ⏳ Planned                           |
+| 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ✅ Done                              |
+| 13.3  | Token & Cost Savings Ledger & Analytics                | ✅ Done                              |
+| 13.4  | API Budget Gating & Runaway Safeguards                | ✅ Done                              |
+| 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
 | 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
+| 13.7  | Hooks-Based Smart Read Cache & AST Skeleton Delta      | ⏳ Planned                           |
+| 13.7.2| Speculative Static Verification & Grounded Fallback    | ⏳ Planned                           |
+| 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
+| 13.8.8| Unified Edge Confidence (Synaptic Plasticity)         | ⏳ Planned                           |
+| 13.9   | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
+| 13.10  | Information Bottleneck Scoring                          | ⏳ Planned                           |
+| 13.11  | Bidirectional Context Retrieval                        | ⏳ Planned                           |
+| 13.12  | Opportunity Cost Scoring — Packer Exclusion Tracking   | ⏳ Planned                           |
 | 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
+| 14.2  | Topological Hierarchy & Zoomable Retrieval (RAPTOR)   | ⏳ Planned                           |
 | 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
 | 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
 | 17    | Active Disambiguation via Self-Consistency             | ⏳ Planned (research-grade)          |
@@ -61,13 +90,16 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20    | Intelligent Architectural Advisor                      | ⏳ Planned                           |
 | 20.1  | Architecture Simulation & What-If Analysis             | ⏳ Planned                           |
 | 20.2  | Bug Hotspot Prediction                                 | ⏳ Planned (research-grade)          |
+| 20.2.1| Catastrophe Tipping-Point Detection                    | ⏳ Planned                           |
 | 20.3  | Design Pattern Suggestion                              | ⏳ Planned                           |
 | 20.4  | Evolutionary Architecture Fitness Functions            | ⏳ Planned                           |
 | 20.5  | Architecture Documentation Generation                  | ⏳ Planned                           |
 | 20.5.1| Automated ADR (Architectural Decision Records) Engine  | ⏳ Planned                           |
 | 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
 | 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
-| 20.7.1| Cross-Agent Workspace State Synchronization            | ⏳ Planned                           |
+| 20.7.1| ~~Cross-Agent Workspace State Sync~~ → see Phase 57    | ⏳ Planned (moved — agent coordination)    |
+| 20.7.2| Mem0-Style Memory Consolidation Pipeline               | ⏳ Planned                           |
+| 20.7.3| Prospective Memory & Belief Revision                   | ⏳ Planned                           |
 | 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
 | 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
 | 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
@@ -76,15 +108,21 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 20.13 | Pattern Skill Library (VOYAGER-inspired)               | ⏳ Planned                           |
 | 20.14 | Causal Impact Analysis (Pearl do-calculus)             | ⏳ Planned (research-grade)          |
 | 20.15 | Dual-Process Synthesis (System 1 / System 2)           | ⏳ Planned (research-grade)          |
-| 20.16 | Multi-Agent Librarian Collaboration                    | ⏳ Planned (research-grade)          |
+| 20.15.1| Protein Folding — Argument Prediction                 | ⏳ Planned                           |
+| 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 58 | ⏳ Planned (moved — agent coordination)    |
 | 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
+| 20.17.1| Casimir Effect — Suppressed-Mode Creativity          | ⏳ Planned (research-grade)          |
 | 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
 | 20.19 | Surgical Knowledge Editing (ROME/MEMIT)                | ⏳ Planned                           |
 | 20.20 | Active Inference & Predictive Synthesis (Friston)      | ⏳ Planned (research-grade)          |
 | 20.21 | Episodic-Semantic Memory Consolidation (Tulving)       | ⏳ Planned (research-grade)          |
 | 20.22 | Spaced Repetition & Forgetting Curves (Ebbinghaus/SM-2)| ⏳ Planned                           |
+| 20.22.1| Entity Lifecycle Phases                               | ⏳ Planned                           |
 | 20.23 | Tool-Use Augmented Synthesis (Toolformer/ReAct)        | ⏳ Planned (research-grade)          |
 | 20.24 | Sequential Thinking & Persistent Reasoning Traces      | ⏳ Planned (research-grade)          |
+| 20.28 | Agentic Retrieval Loop                                 | ⏳ Planned                           |
+| 20.29 | Corrective RAG Module                                  | ⏳ Planned                           |
+| 20.30 | Iterative RAG Refinement                               | ⏳ Planned                           |
 | 21    | Polyrepo Federation                                    | ⏳ Planned                           |
 | 22    | Central Knowledge Server                               | ⏳ Planned                           |
 | 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
@@ -96,6 +134,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 26.2  | Policy-as-Code (OPA/Cedar)                             | ⏳ Planned (enterprise)              |
 | 26.3  | OpenTelemetry Tracing & Observability Export           | ⏳ Planned (enterprise)              |
 | 26.4  | Cryptographic Event Signing & Non-Repudiation          | ⏳ Planned (enterprise)              |
+| 26.5  | Xuan Paper Layer — Permanent Provenance Overlay        | ⏳ Planned                           |
 | 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
 | 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
 | 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
@@ -103,6 +142,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 29.2  | Tenant-Scoped Billing & Metering                       | ⏳ Planned (enterprise)              |
 | 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
 | 30.1  | External AI Conversation Import                        | ⏳ Planned (enterprise)              |
+| 30.2  | Knowledge Base Merge Engine                            | ⏳ Planned (enterprise)              |
 | 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
 | 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
 | 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
@@ -110,19 +150,130 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
 | 33.1  | Model Provider Registry & Cost-Tier Routing            | ⏳ Planned (enterprise)              |
 | 33.2  | Remote Operations & Mobile Status PWA                  | ⏳ Planned (enterprise)              |
+| 34    | Cognitive Engine Optimizations (Gaming/ML Inspired)    | ⏳ Planned (research-grade)          |
+| 34.1  | Virtualized Context Streaming (UE5 Nanite)             | ⏳ Planned (research-grade)          |
+| 34.2  | Speculative Architectural Decoding (ML)                | ⏳ Planned (research-grade)          |
+| 34.3  | Entity Visibility Partitioning (Doom BSP)              | ⏳ Planned (research-grade)          |
+| 34.4  | Cognitive Fog & Abstraction Masking (Silent Hill)      | ⏳ Planned (research-grade)          |
+| 34.5  | Data-Oriented Synthesis Pipeline (ECS)                 | ⏳ Planned (research-grade)          |
+| 34.6  | Heuristic Embedding Pruning (Quake 3 Hash)             | ⏳ Planned (research-grade)          |
+| 34.7  | Paged Context Allocation (PagedAttention)              | ⏳ Planned (research-grade)          |
+| 35    | Cross-Disciplinary Architecture Optimizations          | ⏳ Planned (research-grade)          |
+| 35.1  | Architectural PageRank & Virtual Graph DOM             | ⏳ Planned (research-grade)          |
+| 35.2  | CRDT-Based Multi-Agent Graph Mutations                 | ⏳ Planned (research-grade)          |
+| 35.3  | Categorical Isomorphism Detection                      | ⏳ Planned (research-grade)          |
+| 35.4  | Ring-0 IDE Telemetry Hooks (Anti-Hallucination Guard)  | ⏳ Planned (research-grade)          |
+| 35.5  | WebAssembly (WASM) Graph Vectorization                 | ⏳ Planned (research-grade)          |
+| 35.6  | Architectural Write-Ahead Logging (WAL)                | ⏳ Planned (research-grade)          |
+| 35.7  | Air-Gapped Autarky (Radical Decoupling)                | ⏳ Planned (research-grade)          |
+| 36    | Exotic Architecture Optimizations                      | ⏳ Planned (research-grade)          |
+| 36.1  | Event-Sourced Ephemeral Graphs (Kafka/Redux)           | ⏳ Planned (research-grade)          |
+| 36.2  | God's Algorithm for Refactoring                        | ⏳ Planned (research-grade)          |
+| 36.3  | Vector-Symbolic Emulsification (VSE)                   | ⏳ Planned (research-grade)          |
+| 36.4  | Mycorrhizal Telemetry Protocol                         | ⏳ Planned (research-grade)          |
+| 36.5  | Gödel-Aware Fallback Escapes                           | ⏳ Planned (research-grade)          |
+| 36.6  | Zeno-Effect Test Pinning (Quantum Zeno)                | ⏳ Planned (research-grade)          |
+| 36.7  | Background Knowledge Fermentation (Food Science)       | ⏳ Planned (research-grade)          |
+| 36.8  | Sonoluminescent Prompt Collapse (Physics)              | ⏳ Planned (research-grade)          |
+| 37    | Unified Architectural Field Theory (ToE)               | ⏳ Planned (research-grade)          |
+| 37.1  | Homotopic Graph Compiler (HoTT)                        | ⏳ Planned (research-grade)          |
+| 37.2  | String-Theoretic Tensor Embeddings                     | ⏳ Planned (research-grade)          |
+| 37.3  | API Boundary Holography (Holographic Principle)        | ⏳ Planned (research-grade)          |
+| 38    | The Reality Simulation Mechanics                       | ⏳ Planned (research-grade)          |
+| 38.1  | Octonion-Bound Knowledge Primitives                    | ⏳ Planned (research-grade)          |
+| 38.2  | Ring-0 Epistemological Anticheat                       | ⏳ Planned (research-grade)          |
+| 38.3  | Algorithmic Attention Fatigue                           | ⏳ Planned (research-grade)          |
+| 38.4  | Alcubierre Sub-Graph Warping                           | ⏳ Planned (research-grade)          |
+| 38.5  | Schrödinger’s Branching Contexts                       | ⏳ Planned (research-grade)          |
+| 38.6  | Procedural Node-Based Sculpting                        | ⏳ Planned (research-grade)          |
+| 38.7  | Syntactic Prion Propagation                            | ⏳ Planned (research-grade)          |
+| 38.8  | Terry Davis RNGod Heuristics                           | ⏳ Planned (research-grade)          |
+| 39    | Systemic Convergence                                   | ⏳ Planned (research-grade)          |
+| 39.1  | Cognitive Supervision Trees                            | ⏳ Planned (research-grade)          |
+| 39.2  | Tectonic Migration Solvers                             | ⏳ Planned (research-grade)          |
+| 39.3  | Stigmergic Heatmap Routing                             | ⏳ Planned (research-grade)          |
+| 39.4  | Asymmetric Dual-Processing Substrate                   | ⏳ Planned (research-grade)          |
+| 39.5  | Cognitive Branch Prediction                            | ⏳ Planned (research-grade)          |
+| 39.6  | Merkle-DAG Integrity Verification                       | ⏳ Planned (research-grade)          |
+| 39.7  | OODA Agent Runtime                                     | ⏳ Planned (research-grade)          |
+| 40    | The Reality Engine                                     | ⏳ Planned (research-grade)          |
+| 40.1  | Semantic LLVM Compilation (Semantic IR)                | ⏳ Planned (research-grade)          |
+| 40.2  | ECS Knowledge Architecture (Entity Component System)   | ⏳ Planned (research-grade)          |
+| 40.3  | Gödel Self-Optimizing Graph Rules                      | ⏳ Planned (research-grade)          |
+| 40.4  | SMT-Assisted Constraint Verification                   | ⏳ Planned (research-grade)          |
+| 40.5  | Knot-Theoretic Dependency Untangling                   | ⏳ Planned (research-grade)          |
+| 40.6  | Architectural Fossilization (Cold Storage)             | ⏳ Planned (research-grade)          |
+| 40.7  | Borges Exhaustive Design-Space Generation              | ⏳ Planned (research-grade)          |
+| 40.8  | Gödel Self-Improving Synthesis Loop                    | ⏳ Planned (research-grade)          |
+| 40.9  | JIT-Compiled Synthesis Fast-Path (0-Token Det.)        | ⏳ Planned (research-grade)          |
+| 41    | Cognitive Cache Invalidation Engine                    | ⏳ Planned (research-grade)          |
+| 42    | Fractal Memory Summarization (Multi-Level)             | ⏳ Planned (research-grade)          |
+| 43    | Information Thermodynamics & Entropy Scoring           | ⏳ Planned (research-grade)          |
+| 43.1  | CPT Asymmetry — Question/Answer Entropy Differential    | ⏳ Planned                           |
+| 44    | Semantic Authority Ranking                             | ⏳ Planned (research-grade)          |
+| 45    | Synthetic Immune System (Knowledge Quality)            | ⏳ Planned (research-grade)          |
+| 46    | Event-Sourced Cognition Replay                         | ⏳ Planned (research-grade)          |
+| 47    | Architectural Pattern Recurrence (Poincaré Recurrence) | ⏳ Planned (research-grade)          |
+| 48    | Dependency Entanglement Detection (ER=EPR)             | ⏳ Planned (research-grade)          |
+| 49    | Cross-Deployment Synthesis Learning (Morphic Resonance) | ⏳ Planned (research-grade)          |
+| 56    | Multi-Operator Session Coordination (was 5.8)          | ⏳ Planned (extended vision)         |
+| 57    | Cross-Agent Workspace State Synchronization (was 20.7.1)| ⏳ Planned (extended vision)        |
+| 58    | Multi-Agent Librarian Collaboration (was 20.16)        | ⏳ Planned (extended vision)         |
 | —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
-| 40    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
-| 41    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
-| 42    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
-| 43    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
-| 43.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
-| 43.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
-| 43.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
-| 43.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
-| 43.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
-| 43.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
-| 44    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
-| 45    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
+| 50    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
+| 51    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
+| 52    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
+| 53    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
+| 53.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
+| 53.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
+| 53.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
+| 53.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
+| 53.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
+| 53.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
+| 54    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
+| 55    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
+| 59    | Operational Ontology Layer (Palantir-Inspired)         | ⏳ Planned (add-on module)           |
+| 60    | Circlon Ring Primitives (Topological Composition)      | ⏳ Planned (add-on module)           |
+| 61    | Plasma Current Routing (Electromagnetic Propagation)    | ⏳ Planned (add-on module)           |
+| 62    | Inverted Reality Mode & Curved Abstraction Layers       | ⏳ Planned (add-on module)           |
+| 63    | Outsider Pattern Discovery & Contrarian Analysis       | ⏳ Planned (add-on module)           |
+| 64    | Biogenic Synthesis (Neuroscience & Immunology)         | ⏳ Planned (cross-domain)             |
+| 64.1  | Long-Term Potentiation — Frequency-Strengthened Paths | ⏳ Planned (cross-domain)             |
+| 64.2  | Neurogenesis — Adult-Born Entity Creation             | ⏳ Planned (cross-domain)             |
+| 64.3  | Lateral Inhibition — Competitive Neighbor Suppression  | ⏳ Planned (cross-domain)             |
+| 64.4  | Immunological Memory — Antigen-Specific Recognition   | ⏳ Planned (cross-domain)             |
+| 64.5  | Clonal Selection — Amplifying Successful Patterns     | ⏳ Planned (cross-domain)             |
+| 65    | Physical Metallurgy Synthesis                         | ⏳ Planned (cross-domain)             |
+| 65.1  | Alloy Strengthening — Compositional Hardening         | ⏳ Planned (cross-domain)             |
+| 65.2  | Annealing & Tempering — Controlled Stress Relief      | ⏳ Planned (cross-domain)             |
+| 65.3  | Fatigue Crack Propagation — Cyclical Stress Analysis  | ⏳ Planned (cross-domain)             |
+| 65.4  | Creep Deformation — Slow Structural Drift             | ⏳ Planned (cross-domain)             |
+| 66    | Mechanical & Structural Engineering Synthesis         | ⏳ Planned (cross-domain)             |
+| 66.1  | Truss Optimization — Triangulated Dependency Nets     | ⏳ Planned (cross-domain)             |
+| 66.2  | Buckling Analysis — Critical-Load Prediction          | ⏳ Planned (cross-domain)             |
+| 66.3  | Damping & Resonance — Oscillation Absorption          | ⏳ Planned (cross-domain)             |
+| 66.4  | Factor of Safety — Engineering Margin in Decisions    | ⏳ Planned (cross-domain)             |
+| 67    | Data Science & Statistical Learning Synthesis         | ⏳ Planned (cross-domain)             |
+| 67.1  | Dimensionality Reduction — Entity Space Compression   | ⏳ Planned (cross-domain)             |
+| 67.2  | Ensemble Methods — Multi-Signal Convergence           | ⏳ Planned (cross-domain)             |
+| 67.3  | Survival Analysis — Entity Lifetime Prediction        | ⏳ Planned (cross-domain)             |
+| 67.4  | Bayesian Updating — Prior-Driven Belief Revision      | ⏳ Planned (cross-domain)             |
+| 68    | Medical & Clinical Diagnostic Synthesis               | ⏳ Planned (cross-domain)             |
+| 68.1  | Cardiology — Architectural Pulse & Arrhythmia Detection | ⏳ Planned (cross-domain)           |
+| 68.2  | Psychiatry — Cognitive Distortion & Bias Patterns     | ⏳ Planned (cross-domain)             |
+| 68.3  | Epidemiology — Architectural Smell Contagion Modeling | ⏳ Planned (cross-domain)             |
+| 68.4  | Radiology — Cross-Sectional Architectural Tomography  | ⏳ Planned (cross-domain)             |
+| 68.5  | Neurology — Lesion Studies & Functional Deficit Maps  | ⏳ Planned (cross-domain)             |
+| 69    | Criminal Forensics & Investigative Synthesis          | ⏳ Planned (cross-domain)             |
+| 69.1  | Trace Evidence — Regression Provenance Chain          | ⏳ Planned (cross-domain)             |
+| 69.2  | Behavioral Profiling — Module Pattern-of-Life         | ⏳ Planned (cross-domain)             |
+| 69.3  | Crime Scene Reconstruction — Post-Mortem Failure Analysis | ⏳ Planned (cross-domain)         |
+| 69.4  | Recidivism Prediction — Recurrence Risk Scoring       | ⏳ Planned (cross-domain)             |
+| 70    | Jurisdictional & Legal System Synthesis               | ⏳ Planned (cross-domain)             |
+| 70.1  | Subject-Matter Jurisdiction — Component Authority Maps | ⏳ Planned (cross-domain)            |
+| 70.2  | Stare Decisis — Architectural Precedent Binding       | ⏳ Planned (cross-domain)             |
+| 70.3  | Due Process — Fair Notification Before Enforcement    | ⏳ Planned (cross-domain)             |
+| 70.4  | Habeas Corpus — Justification Requirement for Actions  | ⏳ Planned (cross-domain)            |
 
 ---
 
@@ -361,12 +512,13 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 ## 🔌 Phase 4.6: Developer API & Client SDKs — ⏳ Planned
 
 **Layman's Terms**
-Makes it easy to programmatically query Cortex from your own scripts, CI pipeline, or terminal hacks. We're publishing lightweight client libraries for Node.js and Python that let you fetch entities, check quality scores, and perform impact analysis with simple, single-line functions.
+Makes it easy to programmatically query Cortex from your own scripts, CI pipeline, or terminal hacks. We're publishing lightweight client libraries for Node.js and Python that let you fetch entities, check quality scores, and perform impact analysis with simple, single-line functions. It also provides standard agent-memory proxy endpoints so other popular IDE programming assistants (like Claude Code, Cursor, or Aider) can query Cortex directly as a single source of architectural truth.
 
 **Technical Terms**
 Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`) and Python (`projectcortex-sdk`).
 - **Communication**: The SDKs communicate with the local running Cortex daemon over a standardized REST API or local JSON-RPC socket.
 - **Features**: Single-line helpers like `cortex.readEntity('AuthMiddleware')`, `cortex.getImpact('User')`, `cortex.getQuality('PaymentService')`, and `cortex.runLint()`.
+- **Durable Memory Proxy Layer (`agentmemory` compatibility)**: Emulate the standard, lightweight SQLite/PostgreSQL `agentmemory` schema endpoints in `CortexMCPServer`. This exposes a standard memory backend route that external AI tools can tap into to retrieve relational context, preventing secondary agents from duplicating state or inventing contradictory rules.
 - **Use Cases**: Developers can use these SDKs to write custom git hooks, pre-commit scripts, or documentation generators.
 
 **Definition of Ready (DoR)**
@@ -376,12 +528,13 @@ Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`)
 **Definition of Done (DoD)**
 - Official JS/TS client package (`@projectcortex/sdk`) and Python client package (`projectcortex-sdk`) built and tested.
 - SDKs can successfully connect to the local daemon and execute read/impact/quality operations.
+- **Standardized Proxy Interface**: Expose a fully-compliant, read-only `agentmemory` protocol endpoint from the local MCP daemon; tested successfully with external coding scripts querying knowledge paths.
 - Documentation and code examples included in `README.md`.
-- Tests cover offline/error recovery, API timeouts, and payload verification.
+- Tests cover offline/error recovery, API timeouts, concurrency safeguards, and payload verification.
 
 **Pros & Cons**
-- ✅ **Pros**: Standardizes programmatic access to Cortex, unlocking custom automation for team setups.
-- ❌ **Cons**: Multiplies library maintenance across two ecosystems (NPM/PyPI).
+- ✅ **Pros**: Standardizes programmatic access to Cortex, unlocking custom automation for team setups; makes Cortex the single source of truth for all IDE agents.
+- ❌ **Cons**: Multiplies library maintenance across two ecosystems (NPM/PyPI); emulating third-party protocols requires keeping proxy schemas stable regardless of downstream state changes.
 
 ---
 
@@ -865,6 +1018,8 @@ Inspired by Nexus Phase 33.3 (Session Leadership & Concurrency Control). A leade
 - ✅ **Pros**: **Makes Cortex safe for multi-operator enterprise teams.** Without this, two operators editing the same workspace simultaneously is a guaranteed data inconsistency event. Simple model (one leader, others observers) avoids distributed-consensus complexity for the small N this targets. Approvals working as observer keeps Phase 23 + Phase 43.3 review flows functional. Identity-based PWA+CLI merging means same operator on multiple devices is one session, not two competitors.
 - ❌ **Cons**: Single-operator usage adds zero friction (auto-leadership) but adds operational concept (some users will encounter "you are observer" the first time they collaborate). Mitigated by clear error messages with claim-leader instructions and by Phase 33.2 PWA badge surfacing role prominently. Forced takeover is a potential audit surface (one operator can disrupt another); mitigated by high-severity audit logging and optional configurable approval requirement.
 
+**Entity-Graph Branching for Offline Divergence**: When an operator goes offline, their `.knowledge/` continues to evolve independently from the remote canonical graph. On reconnect, this extension detects divergent entity graphs, tracks them as named branches at the entity-graph level (recording fork-point commit hash and last common ancestor in `state.json`), and merges via CRDT-style semantics (building on Phase 35.2). `cortex session merge --branch <name>` reconciles a divergent graph with the canonical one, flagging conflicts where the same entity was mutated in both branches. Conflicts are surfaced for Phase 23 human review or resolved via Phase 17's active disambiguation if available. Branch history is retained in `.knowledge/meta/branches.jsonl` for audit traceability.
+
 ---
 
 ## 💻 Phase 5.9: Shell Status Prompt Integration & Statusline Badge — ⏳ Planned
@@ -977,6 +1132,8 @@ Four related additions, all sharing one schema/migration:
 
 3. **Blast-radius flagging on entity mutation.** When `action: update` materially changes an entity's description or `sourceFile`, the writer walks the inbound `relationships[]` graph (every entity whose `relationships[]` has the mutated entity as a `target` with kind `depends_on` or `called_by`) and stamps a `staleSince: <ISO timestamp>` field on each dependent record. `state.json` gains a derived `stalenessIndex` so `cortex status` and `read_knowledge_index` can surface "N entities are downstream of a change you haven't reconciled yet."
 
+   **Continuous staleness gradient** (upgrade): in addition to the binary `staleSince` flag, propagate a weighted `staleInfluence: number` (0.0–1.0) that decays with graph distance from the mutated entity — direct dependent gets 1.0, 2-hop gets 0.5, 3-hop gets 0.25 (default decay factor 0.5 per hop, configurable via `CORTEX_STALE_DECAY_PER_HOP`). The context packer (Phase 13) and impact analysis (Phase 9) use `staleInfluence` as a continuous priority signal: entities with `staleInfluence > 0.3` are demoted in packer ranking; entities with `staleInfluence > 0.7` are flagged for re-synthesis.
+
 4. **Failed-approaches memory (anti-repetition).** Add an optional `failedApproaches[]` array on entities and concepts:
 
    ```ts
@@ -1029,6 +1186,82 @@ Four related additions, all sharing one schema/migration:
 
 ---
 
+## 🧩 Phase 6.1: Template Entities & Instantiated-From Relationships — ⏳ Planned
+
+**Layman's Terms**
+Define a template entity once → every entity instantiated from it inherits updates when the template changes. Change your "Service" template definition → all 47 services created from it update automatically. Like Figma component tokens or CSS classes — the instance stays linked to its definition.
+
+**Technical Terms**
+Add `instantiated_from` to the relationship kind enum. When a template entity's description or relationships change, all entities with an inbound `instantiated_from` edge pointing to it get `staleSince` flagged (reuses Phase 6 blast-radius propagation). A `cortex template update <name>` command re-applies the template body to all instances.
+
+- **New relationship kind**: `instantiated_from` added to the existing enum in `EntityRecord.relationships[].kind`.
+- **Template detection**: any entity with outbound `instantiated_from` edges is a template. Marked with `isTemplate: true` in `state.json`.
+- **Cascade**: on template mutation, reuses Phase 6's staleness propagation — instances get `staleSince` set, triggering re-synthesis on next sync.
+- **CLI**: `cortex template list` (templates + instance counts), `cortex template update <name>` (propagate template body to all instances).
+- **MCP**: `get_template(name)` and `instantiate_template(name, entities)` tools.
+
+**DoR**: Phase 6 typed relationships are stable.
+
+**DoD**: `instantiated_from` relationship accepted and persisted. Template mutation propagates `staleSince` to all instances. `cortex template list/update` CLIs. Tests: cascade correctness, template detection, instance staleness.
+
+---
+
+## 🔍 Phase 6.2: Arbitrary Predicate Relationships & Triple-Store Queries — ⏳ Planned
+
+**Layman's Terms**
+Today every relationship must be one of 6 kinds: `depends_on`, `called_by`, `supports`, etc. Phase 6.2 removes that constraint — relationships can use arbitrary predicate strings like "validates", "deployed_on", "owned_by". The graph becomes a proper triple-store, queryable with wildcards: `cortex query "? → validates → ?"`.
+
+**Technical Terms**
+Generalize the `kind` field from a constrained enum to an open string (with the 6 original kinds as defaults). Add triple-pattern query support.
+
+- **Schema**: `relationships[].kind` becomes `string` instead of the enum union. The 6 original kinds remain valid and unchanged.
+- **Query CLI**: `cortex query <subject?> <predicate?> <object?>` — each field supports wildcard `?` or `*`. Returns matching triples.
+- **Export**: `cortex export --format nt | turtle` — N-Triples or Turtle format for SPARQL engine ingestion.
+- **MCP**: `query_triples(subject?, predicate?, object?)` tool for IDE agents.
+- **Backward-compatible**: existing enum-only consumers continue to work; Phase 6 constraint validation still checks the original 6 kinds for enforcement (arbitrary predicates are informational, not enforceable until a constraint type is defined for them).
+
+**DoR**: Phase 6 schema is stable.
+
+**DoD**: `kind` field accepts arbitrary strings. `cortex query` returns matching triples with wildcards. N-Triples export produces valid RDF. Tests: query wildcard matching, export format correctness, backward compatibility with existing enum-only consumers.
+
+---
+
+## 🌱 Phase 6.3: Weak Measurements — Low-Certainty Hypothesis Tags — ⏳ Planned
+
+**Layman's Terms**: Attach a tentative guess to any entity without committing to it. "This might be related to auth" — the guess accumulates confidence every time it's reinforced. When confidence crosses a threshold, it becomes a real tag.
+
+**Technical Terms**: New `weakTags` field on `EntityRecord`: `[{ hypothesis: string, confidence: number, measurements: number, lastMeasuredAt: string }]`. Each time a user or agent applies the same hypothesis, confidence ticks up. At threshold (>0.8 after ≥5 measurements), promotes to a strong tag in `state.json`. Context packer uses weak tags as soft ranking signals. MCP: `apply_weak_measurement(entityId, hypothesis)`.
+
+**DoR**: Phase 6 schema is stable.
+
+**DoD**: `weakTags` persisted and queryable. Auto-promotion at threshold. Tests: single measurement (confidence 0.2), threshold-crossing promotion, empty baseline.
+
+---
+
+## 🧭 Phase 6.4: Torsion Links — Context-Dependent Entity Meaning — ⏳ Planned
+
+**Layman's Terms**: The same entity means different things depending on how you arrived at it. AuthService emphasizes "token validation" when approached from PaymentService but "session management" when approached from UserService. The target's description adapts to the approach path.
+
+**Technical Terms**: Add optional `torsion` field to `relationships[]`: `{ fromContext: string, emphasis: string }`. When `Packer` includes an entity via a relationship that has torsion data, it injects the torsion-modified description instead of the generic one. Graph viewer highlights incoming torsion arcs. Schema: single `contextModifier` field per relationship with `{ emphasis: string, approachPath?: string[] }`.
+
+**DoR**: Phase 6 relationship schema is stable. Phase 13 packer is stable.
+
+**DoD**: Torsion data persisted on relationships. Context packer reads approach path and injects torsion description. Graph viewer renders torsion arcs distinctly. Tests: torsion-modified pack entry, fallback to generic description when no torsion matches.
+
+---
+
+## ⚡ Phase 6.5: Plasma Filaments — Structural Edge Flag — ⏳ Planned
+
+**Layman's Terms**: Some edges are more important than others. Deleting a structural edge cascades across the whole graph; deleting a regular edge only affects its two nodes. Mark edges that hold the graph together.
+
+**Technical Terms**: Add `structural: boolean` (default false) to relationship schema. Structural edges are exempt from Phase 20.17 pruning. Phase 9 impact preview shows cascade depth: structural edges flagged as high-impact (their deletion would ripple through connected clusters). CLI: `cortex edge flag <from> <to> --structural` and `cortex edge list --structural`.
+
+**DoR**: Phase 6 relationship schema is stable. Phase 9 impact preview is stable.
+
+**DoD**: `structural` flag persisted. Structural edges exempt from pruning. Impact preview marks structural edges with cascade depth. Tests: structural flag persistence, pruning exclusion, cascade depth calculation.
+
+---
+
 ## ✅ Phase 7: Audit & Traceability Tools — ✅ Done
 
 ### Phase 7 Execution Plan
@@ -1060,7 +1293,7 @@ Please review the proposed approach for adding structured logging, evidence bloc
 ##### 3. Audit, Evolution, and Lint Modules (`src/knowledge/audit.ts`, `src/knowledge/lint.ts`, `src/knowledge/evolution.ts`)
 
 - **audit.ts**: Implement structured log querying (by entity, since commit, warnings) and evidence drift detection.
-- **lint.ts**: Implement graph integrity checks for orphans, silos, missing source files, dependency cycles, god-modules, and contradiction-heavy entities.
+- **lint.ts**: Implement graph integrity checks for orphans, silos, missing source files, dependency cycles, god-modules, contradiction-heavy entities, and duplicate-pattern detection (reframes "merge candidates" as "missing abstraction signals" — identical subgraph shapes across entities indicate an unextracted shared pattern).
 - **evolution.ts**: Implement semantic timeline reconstruction per entity from `log.jsonl`.
 
 ##### 4. CLI Extensions (`src/cli/log.ts`, `src/cli/audit.ts`, `src/cli/evolution.ts`, `src/cli/lint.ts`, `src/cli/index.ts`)
@@ -1272,27 +1505,31 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 ## 🎲 Phase 7.6: Global Architectural Lessons & Retrospective Log — ⏳ Planned
 
 **Layman's Terms**
-When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` markdown view and command. You can also log global, codebase-wide architectural lessons that aren't tied to a single file.
+When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` view. More importantly, it turns this log into a living **Evolutionary Advisory Engine** (inspired by the Nemesis system): if an approach failed in the past due to a specific limitation (like an old Node version or a missing package), and today you upgrade your environment, Cortex actively alerts you: *"Hey, you can now implement that optimal approach you tried before, because the blocker is finally gone!"*
 
 **Technical Terms**
-Implement a global lessons aggregator in the Knowledge Manager.
+Implement a global lessons compiler and active evolutionary advisor in the Knowledge Manager:
 - **Aggregation**: Collects all `failedApproaches` across all synthesized entities from `state.json`.
+- **Constraint/Blocker Tagging**: When the Librarian synthesizes a failed approach, it explicitly identifies and tags its **blocking conditions** in a structured schema (e.g., `"blocker": "node < 16"`, `"blocker": "dependency: react < 18"`, `"blocker": "flag: CORTEX_STRICT_MODE"`).
+- **Environment Shift Monitor**: During each sync pass, the compiler audits the active workspace environment (`package.json`, `tsconfig.json`, global active constraints, node environment).
+- **Active Evolutionary Advisory**: If a previously active blocker is resolved (e.g. the package is updated or a constraint is lifted), the compiler flags the associated failed approach and raises an active suggestion alert in `.knowledge/LESSONS.md` and CLI returns: *"Architectural Opportunity: [Approach] was previously blocked by [Blocker]. Since your environment changed, you can now safely execute this optimization."*
 - **Manual Logs**: Exposes a CLI command `cortex lessons log --summary "..." --reason "..."` to record a global codebase-wide architectural lesson saved under `.knowledge/lessons.jsonl`.
-- **Output Emitter**: Compiles these into a unified report `.knowledge/LESSONS.md` during sync, showing chronological failures, reasons, and target mitigations.
+- **Output Emitter**: Compiles these into a unified report `.knowledge/LESSONS.md` during sync, highlighting chronological failures, active blocker status, and unlocked optimization advisories.
 
 **Definition of Ready (DoR)**
 - Phase 7 and Phase 7.5 are completed.
-- `state.json` schema supports `failedApproaches[]` correctly.
+- `state.json` schema supports `failedApproaches[]` with structured `blocker` metadata.
 
 **Definition of Done (DoD)**
-- `cortex lessons` command displaying chronological list of all entity-level and global failed approaches/lessons.
+- `cortex lessons` command displaying chronological list of all entity-level and global failed approaches, actively highlighting their blocker statuses (Blocked vs. Unlocked).
+- **Evolutionary Advisory Trigger**: Modifying `package.json` or global environment variables to resolve a logged blocker successfully triggers an active optimization advisory on the next sync pass.
 - `cortex lessons log` command for manual global entries.
-- Unified `.knowledge/LESSONS.md` automatically compiled during sync.
-- Tests covering aggregation, manual entry persistence, and compilation correctness.
+- Unified `.knowledge/LESSONS.md` automatically compiled during sync, splitting entries into "Active Failures/Lessons" and "Newly Unlocked Opportunities."
+- Tests covering blocker tagging correctness, environment change detection, and dynamic optimization advisory triggers.
 
 **Pros & Cons**
-- ✅ **Pros**: Surfaces codebase anti-patterns and retrospects in a single searchable document, preventing AI assistants and developers from repeating historical mistakes.
-- ❌ **Cons**: Requires manual input for global lessons (although entity-level failed approaches are auto-synthesized).
+- ✅ **Pros**: Turns static failure logs into a dynamic, evolutionary optimization engine; prevents developers from forgetting old ideas that are now viable; mimics a biological codebase memory.
+- ❌ **Cons**: Relies on the Librarian accurately extracting and structuring the exact blocker criteria from the Git diff and commit messages. Mitigated by allowing developers to manually adjust or add blocker tags inside the Markdown files.
 
 ---
 
@@ -1331,7 +1568,9 @@ Instead of just checking basic code style or linting rules, Cortex analyzes the 
 Implement structural graph metrics and review-time advisory prompts in the `OrgConstraintEvaluator` and a new `cortex review-advisory` CLI engine:
 - **Untested Hub Detector**: Cross-references PageRank centrality scores (from Phase 10) against entity relations. If a node is in the top 20% of centrality but has zero `called_by` or `depends_on` relationships with `*test*` or `*spec*` entities, flag it as an untested hub.
 - **Architectural Surprise (Unexpected Coupling) Detector**: Evaluates graph distance and community membership (Leiden communities from Phase 13.2). If a new relationship is synthesized that crosses two distinct, previously decoupled communities, flag a "surprise edge" warning.
+- **Hidden Coupling Detector**: Cross-references Phase 13.8.2 co-edit weights against the explicit dependency graph. If two entities have co-edit weight > 0.5 but no direct or transitive dependency edge, flag a hidden coupling advisory — these entities always change together despite having no modeled relationship. The missing edge should likely exist, or the structural coupling should be investigated. Advisory severity scales with co-edit weight.
 - **Advisory Generator**: Exposes a new MCP tool `get_review_advisories(diff)` that computes the blast radius of the diff (using Phase 6) and returns targeted warning prompts (e.g. "authController is a central hub. Verify routes.ts handles the new token error. No tests detected for authController").
+- **Emergent Insight Generator**: when a new edge is synthesized connecting entities from different graph communities (surprise edge), run a single lightweight LLM prompt: `These two entities were just connected for the first time. What emergent architectural insight does this connection suggest?` The generated insight is auto-persisted via `save_concept` with `derived_from` links to both source entities. Gated by `CORTEX_EMERGENT_INSIGHTS=true` (default: false — opt-in to avoid LLM cost on every surprise edge).
 
 **Definition of Ready (DoR)**
 - Phase 7.5 (Quality & Constraints) and Phase 10 (Centrality ranking) are completed.
@@ -1350,7 +1589,7 @@ Implement structural graph metrics and review-time advisory prompts in the `OrgC
 ## 🚨 Phase 7.9: Knowledge Garbage Collection & Archive Consolidation — ⏳ Planned
 
 **Layman's Terms**
-Prevent your AI's memory from getting cluttered with obsolete code that you deleted or refactored months ago. Cortex automatically scans the knowledge folder, sweeps old/unused entity files into a single compressed archive file (`.knowledge/ARCHIVE.md`), and removes them from the active index. This keeps your active workspace tiny and cheap to query, while still saving the history in case the AI needs to look it up later.
+The problem with standard RAG (Retrieval-Augmented Generation) is that as code is deleted or refactored over months, the database fills with outdated garbage, causing the AI to confidently hallucinate based on "ghost" code. Cortex implements an intelligent, automated filter that evaluates staleness and pushes dead entities into cold archives, guaranteeing the active memory is pristine and current. This keeps your active workspace tiny and cheap to query, while still saving the history in case the AI needs to look it up later.
 
 **Technical Terms**
 Implement an automated garbage collection (GC) utility in the `KnowledgeManager`.
@@ -1399,6 +1638,112 @@ Integrate a high-performance regex-based scanning and redaction pipeline inside 
 
 ---
 
+## 🧬 Phase 7.11: Epigenetic Memory Suppression — ⏳ Planned
+
+**Layman's Terms**
+Contextually suppress entities without deleting them. A deprecated auth pattern should vanish from default retrieval but resurface when someone asks "why did we stop using X?"
+
+**Technical Terms**
+Add a `suppressionPolicy` field on entity records:
+
+```typescript
+suppressionPolicy?: {
+  suppressed: boolean;
+  reason: string;
+  suppressedAt: string;
+  resurfaceOn: string[];  // keywords that trigger resurfacing
+}
+```
+
+Suppressed entities excluded from `read_knowledge_index` and context packs by default. Queryable via `cortex find --include-suppressed` or when a query matches `resurfaceOn` keywords. Differentiates from:
+- **Deletion** (permanent, irreversible)
+- **Archival** (Phase 7.9 — moved to cold storage, fully retrievable)
+- **Staleness** (Phase 6 — flagged but still visible)
+
+**Definition of Ready (DoR)**
+- Phase 7.9 (Knowledge GC & Archive) is completed — suppression is the light-touch alternative to archival.
+
+**Definition of Done (DoD)**
+- `suppressionPolicy` field recognized by entity schema and persisted.
+- Suppressed entities excluded from default `read_knowledge_index` output and `cortex context build` packs.
+- `cortex find --include-suppressed` returns suppressed entities.
+- Query matching any `resurfaceOn` keyword auto-includes the suppressed entity.
+- Tests cover: suppression filter in index/packer, keyword resurfacing, `--include-suppressed` flag.
+
+**Pros & Cons**
+- ✅ **Pros**: Removes context noise without losing institutional memory. A codebase migrated from Redux to Zustand shouldn't have Redux entities polluting every pack — but should still answer "what state management did we use before?"
+- ❌ **Cons**: Adds a new entity lifecycle concept alongside deletion, archival, staleness — users must understand the differences.
+
+---
+
+## 🔭 Phase 7.12: Astronomical Parallax — Perspective Shift Scoring — ⏳ Planned
+
+**Layman's Terms**
+View any entity from two points in time simultaneously. "Here's what you wrote about AuthMiddleware 6 months ago vs. today" — with a quantified score showing how much your understanding shifted. High-shift entities surface first in onboarding because they represent the most intellectual growth.
+
+**Technical Terms**
+Implement `cortex parallax <entity> --ago <duration>` that reconstructs the entity's description at two temporal snapshots (current and past), computes a shift score, and renders a side-by-side diff.
+
+- **Data source**: Phase 7 `cortex evolution` already reconstructs temporal history from `log.jsonl` entries keyed by entity ID. Parallax reads the same log, snapshots the `description` + `relationships[]` at each timestamp, and picks the one closest to `now - ago`.
+- **Shift score**: `editDistance(oldDescription, newDescription) / max(len(old), len(new))` — normalized Levenshtein ratio. Score >0.3 is "high shift" (notable re-understanding). Score >0.6 is "rewrite" (complete conceptual replacement).
+- **CLI**: `cortex parallax authEntity --ago 6m` renders old vs. new with inline diff markers (`+`/`-` lines in the terminal).
+- **Onboarding integration**: Entities with `parallaxScore > 0.3` get boosted in Phase 10 reading paths — "this entity changed significantly since you last saw it."
+- **MCP**: `get_parallax(entityId, ago)` returns `{ old, current, shiftScore, diffLines }`.
+
+**DoR**: Phase 7 evolution commands and `log.jsonl` are stable.
+
+**DoD**: `cortex parallax` renders old vs. new with diff markers. Shift score computed and displayed. Tests: exact-match (score 0), minor-edit (score ~0.2), full-rewrite (score ~0.8), empty-history edge case.
+
+---
+
+## ⏪ Phase 7.13: Retrocausality — Backward Quality Propagation — ⏳ Planned
+
+**Layman's Terms**: When you mark a note as "resolved" or "concluded," the system looks backward and re-weights which past nodes actually contributed to reaching that conclusion. Entities that helped get a quality boost; entities that were consulted but irrelevant get decayed.
+
+**Technical Terms**: Extension to Phase 7.5 quality scoring. Add a `resolution_reweight` pass triggered when an entity is marked `status: resolved`. Walks the inbound dependency graph (reverse `depends_on`/`called_by` edges) and: boosts `quality_score` (+0.1) for nodes within 2 hops that have high causal co-occurrence with the resolution entity (Phase 20.14 `causalStrength`), decays `quality_score` (-0.05) for nodes within 2 hops that were consulted (have co-edits with the resolved entity) but zero causal strength. CLI: `cortex resolve <entity>` invokes the pass.
+
+**DoR**: Phase 7.5 quality scoring and Phase 20.14 causal strength are stable.
+
+**DoD**: `cortex resolve` triggers backward reweight. Quality scores updated. Tests: resolution with contributing nodes (scores boosted), resolution with consulted-but-irrelevant nodes (scores decayed), resolution with no dependencies (no-op).
+
+---
+
+## 🔴 Phase 7.14: Intrinsic Redshift — Novelty-at-Creation Metric — ⏳ Planned
+
+**Layman's Terms**: Not all old notes are equally stale. A 3-year-old note that was a brand new idea when written should decay differently than a 3-year-old note that was already a reformulation. Measure novelty at birth, not just age.
+
+**Technical Terms**: Add `intrinsicNovelty: number` (0-1) field to `EntityRecord`, computed at creation time by the synthesis engine. High novelty (>0.7) = entity introduced a concept not present in any existing entity's embedding space (Phase 18 similarity search against all existing entities at creation time, `1 - maxSimilarity`). Low novelty (<0.3) = entity is a reformulation of existing knowledge. Used as a multiplier in Phase 7.5 age_decay: `effective_age_decay = base_decay * (1 - intrinsicNovelty * 0.5)`. High-novelty entities decay slower.
+
+**DoR**: Phase 18 embeddings and Phase 7.5 age scoring are stable.
+
+**DoD**: `intrinsicNovelty` computed and persisted at entity creation. Age decay respects novelty multiplier. Tests: brand-new concept (novelty ~1.0), direct reformulation (novelty ~0.0), mid-range.
+
+---
+
+## 👁️ Phase 7.15: Verlinde Avoidance — Blind-Spot Detection — ⏳ Planned
+
+**Layman's Terms**: The nodes you're avoiding often matter most. If many nearby entities are semantically related to X but never link to X, X is a blind spot. Phase 7.15 flags these automatically.
+
+**Technical Terms**: Compute "avoidance score" per entity: count nearby nodes (within 2 graph hops) whose embedding (Phase 18) has semantic similarity >0.7 to this entity but which have no direct edge to it. High count + high semantic proximity = high avoidance. Entities with avoidance score in top 10% are flagged as "blind spot alerts." Surfaced via `cortex audit --blindspots`. MCP: `get_blindspots(threshold?)`.
+
+**DoR**: Phase 18 embeddings and Phase 6 typed relationships are stable.
+
+**DoD**: Avoidance score computed and queryable. `cortex audit --blindspots` surfaces top blind spots. Tests: known blind spot (semantically related but unlinked nodes), no blind spot (all related nodes linked), empty graph.
+
+---
+
+## 🧬 Phase 7.16: Proteasome Atrophy — Targeted Knowledge Degradation — ⏳ Planned
+
+**Layman's Terms**: Instead of hard-deleting stale or contradictory entities, tag them for slow degradation — their relationships decay, their embedding fades, and they eventually become recyclable. Like biological garbage collection where proteins are tagged with ubiquitin and slowly chewed up by a proteasome.
+
+**Technical Terms**: Add `ubiquitinTags: { tag: string, severity: number, appliedAt: string }[]` to `EntityRecord`. Entities accumulate tags from Phase 16 contradictions, Phase 20.12 temporal staleness, and Phase 7.5 quality drops. A background process (`cortex atrophy --run`) degrades tagged entities: `quality_score *= (1 - 0.01 * sum(severity))` per pass, `embedding` weight decays, relationships weaken. At `quality_score < 0.1`, entity enters "recyclable" state — its content is stripped but its ID and edges remain as a skeleton for future synthesis to rebuild on. Integration with Phase 7.9 GC and Phase 20.22 forgetting curves. CLI: `cortex atrophy --status` shows degradation queue.
+
+**DoR**: Phase 7.9 GC, Phase 16 contradictions, Phase 20.22 forgetting curves stable.
+
+**DoD**: Ubiquitin tags accumulate from quality/contradiction/staleness events. Degradation pass reduces quality and embedding weight. Recyclable state strips content but preserves skeleton. Tests: tag accumulation, degradation pass effect, recyclable threshold, edge case with no tags (no-op).
+
+---
+
 ## ✅ Phase 8: Visual & Browseable Knowledge Graph — ✅ Done
 
 **Layman's Terms**
@@ -1440,6 +1785,42 @@ Two complementary surfaces over the existing `state.json` graph — no new data,
 
 ---
 
+## 🗿 Phase 7.17: Keystone Index — Entity Impact-to-Size Ratio — ⏳ Planned
+
+**Layman's Terms**: Some small, simple entities hold up the entire graph — change them and everything breaks. Others are large and complex but changing them only affects themselves. The Keystone Index measures the ratio: a small entity with huge cascade impact gets a high keystone score and is flagged as low-touch.
+
+**Technical Terms**: Compute `keystoneScore = cascadeSize / entityComplexity`. `cascadeSize = number of unique entities reachable via inbound depends_on/called_by edges within 3 hops` (reuses Phase 6 blast-radius). `entityComplexity = description length (chars) + relationship count + edge complexity`. Entities in the top 10% of keystone scores are flagged as "keystones" — their deletion would create disproportionate damage. CLI: `cortex audit --keystones` surfaces top keystones. Graph viewer renders keystones with a distinct visual marker (crown icon).
+
+**DoR**: Phase 6 blast-radius propagation and entity schema are stable.
+
+**DoD**: Keystone score computed and persisted. `cortex audit --keystones` surfaces top entities. Graph viewer marks keystones. Tests: leaf entity (low keystone), dense small hub (high keystone), complex entity with few dependents (low keystone).
+
+---
+
+## 🛡️ Phase 7.18: Regulatory Suppression — Alert Correlation Dampening — ⏳ Planned
+
+**Layman's Terms**: When a major refactor touches 50 files, Phase 16 contradiction detection might fire 20 alerts. That's not 20 independent problems — it's 1 root cause (the refactor) causing 20 symptoms. Phase 7.18 detects when alerts are correlated and collapses them into one root-cause warning instead of a noise storm.
+
+**Technical Terms**: Add a regulator pass in the Phase 16/17 alert pipeline. When `alertDensity = alertsPerMinute > threshold(5)` within a sliding 30-minute window, compute pairwise `jaccardSimilarity` of the source entity sets of each alert. If >0.6 of alerts share ≥70% entities, they are correlated. Correlated alerts are collapsed into a single composite warning with `{ rootCause: mostCentralEntity, symptomCount: N, affectedEntities: [...] }`. The regulator also applies a suppression cool-down: after one correlation collapse, no new individual alerts from the same entity set are emitted for 1 hour. CLI: `cortex audit --alerts` shows both raw and collapsed counts.
+
+**DoR**: Phase 16 contradiction detection and Phase 17 self-consistency are stable.
+
+**DoD**: Alert density threshold triggers regulation. Correlated alerts collapsed into composite warnings. Suppression cool-down prevents re-emission. Tests: isolated alerts (no correlation, pass-through), correlated alerts (collapsed), high density with no correlation (pass-through, no false collapse).
+
+---
+
+## ⚡ Phase 7.19: Synaptic Tagging — Retroactive Importance Boost — ⏳ Planned
+
+**Layman's Terms**: When you create a highly important entity, the system looks back at weak entities created in the recent past that are related to it. If a weak entity shares topics with a newly important one, it gets an importance boost — the new entity "captures" the old one, strengthening both.
+
+**Technical Terms**: When an entity is created with `quality_score > 0.7` (strong entity), search for entities created within the past 48 hours that share ≥30% entity overlap (via Szymkiewicz-Simpson coefficient on shared `relationships[].target`). Matching weak entities (`quality_score < 0.5`) receive: `quality_score += 0.25 * overlapCoefficient`, `importance += 0.1`. This mimics synaptic tagging and capture (Frey & Morris 1997): the strong entity's "plasticity-related proteins" are captured by tagged weak synapses. Window configurable via `CORTEX_TAG_WINDOW_HOURS` (default 48). Admin: `cortex audit --tagged` shows recently boosted entities.
+
+**DoR**: Phase 7.5 quality scoring and entity relationship schema are stable.
+
+**DoD**: Strong entity creation triggers backward scan. Matching weak entities receive boost. Configurable window. Tests: strong entity with recent weak relative (boost applied), strong entity without recent weak relatives (no-op), stale window (entity outside window, no boost).
+
+---
+
 ## 💾 Phase 8.1: Live Graph Stream (WebSocket) — ⏳ Planned
 
 **Layman's Terms**
@@ -1463,6 +1844,97 @@ Implement a lightweight read-only WebSocket endpoint at `ws://127.0.0.1:<port>/w
 **Pros & Cons**
 - ✅ **Pros**: High-fidelity, real-time feedback for developers during coding sessions. Wow factor for local graph demo.
 - ❌ **Cons**: Running a WebSocket loop uses slight CPU/memory overhead in the daemon background.
+
+---
+
+## 💾 Phase 8.2: Karpathy-Style Obsidian Wiki Compliance & Presets — ⏳ Planned
+
+**Layman's Terms**
+Open your Cortex architectural memory vault directly inside Obsidian for free. Phase 8.2 configures your `.knowledge/` folders to be 100% compliant with standard Obsidian vaults, allowing you to open your codebase memory as a gorgeous, color-coded interactive graph view. It also sets up styling templates and informative visual tooltips on hover without writing any heavy custom desktop code.
+
+**Technical Terms**
+1. **Andrej Karpathy-Style Obsidian Wiki Compliance**: Ensure all inter-linkages utilize relative markdown paths (e.g. `[[entities/Name.md|Name]]` and `[[concepts/Name.md|Name]]`) rather than simple flat names. This guarantees links are fully resolved and clickable in both Obsidian and standard VS Code / GitHub markdown rendering engines.
+2. **Pre-Configured Node Coloring & Tooltips**: Scaffolds default `.obsidian/graph.json` and `.obsidian/appearance.json` configurations under `.knowledge/` (gitignored to avoid team merge conflicts). Establishes a Cyberpunk Dark Palette with precise HSL mappings:
+   - **Electric Blue (`#3B82F6`)**: Concrete Entities
+   - **Royal Purple (`#8B5CF6`)**: Abstract Concepts
+   - **Teal Turquoise (`#0D9488`)**: Parent Module Directories ($\ge 5$ children)
+   - **Electric Cyan (`#06B6D4`)**: Active Constraint Guardrail Boundary (has constraints)
+   - **Magenta Violet (`#D946EF`)**: Historical Scarring (has failed approaches)
+   - **Emerald Green (`#10B981`)**: Quality Certified/Human-Reviewed (score $\ge 0.9$)
+   - **Ochre Amber (`#F59E0B`)**: Decaying Module (score $0.4 - 0.8$)
+   - **Crimson Scarlet (`#EF4444`)**: Quality/Gating Danger (score $< 0.4$)
+   - **Hot Pink (`#FF2E93`)**: High Centrality God Module (from Phase 7)
+   - **Rust Orange (`#F97316`)**: Active Staleness Warning (`[!WARNING]`)
+   - **Slate Gray (`#64748B`)**: Orphan Siloed Node
+   Optimizes markdown templates to front-load headers, warnings, summaries, and quality metrics so native Obsidian tooltips (Hover Page Preview) serve as instant visual diagnostic cards.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+
+**Definition of Done (DoD)**
+- **Obsidian Vault Compliance**: Scaffolds a compliant `.knowledge/index.md` and generates relative, folder-scoped markdown links for maximum clickable portability across VS Code and GitHub.
+- **Sleek Theming Presets**: Generates local-only, gitignored `.obsidian/graph.json` and `.obsidian/appearance.json` presets mapping HSL color signals to quality scores, God modules, and active safeguards. Hover tooltips cleanly display diagnostic headers.
+- Tests cover offline parsing compatibility, relative link resolver robustness, and preset generation checks.
+
+**Pros & Cons**
+- ✅ **Pros**: Turns architectural understanding into a shareable, stunning, zero-overhead interactive graph viewer; clickable links in standard VS Code and GitHub previews; zero runtime desktop bloat.
+- ❌ **Cons**: Changing directory layout or names requires re-mapping link paths in the compilation pass (handled in-memory using `state.json` to preserve speed). Committing default `.obsidian/` folders to git could clutter developer preferences, mitigated by standard gitignore rules.
+
+---
+
+## 💾 Phase 8.3: GPU-Accelerated Knowledge Graph Rendering — ⏳ Planned
+
+**Layman's Terms**
+When your knowledge graph exceeds 300+ entities, Mermaid/Cytoscape CPU rendering slows to a crawl. Phase 8.3 adds a WebGL-based GPU-accelerated renderer that handles 1000+ entities at 60fps. Entity clusters flow and merge based on co-edit relationships, quality scores map to color temperature (green = high quality → red = decaying), and staleness renders as visual fading — all animated in real time via Phase 8.1's WebSocket stream.
+
+**Technical Terms**
+1. **WebGL Graph Renderer**: An alternative rendering mode using Three.js or raw WebGL. The graph is rendered as a GPU particle system where each entity is a billboarded sprite and each edge is a line primitive. Layout is computed on the GPU via a force-directed simulation running in vertex shaders.
+2. **Quality-to-Color Mapping**: Consumes Phase 7.5 quality scores as vertex attributes. Entities with score ≥ 0.8 render green, 0.5–0.8 amber, < 0.5 red. Staleness (staleSince flag) adds a pulsing desaturation effect.
+3. **Co-Edit Flow**: Edge spring tensions scale with Phase 13.8.2 co-edit weights — frequently co-edited entities cluster tightly; rarely co-edited pairs drift apart.
+4. **Fallback**: Automatically falls back to Mermaid rendering for graphs under 300 entities (no GPU needed). Configurable via `CORTEX_GRAPH_RENDERER=webgl|mermaid`.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+- Phase 8.1 WebSocket stream is active.
+
+**Definition of Done (DoD)**
+- WebGL renderer renders 1000+ entity graphs at 60fps on modern GPU hardware.
+- Quality score color mapping is implemented and reacts to Phase 7.5 score changes.
+- Co-edit weight spring tension is implemented.
+- Fallback to Mermaid rendering when GPU unavailable or graph < 300 entities.
+- Tests cover: renderer selection, quality-color mapping, fallback trigger.
+
+**Pros & Cons**
+- ✅ **Pros**: Solves the large-graph rendering problem for Phase 11 monorepo federations and Phase 21 polyrepo setups. Real-time animation makes co-edit patterns visually intuitive. High dashboard wow-factor for Phase 31 executive analytics.
+- ❌ **Cons**: Requires WebGL-compatible browser — falls back to Mermaid for terminal/SSH session users. GPU particle layout differs from force-directed CPU layout, potentially confusing users who switch between modes.
+
+---
+
+## 💾 Phase 8.4: Hyperbolic Graph Layout (Poincaré Disk) — ⏳ Planned
+
+**Layman's Terms**
+Phase 18 uses hyperbolic (Poincaré) embeddings for internal math but never shows them visually. Phase 8.4 renders the knowledge graph on a Poincaré disk: the currently-edited entity sits at the center with full detail, direct dependencies occupy the middle ring, and distant entities shrink toward the perimeter. This maps 1:1 to Phase 20.6's hot/cold memory tiering — the visual layout IS the memory hierarchy.
+
+**Technical Terms**
+1. **Poincaré Disk Projection**: Each entity's hyperbolic embedding (from Phase 18) is projected onto the unit disk via the Poincaré metric. The selected entity is translated to the origin; all other entities are Möbius-transformed relative to it. Entities near the origin render at full size; entities approaching the boundary shrink according to their hyperbolic distance.
+2. **Memory Tier Visualization**: Hot-tier entities (in Phase 20.6 working set) cluster within the inner third of the disk. Cold-tier entities spread toward the boundary. Pinned entities (centrality > 0.8) are highlighted with a glow ring.
+3. **Pan & Zoom**: Clicking any entity re-centers the disk on that entity, re-running the Möbius transform server-side and streaming the updated layout via Phase 8.1 WebSocket.
+4. **Implementation**: Layout computation is a fast server-side matrix operation (no LLM needed). Rendering via D3.js canvas with hyperbolic transform helpers, or optionally via the Phase 8.3 WebGL renderer.
+
+**Definition of Ready (DoR)**
+- Phase 8 is completed.
+- Phase 18 hyperbolic embeddings are computed for all entities.
+
+**Definition of Done (DoD)**
+- Poincaré disk renders all entities with correct hyperbolic distances from the selected center entity.
+- Click-to-recenter works and streams updated layout via WebSocket.
+- Memory tier clustering (hot/inner, cold/outer) is visually distinct.
+- Pinned entity glow ring is implemented.
+- Tests cover: Möbius transform correctness, tier visibility, center selection round-trip.
+
+**Pros & Cons**
+- ✅ **Pros**: Makes the memory hierarchy (Phase 20.6) visually self-evident — no separate "show me hot entities" command needed. Hyperbolic space naturally fits hierarchical codebases. Leverages existing Phase 18 math; no new embedding computation.
+- ❌ **Cons**: Requires Phase 18 embeddings to exist — not available until Phase 18 is implemented. Poincaré disk can be disorienting for users unfamiliar with hyperbolic space; mitigated by a optional Euclidean toggle `--layout euclidean`.
 
 ---
 
@@ -1526,6 +1998,30 @@ Expose a BFS-based pathfinding query over the relationship graph in `state.json`
 
 ---
 
+## ⚖️ Phase 9.2: Torstone Inertia — Refactor Resistance Metric — ⏳ Planned
+
+**Layman's Terms**: Not all refactors are equally hard. A change to a deeply interconnected entity with many cyclic dependencies has high "inertia" — it resists change. Phase 9.2 computes a single mass score per entity that quantifies how hard it would be to refactor, based on graph geometry not lines of code.
+
+**Technical Terms**: Compute `inertiaScore` per entity from three factors: (1) **interconnection density** — number of unique inbound+outbound relationships, normalized against the graph max, (2) **cyclic depth** — longest path through cycles involving this entity (via Tarjan's SCC), (3) **fan-out breadth** — distinct subgraph communities this entity connects to (Leiden communities from Phase 13.2). Formula: `inertiaScore = 0.4 * density + 0.35 * cyclicDepth + 0.25 * communitySpan`. Score stored as `inertia: number` on the entity. Phase 9 `cortex impact <entity>` surfaces inertia alongside cascade depth. CLI: `cortex audit --high-inertia` lists top 10 highest-inertia entities.
+
+**DoR**: Phase 6 typed relationships and Phase 13.2 community detection are stable.
+
+**DoD**: Inertia score computed and persisted. `cortex impact` shows inertia. `cortex audit --high-inertia` surfaces top entities. Tests: leaf entity (low inertia), central hub (high inertia), cyclic dependency (high cyclic depth), empty graph (no-op).
+
+---
+
+## ⚠️ Phase 9.3: Hyrum's Law — Implicit Dependency Detection — ⏳ Planned
+
+**Layman's Terms**: Every observable behavior of an entity gets depended on by someone — even undocumented ones. If entity A happens to always return entities in a certain order, and entity B depends on that order, changing A's behavior breaks B in unexpected ways. Phase 9.3 detects these implicit dependencies by analyzing which entities' observable properties (relationship patterns, description structure, embedding neighborhood) downstream entities actually rely on.
+
+**Technical Terms**: Extends Phase 9 impact preview with implicit dependency detection. Compute per entity: (1) **observable surface** — all fields on `EntityRecord` that vary between entities of the same type (description length, relationship count, relationship kind distribution, embedding neighborhood), (2) **downstream sensitivity** — for each dependent entity, check if its quality score drops when the upstream entity's observable surface changes (via Phase 20.12 temporal log). If `P(qualityDrop | upstreamChange) > 0.6`, mark an implicit dependency edge. CLI: `cortex impact <entity> --implicit` shows both explicit and implicit dependents. `cortex audit --implicit-deps` surfaces entities with the most implicit dependents (high-risk refactoring targets).
+
+**DoR**: Phase 9 impact preview and Phase 20.12 temporal log are stable.
+
+**DoD**: Implicit dependency edges computed and queryable. `cortex impact --implicit` surfaces them. Tests: entity with no downstream quality correlation (zero implicit deps), entity with strong correlation (implicit deps detected), stable entity (no change history, no data).
+
+---
+
 ## 🎓 Phase 10: Onboarding & Guided Reading — ✅ Done
 
 **Layman's Terms**
@@ -1570,6 +2066,26 @@ A new synthesis _output mode_ — no schema changes, no new data, just a differe
 
 - ✅ **Pros**: Transforms `.knowledge/` from a reference into a teaching artifact. Onboarding is one of the highest-leverage uses of synthesized architectural memory — it's exactly where the "compounding knowledge" pays back for humans, not just AIs.
 - ❌ **Cons**: Centrality ≠ pedagogical value perfectly; some highly-linked entities are utility plumbing, not architecture. Mitigated by letting the Librarian re-rank with semantic judgment after centrality scoring produces the candidate list.
+
+---
+
+## 🫧 Phase 10.1: Spherification — Data Encapsulation for Entity Clusters — ⏳ Planned
+
+**Layman's Terms**
+Group related entities behind a single "sphere" node in the graph. Click a sphere → it bursts open revealing everything inside. The graph stays clean (dozens of nodes collapse into one) while complexity remains one click away. Like folders for your graph.
+
+**Technical Terms**
+Generalize Phase 10's `parent_summary` auto-generation into a user-definable cluster primitive with collapse/expand in the graph viewer.
+
+- **CLI**: `cortex sphere create "Auth System" --entities AuthMiddleware,JWTUtils,TokenConfig,AuthRoutes`. Creates a new entity of type `sphere` with `contains` relationships to each listed entity.
+- **Sphere entity type**: new `EntityType` value `"sphere"` added alongside `"concept"`, `"entity"`, etc. Spheres are not synthesized or scored — they are structural containers only.
+- **Graph viewer**: The 2D Cytoscape renderer (Phase 8) renders sphere nodes as larger, visually distinct circles. Click expands the sphere (replaces the sphere node with its contained nodes). Double-click outside collapses back.
+- **Context packer**: `Packer` treats spheres as atomic units — either include the entire sphere as one entry with `contains: [...]` summary, or exclude it entirely (no partial sphere inclusion). Configurable via `sphereMode: "expand" | "collapse"` in `packer.config.ts`.
+- **MCP**: `create_sphere(name, entityIds)`, `expand_sphere(sphereId)`, `list_spheres()`.
+
+**DoR**: Phase 8 graph viewer and `contains` relationship kind are stable.
+
+**DoD**: `cortex sphere create` creates sphere entities with `contains` edges. Graph viewer renders spheres distinctly. Click expands; double-click collapses. Context packer treats spheres as atomic. Tests: sphere creation, expand/collapse render, packer atomicity.
 
 ---
 
@@ -2196,7 +2712,7 @@ Three small, self-contained surfaces over the existing knowledge — no new data
    - `--scope <entity-or-concept>` — narrow to a subgraph (reuses Phase 8's graph traversal).
    - `--depth N` — link-hop traversal depth from the scope root.
    - `--format markdown|json` — markdown for humans/IDEs, JSON for programmatic consumers.
-     The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
+           The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
 
 2. **Response compression in MCP outputs (sqz-style reference pointers).** Wrap MCP tool responses (`read_knowledge_index`, `read_entity`, `read_concept`, `get_pending_changes`) with a per-session content-addressed cache. On the first response that contains a given large block (e.g., a 4KB entity description), the full text is emitted. On any subsequent response in the same session that would repeat the same block, the body is replaced with a `§ref:<hash>§` token plus a small legend the agent can resolve client-side via a new `resolve_refs(refs[])` tool. Sessions are scoped to a single MCP connection; eviction is LRU on a small fixed budget (256KB by default). Backward-compatible: clients that don't call `resolve_refs` simply see the placeholder and ignore it.
 
@@ -2261,7 +2777,7 @@ Extend `cortex test-cost` with comparative raw-vs-dense math and customized toke
 
 ---
 
-## 💸 Phase 13.2: Cortex Brevity Engine & Telegraphic Memory Compression — ⏳ Planned
+## 💸 Phase 13.2: Cortex Brevity Engine & Telegraphic Memory Compression — ✅ Done
 
 **Layman's Terms**
 Save up to 50% of your AI token costs by stripping out prose fluff, introductory greetings, and redundant explanations from Cortex's generated files. This "telegraphic" mode writes compact, high-density instructions directly to `GEMINI.md` and onboarding guides. Code paths, file names, and syntax structures are preserved with 100% accuracy, giving your AI maximum context at half the price.
@@ -2291,7 +2807,7 @@ Implement a "Brevity Engine" containing:
 
 ---
 
-## 💸 Phase 13.3: Token & Cost Savings Ledger & Analytics — ⏳ Planned
+## 💸 Phase 13.3: Token & Cost Savings Ledger & Analytics — ✅ Done
 
 **Layman's Terms**
 Keep track of exactly how much money and how many tokens Cortex has saved you. Running `cortex savings` shows a daily graph of token reductions from smart caching, compressed MCP outputs, and output minification, complete with actual dollar savings based on your AI provider.
@@ -2322,7 +2838,7 @@ Implement a persistent local ledger to audit token and monetary savings.
 
 ---
 
-## 💸 Phase 13.4: API Budget Gating & Runaway Safeguards — ⏳ Planned
+## 💸 Phase 13.4: API Budget Gating & Runaway Safeguards — ✅ Done
 
 **Layman's Terms**
 Protect your wallet from runaway AI loops. If your editor or terminal agent goes into a loop calling Cortex over and over, it could drain your API account. Phase 13.4 lets you set a hard cap on session costs or the number of LLM syncs allowed per hour. Once crossed, Cortex blocks subsequent calls until you reset it.
@@ -2347,7 +2863,7 @@ Implement a session-based usage tracker and gatekeeper:
 
 ---
 
-## 💸 Phase 13.5: Fuzzy Levenshtein & RRF Search Ranker — ⏳ Planned
+## 💸 Phase 13.5: Fuzzy Levenshtein & RRF Search Ranker — ✅ Done
 
 **Layman's Terms**
 Make searching your architecture robust to typos and spelling mistakes. If you search for "useEfect" or "authContrller", Cortex uses fuzzy matching (calculating how close spelling is) and merges the results with exact term matches using Reciprocal Rank Fusion (RRF). The result is that the right files appear at the top, even if you make a typo.
@@ -2423,6 +2939,957 @@ During a coding session, the AI reads the same source code files over and over a
 
 ---
 
+## 💸 Phase 13.7.2: Speculative Static Verification & Grounded Fallback Resolution (Adaptive Retrieval Guardrails) — ⏳ Planned
+
+**Layman's Terms**
+Make your AI co-pilot incredibly reliable and self-healing. When gathering files to help you code, Cortex runs a super-fast check behind the scenes: *"Do the gathered files contain everything the AI needs to understand the changes?"* If the system detects a missing piece (like a reference to a newly added utility that hasn't been documented yet), instead of letting the AI guess or throw a blind error, it instantly runs a local "grep" search across your files, extracts the missing code, and feeds it to the AI as a real-time safety net. You get perfect answers even if the project documentation is momentarily out of sync.
+
+**Technical Terms**
+Implement adaptive retrieval verification and local grep-fallback engines inside the context assembly pipeline:
+- **Speculative Static Verification**: When compiling a token-bounded context pack inside `src/knowledge/packer.ts`, extract all imports and explicit class/function relationships of the target entities. Run a static verification pass to ensure all mapped relationships (Phase 6 edges) are resolved within the active context bundle.
+- **Dynamic Context Expansion**: If critical 1-hop dependencies or contract interfaces are missing from the compact bundle, dynamically "zoom in" and expand the retrieval radius to automatically pull in the missing contracts before the final payload is generated.
+- **Grounded Fallback Resolution**: If a queried relationship or class reference is missing from `.knowledge/` altogether (e.g. a fresh, un-ingested file), intercept the error and execute a sub-millisecond local string search (`git grep` or native node-grep) across the active source code directory.
+- **Signature Extraction Fallback**: Extract the matching raw source code block or interface signature, validate its structure, and inject it as a `[Grounded Fallback Context]` block into the context pack.
+
+**Definition of Ready (DoR)**
+- Phase 6 (Typed Relationships) and Phase 13.5 (RRF Ranker) are completed.
+
+**Definition of Done (DoD)**
+- **Static Import Verification**: Context packing automatically detects when 100% of physical imports of the target target are resolved in the context pack.
+- **Grep Fallback Extraction**: Querying a newly created, un-synced module falls back to live local source code search and successfully retrieves its raw signature, verified by integration tests.
+- **Zero-Latency Invariant**: The static verification and fallback search add less than 15ms of overhead to the total context assembly pass.
+- Tests cover static import coverage verification, deep contract extraction, and grep-fallback signature integration.
+
+**Pros & Cons**
+- ✅ **Pros**: Guarantees absolute context completeness; prevents AI hallucinations caused by missing interface files; operates completely offline and local-first with zero API overhead.
+- ❌ **Cons**: Grep fallbacks are string-based and can return false-positive matching signatures if multiple modules share the exact same helper function names. Mitigated by filtering results based on source file proximity.
+
+---
+
+## 💸 Phase 13.8: Persistent Experience & Cognitive Mode-Adaptive Context (Cortex Soul Implementation Spec) — ⏳ Planned
+
+**Layman's Terms**
+When you use an AI assistant, it forgets everything you did in the previous task. If you run into a bug, fix it, and then try another change, the AI doesn't remember what failed last time. Phase 13.8 adds a local persistent, self-evolving "co-pilot memory" (the Cortex Soul) to your workspace. It stores a history of past attempts, tracks what approaches worked and what failed (Nemesis system), and adjusts the "cognitive lens" (Pharmaicy system) to reweight how it retrieves code context based on your active mode (like Debug, Forensic, or Planning). This prevents the AI from repeating mistakes and slashes your token bills by up to 70% by delivering only the most relevant, proven files.
+
+**Technical Terms & Engineering Spec**
+
+Implement the dynamic context orchestration framework alongside the deterministic, vector-and-graph-hybrid memory and reinforcement engine (Cortex Soul v1):
+
+### A. Core Co-Pilot Context Framework
+- **User Profile Model (`src/knowledge/profile.ts`)**: Loads and validates `user_profile.json` at the workspace root to check for team constraints (e.g. disallowed libraries) and risk tolerances.
+- **Experience Ledger (`src/knowledge/experience.ts`)**: Append-only telemetry manager logging sync decisions, validation outcomes, and reverted commits in `experience.jsonl`.
+- **Cognitive Search Ranker (`src/knowledge/find.ts` & `src/knowledge/packer.ts`)**: Reweights graph search and context-packing candidates dynamically based on the active task mode (`DEBUG` prioritizes past violations and reverts; `PLANNING` prioritizes high-centrality interfaces and parent structures).
+- **Mode-Adaptive Ingestion (`src/knowledge/writer.ts`)**: Applies sub-millisecond local regex heuristics against git diffs/commit messages to swap Librarian system prompts dynamically during synchronization (e.g. Debug prompt for emergency fixes).
+- **Relation Graph Hopping (`src/knowledge/graph.ts` & `src/knowledge/packer.ts`)**: Traverses explicit WikiLinks (1-2 hops) for creative architectural exploration, preventing vector hallucination.
+
+### B. Deterministic Cortex Soul Memory & Reinforcement Spec
+
+> **Cortex Soul** is a persistent memory graph system where memory nodes are weighted by outcome-based reinforcement (Nemesis-style evolution) and retrieved through lens-dependent scoring functions with optional controlled stochastic drift (Pharmaicy-style interpretation modes).
+
+#### 1. Memory Graph Data Structures (`src/knowledge/soul.ts`)
+```typescript
+export type MemoryNode = {
+  id: string;
+  type: "decision" | "event" | "insight" | "failure" | "success";
+  content: string;
+  timestamp: number;
+  embedding?: number[];
+  metadata: {
+    domain?: string;
+    source?: string;
+  };
+  // Nemesis-style evolution metrics
+  weights: {
+    salience: number;        // Importance score [0.0 - 1.0]
+    successBias: number;     // Reinforced if outcome is successful
+    failureBias: number;     // Reinforced if outcome is unsuccessful
+    decay: number;           // Time decay factor
+    certainty: number;       // Confidence in the memory's correctness [0.0 - 1.0]
+    credibility: number;     // Source trustworthiness [0.0 - 1.0]; higher for directly observed vs. inferred
+    energy: number;          // Activation potential [0.0 - 1.0]; decays without reinforcement, spikes on co-occurrence
+  };
+};
+
+export type MemoryEdge = {
+  from: string;
+  to: string;
+  type: "causal" | "contradiction" | "reinforcement" | "dependency" | "association";
+  strength: number;          // Edge relationship strength [0.0 - 1.0]
+};
+
+export type SoulState = {
+  globalBiases: {
+    riskTolerance: number;   // Affects code generation adventurousness [0.0 (cautious) - 1.0 (creative)]
+    creativityBias: number;  // Multiplier for semantic distance exploration
+    precisionBias: number;   // Weighting multiplier for strict static checks
+  };
+  memoryWeightMultiplier: Record<string, number>;
+};
+
+export type CognitiveLens = "ENGINEERING" | "FORENSIC" | "STRATEGIC" | "CREATIVE" | "EXECUTION";
+```
+
+#### 2. Weighted Memory Retrieval (Pharmaicy Logic)
+Compute candidate relevance by combining semantic similarity, node weights, active cognitive lenses, and evolving global biases:
+```typescript
+export function retrieveMemory(
+  query: string,
+  candidates: MemoryNode[],
+  lens: CognitiveLens,
+  soul: SoulState,
+  similarityFunc: (a: MemoryNode, q: string) => number,
+  K: number
+): { node: MemoryNode; score: number }[] {
+  return candidates
+    .map(node => ({
+      node,
+      score:
+        similarityFunc(node, query) *
+        node.weights.salience *
+        node.weights.decay *
+        getLensWeight(node, lens) *
+        getSoulBias(node, soul)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, K);
+}
+
+function getLensWeight(node: MemoryNode, lens: CognitiveLens): number {
+  switch (lens) {
+    case "ENGINEERING": return node.type === "decision" ? 1.2 : 1.0;
+    case "FORENSIC":    return node.type === "failure" ? 1.5 : 1.0;
+    case "STRATEGIC":   return node.metadata.domain ? 1.3 : 1.0;
+    case "CREATIVE":    return node.type === "insight" ? 1.4 : 1.1;
+    case "EXECUTION":   return node.type === "decision" ? 1.5 : 0.8;
+    default:            return 1.0;
+  }
+}
+
+function getSoulBias(node: MemoryNode, soul: SoulState): number {
+  let bias = 1.0;
+  if (node.type === "failure") bias *= (2.0 - soul.globalBiases.riskTolerance);
+  if (node.type === "insight") bias *= (1.0 + soul.globalBiases.creativityBias);
+  return bias;
+}
+```
+
+#### 3. Soul Evolution & Blocker Reinforcement Loop (Nemesis Logic)
+Runs immediately after code modifications, test executions, or commit verification loops to adapt weights based on outcome feedback:
+```typescript
+export function updateSoul(memoryNode: MemoryNode, outcome: { success: boolean }): void {
+  if (outcome.success) {
+    memoryNode.weights.salience += 0.1;
+    memoryNode.weights.successBias += 0.2;
+  } else {
+    memoryNode.weights.failureBias += 0.2;
+    memoryNode.weights.salience -= 0.05; // Slightly dampen salience to prevent locking onto failures
+  }
+  memoryNode.weights.salience = Math.min(Math.max(memoryNode.weights.salience, 0), 1);
+}
+
+export function applyDecay(node: MemoryNode, deltaTime: number): void {
+  node.weights.salience *= Math.exp(-node.weights.decay * deltaTime);
+}
+
+export function applyDrift(nodes: { node: MemoryNode; score: number }[], driftLevel: number): { node: MemoryNode; score: number }[] {
+  if (driftLevel === 0) return nodes;
+  return nodes.map(n => ({
+    ...n,
+    score: n.score + (Math.random() - 0.5) * 2 * driftLevel // Pseudo-Gaussian stochastic exploration
+  }));
+}
+```
+
+#### 4. Advanced Cortex Soul Enhancements (Lightweight & Safe)
+
+##### A. Co-Occurrence Graph Reinforcement (Undocumented File Connection Engine)
+- **Layman's Terms**: The system remembers which files you edit together. If you change a database file and always end up editing a specific UI handler, Cortex automatically links them. The next time you edit that database file, it warns you: *"Hey, you usually edit this UI file too, don't forget it!"*
+- **Technical Terms**: `association` type memory edges are created or reinforced during ingestion whenever multiple files are modified in a single successful sync pass. This implements implicit behavior mapping without LLM calls.
+```typescript
+export function reinforceCoOccurrence(modifiedEntityIds: string[], edges: MemoryEdge[]): MemoryEdge[] {
+  for (let i = 0; i < modifiedEntityIds.length; i++) {
+    for (let j = i + 1; j < modifiedEntityIds.length; j++) {
+      const from = modifiedEntityIds[i];
+      const to = modifiedEntityIds[j];
+      let edge = edges.find(e => (e.from === from && e.to === to) || (e.from === to && e.to === from));
+      if (edge) {
+        edge.strength = Math.min(edge.strength + 0.05, 1.0);
+      } else {
+        edges.push({ from, to, type: "association", strength: 0.1 });
+      }
+    }
+  }
+  return edges;
+}
+```
+
+##### B. Adaptive Forensic Guardrail (Dynamic Risk Clamping)
+- **Layman's Terms**: If a specific section of code has broken your tests or compilation loops in the past, Cortex gets extremely cautious. It automatically activates strict validation modes and forces rigorous checks so you don't repeat the mistake.
+- **Technical Terms**: Scan matching historic `failure` memory nodes for a target entity. If the maximum historical failure bias exceeds a safe threshold, the workspace risk tolerance is dynamically clamped to maximum strictness.
+```typescript
+export function evaluateRiskClamping(targetEntity: string, candidates: MemoryNode[], soul: SoulState): number {
+  const matchingFailures = candidates.filter(n => n.metadata.source === targetEntity && n.type === "failure");
+  const maxFailureBias = Math.max(...matchingFailures.map(n => n.weights.failureBias), 0);
+  if (maxFailureBias > 0.6) {
+    soul.globalBiases.riskTolerance = 0.1; // Force maximum caution
+  }
+  return soul.globalBiases.riskTolerance;
+}
+```
+
+##### C. Temporal Landmark Compression (Memory Chunking)
+- **Layman's Terms**: Instead of remembering every tiny detail of your 500 past edits (which would slow the AI down and cost you money), Cortex compresses older history into "Story Chapters" (like "Module A Redesign"). It keeps the high-level lesson but drops the microscopic file-by-file clutter.
+- **Technical Terms**: Compresses episodic memory nodes within a temporal window into a single parent landmark node when an ingestion boundary stabilizes, reducing active memory search overhead.
+```typescript
+export function compressMilestone(nodes: MemoryNode[], milestoneName: string): MemoryNode {
+  return {
+    id: `milestone-${Date.now()}`,
+    type: "insight",
+    content: `Compressed Milestone: ${milestoneName}. Unified lessons from ${nodes.length} historical modifications.`,
+    timestamp: Date.now(),
+    metadata: { domain: "milestone" },
+    weights: { salience: 0.8, successBias: 0.5, failureBias: 0.0, decay: 0.01 }
+  };
+}
+```
+
+#### 5. Dynamic Run-Loop Execution Flow
+```mermaid
+graph TD
+    Query["User Task / Code Commit"] --> Lens["Select Cognitive Lens (e.g. FORENSIC on tests)"]
+    Lens --> Retrieve["Retrieve Memory (Similarity × Salience × Decay × Lens × SoulBias)"]
+    Retrieve --> Drift["Apply Stochastic Drift (Creative exploration)"]
+    Drift --> LLM["Assemble Context & Generate Response"]
+    LLM --> Exec["Evaluate Outcome (CI validation, compiler, or user feedback)"]
+    Exec --> Update["Update Soul State (Nemesis success/failure reinforcement)"]
+    Update --> Store["Commit new MemoryNode to physical state"]
+```
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (Fuzzy Search Ranker) and Phase 13.7.2 (Speculative Retrieval Guardrails) are completed.
+
+**Definition of Done (DoD)**
+- **User Profile Modeling (`user_profile.json`)**: A structured `.knowledge/user_profile.json` is created and parsed to inject developer rules, disallowed libraries, and preferred brevity styles without context window pollution.
+- **Systemic Experience Ledger (`experience.jsonl`)**: An append-only transaction stream `.knowledge/experience.jsonl` logs sync decisions, verification results, and reverts to identify unstable patterns and prevent repetitive AI errors.
+- **Cognitive Mode-Based Reranking (`cognitive.ts`)**: The search ranker adjusts node weights dynamically based on active intent modes (e.g. `DEBUG` prioritizes past faults, `PLANNING` prioritizes parent structures), delivering 3x higher relevance in the exact same token limits.
+- **Mode-Adaptive Ingestion**: Sub-millisecond regex checks of git diffs swap Librarian prompts dynamically during synchronizations (e.g., swapping to a specialized Debug prompt on bug-fix code commits).
+- **Relation-Based Graph Hopping**: The query traversal engine navigates 1-2 hops along explicit conceptual `[[WikiLink]]` paths when in `CREATIVE` mode to recommend architectural parallels without semantic vector hallucinations.
+- **Deterministic Schema Enforcement**: The memory graph, nodes, and weights are successfully serialized in `.knowledge/soul_state.json` and validated using strict schemas.
+- **Outcome-Based Weight Reinforcement**: Running a sync with a test failure or code revert successfully updates `failureBias` and `salience` on the targeted entities.
+- **Dynamic Retrieval Re-ranking**: Search and context extraction queries with the `FORENSIC` lens boost past failures by a verified factor of >= 1.5 in retrieval scores.
+- **Co-Occurrence Graph Mapping**: Successful edits to multiple files automatically create or increment `association` edge strengths without LLM overhead.
+- **Adaptive Risk Clamping**: Accessing an entity with `max(failureBias) > 0.6` clamps `riskTolerance` to `0.1`, verified by test suites.
+- **Milestone Compression**: Epoch execution runs correctly collapse older log arrays into consolidated landmark `insight` nodes.
+- Tests verify retrieval scoring correctness, lens weight amplification, outcome bias updates, and decay/drift operations.
+
+**Pros & Cons**
+- ✅ **Pros**: Prevents repetitive AI coding failure loops by grounding it in local workspace history; slashes token overhead by 50% via high-relevance lens filtering; creates a persistent codebase experience.
+- ❌ **Cons**: Requires structuring output feedback (success/failure) from local compiler runs or IDE commands to trigger the update loop reliably.
+
+---
+
+## 🔗 Phase 13.8.2: Dynamic Co-Edit Edge Weighting — ⏳ Planned
+
+**Layman's Terms**
+Right now, every knowledge graph tool (Obsidian, Notion, Roam, and Cortex today) uses **static links**. When you write `AuthController depends_on JwtUtils`, that link is either there or it isn't — it never gets stronger or weaker. But in real codebases, some file pairs are edited together *constantly* (controller + its test, service + its DTO), while other links go stale and never get touched again. Phase 13.8.2 makes Cortex's graph edges **alive** — they strengthen automatically when files are co-edited in the same commit and decay slowly when they drift apart. This means the context packer automatically prioritizes the files you *actually work with together*, not just the ones that happen to have an import statement.
+
+**Why This Matters (The Competitive Differentiator)**
+Every competitor treats dependency edges as binary switches (exists / doesn't exist). Cortex will be the first architectural memory tool where the graph **learns from your editing patterns** without any LLM calls. When the context packer has to choose which 5 files to include in a 4,000-token budget, it picks the ones with the highest co-edit weight — the files that *actually matter together* based on real developer behavior, not just static import analysis.
+
+**Technical Terms & Engineering Spec**
+
+### A. Core Mechanism: 3-Tier Co-Edit Signal Stack
+
+Co-edit detection does **not** require git commits. It fires on three independent signal layers, each with a different trust level, so that even uncommitted edits build up co-edit weight over time:
+
+#### Tier 1 — File-System Co-Saves (Weakest, Finest Grain)
+When `cortex watch` detects file-save events, it groups files saved within a configurable time window (default: 60 seconds). Files saved in the same window are treated as a co-edit pair.
+```typescript
+// Tier 1: co-save within 60s window
+edge.coEditWeight = edge.coEditWeight * (1 - 0.02) + 0.02;
+// Very weak signal — could be coincidence. Takes ~50 co-saves to reach 0.5
+```
+
+#### Tier 2 — Sync Diff Co-Occurrence (Medium, Default Trigger)
+On every `cortex sync` (manual or watcher-triggered), Cortex runs `git diff` which includes **unstaged, uncommitted working-tree changes**. All files appearing in the same sync diff are co-edit pairs.
+```typescript
+// Tier 2: both files appear in the same sync diff (committed or not)
+edge.coEditWeight = edge.coEditWeight * (1 - 0.05) + 0.05;
+// Medium signal — you actively changed both since last sync
+```
+
+#### Tier 3 — Git Commit Bundling (Strongest, Coarsest Grain)
+When the sync diff includes committed changes, files that share the same commit hash get the strongest co-edit signal.
+```typescript
+// Tier 3: both files in the same git commit
+edge.coEditWeight = edge.coEditWeight * (1 - 0.10) + 0.10;
+// Strongest signal — you deliberately bundled these together
+```
+
+#### Decay on Every Sync Tick
+Edges that were **not** co-edited in the current sync tick decay slowly:
+```typescript
+// For every edge NOT co-edited in this tick:
+edge.coEditWeight *= decayFactor;
+// decayFactor = 0.995 (slow decay — takes ~140 syncs to halve)
+```
+
+**Why 3 tiers?** A developer who never commits but saves files A and B together 20 times still builds `coEditWeight ≈ 0.33` from Tier 1 alone. Committing is the strongest signal, but it's not required. The system learns from whatever workflow the developer actually uses.
+
+#### IDE/MCP Route — Tier 4: `save_synthesis` sourceFile Extraction
+When the developer uses the **IDE route** (Gemini, Claude, Cursor calling MCP tools directly), there is no `cortex watch` daemon and no file-system watcher running. Tiers 1-3 don't fire because there's no CLI sync loop. Instead, co-edit signals come from the MCP tools themselves:
+
+- **`save_synthesis` hook**: Every entity in a synthesis call carries a `sourceFile` field. When `save_synthesis` receives entities touching multiple source files in a single call, those files are treated as a co-edit set:
+  ```typescript
+  // Inside save_synthesis handler:
+  const sourceFiles = synthesis.entities
+    .map(e => e.sourceFile)
+    .filter(Boolean);
+  // All unique pairs from this set = co-edited
+  for (const [fileA, fileB] of allPairs(sourceFiles)) {
+    edge.coEditWeight = edge.coEditWeight * (1 - 0.08) + 0.08;
+  }
+  ```
+- **`ingest` hook**: When the agent calls `ingest` (which internally calls `get_pending_changes` → LLM → `save_synthesis`), Tier 2 and 3 fire naturally since `get_pending_changes` reads `git diff`.
+- **`get_pending_changes` is read-only** — it does not update co-edit weights. Weights only update on write operations (`save_synthesis` or `ingest`).
+
+| Route | Tiers That Fire | How |
+| :--- | :--- | :--- |
+| **CLI (`cortex watch` / `cortex sync`)** | Tier 1 + 2 + 3 | fs watcher + git diff + commit hash grouping |
+| **IDE/MCP (`save_synthesis` direct)** | Tier 4 | sourceFile extraction from synthesis entities |
+| **IDE/MCP (`ingest` tool)** | Tier 2 + 3 + 4 | git diff (via get_pending_changes) + sourceFile extraction |
+
+### B. Where Co-Edit Weights Are Used
+
+| Cortex Subsystem | How It Uses Co-Edit Weights |
+| :--- | :--- |
+| **Context Packer (`src/knowledge/packer.ts`)** | When assembling `build_context_pack`, entities with high co-edit weights to the currently modified files are boosted in the priority ranking. A file with `coEditWeight: 0.8` to the active file beats a file with `coEditWeight: 0.1` even if the latter has higher PageRank centrality. |
+| **Graph Visualization (`graph` tool)** | Edge thickness in the Mermaid output scales with `coEditWeight`. Thick edges = frequently co-edited. Thin/dashed edges = stale connections that may be candidates for pruning. |
+| **Stale Detection (`audit` tool)** | If an entity has `depends_on` relationships but all of them have `coEditWeight < 0.05`, that's a signal the dependency may be dead code. Flag it in the audit report. |
+| **Impact Analysis (`impact_analysis` tool)** | When computing blast radius, weight the severity of downstream impact by co-edit strength. A dependent with `coEditWeight: 0.9` is a much higher blast-radius risk than one with `coEditWeight: 0.02`. |
+
+### C. Data Model Changes
+
+Add a `coEditWeight` field to the existing relationship model in `state.json`:
+```typescript
+interface Relationship {
+  target: string;
+  kind: "depends_on" | "called_by" | "supports" | "contradicts" | "derived_from" | "parent_of";
+  coEditWeight?: number;  // 0.0 to 1.0, default 0.0 for new edges
+}
+```
+
+The weight is stored per-edge in `state.json` and persisted across syncs. No additional files needed — it piggybacks on the existing graph structure.
+
+### D. Implementation Scope
+
+- **File**: `src/knowledge/writer.ts` — Add co-edit extraction from both git diff (CLI route) and `sourceFile` fields (IDE route). Run EMA update loop during `save_synthesis`.
+- **File**: `src/knowledge/packer.ts` — Modify `build_context_pack` centrality ranking to blend PageRank with co-edit weight (configurable blend ratio via `CORTEX_COEDIT_BLEND`, default `0.3`).
+- **File**: `src/knowledge/manager.ts` — Add `decayCoEditWeights()` method called on every sync tick or `save_synthesis` call.
+- **File**: `src/mcp/tools.ts` — Expose co-edit weights in `graph` and `impact_analysis` tool outputs. Add Tier 4 hook inside the `save_synthesis` MCP handler.
+- **Config**: `CORTEX_COEDIT_ALPHA` (learning rate, default `0.1`), `CORTEX_COEDIT_DECAY` (decay factor, default `0.995`), `CORTEX_COEDIT_BLEND` (packer blend ratio, default `0.3`).
+
+**Architecture & System Design**
+
+```mermaid
+flowchart LR
+    subgraph CLI Route
+        FS["File-System Saves (Tier 1)"] --> EMA
+        Diff["Git Diff (Tier 2+3)"] --> EMA
+    end
+    subgraph IDE Route
+        SaveSynth["save_synthesis sourceFiles (Tier 4)"] --> EMA
+        Ingest["ingest → get_pending_changes (Tier 2+3)"] --> EMA
+    end
+    EMA["EMA Update Loop"] --> StateJson["state.json (coEditWeight on edges)"]
+    StateJson --> Packer["Context Packer (blended ranking)"]
+    StateJson --> Graph["Graph Tool (edge thickness)"]
+    StateJson --> Audit["Audit Tool (dead-edge detection)"]
+    StateJson --> Impact["Impact Analysis (weighted blast radius)"]
+    Tick["Sync Tick / save_synthesis call"] --> Decay["Decay All Untouched Edges"]
+    Decay --> StateJson
+```
+
+**Definition of Ready (DoR)**
+- Phase 6 (Typed Relationships) is completed — co-edit weights extend the existing `relationships[]` array.
+- Phase 13.8 (Cortex Soul) is completed or in progress — the co-edit weight system complements the Soul's experience ledger.
+
+**Definition of Done (DoD)**
+- **EMA Update Verified**: Co-editing files A and B in 5 consecutive commits increases `coEditWeight(A,B)` from 0.0 to ≥ 0.41 (verified mathematically: `1 - 0.9^5`).
+- **Decay Verified**: An edge untouched for 100 syncs decays from 1.0 to ≤ 0.61 (verified: `0.995^100`).
+- **Packer Integration**: `build_context_pack` with `CORTEX_COEDIT_BLEND=0.3` provably reorders entity priority vs pure PageRank when co-edit weights diverge.
+- **Graph Visualization**: `graph` tool output shows co-edit weights as edge annotations or thickness variations.
+- **Audit Integration**: `audit` tool flags `depends_on` edges with `coEditWeight < 0.05` as potentially stale.
+- **Zero LLM Cost**: The entire feature operates without any LLM calls — purely local git analysis and arithmetic.
+- Tests cover: EMA convergence, decay rate correctness, packer reordering, edge creation for new co-edit pairs, decay-to-zero cleanup threshold.
+
+**Pros & Cons**
+- ✅ **Pros**: First architectural memory tool with graph edges that learn from developer behavior; zero LLM cost; ~50 lines of core logic; directly improves context relevance for the most common editing patterns; complements Phase 13.8 Soul without adding complexity.
+- ❌ **Cons**: Requires git history access (already available via existing diff extraction); co-edit signal is noisy for large refactoring commits where 30+ files change together (mitigated by capping pair generation to files within the same directory bucket, reusing Phase 14's clustering logic when available).
+
+### E. Transitive Co-Edit Inference (2-Hop)
+
+If File A and File B are frequently co-edited (`coEditWeight(A,B) = 0.7`), and File B and File C are frequently co-edited (`coEditWeight(B,C) = 0.6`), infer a **transitive co-edit weight** for A↔C even if they've never been directly edited together:
+
+```typescript
+// Transitive inference: product of path weights
+transitiveWeight(A, C) = coEditWeight(A, B) * coEditWeight(B, C);
+// = 0.7 * 0.6 = 0.42
+```
+
+- **Implementation**: 2-hop BFS from the active file during `build_context_pack`. For each neighbor's neighbor, compute the product-of-path weight. Cap at 2 hops to avoid noise.
+- **Where it fires**: Inside `src/knowledge/packer.ts` during context assembly.
+- **Why it matters**: Catches "hidden companion" files that should be in context but have zero direct signal. Without this, `tokenConfig.ts` would never appear when editing `authController.ts`, even though `jwtUtils.ts` bridges them.
+- **DoD**: Transitive weight for a 2-hop path (A→B→C with weights 0.7 and 0.6) computes to 0.42 and successfully promotes File C into the context pack when File A is active.
+
+### F. Triangle Detection for Stable Context Caching
+
+Detect whether a group of 3 frequently co-edited files forms a **triangle** (all three pairwise edges have `coEditWeight > 0.3`) or a **chain** (only two of three edges are active):
+
+- **Triangle detected** (A↔B, B↔C, A↔C all strong): These 3 files are a **stable context unit**. Cache their combined summary as an atomic group in the packer. When any one is touched, always pull all three without re-evaluating individual edges.
+- **Chain detected** (A↔B, B↔C strong, but A↔C weak): The relationship is **volatile**. Do not cache as a unit. Evaluate each edge independently per sync.
+
+```typescript
+function isTriangle(a: string, b: string, c: string, edges: Map): boolean {
+  const threshold = 0.3;
+  return getWeight(a, b) > threshold
+      && getWeight(b, c) > threshold
+      && getWeight(a, c) > threshold;
+}
+```
+
+- **Implementation**: Cycle detection in `src/knowledge/packer.ts` during context assembly (~20 lines).
+- **Why it matters**: Avoids re-evaluating stable groups every sync. Once identified, triangles become atomic packer units, reducing computation and improving cache hit rates.
+- **DoD**: A triangle of 3 files with all pairwise `coEditWeight > 0.3` is cached as a single atomic context unit and served without per-edge re-evaluation.
+
+### G. Monogamy Constraint on Token Budget
+
+If File B has a very strong co-edit weight with File A (`coEditWeight(B,A) = 0.9`), then File B's co-edit weight with all other files should be **discounted** in packer ranking. B's "context attention" is already consumed by A:
+
+```typescript
+// Monogamy discount: strongest edge consumes attention budget
+effectiveWeight(B, C) = coEditWeight(B, C) * (1 - maxCoEditWeight(B));
+// If max is 0.9: effectiveWeight = 0.6 * (1 - 0.9) = 0.06
+```
+
+- **Implementation**: Single multiplication per edge during `build_context_pack` ranking (~3 lines).
+- **Why it matters**: Prevents hub files (like `utils.ts`) that are co-edited with everything from pulling in their entire neighborhood. The monogamy constraint forces the budget toward the *strongest* companion only.
+- **DoD**: A hub file with `coEditWeight: 0.9` to File A and `coEditWeight: 0.6` to File C produces `effectiveWeight(hub, C) = 0.06`, verified to not promote File C over genuinely relevant files.
+
+### H. Oja's Rule Weight Normalization
+
+Prevent co-edit weights from saturating at 1.0 for "everything files" (e.g., `index.ts`, `utils.ts`) that appear in every commit. Apply Oja's normalization rule after each EMA update to keep the weight vector bounded:
+
+```typescript
+// After EMA update, normalize: Oja's rule
+const norm = Math.sqrt(edges.reduce((sum, e) => sum + e.coEditWeight ** 2, 0));
+if (norm > 1) edges.forEach(e => e.coEditWeight /= norm);
+```
+
+- **Implementation**: 3 lines in `src/knowledge/writer.ts`, called after each EMA update batch.
+- **Why it matters**: Without normalization, files touched in every commit would accumulate `coEditWeight: 1.0` with everything, making the signal useless. Oja's rule ensures weights represent *relative* co-edit importance, not absolute frequency.
+- **DoD**: A file co-edited with 20 other files has its weights normalized such that the L2 norm of its outgoing weights ≤ 1.0.
+
+### I. Casimir Shortcut Channels
+
+When two entity clusters have high mutual co-edit weight (inter-cluster `coEditWeight > 0.3` for 3+ entity pairs) but are separated by a chain of low-quality noise nodes (quality < 0.4, no inbound edges from outside the chain), create a **direct shortcut edge** between the clusters, bypassing the noise. The shortcut edge carries `kind: "shortcut"` with `coEditWeight` set to the mean inter-cluster weight.
+
+- **Implementation**: post-processing pass in `src/knowledge/graph.ts` after co-edit weights are computed. Reuses Phase 14's Leiden community detection to identify clusters, computes inter-cluster co-edit density, creates shortcut edges where density exceeds threshold.
+- **Why it matters**: Accelerates retrieval between coupled clusters — the context packer traverses 1 hop instead of N hops through noisy intermediaries. Edge count stays bounded because shortcuts are only created where behavioral (co-edit) evidence supports a real connection.
+- **DoD**: Two clusters with mean inter-cluster co-edit weight 0.4 connected via a 5-hop path of quality < 0.3 nodes produce a direct shortcut edge. Retrieval between clusters is 1 hop.
+
+---
+
+## 🎯 Phase 13.8.3: Simulated Annealing for Context Packing — ⏳ Planned
+
+**Layman's Terms**
+When Cortex builds the context pack for your AI, it's solving a version of the Knapsack Problem: given 50 files of varying sizes and relevance scores, pick the subset that maximizes total relevance while fitting within your token budget. This is NP-hard — greedy algorithms get stuck picking one large, moderately relevant file when three small, highly relevant files would have been better. Phase 13.8.3 adds Simulated Annealing (SA) to the packer, allowing it to explore non-obvious combinations and find significantly better context packs in <10ms.
+
+**Technical Terms & Engineering Spec**
+
+### A. The Problem: Greedy Gets Stuck
+
+Current packer (Phase 5): sort entities by centrality score, take from top until budget exhausted.
+
+```
+Greedy result:   [User.ts (800 tok), AppError.ts (600 tok)]  → 1400/2000 tokens
+                 600 tokens wasted, 2 files, moderate relevance
+
+SA result:       [jwtUtils (300), authMiddleware (250), tokenConfig (200),
+                  authRoutes (150), User.ts (800)]             → 1700/2000 tokens
+                 300 tokens wasted, 5 files, high relevance
+```
+
+### B. The Algorithm
+
+```typescript
+function annealContextPack(
+  entities: ScoredEntity[],
+  budget: number,
+  options: { initTemp?: number; coolingRate?: number; iterations?: number }
+): ScoredEntity[] {
+  const { initTemp = 1.0, coolingRate = 0.995, iterations = 500 } = options;
+  let current = greedyPack(entities, budget); // start from greedy solution
+  let bestScore = totalRelevance(current);
+  let best = [...current];
+  let temp = initTemp;
+
+  for (let i = 0; i < iterations; i++) {
+    // Perturbation: swap one file in the pack with one outside
+    const candidate = perturb(current, entities, budget);
+    const candidateScore = totalRelevance(candidate);
+    const delta = candidateScore - totalRelevance(current);
+
+    // Metropolis criterion: accept improvements always, accept worse
+    // solutions with decreasing probability as temperature cools
+    if (delta > 0 || Math.random() < Math.exp(delta / temp)) {
+      current = candidate;
+      if (candidateScore > bestScore) {
+        best = [...candidate];
+        bestScore = candidateScore;
+      }
+    }
+    temp *= coolingRate;
+  }
+  return best;
+}
+```
+
+### C. Implementation Scope
+
+- **File**: `src/knowledge/packer.ts` — Add `annealContextPack()` as an alternative to the existing greedy sort. Gated behind `CORTEX_PACKER_MODE` config (`greedy` | `annealing`, default `greedy`).
+- **Performance**: 500 iterations at ~0.02ms each = ~10ms total. Negligible compared to LLM round-trip.
+- **Config**: `CORTEX_PACKER_MODE` (default `greedy`), `CORTEX_SA_ITERATIONS` (default `500`), `CORTEX_SA_COOLING` (default `0.995`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer) and Phase 13.8.2 (Co-Edit Weights) are completed.
+
+**Definition of Done (DoD)**
+- SA packer produces measurably higher total relevance scores than greedy packer on test cases with >20 candidate entities.
+- SA packer respects token budget — never exceeds allocated limit.
+- SA packer runs in <50ms for up to 200 candidate entities.
+- `CORTEX_PACKER_MODE=greedy` preserves existing behavior (no regression).
+- Tests cover: budget boundary, improvement over greedy on known-suboptimal cases, cooling convergence.
+
+**Pros & Cons**
+- ✅ **Pros**: 10-30% better context quality on complex codebases where greedy gets stuck; mathematically proven to converge toward global optimum; zero LLM cost; <10ms runtime.
+- ❌ **Cons**: Non-deterministic output (different runs may produce slightly different packs); adds ~80 lines of code; marginal improvement on small codebases (<20 entities) where greedy is already near-optimal.
+
+---
+
+## 🎯 Phase 13.8.4: Quantum Walk-Inspired Entity Ranking — ⏳ Planned
+
+**Layman's Terms**
+PageRank imagines a random person clicking links. It works, but it has a problem: in well-structured codebases, many files end up with identical importance scores — the algorithm can't tell them apart. Phase 13.8.4 replaces the random-surfer model with a "quantum walk" — a mathematically different way of exploring the graph that spreads faster and uses wave-like interference to amplify truly important nodes while suppressing noise. This runs on normal computers (no quantum hardware needed) and breaks ties that PageRank can't resolve.
+
+**Technical Terms & Engineering Spec**
+
+### A. Why PageRank Has Degeneracy Problems
+
+In a well-organized codebase, many modules have similar connectivity (e.g., 5 controllers each depending on 3 services each). PageRank assigns them nearly identical scores. The packer then has to break ties arbitrarily — usually alphabetically or by file size, which is meaningless.
+
+### B. Szegedy Quantum Walk (Classical Simulation)
+
+The quantum walk operates on the same graph but uses a **unitary evolution** operator instead of a stochastic transition matrix:
+
+```typescript
+function quantumWalkRank(
+  adjacency: number[][],
+  steps: number = 20
+): number[] {
+  const n = adjacency.length;
+  // Build Szegedy walk operator from adjacency matrix
+  const P = buildTransitionMatrix(adjacency);       // same as PageRank
+  const W = buildSzegedyOperator(P);                // unitary operator (2n × 2n)
+
+  // Initialize uniform superposition
+  let state = uniformSuperposition(2 * n);
+
+  // Evolve for T steps
+  for (let t = 0; t < steps; t++) {
+    state = matVecMul(W, state);
+  }
+
+  // Measure: probability of finding the walker at each node
+  const scores = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    scores[i] = state[i] ** 2 + state[i + n] ** 2;  // sum of amplitudes squared
+  }
+  return normalize(scores);
+}
+```
+
+### C. Key Advantage: Resolving Degeneracies
+
+Where PageRank gives 5 controllers identical scores (e.g., all 0.042), quantum walk produces differentiated scores (e.g., 0.051, 0.048, 0.039, 0.035, 0.027) based on deeper structural properties — secondary hub connectivity, cluster membership, and bridge positions.
+
+### D. Implementation Scope
+
+- **File**: `src/knowledge/packer.ts` — Add `quantumWalkRank()` as an alternative centrality scorer. Gated behind `CORTEX_RANK_MODE` config (`pagerank` | `qwalk`, default `pagerank`).
+- **Performance**: O(n² × steps) where n = entity count, steps = 20. For 200 entities: ~8ms.
+- **Config**: `CORTEX_RANK_MODE` (default `pagerank`), `CORTEX_QWALK_STEPS` (default `20`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer with PageRank) is completed.
+
+**Definition of Done (DoD)**
+- Quantum walk ranking produces strictly fewer tied scores than PageRank on a test graph with ≥20 nodes of similar connectivity.
+- Scores are normalized to sum to 1.0 (valid probability distribution).
+- Ranking is deterministic (same graph → same scores, unlike SA).
+- `CORTEX_RANK_MODE=pagerank` preserves existing behavior.
+- Tests cover: tie-breaking verification, score normalization, performance under 50ms for 200 entities.
+
+**Pros & Cons**
+- ✅ **Pros**: Breaks ties that PageRank cannot; deterministic; classically simulable; well-studied mathematical foundation; better at identifying secondary hubs and bridge nodes.
+- ❌ **Cons**: O(n²) complexity vs O(n) for PageRank — acceptable for <500 entities but not for massive monorepos; conceptually harder for contributors to understand; marginal improvement when graph has natural hierarchy (few ties).
+
+---
+
+## 🎯 Phase 13.8.5: Contextual RAG Preprocessing — ⏳ Planned
+
+**Layman's Terms**
+When Cortex sends a code file to the AI, it sends the raw content with no explanation. The AI has to figure out *why* this file is in the context pack. Phase 13.8.5 prepends a 1-sentence "relevance header" to each entity in the pack — explaining why Cortex included it (e.g., "Included because it shares a strong co-edit pattern with the active file" or "Included as a high-centrality hub that many modules depend on"). This makes the AI significantly better at using the context correctly.
+
+**Technical Terms & Engineering Spec**
+
+### A. The Problem: Uncontextualized Chunks
+
+Current context pack output:
+```
+## AuthMiddleware
+Role: Express middleware for JWT verification...
+```
+
+AI's internal question: *"Why am I seeing this? Is the user editing this? Does it depend on what I'm changing? Should I modify it?"*
+
+### B. The Solution: Relevance Headers
+
+Enhanced context pack output:
+```
+## AuthMiddleware
+> 📎 Included: co-edit weight 0.72 with active file AuthController.
+> Direct dependent — changes to AuthController may require updates here.
+
+Role: Express middleware for JWT verification...
+```
+
+### C. Header Generation (Zero LLM Cost)
+
+Headers are generated deterministically from graph signals already available:
+
+```typescript
+function generateRelevanceHeader(entity: Entity, activeFile: string): string {
+  const reasons: string[] = [];
+  const coEdit = getCoEditWeight(entity, activeFile);
+  if (coEdit > 0.3) reasons.push(`co-edit weight ${coEdit.toFixed(2)} with active file`);
+  const rel = getRelationship(entity, activeFile);
+  if (rel) reasons.push(`${rel.kind} relationship`);
+  if (entity.centrality > 0.7) reasons.push(`high-centrality hub (${entity.centrality.toFixed(2)})`);
+  return reasons.length > 0
+    ? `> 📎 Included: ${reasons.join('; ')}.\n`
+    : '';
+}
+```
+
+### D. Implementation Scope
+
+- **File**: `src/knowledge/packer.ts` — Add header injection step after entity selection, before serialization.
+- **Token overhead**: ~15-30 tokens per entity. For a pack of 8 entities: ~200 extra tokens (trivial vs the thousands saved by better AI decisions).
+- **Config**: `CORTEX_CONTEXT_HEADERS` (default `true`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer) and Phase 13.8.2 (Co-Edit Weights) are completed.
+
+**Definition of Done (DoD)**
+- Every entity in `build_context_pack` output includes a relevance header when `CORTEX_CONTEXT_HEADERS=true`.
+- Headers are generated deterministically from graph signals (no LLM calls).
+- Headers add ≤30 tokens per entity.
+- `CORTEX_CONTEXT_HEADERS=false` suppresses all headers.
+- Tests cover: header generation for co-edit, relationship, and centrality signals; empty header for entities with no clear relevance signal.
+
+**Pros & Cons**
+- ✅ **Pros**: Makes the AI understand *why* each file is in context, leading to better-targeted responses; zero LLM cost; ~30 lines of code; trivial token overhead.
+- ❌ **Cons**: Adds slight token overhead per entity; headers may become stale if graph signals change mid-session (mitigated by regenerating on each `build_context_pack` call).
+
+---
+
+## 🎯 Phase 13.8.6: Selective Retrieval Gate — ⏳ Planned
+
+**Layman's Terms**
+Not every question needs Cortex to search the knowledge base. If the developer asks "what does `console.log` do?", Cortex shouldn't waste time retrieving architectural context. Phase 13.8.6 adds a cheap pre-filter that decides — before doing any retrieval — whether the current query actually *needs* external context. If not, it skips retrieval entirely, saving tokens and latency.
+
+**Technical Terms & Engineering Spec**
+
+### A. The Gate: Keyword + Heuristic Classifier
+
+```typescript
+function needsRetrieval(query: string, activeFile: string | null): boolean {
+  // Skip retrieval for generic knowledge questions
+  const genericPatterns = [
+    /what (is|does|are)/i,
+    /explain/i,
+    /how do I/i,
+    /syntax for/i,
+  ];
+  if (genericPatterns.some(p => p.test(query)) && !activeFile) return false;
+
+  // Skip retrieval if no active file context
+  if (!activeFile) return false;
+
+  // Always retrieve for modification-intent queries
+  const modifyPatterns = [
+    /refactor/i, /fix/i, /add/i, /implement/i, /change/i,
+    /update/i, /modify/i, /delete/i, /rename/i, /move/i,
+  ];
+  if (modifyPatterns.some(p => p.test(query))) return true;
+
+  // Default: retrieve
+  return true;
+}
+```
+
+### B. Implementation Scope
+
+- **File**: `src/mcp/tools.ts` — Add gate check before `build_context_pack` and `read_entity` calls in tool handlers.
+- **Config**: `CORTEX_RETRIEVAL_GATE` (default `true`).
+
+**Definition of Ready (DoR)**
+- Phase 5 (Context Packer) is completed.
+
+**Definition of Done (DoD)**
+- Queries matching generic patterns with no active file context skip retrieval entirely.
+- Queries with modification intent always trigger retrieval.
+- `CORTEX_RETRIEVAL_GATE=false` disables the gate (always retrieve).
+- Tests cover: generic question bypass, modification intent pass-through, edge cases.
+
+**Pros & Cons**
+- ✅ **Pros**: Saves tokens and latency on ~20% of typical IDE interactions that don't need architectural context; ~15 lines of code; zero false negatives on modification-intent queries.
+- ❌ **Cons**: Risk of false negatives — a question phrased generically might actually need context. Mitigated by defaulting to retrieve when uncertain.
+
+---
+
+## 🎯 Phase 13.8.7: Spike-Based Event-Driven Graph Updates — ⏳ Planned
+
+**Layman's Terms**
+Right now, `cortex watch` polls for file changes on a timer or file-system event, then runs the full sync pipeline. Phase 13.8.7 makes the graph update system event-driven: instead of checking everything on every tick, it only updates the specific edges and nodes that were "spiked" by a relevant event (file save, compile pass/fail, test result). This reduces idle CPU usage and makes updates near-instant for the affected subgraph.
+
+**Technical Terms & Engineering Spec**
+
+### A. Spike Events
+
+Borrowed from Spiking Neural Networks (SNNs): instead of continuous polling, define discrete "spike" events that trigger targeted graph updates:
+
+| Spike Event | Source | What It Updates |
+| :--- | :--- | :--- |
+| `FILE_SAVE` | fs watcher | co-edit weights for the saved file's edges (Tier 1) |
+| `COMPILE_PASS` | compiler/build tool | Boost `coEditWeight` for all files in the successful build |
+| `COMPILE_FAIL` | compiler/build tool | Decay `coEditWeight` for files in the failed build |
+| `TEST_PASS` | test runner | Strengthen edges between test file and its source file |
+| `TEST_FAIL` | test runner | Flag the source file's entity for staleness check |
+| `GIT_COMMIT` | git hook | Tier 3 co-edit weight update for committed files |
+| `BRANCH_SWITCH` | git hook | Reset all active co-edit weights to baseline (ESD) |
+
+### B. Spike Processing
+
+```typescript
+interface Spike {
+  type: 'FILE_SAVE' | 'COMPILE_PASS' | 'COMPILE_FAIL' | 'TEST_PASS' | 'TEST_FAIL' | 'GIT_COMMIT' | 'BRANCH_SWITCH';
+  files: string[];
+  timestamp: number;
+}
+
+function processSpike(spike: Spike, graph: KnowledgeGraph): void {
+  switch (spike.type) {
+    case 'FILE_SAVE':
+      updateCoEditWeights(spike.files, 0.02);  // Tier 1
+      break;
+    case 'COMPILE_PASS':
+      updateCoEditWeights(spike.files, 0.05);  // boost
+      break;
+    case 'COMPILE_FAIL':
+      decayCoEditWeights(spike.files, 0.1);    // punish
+      break;
+    case 'BRANCH_SWITCH':
+      resetAllActiveWeights(graph);             // ESD
+      break;
+    // ... other cases
+  }
+}
+```
+
+### C. Implementation Scope
+
+- **File**: `src/knowledge/manager.ts` — Add `processSpike()` method and spike event queue.
+- **File**: `src/cli/watch.ts` — Emit spike events from file watcher instead of full sync triggers.
+- **File**: `src/mcp/tools.ts` — Accept spike events from IDE extensions via a new `emit_spike` MCP tool.
+- **Config**: `CORTEX_SPIKE_MODE` (default `false` — opt-in, since it requires integration with build tools).
+
+**Definition of Ready (DoR)**
+- Phase 13.8.2 (Co-Edit Weights) is completed.
+- Phase 5 (CLI/Daemon) is completed.
+
+**Definition of Done (DoD)**
+- `FILE_SAVE` spikes trigger Tier 1 co-edit weight updates within 10ms.
+- `BRANCH_SWITCH` spikes reset all active weights to 0.0 (ESD behavior).
+- `COMPILE_PASS` spikes boost co-edit weights for all files in the build.
+- Spike processing is non-blocking — does not delay the main sync pipeline.
+- `CORTEX_SPIKE_MODE=false` disables spike processing (existing polling behavior preserved).
+- Tests cover: each spike type's expected graph mutation, spike queue ordering, ESD reset correctness.
+
+**Pros & Cons**
+- ✅ **Pros**: Near-instant targeted graph updates instead of full-graph scans; reduces idle CPU usage by ~60%; enables real-time co-edit signal from compiler/test feedback; pairs naturally with Phase 13.8 Soul's experience ledger.
+- ❌ **Cons**: Requires integration with the developer's build toolchain (compiler, test runner) to emit spikes — opt-in complexity; spike queue management adds ~40 lines of code; `BRANCH_SWITCH` detection requires a git hook or polling `HEAD`.
+
+---
+
+## 🔗 Phase 13.8.8: Unified Edge Confidence (Synaptic Plasticity) — ⏳ Planned
+
+**Layman's Terms**
+Today Cortex tracks four separate edge-level signals — co-edit weight, causal strength, evidence count, contradiction status — but no single score answers "how much should I trust this relationship?" Phase 13.8.8 combines them into a computed `edgeConfidence` that the packer and impact analysis use to weight traversal: high-confidence edges are followed preferentially.
+
+**Technical Terms**
+A computed `edgeConfidence: number` (0–1) on each relationship:
+
+```typescript
+edgeConfidence = weighted_mean(
+  coEditWeight,           // behavioral signal (Phase 13.8.2)
+  causalStrength,         // temporal co-change signal (Phase 20.14)
+  evidenceCount > 0 ? 1 : 0,  // grounded in cited code (Phase 7)
+  hasContradiction ? 0 : 1    // no open contradiction on this edge (Phase 16)
+)
+```
+
+Default weights: `{ coEdit: 0.3, causal: 0.3, evidence: 0.2, contradiction: 0.2 }`, configurable via `CORTEX_EDGE_CONFIDENCE_WEIGHTS`. Edge confidence is computed on read and stored ephemerally — it's a projection, not a persisted field. Used by:
+- **Context packer**: traverse edges with `edgeConfidence > 0.5` preferentially; low-confidence edges require explicit `--include-weak` flag.
+- **Impact analysis**: blast-radius weighting scales with edge confidence.
+- **Graph visualization**: edge opacity or dash pattern reflects confidence.
+
+**Definition of Ready (DoR)**
+- Phase 13.8.2 (coEditWeight) and Phase 20.14 (causalStrength) are completed.
+- Phase 7 evidence and Phase 16 contradiction flags are stable.
+
+**Definition of Done (DoD)**
+- `edgeConfidence` computed for every relationship at read time from existing fields.
+- Configurable weight vector respected.
+- Context packer skips edges below confidence threshold (default 0.3) unless `--include-weak` is set.
+- Impact analysis weights blast radius by edge confidence.
+- Tests cover: confidence computation on edges with various signal combinations, threshold filtering, weight override.
+
+**Pros & Cons**
+- ✅ **Pros**: Single trust number per relationship — no mental arithmetic across 4 unrelated signals. Packer and impact analysis get strictly better edge-guidance; this is pure refinement with zero new data collection. ~30 lines of scoring logic.
+- ❌ **Cons**: Default weight vector may not suit all codebases — mitigated by explicit configuration. Edges with zero signals produce 0.5 (neutral) rather than 0.0 to avoid penalizing unsensed relationships.
+
+---
+
+## 💸 Phase 13.9: Grapheme-Safe Token Compression (TokenJuice Rules) — ⏳ Planned
+
+**Layman's Terms**
+Prevent token minifiers from breaking or corrupting complex language text or layout status emojis. Phase 13.9 integrates grapheme cluster segmentation into our token compressor so that Chinese, Japanese, Korean comments, system-status emojis, and code formatting remain completely uncorrupted during high-ratio compression passes.
+
+**Technical Terms**
+- **Grapheme-Safe Token Compression (TokenJuice rules)**: Integrate Node's native compiled C++ `Intl.Segmenter` API inside `src/knowledge/brevity.ts`. Rather than using standard byte-level slices or regex matches, analyze strings at the grapheme cluster level.
+- **Multi-Byte Preservation**: Retains multi-byte CJK comments, custom visual glyphs, status emojis, and layout indicators from truncation during telemetry or context-packer compression passes.
+
+**Definition of Ready (DoR)**
+- Phase 13.2 (Brevity Engine) is completed.
+
+**Definition of Done (DoD)**
+- **Grapheme Safety Verified**: Minified outputs containing Chinese/Japanese/Korean text comments and visual status emojis are processed with 100% character and glyph preservation.
+- Tests verify character and glyph preservation across high-ratio compression boundaries.
+
+**Pros & Cons**
+- ✅ **Pros**: Guaranteed safety for international developers; prevents emoji and UI visual rendering bugs in compressed context payloads.
+- ❌ **Cons**: Using native `Intl.Segmenter` loops adds minor computational parsing overhead (1-2ms per massive file).
+
+---
+
+## 💸 Phase 13.10: Information Bottleneck Scoring — ⏳ Planned
+
+**Layman's Terms**
+When assembling context packs, prefer entities with high information density (lots of relevant signal per token) over verbose entities with the same total relevance. Two entities might both score 0.85 relevance, but one is 50 tokens and the other is 500 tokens — the compact one delivers 10x more value per token of budget consumed.
+
+**Technical Terms**
+In the context packer scoring function, add a density dimension:
+
+```typescript
+density_score = relevanceToQuery / descriptionTokenCount
+```
+
+- `relevanceToQuery`: existing relevance score (centrality x quality blend)
+- `descriptionTokenCount`: token count of the entity's rendered description (via Phase 13.1 tokenizer heuristic)
+- Final packer score: `relevanceToQuery x (1 + B x density_score)` where B (default 0.3) controls density bias
+
+Entities with high density (compact, signal-rich descriptions) are preferred over verbose entities with equivalent total relevance. This is a refinement of existing packer scoring (Phase 13 centrality x quality), not a new system.
+
+**Irreducible entity detection**: entities whose description resists compression (compression ratio > 0.8 — the shortest faithful summary is still 80%+ of the full text) are flagged as `irreducible`. Irreducible entities are exempted from the density penalty: their packer score reverts to raw `relevanceToQuery` without the density multiplier, preventing the scanner from penalizing complexity that can't be usefully compressed.
+
+**Definition of Ready (DoR)**
+- Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
+
+**Definition of Done (DoD)**
+- `density_score` computed per entity during `build_context_pack`.
+- Score-weighted pack results prefer compact entities over verbose ones at equal relevance.
+- `CORTEX_DENSITY_BETA` configurable (default 0.3).
+- Tests cover: density bias reorders pack inclusion vs pure relevance scoring, B=0 produces identical ranking to current behavior.
+
+**Pros & Cons**
+- ✅ **Pros**: Extracts maximum value per token — directly reduces context pack size for equivalent relevance signal. No new data structures, no new storage. ~20 lines of scoring adjustment.
+- ❌ **Cons**: Slight risk of overly aggressive pruning on entities that are long because they're genuinely complex — mitigated by B defaulting to 0.3 (conservative density bias).
+
+---
+
+## 💸 Phase 13.11: Bidirectional Context Retrieval — ⏳ Planned
+
+**Layman's Terms**
+The context packer currently walks forward from the active entity: it follows dependency edges outward until the token budget is exhausted. But some of the most relevant context isn't reachable within N forward hops — it's structurally important because a high-centrality hub depends ON it. Phase 13.11 adds a backward traversal wave: simultaneously walk backward from the top hub entities (by PageRank) and intersect the two wavefronts. Entities at the intersection are the highest-relevance candidates — contextually near the query AND anchored to authoritative hubs.
+
+**Technical Terms**
+A second graph traversal pass in `src/knowledge/packer.ts` running alongside the existing forward BFS:
+
+```typescript
+// Forward wave: from scope root outward
+const forwardCandidates = bfs(entityGraph, scopeRoot, { direction: "outbound", depth: CORTEX_BIDIRECTIONAL_DEPTH });
+
+// Backward wave: from top 5% PageRank hubs inward
+const topHubs = entities.sortBy("pageRank").slice(0, Math.ceil(entities.length * 0.05));
+const backwardCandidates = topHubs.flatMap(hub => bfs(entityGraph, hub, { direction: "inbound", depth: CORTEX_BIDIRECTIONAL_DEPTH }));
+
+// Intersection: entities reachable from both waves
+const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id));
+```
+
+- The intersection is scored at `(forwardHops + backwardHops) / 2` for packer priority — entities close to both the scope root and a hub rank highest.
+- Configurable depth via `CORTEX_BIDIRECTIONAL_DEPTH` (default 2 hops per direction). Depth 0 disables the backward wave (current behavior).
+- Catches "pull" relationships: entities that important hubs depend on, but the current scope root doesn't directly reach.
+
+**Definition of Ready (DoR)**
+- Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
+- Phase 10 centrality scores are available — needed to identify hub entities.
+
+**Definition of Done (DoD)**
+- Bidirectional traversal produces the forward/backward intersection set.
+- Intersection entities score higher in packer ranking than forward-only entities at equal relevance.
+- `CORTEX_BIDIRECTIONAL_DEPTH=0` produces identical results to current (forward-only) behavior.
+- Tests cover: intersection correctness on a known graph, depth=0 backward-compatibility, hub selection respects PageRank ordering.
+
+**Pros & Cons**
+- ✅ **Pros**: Catches a genuine blind spot in forward-only traversal — hub-dependent entities that are structurally important but not locally reachable. No new data structures. ~30 lines of traversal logic. Complements Phase 13.8.2 (co-edit weighting) which is behavioral signal — this is structural signal.
+- ❌ **Cons**: Adds ~1 extra BFS per context pack per hub (capped at top 5% of entities). On a 500-entity graph with 2-hop depth, this is <10 extra traversals of <50 nodes each — negligible overhead. Hub selection is sensitive to PageRank quality — stale PageRank scores produce stale hub sets.
+
+---
+
+## 💰 Phase 13.12: Opportunity Cost Scoring — Packer Exclusion Tracking — ⏳ Planned
+
+**Layman's Terms**: Every time the context packer has to choose between entities under token budget, it makes a tradeoff. Phase 13.12 logs what was excluded and why. Over time, entities that are frequently excluded despite high relevance scores get boosted — the system learns that it's consistently making the wrong tradeoff.
+
+**Technical Terms**: Add `opportunityLog` to the context packer: each assembly run appends `{ entityId, priorityScore, excludedAt, reason }` for every candidate entity that passed relevance filtering but was excluded by the budget cap. Accumulate `exclusionCount` and `avgPriorityWhenExcluded` per entity per time window. An entity with `exclusionCount > 10` AND `avgPriorityWhenExcluded > 0.7` gets `priorityBoost: 0.1` applied to its base priority score (Phase 13 ranking). CLI: `cortex pack --audit` shows top 5 excluded entities per assembly for debugging. MCP: `get_packer_opportunity_cost(entityId?)`.
+
+**DoR**: Phase 13 context packer and relevance scoring are stable.
+
+**DoD**: Opportunity log accumulated per assembly. Auto-boost applied to frequently-excluded high-priority entities. `cortex pack --audit` surfaces exclusions. Tests: entity never excluded (no boost), entity excluded with high priority (boost applied), empty pack (no-op).
+
+---
+
 ## 🗂️ Phase 14: Large-Diff Clustering — ⏳ Planned
 
 **Layman's Terms**
@@ -2432,7 +3899,7 @@ When you change 30+ files at once — say, touching auth, database, and UI all i
 Introduce a deterministic clustering step that runs _before_ the LLM synthesis call when a diff exceeds a configurable file-count or token threshold. Each cluster is synthesised independently; the results are merged into a single log entry. Clustering is intentionally LLM-free — it uses structural signals already present in `state.json` (directory paths, Phase 6's typed `relationships[]` edges) so it adds no token cost and no latency outside of the synthesis calls themselves.
 
 - **Trigger threshold**: configurable via `.cortexrc` / env; defaults to `CORTEX_CLUSTER_THRESHOLD=15` files. Below the threshold the existing single-shot path runs unchanged.
-- **Clustering algorithm**: two-pass.
+- **Clustering algorithm**: an $O(N \log N)$ hierarchical tree-clustering pass. If you commit 5,000 file changes at once (like a mass refactor), standard tools use $O(N^2)$ comparisons to group them, which freezes the IDE or times out the CI/CD pipeline. By using hierarchical tree clustering, Cortex treats distant folders as single macro-nodes, instantly grouping related files in $O(N \log N)$ time with zero LLM latency overhead.
   1. **Directory bucketing** — group changed files by their nearest common ancestor directory (e.g. `src/auth/`, `src/db/`, `src/ui/`). Files in the repo root are their own bucket.
   2. **Edge merge** — if two directory buckets share a `depends_on` or `called_by` edge in `state.json`'s typed graph, merge them into one cluster. This prevents splitting a change that straddles a tightly coupled boundary (e.g., a service and its direct repository layer) into two disconnected syntheses that each miss the other half.
 - **Synthesis**: each cluster is sent to the LLM as a separate `generateObject` call using the same Librarian prompt, with its own diff slice and a CURRENT CONTEXT block scoped to that cluster's entities. Retries (Phase 2's 3-attempt backoff) apply per cluster.
@@ -2467,6 +3934,40 @@ Introduce a deterministic clustering step that runs _before_ the LLM synthesis c
 
 - ✅ **Pros**: Directly improves synthesis quality on the class of diffs where it degrades today — large, cross-cutting changes. Each cluster is small enough for the LLM to reason about precisely. Costs more tokens per large sync (N synthesis calls instead of 1), but produces N focused entries instead of 1 vague one — net knowledge quality improves.
 - ❌ **Cons**: Adds latency on large syncs (N sequential or parallel LLM calls). Parallel calls are faster but multiply the concurrent API load; sequential calls are safer but slower. Default to sequential; expose a `CORTEX_CLUSTER_PARALLEL=true` flag for users on rate-limit-generous API tiers. The edge-merge heuristic can over-merge tightly coupled directories into one large cluster — mitigated by capping each cluster at `2 × CORTEX_CLUSTER_THRESHOLD` files and splitting oversized merged clusters by sub-directory.
+
+---
+
+## 🗂️ Phase 14.2: Topological Hierarchy & Multi-Tier Zoomable Retrieval (RAG-RAPTOR Adaptation) — ⏳ Planned
+
+**Layman's Terms**
+Supercharge your AI assistant with the ability to "zoom in and out" of your codebase like Google Maps. Instead of feeding the AI massive blocks of detailed code for every file, Phase 14.2 groups your files into their physical folder directories and creates a tiny, 3-sentence "cheat-sheet" summary for each folder. When working on a task, the AI gets the full, detailed code for the exact file you are changing, public names for surrounding files, and only the 1-page folder summaries for distant code. This keeps the AI laser-focused, prevents brain fog, and cuts your AI token bills by up to 70% with zero lag.
+
+**Technical Terms**
+Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval) framework using your workspace directory topology:
+1. **Topological Hierarchy Mapping (`state.json`)**: During ingestion, map directories as abstract parent nodes in the logical dependency graph. Concrete file entities are mapped as child nodes (`child_of`) based on their physical folder paths.
+2. **Deterministic Folder Summarization (`directory_summary.md`)**: When a directory has structural changes (files added, deleted, or moved), the Librarian compiles a high-level summary of the module's unified role, boundaries, and public API, written to `.knowledge/entities/[dir_name]_summary.md`. No summary is generated for unchanged directories.
+3. **Multi-Tier Zoomable Context Packing (`src/knowledge/packer.ts`)**: When compiling a token-bounded context pack:
+   - **Target Tier (100% detail)**: Full layered page (`## Role`/`## Interface`/`## Behavior`/`## Wiring`) for the active edit target.
+   - **Neighborhood Tier (40% detail)**: Truncated `## Role` + `## Interface` signatures only for 1-hop dependencies.
+   - **System/District Tier (10% detail)**: The `directory_summary.md` parent node only for 2+ hop nodes.
+4. **Self-Cleaning Directory Garbage Collection**: If a directory is emptied during file refactoring/moves, its logical node in `state.json` and its summary file on disk are automatically garbage collected and deleted during the next sync pass.
+5. **PageRank Centrality Hub Summaries (GraphRAG Adaptation)**: When compiling a directory summary, use the graph centrality values calculated in Phase 7 to identify "Transit Hub" modules (entities with high PageRank or degree centrality). Generate a consolidated transit hub summary `transit_hub_summary.md` detailing how these central intersection files coordinate system-wide architectural traffic.
+
+**Definition of Ready (DoR)**
+- Phase 8.2 (Obsidian Vault Compliance) and Phase 13 (Token Economics) are completed.
+
+**Definition of Done (DoD)**
+- **Deterministic Parent Mapping**: Directory parent nodes and child relationships are successfully serialized inside `state.json`.
+- **Automated Directory Summary Generation**: Compilation of `[dir_name]_summary.md` is successfully triggered on directory additions or structural changes, and garbage-collected when directories physically empty out.
+- **Dynamic Zoomable Context Packs**: The context packer correctly trims neighborhood and distant nodes based on graph hop distance, proving a >= 50% token reduction compared to flat raw loading on the same neighborhood.
+- **Obsidian Visual Integration**: Directory summaries render as **Teal Turquoise (`#0D9488`)** hub nodes connecting their children in Obsidian's visual graph view.
+- **Transit Hub Summaries**: Centrality-based PageRank hub summaries are successfully generated for the top 5% most connected entities in the codebase, proving active, LLM-free community-summarization.
+- Direct query endpoints (like `read_entity`) are completely unaffected and continue to return 100% of raw content when explicitly queried (no dynamic truncation).
+- Tests cover: hierarchy compilation, directory addition/deletion triggers, self-cleaning garbage collection, dynamic zoom trimming logic, transit hub calculations, and direct query contract compatibility.
+
+**Pros & Cons**
+- ✅ **Pros**: Massive context window token and cost savings (up to 70% reduction); prevents AI "lost-in-the-middle" issues by maintaining high conceptual focus; enhances Obsidian visual structures into clean topological constellations.
+- ❌ **Cons**: Relies on sensible codebase folder structures to operate at peak efficiency (flat root repositories collapse into a single broad summary); directory summaries require a single cheap LLM compilation pass when folders structurally change.
 
 ---
 
@@ -2519,6 +4020,9 @@ A new module that ingests CI run results (success / failure / which tests failed
 Cortex already detects when new code contradicts the existing knowledge — _"the auth module is documented as JWT but the new code uses cookies."_ Today those contradictions are logged inline in `log.md` and then forgotten. Phase 16 promotes the contradiction history into a queryable graph: when a developer or AI reads `[[AuthService]]`, the response surfaces every unresolved contradiction touching that entity. Future syntheses see the contradiction history in CURRENT CONTEXT and can no longer silently re-introduce rejected patterns.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Paraconsistent Logic**
+> *Source Domain:* Mathematical Logic / Philosophy.
+> Standard classical logic "explodes" when it encounters a contradiction (if A and Not-A are both true, anything can be proven). But legacy codebases are fundamentally contradictory. Paraconsistent logic frameworks are designed to tolerate localized contradictions without corrupting the entire knowledge system. Cortex treats contradictions not as errors to be panicked over, but as stable, queryable topological features. The graph holds "Auth is JWT" and "Auth is Session" simultaneously, tagging the contradictory edge, preventing global state corruption while isolating the discrepancy for human review.
 Promote `warnings[]` (today a per-log-entry free-form string array) into a first-class contradiction graph. Each warning containing `[[WikiLink]]` references is parsed into a directed edge between the referenced entities/concepts, stamped with the synthesis event that produced it and a mutable status. The graph is queryable via CLI, surfaced in `read_entity` / `read_concept` MCP responses, and injected into CURRENT CONTEXT for entities touched by the next synthesis.
 
 - **Schema (additive)**: a new top-level `contradictions[]` array in `state.json` — `{ id, between: [name1, name2], summary, recordedAt, sourceSynthesis, status: "open" | "resolved" | "muted", resolution?: { note, resolvedAt } }`. Existing `warnings[]` arrays in `log.md` stay; `contradictions[]` is a structured projection on top.
@@ -2564,6 +4068,10 @@ Promote `warnings[]` (today a per-log-entry free-form string array) into a first
 Sometimes the AI is sure about what a code change means; sometimes it's guessing. Today Cortex treats both the same — it just writes down whatever the AI said. Phase 17 makes Cortex sample the AI's synthesis multiple times at the same input and check whether the answers agree. When they agree, it commits silently. When they disagree, it surfaces a short structured question — _"Did this change introduce `[[OAuth2Strategy]]` or modify the existing `[[JWTStrategy]]`?"_ — and waits for an answer before persisting. The user (or an IDE agent) picks one; Cortex commits with that choice. The "confidence" signal is structural inter-sample agreement, not an LLM-emitted number.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Quantum Superposition & Wave Function Collapse**
+> *Source Domain:* Quantum Mechanics.
+> When an LLM evaluates a highly ambiguous code change, multiple architectural interpretations may be valid simultaneously. Instead of forcing the LLM to greedily pick one (which leads to hallucinations), Cortex places the architectural state in "superposition" — it holds multiple contradictory interpretations in memory as uncommitted possibilities. When a human developer answers a clarifying prompt, that "observation" collapses the wave function, forcing the system into a single, verified truth state that is then committed to the knowledge graph.
+
 Implement self-consistency sampling (Wang et al., 2022 — _Self-Consistency Improves Chain of Thought Reasoning in Language Models_) as a synthesis-quality signal. For each synthesis call, sample the Librarian _N_ times (default _N=3_) at non-zero temperature, structurally diff the outputs, and route by inter-sample agreement. Supports multi-model consensus verification checks: when running in multi-provider mode, queries are routed to two different providers (e.g. Claude and Gemini) and cross-verified via a consensus checker to calculate a confidence score (0-100%) and resolve discrepancy before committing.
 
 - **Full agreement** (all _N_ samples produce equivalent entity sets and equivalent action verbs per entity): commit silently. This is the dominant case on routine diffs.
@@ -2606,6 +4114,8 @@ A disambiguation question is a structured object — `{ id, file, summary, optio
 - ✅ **Pros**: Self-consistency is well-validated in the literature as a quality signal and is calibration-free — it requires no model-emitted confidence. Surfaces low-confidence syntheses for human input _exactly_ where input is most useful, without forcing review on the ~95% of syntheses where the model is consistent. Provides a clean experimental surface: _what fraction of disagreement cases, on real corpora, correspond to genuine architectural ambiguity vs LLM noise?_ That measurement is publishable.
 - ❌ **Cons**: _N×_ token cost on every synthesis call. Mitigated by opt-in env-var gating and by Phase 14 clustering reducing per-synthesis size. Disambiguation queue can grow unbounded if the user ignores it — mitigated by overflow refusal and surfacing the count in `cortex status`.
 
+**Synthesis drift detection**: monitor consecutive syntheses of the same entity for diminishing description variance. If the last N syntheses (default N=5) produce near-identical descriptions (cosine similarity > 0.95 on description embedding) while the source code context has measurably changed (non-trivial git diff between syntheses), flag the entity as `stuck` — the Librarian is re-scribing prior output rather than re-evaluating from evidence. Stuck entities are surfaced in `cortex audit quality` with a `stuck` signal and routed to Phase 23 human review for forced re-synthesis.
+
 ---
 
 ## 💬 Phase 17.1: Multi-Model Architectural Debate — ⏳ Planned
@@ -2641,6 +4151,10 @@ Implement a multi-model architectural debate command: `cortex debate <entity-nam
 Cortex understands structure (the typed dependency graph) and Cortex understands text (the synthesised descriptions). Phase 18 fuses them into a single vector per entity, so a question like _"which other entity is architecturally most similar to `[[AuthService]]`?"_ can be answered numerically without re-reading the whole index. The embeddings also become the substrate for Phase 19's distilled Librarian and a link-injection assist for Phase 6.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Poincaré Embeddings (Hyperbolic Geometry)**
+> *Source Domain:* Differential Geometry / String Theory.
+> Standard vector databases use flat (Euclidean) space. But software architecture and dependency graphs are highly hierarchical (trees and DAGs). In flat space, trying to embed a deep tree forces nodes at the edges to crowd together, losing fidelity. In hyperbolic space (specifically the Poincaré ball model), volume grows exponentially as you move outward from the origin—perfectly matching the capacity needed for hierarchical software structures. By switching from cosine similarity in Euclidean space to hyperbolic distance, Cortex can perform zero-hallucination structural code search and cluster deep dependency trees with massive accuracy improvements.
+
 For each entity, compute a hybrid embedding that fuses three signals:
 
 - **Text embedding** of the entity description + concatenated `evidence[].content` snippets (Phase 7), via a small open-weight encoder (default `bge-small-en-v1.5`, 384-d, CPU-friendly).
@@ -2827,11 +4341,15 @@ Some parts of the codebase are just more dangerous than others — they change c
 **Technical Terms**
 Grounded in Nagappan & Ball (ICSE 2008): network analysis on a dependency graph predicts which modules are most defect-prone — 10% higher recall than complexity metrics alone on the Windows Server 2003 dataset. Cortex already has the dependency graph (Phase 6 `relationships[]`), CI failure history (Phase 15 `ciSignal`), and entity churn (derivable from `log.jsonl`). Phase 20.2 combines them into a defect-prediction surface with no LLM in the computation path.
 
+> 🔬 **Scientific Foundation: Hawkes Processes (Self-Exciting Point Processes)**
+> *Source Domain:* Seismology / Quantitative Finance.
+> In seismology, an earthquake drastically increases the probability of aftershocks in the immediate area. Hawkes processes model this "self-exciting" mathematical decay. In software, a bug fix in a file is an "earthquake" that increases the probability of another bug in that *same* file or its dependency neighbors within 48 hours. By applying Hawkes math, Cortex doesn't just look at static churn; it models the temporal decay of risk, dynamically warning users: *"This file was part of a major refactor 12 hours ago. Hawkes probability of a hidden regression is 84%."*
+
 Per-entity hotspot score fusing three signals:
 - **Churn score**: count of synthesis events touching the entity in a rolling window (default 90 days), normalized to [0, 1] against the max-churned entity.
 - **Centrality score**: Phase 8/10's PageRank over the typed dependency graph. High centrality = many entities depend on this one; a bug here cascades.
 - **CI failure rate**: from Phase 15's `ciSignal` — `redRunsSince / (greenRunsSince + redRunsSince)`. Defaults to 0.5 (neutral) when no CI data exists.
-- **Hotspot score**: `churn × centrality × (1 + ci_failure_rate)` — entities that are heavily modified, highly coupled, and frequently fail CI score highest. Formula weights are configurable via `CORTEX_HOTSPOT_WEIGHTS`.
+- **Hotspot score (Hawkes-adjusted)**: `churn × centrality × (1 + ci_failure_rate) × hawkes_decay_factor` — entities that are heavily modified, highly coupled, and frequently fail CI score highest. Formula weights are configurable via `CORTEX_HOTSPOT_WEIGHTS`.
 
 CLI:
 - `cortex predict hotspots [--top N] [--since DATE]` — ranked hotspot list with scores and contributing factor breakdown.
@@ -2869,12 +4387,44 @@ CLI:
 
 ---
 
+## 🐛 Phase 20.2.1: Catastrophe Tipping-Point Detection — ⏳ Planned
+
+**Layman's Terms**
+Some entities are one change away from structural collapse — one more dependency pushes them past the god-module threshold, or removing one edge disconnects a subgraph. Phase 20.2.1 models these tipping points: the nonlinear threshold where incremental change becomes structural collapse.
+
+**Technical Terms**
+`cortex predict tipping-points` — pure graph math, no LLM calls. Three detector types:
+
+1. **God-module proximity**: entities where `current_dependencies >= god_module_threshold - 1`. One more dependency edge pushes them over the lint threshold.
+2. **Bridge nodes**: entities whose removal would disconnect a subgraph (articulation points in the dependency graph). Detected via Tarjan's algorithm over the directed relationship graph.
+3. **Quality gate proximity**: entities where quality score is within 0.05 of the Phase 7.5 quality gate threshold. One more bad synthesis drops them below the gate.
+
+**Definition of Ready (DoR)**
+- Phase 20.2 (Hotspot Prediction) is completed — shares the `cortex predict` command namespace.
+- Phase 6 constraints include god_module threshold configuration.
+- Phase 7.5 quality gates are defined.
+
+**Definition of Done (DoD)**
+- `cortex predict tipping-points` returns all three detector types.
+- God-module proximity flagged for entities at threshold - 1 dependencies.
+- Bridge nodes correctly identified via articulation-point detection.
+- Quality-gate proximity surfaced for entities within 0.05 of the gate threshold.
+- Tests cover: each detector type on synthetic graphs, edge cases (empty graph, fully connected graph, single-bridge graph).
+
+**Pros & Cons**
+- ✅ **Pros**: Catches structural risk before it materializes — the most valuable intervention point. Zero LLM cost. Complements hotspot prediction (current bugs) with forward-looking risk.
+- ❌ **Cons**: Bridge-node detection produces false positives in intentionally star-shaped topologies (e.g., API gateways). Mitigated by severity labeling and by explaining why the entity is a bridge.
+
+---
+
 ## 🧩 Phase 20.3: Design Pattern Suggestion — ⏳ Planned
 
 **Layman's Terms**
 Phase 7's `cortex lint` tells you what's wrong — "`AuthModule` is a god module" or "`UserService` and `OrderService` form a cycle." Phase 20.3 tells you what to do about it: "Consider extracting the validation logic into a `Validator` strategy — here's what that graph looks like in Cortex terms." It maps each anti-pattern the linter detects to a canonical design pattern that resolves it, gives a concrete entity-level suggestion, and shows what the knowledge graph would look like after the refactor.
 
 **Technical Terms**
+To escape architectural "local minima" (where a simple fix doesn't resolve deep coupling), Cortex uses heuristic topological search. It explores hundreds of randomized refactoring paths concurrently in memory, scoring each topology's coupling density, before returning the globally optimal canonical pattern (like a Facade) that mathematically minimizes systemic coupling.
+
 Inspired by ROSE (2024) — transformer-based refactoring recommendation fine-tuned on 2M+ historical refactorings — but implemented without a trained model: a curated anti-pattern → pattern mapping table that operates over `LintManager` output and instantiates concrete suggestions against the entity's actual graph neighborhood.
 
 Anti-pattern → pattern library (initial set):
@@ -2932,6 +4482,10 @@ MCP tool: `get_pattern_suggestions(entity?)` for IDE surface.
 You can write unit tests to make sure your code doesn't break. Phase 20.4 gives you "architecture tests" — rules like "the dependency graph must never have cycles," "no single entity can have more than 15 incoming dependencies," or "at least 80% of entities must have CI evidence." These run in CI automatically. When the architecture drifts outside the bounds the team agreed on, the build fails and the team is alerted — before it ships.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Fitness Landscapes & Pareto Frontiers**
+> *Source Domain:* Evolutionary Biology / Mathematical Economics.
+> In evolution, there is no single "perfect" organism—only peaks and valleys on a multidimensional fitness landscape. Similarly, in software architecture, there is no perfect design, only trade-offs (e.g., Latency vs. Memory vs. Maintainability). Instead of enforcing a rigid binary rule, Phase 20.4 maps the architecture onto a Pareto Frontier. When Cortex evaluates fitness functions, it charts the architecture's trajectory on this landscape, warning the team when an evolution optimizes one dimension (e.g., speed) at the critical expense of another (e.g., coupling), keeping the system on the optimal evolutionary frontier.
+
 Grounded in Ford, Parsons, Kua — "Building Evolutionary Architectures" (O'Reilly, 2017). Fitness functions are automated governance checks that verify the architecture remains within acceptable bounds as the system evolves — the architectural equivalent of unit tests. Phase 20.4 implements them as declarative YAML evaluated by `cortex fitness`, intentionally distinct from Phase 6's entity-level constraints (per-entity import rules) and Phase 7.5's org constraints (domain-level rules). Fitness functions are systemic: they measure properties of the entire graph at a point in time.
 
 Pre-built fitness function library (initial set):
@@ -3065,7 +4619,7 @@ Extend Phase 20.5 with an automated ADR generation engine.
 **Research grounding**: MemGPT (Packer, Wooders, Lin, Fang, Patil, Stoica, Gonzalez — UC Berkeley 2023 — *"MemGPT: Towards LLMs as Operating Systems"*, arXiv:2310.08560). MemGPT introduces a hierarchical memory architecture inspired by traditional OS virtual memory: a small "main context" (in the LLM's window) and a large "external context" paged in/out via function calls. The LLM controls its own paging via a small set of memory-management functions. Reports that MemGPT outperforms fixed-context baselines on long-document QA and multi-session chat consistency.
 
 **Layman's Terms**
-Today every Cortex query reads the entire knowledge index. As the knowledge base grows past a few hundred entities, the index becomes too big for the AI to read efficiently. Phase 20.6 introduces a two-tier memory: a "hot" working memory of frequently-accessed entities that's always loaded, and a "cold" archive of rarely-touched entities that's pulled in on demand. The AI controls the paging itself — it can request "load the auth subsystem into working memory" and "evict the payment subsystem to make room." This is the architecture behind MemGPT, applied to Cortex's growing knowledge base.
+Standard LLM tools dump the entire repo into the context window for every query, costing $5-$10 per prompt on massive codebases. Phase 20.6 introduces a two-tier memory architecture (a hot/cold caching layer). Cortex "freezes" irrelevant codebase segments into cold storage, ensuring they consume zero tokens unless specifically queried, cutting API costs by 80-90%. The AI controls the paging itself — it can request "load the auth subsystem into working memory" and "evict the payment subsystem to make room."
 
 **Technical Terms**
 A two-tier memory architecture over `state.json`:
@@ -3074,6 +4628,7 @@ A two-tier memory architecture over `state.json`:
 - **Cold tier (paged out)**: all other entities. Listed in the index as header + one-line description only ("read on demand via `page_in(entity)`"). Full entity content is paged in on explicit MCP tool calls.
 - **Self-paging tool surface**: new MCP tools `page_in(entity)`, `page_out(entity)`, `working_set_status()`. The AI agent decides what to load and evict based on the current task — the LLM is in control, not Cortex.
 - **Eviction policy**: LRU within the hot tier, with "pinned" override for entities marked `centrality > 0.8` (always-resident high-centrality hubs).
+- **Speculative page-in**: when an entity is requested, pre-fetch its co-edit neighbors (by Phase 13.8.2 co-edit weight, descending) into the hot tier. The working set expands to likely-next entities before the LLM explicitly pages them. Controlled by `CORTEX_SPECULATIVE_PAGE_IN=true` (default: false — opt-in, use judiciously to avoid needless paging for simple queries).
 - **Pressure signal**: when the hot tier is full, `page_in` returns a "pressure" warning listing the LRU eviction candidates so the LLM can make an informed choice.
 
 **Architecture & System Design**
@@ -3186,6 +4741,66 @@ Expose a real-time session state synchronization protocol via the Cortex daemon 
 **Pros & Cons**
 - ✅ **Pros**: Eliminates race conditions and redundant edits in multi-agent workflows; connects isolated IDE chats.
 - ❌ **Cons**: Relies on IDE agents providing their context during MCP calls. Mitigated by auto-deriving focus files from the IDE's roots list notifications and recently modified git files.
+
+---
+
+## Phase 20.7.2: Mem0-Style Memory Consolidation Pipeline — ⏳ Planned
+
+**Layman's Terms**
+When the AI talks to a developer, it learns things. "Alice prefers functional style." "Bob burned a day on the legacy auth API." Phase 20.7 stores those facts, but it stores them naively — just dumps them in. Phase 20.7.2 adds a smart consolidation layer: each new fact is compared against what Cortex already knows, and an LLM decides whether to add it (new knowledge), update an existing fact (refinement), delete an obsolete one (contradiction), or do nothing (duplicate). Over time, the memory stays compact, coherent, and current.
+
+**Technical Terms**
+Implements the Mem0 three-stage consolidation pipeline (Chhikara et al., ECAI 2025, arXiv:2504.19413). For each interaction, Cortex runs:
+1. **Extraction phase**: recent messages + a periodically refreshed global summary are passed to an LLM prompt to distill salient memory facts (short statements).
+2. **Update phase**: each candidate fact is embedded and compared via cosine similarity against existing memory embeddings in the vector store. The top-K similar memories are retrieved. An LLM classifies the operation: **ADD** (new fact), **UPDATE** (refine existing), **DELETE** (contradiction/obsolescence), **NOOP** (duplicate). The update is executed on the persistent store.
+3. **Graph extension** (Mem0g variant): entities and relationships are extracted from the consolidated fact and stored in a lightweight in-memory graph (or Neo4j when available) for multi-hop relational retrieval.
+
+**Core Components**: new `src/memory/consolidation/pipeline.ts` (extraction prompt + embedding comparison + LLM classification router), `src/memory/consolidation/store.ts` (vector store wrapper with ADD/UPDATE/DELETE/NOOP operations), `src/memory/consolidation/graph.ts` (entity-extraction → relationship persistence for graph memories), configuration for embedding model (reuses existing Phase 13.5 embedding pipeline).
+
+**Definition of Ready (DoR)**
+- Phase 20.7 (Personalized Per-Developer Memory) is shipped — the per-developer fact store exists.
+- Phase 13.5 embedding pipeline is shipped (for semantic similarity comparison).
+- Vector store (existing from Phase 13 caching) is available for memory embeddings.
+
+**Definition of Done (DoD)**
+- After 5+ interactions with a developer, the memory store contains deduplicated, updated facts with no stale contradictions.
+- LLM triggers ADD for genuinely new facts, UPDATE for refinements ("prefers TypeScript" → "strongly prefers TypeScript with strict mode"), DELETE for contradictions ("used to prefer Mocha" → "now uses Vitest").
+- Graph memory enables answering "what relationships does Alice have to the auth subsystem?" via entity traversal.
+- Cost benchmark: consolidation adds ≤20ms p95 per interaction beyond the base Phase 20.7 memory write.
+
+**Pros & Cons**
+- ✅ **Pros**: Memory stays compact and coherent without manual curation; graph variant enables multi-hop relational retrieval; Mem0 benchmark shows 26% accuracy improvement over naive storage.
+- ❌ **Cons**: Each interaction costs one extra LLM call for consolidation; occasional false DELETE when a fact is nuanced rather than contradictory. Mitigated by confidence threshold: only DELETE when similarity >0.95.
+
+---
+
+## Phase 20.7.3: Prospective Memory & Belief Revision — ⏳ Planned
+
+**Layman's Terms**
+Two problems with naive memory: (1) you store a fact but never think to retrieve it in the context where it matters, and (2) when new facts contradict old ones, the old ones just get deleted leaving no trace. Phase 20.7.3 fixes both: at write time, Cortex imagines *when* this fact might be useful next and tags it with future query scenarios. At update time, contradictions don't vanish — they form a *version chain* so you can see what changed and why. Inspired by Kumiho's prospective indexing and belief revision (arXiv:2603.17244, 2026), using zero additional infrastructure.
+
+**Technical Terms**
+Two lightweight passes on top of Phase 20.7.2's consolidation pipeline:
+
+1. **Prospective Indexing**: after a memory is written, an LLM generates 3-5 likely future queries this fact would be relevant to (e.g., "what auth library do we use?" for a memory "Alice migrated from Passport to Auth.js"). These are embedded via the existing Phase 13.5 embedding pipeline and stored as `prospectiveQueries: string[]` on the memory record. At retrieval time, the query is also checked against prospective embeddings — if it matches, the memory's relevance score gets a +0.15 boost (configurable). No additional storage backend needed.
+
+2. **Belief Revision via Version Chains**: instead of DELETE in the ADD/UPDATE/DELETE/NOOP classifier (Phase 20.7.2), route DELETE decisions to a `supersededBy` link: the old fact is marked `active: false` with a `supersededBy: <new-fact-id>` reference and a `revisionReason` field explaining why. The LLM decides whether the new fact supersedes (DELETE but traceable) or coexists with the old (NOOP + both active for different contexts). At retrieval time, the system returns only the highest-confidence active version by default, but `cortex memory history <developer>` shows the full version chain.
+
+**Core Components**: additions to `src/memory/consolidation/pipeline.ts` (prospective query generation pass after consolidation), new field `prospectiveQueries` on the memory schema (embedded via Phase 13.5), additions to retrieval reranking (prospective match boost), modifications to `src/memory/consolidation/store.ts` (supersededBy link replacing hard DELETE), new `src/memory/revision/history.ts` (version chain inspection CLI).
+
+**Definition of Ready (DoR)**
+- Phase 20.7.2 (consolidation pipeline) is shipped.
+- Phase 13.5 (embedding pipeline) is shipped.
+
+**Definition of Done (DoD)**
+- Prospective indexing: after writing "Alice migrated auth libraries," generating queries like "what auth does Alice use?" returns the fact with boosted relevance vs. naive semantic search.
+- Belief revision: when a fact is superseded, `cortex memory history alice` shows the old fact, the new fact, and the `revisionReason` ("migrated from Passport to Auth.js v5").
+- No new storage backends — all data fits in existing vector store + memory record schema.
+- Each prospective pass adds ≤1 LLM call per memory write; version chain stores ≤1KB per revision.
+
+**Pros & Cons**
+- ✅ **Pros**: Future-query-aware retrieval catches relevant memories that pure semantic search would miss; version chains provide full audit trail of knowledge evolution without AGM infrastructure; zero new storage backends.
+- ❌ **Cons**: Prospective indexing adds an LLM call per memory write (~10% overhead on write path). Version chains add slight retrieval complexity (filter out inactive versions).
 
 ---
 
@@ -3312,6 +4927,9 @@ MCP tool: `read_community(name)` returns a community summary for IDE consumption
 When you ask Cortex "which entities are likely affected if I change the JWT validator?", today it does a one-hop dependency lookup. But the real answer might be three hops away — the JWT validator is used by the auth middleware, called by the API gateway, which serves payment endpoints. Phase 20.10 implements hippocampus-inspired retrieval: it does one mathematical computation (Personalized PageRank) that captures all multi-hop reachability at once. Faster, more accurate, and grounded in cognitive science research (HippoRAG, OSU 2024).
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Hippocampal Indexing Theory**
+> *Source Domain:* Cognitive Neuroscience.
+> The hippocampus doesn't store memories; it stores the *index* of cortical patterns. Cortex's vector DB shouldn't store code; it should store the *activation patterns* of how concepts link, acting as an index to pull the raw code from the disk only when needed. This allows for lightning-fast multi-hop retrieval without context explosion.
 Personalized PageRank (PPR) based multi-hop retrieval over the typed dependency graph. Given a query entity (or set), the personalized PageRank vector is computed with restart probability anchored to the query, yielding a relevance score for every entity in the graph that captures multi-hop reachability in one computation.
 
 Pipeline:
@@ -3432,6 +5050,10 @@ Together these establish a representation pattern: every fact carries `(validFro
 Today Cortex tells you what the architecture is *right now*. It can't tell you what it was last month — "did AuthService depend on JWT then?" or "when did we switch from sessions to OAuth?" Phase 20.12 adds time-validity intervals to every relationship: each `depends_on` edge has a `validFrom` and (optionally) `validTo`. Cortex can now answer time-travel queries directly without replaying the entire JSONL log. This is the temporal knowledge graph pattern from KG research (TNTComplEx, TimePlex), applied to Cortex's architecture graph.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Minkowski Spacetime (Worldlines)**
+> *Source Domain:* Special Relativity / Physics.
+> In relativity, objects don't just exist in space; they travel along "worldlines" through spacetime. Cortex treats entities exactly like this. An entity isn't a static point in `state.json`; it's a worldline. A bug isn't a bad state; it's an event intersection in spacetime. By adopting this physics-based topology, Cortex can trivially answer questions like *"What did this architecture's spacetime volume look like relative to the Auth migration event?"* without brute-force log replay.
+
 Time-aware extension to the entity relationship model. Each edge in `state.json.entities[].relationships[]` gains:
 
 - `validFrom: ISO 8601 timestamp` — when the relationship was first observed (the synthesis event that introduced it).
@@ -3480,6 +5102,8 @@ Integrates with Phase 7's `cortex evolution --replay --at <commit>` at a finer g
 
 - ✅ **Pros**: Enables genuinely useful queries: "when did this dependency get introduced?", "what did the architecture look like before the auth migration?", "which edges have been added in the last week?" — all O(graph) instead of O(log replay). Temporal KG is a well-established research area, so the data model is on solid ground. The bitemporal distinction (validity vs. event time) is the right level of rigor for an architectural memory tool — it's how databases handle this (SQL:2011 system-versioned tables).
 - ❌ **Cons**: Doubles the relationship field count (every edge gains 2-3 extra fields). Mitigated by the fields being small (timestamps) and persisted only in `state.json`, not in human-readable markdown. Soft-delete semantics (entities retained with `removed: true`) accumulate cruft over time; mitigated by an optional `cortex prune --before <date>` command that hard-deletes old soft-deleted records (explicit user invocation).
+
+**Temporal Consistency Correction**: When a later synthesis produces entity content or relationships that contradict an earlier version, the temporal graph retroactively corrects the earlier record — the contradiction is annotated (not overwritten), marking it as `supersededBy: <newer_version_ref>`. This ensures temporal queries always see a self-consistent timeline. Separately, when source code changes invalidate the evidence chain of an older synthesis (e.g., the file line range an entity referenced no longer exists), the evidence chain is traced backward through the temporal graph and each affected entity's confidence score is decayed proportionally to the evidence distance from the invalidated source. Builds on Phase 7's `evidenceDrift` field and Phase 16's contradiction detection.
 
 ---
 
@@ -3554,6 +5178,8 @@ Lifecycle:
 - ✅ **Pros**: VOYAGER's skill library is a high-profile lifelong-learning paper (TMLR 2024, 800+ citations). The "your team did this before, here's how" framing is uniquely valuable — most static refactoring tools give generic advice; Cortex's skill library gives team-specific historical precedent. The library compounds in value: more successful refactors → better future suggestions. Reuses Cortex's existing log, quality, and embedding infrastructure.
 - ❌ **Cons**: Skill harvesting depends on outcome signals — without Phase 15 (CI), Phase 7.5 (quality), and ideally Phase 23 (review), the harvester has weaker "successful" signals. Mitigated by graceful degradation: weaker signals produce fewer skills, not wrong ones. Skill quality varies with team behavior — a team that resolves anti-patterns poorly harvests poor skills. Mitigated by the manual `cortex skills remove` escape hatch.
 
+**Emerging Pattern Detection**: beyond harvesting known refactors, monitor the entity graph for spontaneously-repeating subgraph topologies. When the same entity-neighborhood shape appears in 3+ independent locations without a shared synthesis event, flag it as an emergent pattern — an implicit architecture forming without design intent. Surface via `cortex skills list --emergent`. Patterns matching known anti-pattern shapes (god-module, cycle) escalate to advisory; patterns matching desirable shapes annotate the entity with `_emergentPattern: "<name>"` for the skill library to learn from.
+
 ---
 
 ## ⚖️ Phase 20.14: Causal Impact Analysis — ⏳ Planned (research-grade)
@@ -3564,6 +5190,10 @@ Lifecycle:
 Today Cortex tells you "AuthService and SessionStore are related" but doesn't tell you whether changing AuthService will *cause* SessionStore to break, or whether they're correlated through some shared parent dependency. Phase 20.14 builds a causal model over the architecture: when you ask "what happens if I remove the JWT library?", Cortex answers using Pearl's do-calculus — the same math the FDA uses to evaluate drug interventions — to give a causal answer, not just a correlational one. Root-cause analysis ("which entity is the likely origin of this failure?") becomes a first-class query.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Pearl's Do-Calculus ($do(X)$)**
+> *Source Domain:* Causal Inference (Judea Pearl).
+> The system distinguishes between *correlation* (X and Y change together) and *causation* (intervening to change X *causes* Y to break). Cortex uses structural causal models to mathematically prove if a refactor will break a downstream service, answering counterfactual queries like *"What would have happened to the payment service if the auth module had not been migrated?"*
+
 A structural causal model (SCM) layer over the Phase 6 typed dependency graph. Each `depends_on` edge gains a `causalStrength: number` (0-1) derived from observed change-propagation in `log.jsonl`: if changes to A historically caused changes to B within N syncs, the A→B edge gains causal strength proportional to the conditional probability `P(change_B | change_A)` over the empirical history.
 
 Three new query types:
@@ -3661,6 +5291,49 @@ CLI overrides: `cortex sync --force-slow` (always deliberate), `cortex sync --fo
 
 ---
 
+## 🧬 Phase 20.15.1: Protein Folding — Argument Prediction — ⏳ Planned (research-grade)
+
+**Research grounding**: **AlphaFold** (Jumper et al., DeepMind 2021 — *"Highly accurate protein structure prediction with AlphaFold"*, Nature 2021, 30,000+ citations) predicts 3D structure from a 1D amino-acid sequence. Conceptual analog: given a partial reasoning chain (1D argument sequence), predict the logical endpoints (3D conclusions) the chain is folding toward. Operates purely over the graph — no protein data, no model training.
+
+**Layman's Terms**
+When you or Cortex starts an incomplete reasoning chain — "if we move to microservices, then auth needs to be extracted, which means..." — Phase 20.15.1 predicts where that chain is heading. It reads the Partial graph of entities + argument edges and asks "what conclusion does this chain fold toward?" It's AlphaFold for arguments, not proteins.
+
+**Technical Terms**
+Post-20.15 dual-process routing is stable. Adds a lightweight prediction layer that runs over graph chains: given a sequence of entities linked by argument edges (premise → conclusion), predict the most likely missing conclusion.
+
+- **Input**: a subgraph where entities are linked by edges of kind `"premise"` or `"supports"` forming a directed chain (or tree). Extracted from the active synthesis context.
+- **Prediction mechanism**: a single LLM query: `Given these premises in sequence: [...]. What conclusion does this argument chain fold toward? Return a ranked list of up to 3 plausible conclusions, each with a confidence score (0-1).`
+- **Output**: up to 3 predicted conclusions as structured JSON with `{ conclusion: string, confidence: number, evidence: string[] }`. Persisted as draft entities with `predicted: true` flag (not synthesized unless confirmed).
+- **Integration**: invoked by Phase 20.15's System 2 router when the argument chain length exceeds 3 entities. Results appear as `cortex predict --chain <entityIds>`.
+- **Not**: a replacement for System 2 reasoning (Phase 20.18 ToT). It's a fast-lightweight prefix: predict first, then verify with ToT if confidence is low.
+
+**Architecture & System Design**
+
+- **Core Components**: new `src/synthesis/folding.ts` (chain extraction + prompt), small hook in `src/synthesis/router.ts` (gated on chain length > 3).
+- **Design Pattern**: Prompt-only — no model, no training, no infrastructure. Reuses existing entities and relationship kinds.
+- **Key Considerations**:
+  - Predictions are **never auto-committed**. They are stored as draft entities (`predicted: true`) and flagged for user review. The user can `cortex promote <predictionId>` to convert to a real entity.
+  - Chain extraction is conservative: only follows edges of kind `"premise"` or `"supports"` — not `"depends_on"` or `"called_by"` — because those are dependency edges, not argument edges.
+  - Works offline (no API call) if the chain is empty or trivially short (≤2 entities). The prompt is only dispatched for nontrivial chains.
+  - False positives (predicted conclusions that are wrong) are harmless because they're never synthesized — they sit as drafts until manually promoted or pruned by Phase 20.17 consolidation.
+
+**Definition of Ready (DoR)**
+- Phase 20.15 dual-process routing stable.
+- `"premise"` and `"supports"` relationship kinds present in the graph (Phase 6).
+
+**Definition of Done (DoD)**
+- `cortex predict --chain <entityIds>` returns ranked predictions with confidence scores.
+- Draft entities created with `predicted: true` flag; not auto-synthesized.
+- Predictions gated on chain length > 3.
+- Test with empty chain (no-op), short chain (≤2, no-op), medium chain (3+, predictions returned), and known-contrived chain (verify prediction quality is plausible).
+
+**Pros & Cons**
+
+- ✅ **Pros**: Novel intellectual framing (AlphaFold analogy), genuinely useful for architectural reasoning, zero infrastructure cost, builds naturally on existing graph structures.
+- ❌ **Cons**: Predictions are LLM-quality — not formal theorem proving. Draft entity pattern mitigates false-positive risk. The "premise" relationship kind needs to be actively maintained by users or auto-detected from commit messages (future work).
+
+---
+
 ## 🎭 Phase 20.16: Multi-Agent Librarian Collaboration — ⏳ Planned (research-grade)
 
 **Research grounding**: **AutoGen** (Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, Awadallah, White, Burger, Wang — Microsoft Research + Penn State 2023 — *"AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation"*, arXiv:2308.08155, ICLR 2024). **MetaGPT** (Hong, Zheng, Chen, Cheng, Wang, Zhang, Wang, Yau, Lin, Zhou, Ran, Xiao, Wu, Schmidhuber — DeepWisdom 2023 — arXiv:2308.00352, ICLR 2024 Oral). **Multi-Agent Debate** (Du, Li, Torralba, Tenenbaum, Mordatch — MIT 2023 — arXiv:2305.14325). **CAMEL** (Li, Hammoud, Itani, Khizbullin, Ghanem — KAUST 2023, NeurIPS 2023). **ChatDev** (Qian, Liu, Zhang, Chen, Dang, Liu, Cong, Sun — Tsinghua 2024, ACL 2024).
@@ -3729,13 +5402,19 @@ CLI: `cortex sync --agents <list>` overrides activation (e.g., `--agents archite
 Humans don't just accumulate facts — they sleep, and during sleep the brain reorganizes what was learned that day into deeper patterns. Today Cortex just keeps adding entities forever. Phase 20.17 adds a "sleep" phase: every N syncs (or nightly via cron), Cortex runs a consolidation pass that merges duplicate concepts, archives resolved contradictions, generates higher-order pattern insights, and prunes truly dead entities. The knowledge base stays sharp instead of accumulating as cruft.
 
 **Technical Terms**
-A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Five operations:
+> 🔬 **Scientific Foundation: Sleep Consolidation (Synaptic Downscaling)**
+> *Source Domain:* Sleep Biology / Neuroscience.
+> During sleep, the brain replays the day's events, compresses memories, and prunes weak synaptic connections (Synaptic Homeostasis Hypothesis). Cortex replicates this: when the IDE is closed or idle at 3 AM, a background daemon replays the day's git commits, compresses the knowledge graph, prunes dead synaptic weights (using Oja's rule from Phase 13.8), and even hallucinates possible refactorings (dreams) to test architectural stability for the next day.
+
+A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Six operations:
 
 1. **Duplicate merging**: identify entities with high Phase 18 embedding similarity (>0.9) AND overlapping `sourceFile` paths AND no distinguishing relationships. Propose merge candidates; user applies via `cortex consolidate --apply-merges`.
 2. **Resolved-contradiction cleanup**: contradictions resolved >30 days ago with no recurrence are archived (moved from active `contradictions[]` to `contradictions-archive.jsonl`).
 3. **Higher-order pattern extraction**: detect entity clusters that share architectural patterns (Repository, Strategy, Factory) via Phase 20.13 skill library + Phase 20.9 communities, and synthesize a meta-entity describing the pattern at the cluster level.
 4. **Dead entity pruning**: entities with `removed: true` (Phase 20.12) AND no temporal queries against them in 90 days are hard-deleted (with explicit user confirmation per batch).
 5. **Reflection generation**: per Generative Agents pattern, an LLM pass over recent `log.jsonl` events produces "what did we learn this week" insights stored at `.knowledge/reflections/weekly/<date>.md`.
+6. **Synaptic edge pruning**: prune weak edges — relationships where `coEditWeight < 0.05` AND `causalStrength < 0.1` (or absent) AND `lastEvidenceAt > 180 days ago`. Pruned edges archived in `log.jsonl` for potential resurrection if the relationship re-emerges. Keeps the graph honest without human intervention.
+7. **Fermentation Incubation**: Add a `fermentingUntil` optional timestamp on `EntityRecord`. When an entity is marked as fermenting, it is excluded from synthesis (read-only) and excluded from context packs. When `fermentingUntil` expires, the scheduler triggers a notification resurfacing the entity alongside everything learned since it was locked. This operation runs between consolidation passes — entities with expired `fermentingUntil` are re-evaluated: if new connections (edges synthesized during the pause) or new entities with overlapping `sourceFile` now exist, the entity is un-fermented with a summary of "what happened while you were away." If no new connections exist, `fermentingUntil` is extended by the same duration — the entity wasn't ready to resurface. Gated by CLI flag `--ferment` on `cortex consolidate`.
 
 Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to true.
 
@@ -3756,7 +5435,7 @@ Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to t
 
 **Definition of Done (DoD)**
 
-- `cortex consolidate` runs all 5 operations with `--dry-run` defaulting to true.
+- `cortex consolidate` runs all 7 operations with `--dry-run` defaulting to true. Fermentation is gated by `--ferment` flag.
 - Duplicate merge candidates correctly identified by embedding + sourceFile overlap.
 - Resolved contradictions archived after configurable window.
 - Higher-order pattern entities generated from skill + community signals.
@@ -3767,7 +5446,21 @@ Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to t
 **Pros & Cons**
 
 - ✅ **Pros**: Solves the "knowledge base grows forever as cruft" problem at the architectural level that biological sleep solves it (batch off-hours). Generative Agents' reflection phase is one of the paper's most-replicated mechanisms. The weekly reflection artifact is high-value documentation that emerges naturally from this layer. Diekelmann & Born (Nature Reviews) is a foundational reference frame for the design.
-- ❌ **Cons**: Consolidation is computationally expensive (~N² entity-pair embedding comparisons for duplicate detection). Mitigated by off-hours scheduling. User-approval-by-default means consolidation only happens when humans review — acceptable trade since architectural memory consolidation is too high-stakes to fully automate.
+- ❌ **Cons**: Consolidation is computationally expensive (~N² entity-pair embedding comparisons for duplicate detection). Fermentation adds state management over an unbounded set of dormant entities — mitigated by the auto-extend mechanism. User-approval-by-default means consolidation only happens when humans review — acceptable trade since architectural memory consolidation is too high-stakes to fully automate.
+
+---
+
+## 🧊 Phase 20.17.1: Casimir Effect — Suppressed-Mode Creativity — ⏳ Planned (research-grade)
+
+**Layman's Terms**: When two entities are brought close together in the graph, suppress the obvious connections between them. What remains are the surprising, creative links that wouldn't exist in either entity alone. Like forcing unrelated ideas close and seeing what unexpected sparks fly.
+
+**Technical Terms**: Phase 20.17 op 7 (Fermentation) already surfaces dormant entities. Casimir adds a specific pair-testing filter: when evaluation mode detects that an entity pair has high semantic overlap (>0.7 embedding cosine), instead of merging or deduplicating, invert the filter — exclude edges with embedding similarity >0.7 and surface only the residual low-probability edges (similarity <0.3) that still pass Phase 7.5 quality gates. Output is a "surprise report": entity pairs with unexpectedly low surface similarity but high architectural relevance. Gated by `CORTEX_CASIMIR=true` (default: off — research-grade).
+
+**Builds on**: Phase 7.5 quality scoring, Phase 20.17 op 7 fermentation, Phase 18 entity embeddings.
+
+**DoR**: Fermentation (Phase 20.17 op 7), Phase 18 embeddings, and Phase 7.5 quality scoring are stable.
+
+**DoD**: Casimir mode produces surprise reports with filtered edge pairs. Default-off flag. Tests: high-overlap pair (few edges surfaced), low-overlap pair (edges pass filter), empty result when no surprising edges found.
 
 ---
 
@@ -3895,6 +5588,9 @@ MCP tool: `edit_entity(entity, field, value, reason?)` for IDE-assisted surgical
 Today Cortex is reactive — it waits for a code change, then synthesizes. Phase 20.20 makes it predictive: before you commit a change, Cortex predicts what synthesis it expects based on past patterns. When your actual change matches the prediction, the system is unsurprised and synthesizes quickly. When your change is wildly unexpected ("you just imported a payment library in the auth module — never seen that before"), the system surfaces *surprise* as a signal: "this is unusual relative to your codebase's pattern — worth a careful look." Inspired by Karl Friston's Free Energy Principle.
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Predictive Coding (Free Energy Principle)**
+> *Source Domain:* Neuroscience (Karl Friston).
+> The brain doesn't react to stimuli; it constantly predicts what will happen and only processes "surprise" (prediction errors). Cortex should predict what files you will edit next based on historical dependencies. If you edit something expected, synthesis is fast. If you edit something else, that "surprise signal" triggers a heavy re-indexing of that specific edge. By minimizing surprise (Free Energy), Cortex actively pulls the developer back toward established architectural patterns.
 A predictive model over the synthesis distribution: P(synthesis | diff, current_context). On each diff:
 
 1. **Prediction step**: a fast prediction LLM call (Phase 19 distilled Librarian) generates an *expected* synthesis given the diff and CURRENT CONTEXT, *before* the actual synthesis runs.
@@ -3939,6 +5635,8 @@ CLI: `cortex surprise log [--top N]` — ranked list of most-surprising recent s
 
 - ✅ **Pros**: Free Energy Principle is the most-cited unified theory in computational neuroscience. Predict-then-update is a research-validated paradigm. The surprise leaderboard is genuinely useful — it surfaces the most architecturally anomalous changes, exactly where bugs and architectural drift hide. Reuses Phase 19's distilled Librarian without new infrastructure.
 - ❌ **Cons**: Surprise threshold tuning matters — too low and every sync is "surprising," too high and nothing surfaces. Mitigated by exposing the threshold and documenting calibration via empirical observation. Requires Phase 19 distillation for cost-efficient prediction.
+
+**Prediction circularity guard**: when a prediction influences the synthesis outcome such that it becomes self-fulfilling, detect the circular dependency and flag it. Detection: compare the predicted entity state (pre-synthesis) against the synthesized state (post-synthesis). If post-synthesis matches prediction more closely than pre-synthesis by a suspicious margin (Jaccard > 0.9 vs pre-synthesis Jaccard < 0.5 with source), the synthesis was likely biased by the prediction. Logged as `predictionParadox` in `log.jsonl` with references to both prediction and synthesis. Surfaced via `cortex predict log --paradoxes`.
 
 ---
 
@@ -4073,6 +5771,41 @@ Auto-confirmation: an entity touched by a recent synthesis (last 30 days) is aut
 
 ---
 
+## 🔁 Phase 20.22.1: Entity Lifecycle Phases — ⏳ Planned
+
+**Layman's Terms**
+Every entity passes through predictable stages: emerging (new, few relationships), growing (being actively developed), mature (stable, well-evidenced), declining (losing relevance), archived (removed or fossilized). Phase 20.22.1 computes a discrete lifecycle phase for each entity from existing signals — creation date, relationship count, quality trend, staleness — and surfaces it as a retrieval signal and visual indicator.
+
+**Technical Terms**
+A computed `lifecyclePhase: "emerging" | "growing" | "mature" | "declining" | "archived"` derived from:
+- **emerging**: created <30 days, <3 relationships
+- **growing**: created <90 days, relationships increasing (detected via log.jsonl trend)
+- **mature**: stable description, quality >0.7, well-evidenced (evidence count >2), no recent staleness signals
+- **declining**: `staleSince` set, quality dropping (last 3 scores decreasing), no recent synthesis touching this entity in 60 days
+- **archived**: removed from active index (Phase 7.9) or fossilized (Phase 40.6)
+
+Computed on read from existing fields — no new storage. Surface:
+- **Context packer**: deprioritize declining entities; prioritize emerging/growing entities for enrichment.
+- **Graph visualization**: color nodes by lifecycle phase (green=mature, amber=declining, blue=emerging).
+- **Cortex lint**: warn on declining entities with no archival plan.
+
+**Definition of Ready (DoR)**
+- Phase 20.22 (Spaced Repetition) is completed — provides creation timestamps and quality trends.
+- Phase 7.5 quality scores are stable.
+
+**Definition of Done (DoD)**
+- `lifecyclePhase` computed for every entity on read.
+- Phase boundaries configurable via `CORTEX_LIFECYCLE_THRESHOLDS` (age days, relationship count, quality floor).
+- Context packer deprioritizes declining entities.
+- Graph visualization colors nodes by lifecycle phase.
+- Tests cover: each phase correctly classified from synthetic entity records, configurable threshold overrides.
+
+**Pros & Cons**
+- ✅ **Pros**: Explicit lifecycle awareness without new storage or new synthesis. Refines retrieval quality — declining entities get less budget, emerging entities get more attention. ~25 lines of computed-field logic.
+- ❌ **Cons**: Phase boundaries are heuristic — a long-dormant entity might be "mature" not "declining." Mitigated by configurable thresholds and by always surfacing the raw signals alongside the computed phase.
+
+---
+
 ## 🛠️ Phase 20.23: Tool-Use Augmented Synthesis — ⏳ Planned (research-grade)
 
 **Research grounding**: **Toolformer** (Schick, Dwivedi-Yu, Dessì, Raileanu, Lomeli, Zettlemoyer, Cancedda, Scialom — Meta AI 2023 — *"Toolformer: Language Models Can Teach Themselves to Use Tools"*, NeurIPS 2023, arXiv:2302.04761, 1500+ citations). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022 — *"ReAct: Synergizing Reasoning and Acting in Language Models"*, ICLR 2023, 2000+ citations). **Gorilla** (Patil, Zhang, Wang, Gonzalez — UC Berkeley 2023 — arXiv:2305.15334). **LATS** (Zhou et al., ICML 2024). **Voyager** tool-use mechanics (Wang et al., NVIDIA TMLR 2024).
@@ -4143,7 +5876,7 @@ Pipeline:
 
 ### Layman's Terms
 
-When Cortex's Librarian synthesizes a complex change today, the reasoning vanishes — you see the resulting entity description but not *why* the AI concluded what it did. Phase 20.24 records the step-by-step thinking ("first I considered X; then I noticed Y contradicted it; I revised my conclusion to Z; verified by Q") and stores it with the entity. When a PR is blocked by a constraint violation (Phase 6) or a fitness function (Phase 20.4), the PR comment includes the reasoning chain: *"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."* Developers stop hating constraint blocks because they understand *why*. Powered by Anthropic's open-source Sequential Thinking MCP server, integrated via Phase 20.23's tool registry — not reinvented.
+Normal AI prediction is linear and greedy; if it makes one wrong assumption early on, the whole task fails. Phase 20.24 forces the AI to explore multiple logic trees concurrently (branching, backtracking, verifying) so the final generated code is the result of deep, rigorously verified logic. When a PR is blocked by a constraint violation (Phase 6), the PR comment includes the reasoning chain: *"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."* Developers stop hating constraint blocks because they understand *why*.
 
 ### Technical Terms
 
@@ -4259,6 +5992,19 @@ This is what makes constraint blocks **explainable** instead of cryptic — the 
 - `cortex trace show <entity>` CLI renders the entity's stored reasoning traces.
 - Tests cover: `sequential_think` tool registration + invocation, trace persistence + LRU eviction, CoVe verification flag, activation gating across each signal source, PR-comment rendering format, quality score integration, `--think` override behavior.
 
+---
+
+## 🗜️ Phase 20.25: Telegraphic AST Memory Compression — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Standard LLM text is full of fluff, conversational noise, and repetitive syntactic structures. By flattening the Abstract Syntax Tree (AST) into a maximally dense hash—compressing the knowledge graph down to its absolute minimum theoretical length—we pack 2x-3x more actionable architectural context into the exact same token limits.
+
+**Technical Terms**
+An advanced algorithmic compression layer over the knowledge graph. Cortex's synthesis engine acts as an information density maximizer: it strips non-semantic ASCII, pleasantries, and redundant syntax, flattening the architecture into a telegraphic representation.
+- **AST Flattening:** Directly translates source code AST patterns into deterministic hash structures rather than prose, ensuring every LLM token carries maximum semantic weight.
+- **Semantic Minification:** Removes all conversational filler ("It is important to note that...") automatically during the consolidation step.
+- **Outcome:** Doubles or triples the effective context window capacity when querying the `state.json` knowledge graph, cutting per-query token costs drastically without losing any architectural details.
+
 ### Pros & Cons
 
 - ✅ **Pros**: **Explainability without reinventing reasoning** — Sequential Thinking is a battle-tested open-source MCP server; Cortex consumes it via the existing tool registry rather than building parallel infrastructure. CoVe verification step catches reasoning-internal hallucinations cheaply (one extra thought). PR-comment integration is **the** product win — constraint blocks become teaching moments rather than friction. Reasoning traces feed back into Phase 20.11 Reflexion (richer reflection inputs) and Phase 7.5 quality scoring (verified-trace dimension). Activation gating keeps cost bounded — the typical synthesis pays nothing for this feature; only the ~5-15% of complex/contested syntheses pay the multiplier.
@@ -4269,6 +6015,115 @@ This is what makes constraint blocks **explainable** instead of cryptic — the 
 Phase 20.18 (Tree-of-Thoughts) is **breadth-first reasoning**: generate K parallel candidates, score them, pick the best. Phase 20.24 Sequential Thinking is **depth-first reasoning**: one chain that revises itself, with explicit verification. They are complementary patterns, not redundant — the slow path (Phase 20.15) can choose either or both depending on the problem shape.
 
 Phase 20.23 (Tool-Use) ships the tool *registry* and the 6 baseline tools. Phase 20.24 ships the Sequential Thinking tool integration + the persistent trace layer + the PR-comment integration. Folding 20.24 into 20.23 would conflate "tool registry exists" with "Sequential Thinking + trace persistence + PR integration is implemented" — different scopes, different DoR (20.23 requires no other phase; 20.24 requires 20.15 + 6 + 12), different test surfaces.
+
+---
+
+## 🕸️ Phase 20.28: Agentic Retrieval Loop — ⏳ Planned
+
+**Layman's Terms**
+Sometimes a simple search isn't enough. "How does the payment flow work end-to-end?" requires pulling facts from the auth module, the billing service, the webhook handler, and the ledger — each in a different part of the codebase. Phase 20.28 turns Cortex's retrieval into an *agent*: it doesn't just search once; it plans what to look up, searches, reads results, decides if it has enough, and searches again if not. Like a junior dev who knows when to go ask a follow-up question instead of guessing.
+
+**Technical Terms**
+Implements the Agentic RAG pattern (Singh et al., arXiv:2501.09136; Mishra et al., SoK arXiv:2603.07379, 2026). At query time, a reasoning LLM (the "retrieval agent") controls a loop:
+1. **Query decomposition**: the agent splits a complex query into sub-queries (e.g., "find auth entities" + "find billing entities" + "find ledger entities").
+2. **Tool routing**: per sub-query, the agent selects a retrieval tool — vector search, BM25 keyword search, entity name lookup, web search, or a data source tool (e.g., `git_blame`, `read_file`). Tools are registered via Phase 20.23's tool registry.
+3. **Multi-hop retrieval**: the agent iterates retrieve → reason → identify gaps → reformulate → re-retrieve until evidence sufficiency is met.
+4. **Self-check**: a faithfulness judge (LLM-as-a-judge) scores each candidate answer against the retrieved evidence. Unsupported claims trigger re-retrieval with a refined query.
+5. **Adaptive termination**: the loop ends when confidence exceeds a threshold (configurable per query type) or max iterations (default 5) is reached.
+
+**How this differs from Phase 20.11 (Reflexion-Style Self-Correcting Synthesis)**
+Phase 20.11 corrects the *generated output* after retrieval is done — it's a post-hoc critique. Phase 20.28 corrects the *retrieval process itself* mid-loop — the agent rewrites queries and re-retrieves before generation even starts. They compose: 20.28 produces high-quality context, then 20.11 verifies the output against that context.
+
+**Research grounding**: SoK: Agentic RAG (Mishra et al., arXiv:2603.07379, 2026); Agentic RAG Survey (Singh et al., arXiv:2501.09136); CoopRAG (Ko et al., NeurIPS 2025, arXiv:2512.10422).
+
+**Core Components**: new `src/retrieval/agent/planner.ts` (query decomposition → sub-query generation), `src/retrieval/agent/router.ts` (tool selection per sub-query), `src/retrieval/agent/loop.ts` (retrieve-reason-reformulate cycle with adaptive termination), `src/retrieval/agent/judge.ts` (faithfulness gate — reuses Phase 7.5 quality scoring infrastructure), integration with Phase 20.23 tool registry.
+
+**Definition of Ready (DoR)**
+- Phase 20.23 (tool registry) is shipped — the retrieval agent needs tools to call.
+- Phase 13.5 (vector/BM25 search) is shipped — baseline retrieval tools exist.
+
+**Definition of Done (DoD)**
+- A 3-hop query ("how does auth → billing → ledger work?") returns evidence from all three subsystems without manual rewrites, vs. Phase 13.5 baseline which misses ≥1 hop 60%+ of the time.
+- Faithfulness judge blocks hallucinated claims and triggers re-retrieval with ≥80% precision.
+- Adaptive termination: simple queries terminate in 1 iteration; complex ones use up to 5.
+- CLI flag `cortex query --agentic` activates the agentic loop (otherwise uses standard Phase 13.5 retrieval).
+
+**Pros & Cons**
+- ✅ **Pros**: Dramatically better multi-hop retrieval quality; self-correcting loop reduces hallucination at source; composable with Phase 20.11 and Phase 20.29 for layered reliability.
+- ❌ **Cons**: Higher latency (3-5x vs. single-pass retrieval) and token cost per query. Mitigated by adaptive termination (simple queries skip the loop).
+
+---
+
+## 🎯 Phase 20.29: Corrective RAG Module — ⏳ Planned
+
+**Layman's Terms**
+When Cortex searches for information, sometimes the results are bad — irrelevant pages, outdated docs, wrong module. Phase 20.29 adds a quality check *before* the LLM sees the results: if the search results are low quality, Cortex auto-falls back to a web search. And instead of dumping whole documents into context, it decomposes each document and only keeps the relevant parts. Like a research assistant who checks a source before handing it to you — and cuts out the irrelevant paragraphs.
+
+**Technical Terms**
+Implements Corrective Retrieval Augmented Generation (CRAG) (Yan et al., arXiv:2401.15884, 2024). Three-stage pipeline:
+1. **Retrieval evaluator**: a lightweight T5-based or LLM-as-a-judge scorer assesses the overall relevance of retrieved documents for a query, returning a confidence score (0-1). Uses a single forward pass — no multi-step reasoning at evaluation time.
+2. **Action selection**: based on confidence:
+   - **High** (≥0.7): proceed with retrieved docs, applying the decompose-then-recompose filter.
+   - **Medium** (0.3-0.7): trigger web search fallback. Merge web results with vector results via reciprocal rank fusion (Phase 13.5 RRF).
+   - **Low** (<0.3): discard retrieved docs entirely, use web search only.
+3. **Decompose-then-recompose**: each retrieved document is split into "knowledge strips" (paragraph-level). Irrelevant strips (scored by the evaluator per-strip) are discarded. Remaining strips are recomposed into a coherent, noise-free context window.
+
+**How this differs from Phase 20.28 (Agentic Retrieval Loop)**
+Phase 20.28 is an *agent* that plans and iterates — it handles complex queries that need multi-hop reasoning. Phase 20.29 is a *quality gate* for single-pass retrieval — it handles the common failure mode where a simple query returns bad results. They stack: 20.29 evaluates and cleans each retrieval step *within* the 20.28 agentic loop.
+
+**Research grounding**: CRAG (Yan et al., arXiv:2401.15884, 2024); Self-RAG reflection tokens (Asai et al., ICLR 2024, arXiv:2310.11511) — retrieval evaluator design borrows the relevance/support token concept.
+
+**Core Components**: new `src/retrieval/crag/evaluator.ts` (lightweight relevance scorer), `src/retrieval/crag/actions.ts` (confidence-based action router: proceed / web-fallback / discard-and-web), `src/retrieval/crag/decompose.ts` (document → knowledge strips + per-strip scoring + recomposition), integration with web search tool (reuses existing web fetch infrastructure).
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (vector/BM25 search + RRF) is shipped.
+- Web fetch infrastructure exists (for web search fallback).
+
+**Definition of Done (DoD)**
+- When evaluated against a test set of 50 queries with intentionally poisoned retrieval (irrelevant docs inserted), CRAG detects low-relevance and falls back to web search with ≥90% accuracy.
+- Decompose-then-recompose reduces context window size by ≥40% vs. full-document retrieval while maintaining or improving answer quality (measured by LLM-as-a-judge).
+- Retrieval evaluator adds ≤50ms p99 latency per query (single forward pass design).
+- CLI flag `cortex query --correct` activates CRAG gating (enabled by default for Pro tier).
+
+**Pros & Cons**
+- ✅ **Pros**: Catches bad retrieval before it reaches the LLM; web fallback keeps answers grounded; decompose-then-recompose saves tokens and reduces noise.
+- ❌ **Cons**: Extra latency from evaluator pass; web fallback introduces variable latency. Mitigated by lightweight evaluator design and async web search that streams results.
+
+---
+
+## 🔄 Phase 20.30: Iterative RAG Refinement — ⏳ Planned
+
+**Layman's Terms**
+Cortex retrieves some context, generates an answer, then checks: "is anything missing?" If the answer has gaps, it searches again with a better question, merges the new evidence, and re-generates. It keeps going until the answer is solid or it's tried enough times. This is how a human expert works — read, think, realize you need more info, go find it, repeat.
+
+**Technical Terms**
+Implements Iterative RAG (Astaraki et al., arXiv:2601.19827, 2026; Lin et al., 2025), a multi-pass retrieve-reason-retrieve loop distinct from both Agentic RAG (which uses an agent) and CRAG (which uses an evaluator). The core loop:
+1. **Initial retrieval**: standard Phase 13.5 retrieval based on the user query.
+2. **Hypothesis generation**: the LLM generates a preliminary answer conditioned on the retrieved context.
+3. **Gap detection**: the LLM scores its own confidence (per-claim) and emits a list of specific missing information items ("I need to know what error handler middleware does when the DB connection fails").
+4. **Query reformulation**: each gap item is reformulated into a targeted search query by an LLM.
+5. **Re-retrieval**: new queries are executed. Results are merged with existing evidence via RRF (Phase 13.5).
+6. **Evidence-aware stopping**: if all claims have confidence above threshold (default 0.8) or max iterations (default 3) reached, the final answer is generated. Otherwise, loop back to step 3.
+
+**How this differs from Phase 20.28 (Agentic Retrieval Loop)**
+Phase 20.28 uses an *agent* that explicitly plans sub-queries and selects tools — it's structured, controllable, and explainable. Phase 20.30 is a *simpler, softer* loop: generate → self-assess gaps → re-retrieve → regenerate. No explicit planning or tool selection — just iterative refinement. 20.30 is cheaper and easier to implement; 20.28 is more powerful but more expensive. They are alternatives (choose one based on complexity budget), not stackable.
+
+**Research grounding**: When Iterative RAG Beats Ideal Evidence (Astaraki et al., arXiv:2601.19827, 2026); Iterative RAG Survey (Emergent Mind, 2026); Multi-cycle RAG (CLoaKY233, 2025).
+
+**Core Components**: new `src/retrieval/iterative/loop.ts` (gap detection prompt → query reformulation → re-retrieval → merge → retry), `src/retrieval/iterative/gap.ts` (per-claim confidence scoring and gap extraction), `src/retrieval/iterative/stop.ts` (evidence-aware termination policy), integration with Phase 13.5 RRF for evidence merging.
+
+**Definition of Ready (DoR)**
+- Phase 13.5 (vector/BM25 search + RRF) is shipped.
+
+**Definition of Done (DoD)**
+- On a test set of 30 multi-hop queries where initial retrieval is intentionally incomplete, iterative refinement closes ≥70% of evidence gaps (measured by human evaluators).
+- Iterations terminate early (≤2) on 60%+ of simple queries; complex queries use up to 3.
+- Per-iteration latency ≤ the original retrieval latency (since re-retrieval queries are narrower).
+- CLI flag `cortex query --iterative` activates iterative refinement.
+
+**Pros & Cons**
+- ✅ **Pros**: Simple implementation (no agent, no tool routing); effective at closing evidence gaps; early termination saves cost on easy queries; composable with Phase 20.29 (CRAG as the per-iteration quality gate).
+- ❌ **Cons**: Can drift on very long loops (mitigated by max 3 iterations); gap detection quality depends on LLM calibration (mitigated by training-free confidence prompts).
 
 ---
 
@@ -5033,6 +6888,18 @@ interface SignedAuditEvent {
 
 ---
 
+## 📜 Phase 26.5: Xuan Paper Layer — Permanent Provenance Overlay — ⏳ Planned
+
+**Layman's Terms**: Every interaction with an entity — even reads — leaves a permanent, semi-transparent mark. Nothing is ever deleted, only overlaid. Like writing on Xuan paper: every stroke bleeds through permanently. The current state is the topmost visible layer; full history is always preserved underneath.
+
+**Technical Terms**: Add `provenanceLayer` field to `EntityRecord`: `{ overwrites: { timestamp: string, type: "edit" | "read" | "resolve" | "reject", delta: string }[] }`. Every mutation creates a new layer describing what changed (`delta` is a JSON diff). Reads append a lightweight `{ type: "read", timestamp }` marker. `cortex edit` creates a write layer; `cortex review reject` creates a rejection layer. The entity's current `description` and `relationships` are the topmost write layer; all previous layers are accessible via `cortex provenance <entity>`. This is additive storage — no data is ever removed, only superseded. Phase 26 immutable audit already hash-chains events; Xuan Paper makes the entity itself permanently layered.
+
+**DoR**: Phase 26 immutable audit trail and `EntityRecord` schema are stable.
+
+**DoD**: Every mutation appends a provenance layer. Reads append lightweight markers. `cortex provenance` replays all layers. Tests: single write (one layer), multiple writes (layered stack), read-only entity (no write layers), provenance on deleted/skeleton entity.
+
+---
+
 ## 🏰 Phase 27: Air-Gapped, Sovereign & BYO-Key Deployment — ⏳ Planned (enterprise)
 
 **Layman's Terms**
@@ -5535,6 +7402,39 @@ After raw import, each conversation passes through a synthesis pass that:
 
 ---
 
+## 🔀 Phase 30.2: Knowledge Base Merge Engine — ⏳ Planned (enterprise)
+
+**Layman's Terms**
+When two codebases combine (branch merge, repo consolidation, acquisition), their `.knowledge/` directories diverge independently. Today there's no path to merge them — the branch's knowledge is silently discarded on merge, and consolidating teams must bootstrap from scratch. Phase 30.2 adds `cortex merge <source-knowledge>` — collide two `.knowledge/` trees and produce a unified graph. Contradicting entity descriptions are flagged for Phase 23 review; identical entities are unified; unique entities from each side are retained.
+
+**Technical Terms**
+A structured merge engine operating on `state.json` graphs:
+
+1. **Entity identity resolution**: match entities across the two knowledge bases by name + `sourceFile` (strong match) or by name + subgraph shape similarity via Phase 18 embeddings (fuzzy match, when available). Unmatched entities are unique additions — retained from their source side.
+2. **Conflict detection**: when the same entity exists in both knowledge bases with different descriptions, both versions are retained as a `contradicts` relationship (Phase 16). The merge report lists all conflicts for Phase 23 human review.
+3. **Edge merge**: the union of both edge sets. Duplicate edges (same source, same target, same kind) are deduplicated; edges from both sides are retained. Temporal fields (`validFrom`/`validTo` from Phase 20.12) are preserved per side.
+4. **Garbage-resistant**: entities archived by Phase 7.9 (GC) on either side stay archived post-merge — GC decisions don't propagate across the merge boundary.
+5. **Idempotent**: running `cortex merge` twice on the same pair produces the same output (merge is a pure union function over the graph, modulo conflict labeling).
+
+**Definition of Ready (DoR)**
+- Phase 16 (Contradiction Detection) is shipped — needed for conflict labeling.
+- Phase 20.12 (Temporal KG) is shipped — needed for temporal field preservation.
+- Phase 23 (Human Review) is shipped — needed for conflict resolution workflow.
+
+**Definition of Done (DoD)**
+- `cortex merge <source-knowledge>` produces a unified `state.json` from two disjoint knowledge bases.
+- Entity identity resolution correctly matches same-file entities across the pair and flags cross-file fuzzy matches for review.
+- Conflict report lists all entity-level description contradictions with side-by-side sources.
+- Edge union preserves all non-conflicting edges; duplicate edges deduplicated.
+- Merge is idempotent: second run produces byte-identical output.
+- Tests cover: identity resolution (exact + fuzzy), conflict detection, edge union, idempotency, GC boundary preservation.
+
+**Pros & Cons**
+- ✅ **Pros**: Fills a genuine write-side federation gap — current Phase 11/21 federation is read-only. Makes branch-level knowledge preservation possible (no more discarded knowledge on merge). Enterprise consolidation use case (acquisitions, org restructuring) is a concrete sales scenario.
+- ❌ **Cons**: Depends on Phase 16, 20.12, and 23 being shipped — merge can't ship without all three. Entity identity resolution is inherently heuristic (two knowledge bases may name the same thing differently). Conflicts require human review — fully automated merge is not the goal.
+
+---
+
 ## 📊 Phase 31: Executive Analytics, ROI Dashboard & Architectural KPIs — ⏳ Planned (enterprise)
 
 **Layman's Terms**
@@ -5971,6 +7871,10 @@ A five-phase pipeline replacing the current single-shot bootstrap. Each phase is
 - If quality is below threshold for any domain, **auto-trigger a second Phase B pass for that domain** (budget permitting).
 - User-visible quality scorecard at the end: per-domain entity count, evidence coverage, relationship density, quality score (Phase 7.5).
 - If overall quality score < 0.5, emit a warning recommending `cortex bootstrap refine --domain <weakest-domain>`.
+
+**Phase F — Self-Entity Generation**
+- Auto-generate a `[[Cortex Configuration]]` meta-entity in `.knowledge/entities/` describing Cortex's own configuration on this project: which phases are active, which constraints are declared, which domains were detected, quality score trends, provider configuration, bootstrap history (timestamp, entity count, total cost). Gives the Librarian self-awareness about its own setup — when asked "how is Cortex configured for this project?" it has a ground-truth answer.
+- Cost: zero LLM calls — computed entirely from existing config + state.json + bootstrap progress. Updated on every Phase 20.17 consolidation pass to keep quality trends current.
 
 ### The Output-Token Wall — Why Multi-Wave Processing Is Physically Required
 
@@ -7403,10 +9307,467 @@ Each Pro module has a clear activation gate (which base-platform phases it depen
 
 ---
 
-## 🌌 Distributed Cognitive Substrate (Phases 40-45) — The Extended Vision
+## 🎮 Phase 34: Cognitive Engine Optimizations (Gaming/ML Inspired) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+By adapting the most aggressive performance optimizations from 3D game engines (Doom, Unreal, Silent Hill) and modern ML inference (vLLM, Speculative Decoding), Project Cortex can achieve "infinite" scale on enterprise monorepos without token explosion or latency bottlenecks. These are pure software engineering translations of rendering pipeline hacks, repurposed for massive LLM context windows.
+
+### Phase 34.1: Virtualized Context Streaming (Inspired by UE5 Nanite)
+**Technical Terms**: Cortex generates a dynamic "Level of Detail" hierarchy for every entity. LOD 0 (1,000 tokens) for immediate proximity (full AST, source code); LOD 1 (150 tokens) for 1-hop dependencies (interfaces only); LOD 2 (15 tokens) for distant graph clusters (name and summary only). As the LLM traverses the graph, Cortex streams in higher LODs for the "focal point" and instantly degrades the LOD for distant modules.
+**Engineering ROI**: Infinite Context Scaling. The LLM can reason about a 10,000-file monorepo within a strict 32k context window because 95% of the repo is rendered at LOD 2.
+
+### Phase 34.2: Speculative Architectural Decoding (Inspired by ML Speculative Decoding)
+**Technical Terms**: Cortex uses a highly quantized local model (or a cheap API like Haiku/Llama-3-8B) to rapidly generate the "draft" architectural impact of a 50-file PR. The expensive reasoning model (Opus/Sonnet) is then called *once* to verify the draft, correct hallucinations, and approve the synthesis.
+**Engineering ROI**: 300% Speedup & 70% Cost Reduction. Massively accelerates CI/CD pipeline blocking and PR reviews by offloading token-generation to cheap infrastructure, using the expensive model solely as an auditor.
+
+### Phase 34.3: Entity Visibility Partitioning (Inspired by Doom Engine BSP Trees)
+**Technical Terms**: When evaluating a change, Cortex pre-computes strict "Visibility Trees" based on Domain-Driven Design (DDD) boundaries and explicit graph edges. If a domain has no inbound or outbound edges to the active file, it is mathematically culled from the search space before the vector database is even queried.
+**Engineering ROI**: Eliminates 80% of Graph Traversal Overhead. Ensures zero context-window pollution by only rendering the architectural "rooms" connected by dependency doors.
+
+### Phase 34.4: Cognitive Fog & Abstraction Masking (Inspired by Silent Hill)
+**Technical Terms**: Cortex enforces a strict "Cognitive Fog" at 2 graph hops away from the active file. Beyond this horizon, implementation details are intentionally masked out, and the AI is *only* allowed to see the public API interfaces of distant services.
+**Engineering ROI**: Forced SOLID Compliance. Prevents the AI from writing tightly coupled spaghetti code based on deep implementation details.
+
+### Phase 34.5: Data-Oriented Synthesis Pipeline (Inspired by Game Engine ECS)
+**Technical Terms**: Instead of representing the knowledge graph as nested JSON objects, Cortex pivots the graph into a columnar/ECS structure. All `Dependencies` live in one contiguous typed array; all `Invariants` in another.
+**Engineering ROI**: 10x-50x Faster Graph Validation. Lint checks operate on a flat array of integers (IDs) rather than deserializing thousands of JSON objects, executing in under 5 milliseconds.
+
+### Phase 34.6: Heuristic Embedding Pruning (Inspired by Quake III Fast Inverse Square Root)
+**Technical Terms**: Cortex uses Locality Sensitive Hashing (LSH) and bitwise XOR operations to find "roughly similar" entities 100x faster using integer math, only doing the expensive floating-point cosine similarity on the top 1% of matches.
+**Engineering ROI**: Sub-millisecond Local Semantic Search without spinning up a heavy vector database like Pinecone.
+
+### Phase 34.7: Paged Context Allocation (Inspired by ML PagedAttention)
+**Technical Terms**: Cortex pre-chunks the knowledge graph into exact, fixed-token-size pages (e.g., 256 tokens per block). When assembling the final prompt, it passes pointers to these pages to tightly pack the context window.
+**Engineering ROI**: 100% Context Window Utilization. Zero token waste and no risk of a JSON object being cleanly cut in half by a max-token limit.
+
+---
+
+## 🧬 Phase 35: Cross-Disciplinary Architecture Optimizations (Deep Tech Inspired) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+This phase pulls extreme optimizations from Google's PageRank, mathematical Category Theory, Figma's multiplayer syncing, and kernel-level Anticheat software. It translates these wildly diverse concepts into strict software engineering implementations to solve Cortex's biggest bottlenecks around cost, multi-agent deadlocks, code duplication, and LLM hallucination.
+
+### Phase 35.1: Architectural PageRank & Virtual Graph DOM (Inspired by Google & React)
+**Technical Terms**: Cortex calculates a "Virtual Graph Diff" in memory and applies a PageRank algorithm to the dependency graph. Changes to high-centrality nodes (e.g., `core/auth`) are prioritized, while low-centrality nodes are deferred or skipped.
+**Engineering ROI**: 90% Reduction in LLM API Costs & Ingest Time. Massively drops cost during CI/CD ingestion by intelligently skipping low-impact nodes.
+
+### Phase 35.2: CRDT-Based Multi-Agent Graph Mutations (Inspired by Figma)
+**Technical Terms**: Migrates `.knowledge/state.json` from Mutex locking to Conflict-free Replicated Data Types (CRDTs). Allows completely lock-free, concurrent mutation of the architectural graph by fleets of autonomous agents.
+**Engineering ROI**: Infinite Agent Parallelism. Eliminates deadlock and wait-state IO blocking, allowing 100 agents to audit 100 microservices simultaneously.
+
+### Phase 35.3: Categorical Isomorphism Detection (Inspired by Category Theory)
+**Technical Terms**: Uses Category Theory to detect structural isomorphism—proving mathematically that two sub-graphs behave identically even if written in different languages or paradigms (e.g., Python Flask vs. Go Gin).
+**Engineering ROI**: Enterprise Debt Eradication. Automatically identifies and flags systemic architectural duplication across massive polyglot monorepos.
+
+### Phase 35.4: Ring-0 IDE Telemetry Hooks (Inspired by Vanguard Anticheat & eBPF)
+**Technical Terms**: Cortex deploys low-level memory hooks into the IDE's Language Server Protocol (LSP). It observes failed developer trajectories in real-time and silently records them as "Failed Paths" in the local state without needing a commit.
+**Engineering ROI**: Perfect Context Awareness. The AI knows exactly what the developer tried and failed to do, preventing it from suggesting a recently deleted approach.
+
+### Phase 35.5: WebAssembly (WASM) Graph Vectorization (Inspired by SIMD & Assembly)
+**Technical Terms**: Rewrites the core `Substrate` graph traversal engine in bare-metal Rust/WASM, utilizing Single Instruction, Multiple Data (SIMD) for bitwise array operations, bypassing V8 Garbage Collection pauses.
+**Engineering ROI**: 100x Performance Boost. Traverses massive enterprise architectures in under 2 milliseconds with zero IDE lag.
+
+### Phase 35.6: Architectural Write-Ahead Logging (Inspired by Oracle WAL & DNA)
+**Technical Terms**: Before an autonomous agent executes a multi-file refactor, Cortex writes the intended state changes to an append-only WAL. If the AI hallucinates or violates an invariant, Cortex instantly plays the WAL in reverse.
+**Engineering ROI**: Zero-Risk Autonomous Coding. Provides mathematical guarantees of state recovery, making autonomous AI agents safe for production codebases.
+
+### Phase 35.7: Air-Gapped Autarky (Inspired by Luddite Philosophy)
+**Technical Terms**: An invariant "Zero-Dependency Mode." If the network is severed, Cortex instantly degrades gracefully, rips out telemetry, and falls back to a locally quantized model running purely on local silicon.
+**Engineering ROI**: Ultimate Reliability & Security. Cortex becomes immune to cloud outages and acceptable for extreme high-security (defense, finance) air-gapped environments.
+
+**New: `cortex autarky audit`** — scans `package.json`/`requirements.txt`/equivalent for every external dependency and scores replaceability on API surface size, bus factor, and native-alternative availability. Produces a ranked self-sufficiency roadmap (easiest-to-replace first) stored in `.knowledge/meta/autarky_report.json`. Acts as the pre-flight checklist before disconnecting from the network.
+
+---
+
+## 🌀 Phase 36: Exotic Architecture Optimizations (Deep Tech Inspired) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+This phase implements cutting-edge optimizations adapted from Event Sourcing, Combinatorial Game Theory, Biology, Quantum Zeno mechanics, and Mathematical Logic. These optimizations target the ultimate limits of AI coordination, safety, correctness, and search latency. 
+
+### Phase 36.1: Event-Sourced Ephemeral Graphs (Inspired by Kafka & Redux)
+**Technical Terms**: Cortex transitions `.knowledge/state.json` from state-based snapshots to an immutable, append-only event log (e.g., `[NODE_ADDED, EDGE_MUTATED]`). The current graph state is a dynamic projection of past events. For debugging, the agent time-travels and replays AST mutations frame-by-frame.
+**Engineering ROI**: **100% Deterministic AI Debugging.** Removes the need for the AI to guess the history or intent of code changes, dramatically reducing debugging hallucinations.
+
+### Phase 36.2: God's Algorithm for Refactoring (Inspired by Rubik's Cube Solvers)
+**Technical Terms**: Applies a combinatorial game theory minimum-edit-path solver to the AST-diff graph when an LLM proposes changes. Cortex calculates the absolute minimum set of code mutations required to shift the codebase state, stripping out LLM-generated redundant changes.
+**Engineering ROI**: **Zero Bloat & Pixel-Perfect Refactors.** Restricts the AI from rewriting unchanged code or creating useless helper functions, simplifying review overhead.
+
+### Phase 36.3: Vector-Symbolic Emulsification (VSE) (Inspired by Food Science & HDC)
+**Technical Terms**: Binds symbolic logical AST graphs directly into continuous vector space embeddings using Hyperdimensional Computing (HDC), rather than maintaining separate relational and vector indices.
+*Compatibility Note*: This acts as the direct implementation pathway for **Phase 18 (Hybrid Embeddings)**, resolving the immiscibility between semantic vector models and discrete AST schemas.
+**Engineering ROI**: **50% Search Latency Reduction.** Solves vector-lexical merge bottlenecks by executing hybrid queries in a single hardware-accelerated pass.
+
+### Phase 36.4: Mycorrhizal Telemetry Protocol (Inspired by Biology)
+**Technical Terms**: Implements a lightweight P2P graph syncing protocol. If an agent detects a critical vulnerability, deprecation, or invariant break in shared packages in Repo A, it transmits a signed warning to the local Cortex instances of Repo B and C.
+**Engineering ROI**: **Instant Org-Wide Security Updates.** Warns local developers of upstream breaks before they compile or run install steps, without a central server.
+
+### Phase 36.5: Gödel-Aware Fallback Escapes (Inspired by Mathematical Logic)
+**Technical Terms**: Embeds a formal incompleteness threshold in the agent logic. When an agent hits an undecidable state or a circular reasoning loop, it triggers the Gödel Escape: it halts execution, rolls back its Write-Ahead Log state, and prompts the user.
+**Engineering ROI**: **Catastrophe Prevention.** Mathematically guarantees that autonomous agents fail safely and immediately alert human operators rather than looping infinitely.
+
+### Phase 36.6: Zeno-Effect Test Pinning (Inspired by Quantum Zeno Effect)
+**Technical Terms**: Cortex runs an ultra-fast background Language Server Protocol (LSP) observer. By continuously monitoring the active file buffer as the developer types, it catches contract violations before the code is saved or committed.
+**Engineering ROI**: **0ms Real-Time Invariant Enforcement.** Eliminates wait times for pre-commit hooks, providing instantaneous feedback in the editor.
+
+### Phase 36.7: Background Knowledge Fermentation (Inspired by Food Science)
+**Technical Terms**: Runs an off-hours background task that minifies ASTs, removes prose fluff, and consolidates related entity files in `.knowledge/entities` into highly compressed conceptual hashes.
+**Engineering ROI**: **Passive Token Cost Reduction.** Lowers the context window cost of the codebase passively over time without requiring active developer LLM calls.
+
+### Phase 36.8: Sonoluminescent Prompt Collapse (Inspired by Physics)
+**Technical Terms**: An automated context-compaction routine that triggers when context window limits are reached. It collapses the prompt into a high-density Extractive Tree-of-Thoughts core, resetting the active token window size.
+**Engineering ROI**: **Zero "Context Window Exceeded" Crashes.** Gracefully degrades prompts under heavy load, ensuring the agent remains operational without hard API errors.
+
+---
+
+## 🌌 Phase 37: Unified Architectural Field Theory (Theory of Everything) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+This phase solves the ultimate compatibility problem in software: the constant contradiction between high-level System Architecture (the macro scale) and low-level Application Code (the micro scale). It compiles both models into a single, unified mathematical structure where architectural drift throws compiler errors, while mapping system traits onto multidimensional spaces and holographic boundaries.
+
+### Phase 37.1: The Homotopic Graph Compiler (HoTT) (Inspired by Theory of Everything)
+**Technical Terms**: Cortex integrates a Homotopy Type Theory (HoTT) parser that compiles business logic contracts and micro-level AST nodes into a unified homotopic path. Relationships between architecture diagrams and AST nodes are enforced via mathematical equivalence proofs.
+**Engineering ROI**: **Zero Architectural Drift.** Any micro-level change violating a macro-level architectural constraint throws a compile-time compiler error, completely preventing technical debt.
+
+### Phase 37.2: String-Theoretic Tensor Embeddings (Inspired by String Theory)
+**Technical Terms**: Cortex upgrades flat 1D semantic embeddings to Multidimensional Tensors. An entity is mapped across distinct orthogonal semantic axes (Security, Performance, Design Patterns, Database Schemes).
+**Engineering ROI**: **Infinite Perspective Scaling.** Allows specialized AI agents (Security, Performance) to query the exact same graph and receive context projected specifically for their target dimension, reducing database hosting footprint.
+
+### Phase 37.3: API Boundary Holography (Inspired by Holographic Principle)
+**Technical Terms**: Cortex encodes the internal behavioral complexity of a microservice strictly onto the boundary states of its public API interface.
+**Engineering ROI**: **O(1) System Comprehension.** AI agents evaluate system behavior via the holographic boundary projection without parsing millions of lines of internal implementation details, slashing runtime token consumption.
+
+---
+
+## 🌌 Phase 38: The Reality Simulation Mechanics — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+This phase turns Cortex into a living, high-fidelity codebase simulation, mapping physical, gaming, biological, and mathematical realities to software maintenance. It forces strict execution rules, measures attention fatigue, enables visual systems drafting, and dynamically propagates code refactors.
+
+### Phase 38.1: Octonion-Bound Knowledge Primitives (Inspired by String Theory)
+**Technical Terms**: Cortex maps architectural dimensions to Octonions (8-dimensional hypercomplex numbers) to construct a non-commutative geometry graph.
+*Synergy Note*: This acts as the mathematical solver mechanism for the multi-dimensional projection layers built in **Phase 37.2 (String-Theoretic Tensor Embeddings)**.
+**Engineering ROI**: **Virtually Instant Search.** Drastically compresses multi-layered repository dependencies, reducing search complexity on 10,000+ files to single algebraic operations.
+
+### Phase 38.2: Ring-0 Epistemological Anticheat (Inspired by TempleOS & Kernel Integrity)
+**Technical Terms**: Cortex implements a Rust-based ring-0 anticheat loop in the WebAssembly execution substrate. If an LLM suggests code that violates contract schemas, the engine immediately throws an validation panic and halts the agent process.
+*Integration Note*: This acts as the runtime enforcement engine for the constraints defined under **Phase 7.5 (Quality Governance)**.
+**Engineering ROI**: **Hallucination Protection.** Guarantees that AI agents can never compile, write, or suggest invalid, out-of-bounds codebase mutations.
+
+### Phase 38.3: Algorithmic Attention Fatigue (Inspired by RCT2 Mechanics)
+**Technical Terms**: Calculates a cognitive fatigue score representing prompt/context distance metrics. When fatigue thresholds are crossed, the query engine recalculates a Brachistochrone Curve path through the graph to bypass boilerplate.
+*Integration Note*: Works directly alongside **Phase 34.7 (Paged Context Allocation)** to decide which context blocks to load into the prompt space.
+**Engineering ROI**: **Bypass Code Fluff.** Automatically cuts down on token waste and prevents search paths from getting lost in boilerplate directories.
+
+### Phase 38.4: Alcubierre Sub-Graph Warping (Inspired by FTL & Wormholes)
+**Technical Terms**: Pre-computes structural shortcuts (Wormhole Edges) across isomorphic nodes, allowing graph traversals to bypass intermediate directory hierarchies. Incorporates a "False Vacuum Collapse" routine to drop high-entropy codebases into lower-complexity structures.
+**Engineering ROI**: **O(1) Domain Navigation.** Reduces graph traversal steps between matching design patterns to a single hop.
+
+### Phase 38.5: Schrödinger’s Branching Contexts (Inspired by Quantum Mechanics)
+**Technical Terms**: Holds ambiguous contexts in a vector-state superposition. Upon developer query (the measurement), it collapses the context window to the specific verified branch, pruning unused paths.
+**Engineering ROI**: **80% Cost Reduction.** Lowers initial prompt token counts by only resolving and presenting context options that the developer is actively interacting with.
+
+### Phase 38.6: Procedural Node-Based Sculpting (Inspired by Blender & Figma)
+**Technical Terms**: Implements a visual geometry-node style canvas editor, allowing users and agents to collaboratively model microservices and relationships, which procedurally generates AST code and deployment configs in the background.
+**Engineering ROI**: **Code-Free System Design.** Shifts system architecture management from manual markdown editing to visual, collaborative node mapping.
+
+### Phase 38.7: Syntactic Prion Propagation (Inspired by Biology)
+**Technical Terms**: A background agent detects high-quality refactor patterns (prions) applied locally, extracts the abstract structure, and incrementally propagates the pattern throughout the codebase via automated PR creation.
+**Engineering ROI**: **Self-Healing Codebase.** Spreads structural code quality and optimization rules automatically across the monorepos without manual copy-paste work.
+
+### Phase 38.8: Terry Davis RNGod Heuristics (Inspired by Esoteric Computing)
+**Technical Terms**: Dynamically modifies LLM generation temperatures and vector search parameters using entropy-based pseudorandom noise when agents reach local minima or deadlocks.
+**Engineering ROI**: **Creative Reasoning Breakthroughs.** Breaks agents out of repetitive logic loops by forcing out-of-the-box conceptual comparisons.
+
+---
+
+## 🧬 Phase 39: Systemic Convergence (Extreme Reliability & Orchestration) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+This phase hardens Cortex for mission-critical enterprise environments. It introduces automated self-healing crash handlers for AI agents, multi-agent navigation markers that stop redundant code searches, asymmetric processors that drop API costs, and background pre-fetching that makes autocomplete instant.
+
+### Phase 39.1: Cognitive Supervision Trees (Inspired by Erlang & Biology)
+**Technical Terms**: Cortex implements an Erlang-style Supervisor hierarchy for autonomous sub-agents. If an agent hangs, encounters a logic loop, or throws an unhandled error, the supervisor performs programmed cell death (Apoptosis) on the agent thread, rolls back the Write-Ahead Log state, and spawns a fresh agent with failure telemetry injected into its system prompt.
+**Engineering ROI**: **Bulletproof Autonomous Resilience.** Prevents runaway LLM API billing loops and locks down agent stability.
+
+### Phase 39.2: Tectonic Migration Solvers (Inspired by Geology)
+**Technical Terms**: Cortex maps architectural shifts as tectonic plates, calculating topological fault lines (interface boundaries) and producing structured strangler-fig migration sequences to safely shift code modules in production.
+**Engineering ROI**: **Automates Enterprise Tech Debt.** Safely schedules and automates massive structural codebase refactors (such as framework or library migrations).
+
+### Phase 39.3: Stigmergic Heatmap Routing (Inspired by Ant Colony Optimization)
+**Technical Terms**: Multi-agent graph searches leave decaying pheromone trails (numeric weights) on target AST nodes. Agents dynamically bias pathfinding heuristics away from negative trails (dead ends explored by other agents) and toward positive paths.
+**Engineering ROI**: **Zero Redundant Search.** Drastically reduces token usage and processing latency in parallel multi-agent workspaces.
+
+### Phase 39.4: Asymmetric Dual-Processing Substrate (Inspired by Split-Brain Psychology)
+**Technical Terms**: Splits graph queries into parallel Left-Brain (10ms, fast deterministic AST parsing and graph lookup) and Right-Brain (expensive probabilistic LLM query) pipelines. The Left-Brain pipeline acts as a strict structural filter for the Right-Brain context window.
+**Engineering ROI**: **Optimized Accuracy & Cost.** Guarantees exact syntactic graph correctness while utilizing deep reasoning engines only on verified problem scopes.
+
+### Phase 39.5: Cognitive Branch Prediction (Inspired by CPU Speculative Execution)
+**Technical Terms**: Evaluates real-time editor keystrokes to predict the developer's next two likely action paths, speculatively pre-fetching context buffers into hot RAM before a query is issued.
+**Engineering ROI**: **Zero-Latency IDE Assistance.** Serves context-rich AI completions and suggestions immediately when called, eliminating file retrieval wait times.
+
+### Phase 39.6: Merkle-DAG Integrity Verification (Inspired by Cryptography)
+**Technical Terms**: Organizes `.knowledge` storage into a cryptographic Merkle Directed Acyclic Graph. Every file and constraint tracks its hash and its dependents' hashes.
+**Engineering ROI**: **O(1) Cache Invalidation & Tamper Detection.** Instantly flags manual file mutations or corruption across 100,000+ files without rescanning the disk.
+
+### Phase 39.7: OODA Agent Runtime (Inspired by Cybernetics)
+**Technical Terms**: Implements a strict, deterministic four-tick clock cycle loop (Observe, Orient, Decide, Act) for all autonomous agents, tracing and logging state changes on every tick.
+**Engineering ROI**: **Predictable AI Execution.** Simplifies agent debugging and tracing by enforcing a rigid execution rhythm, preventing chaotic prompts.
+
+---
+
+## ⚙️ Phase 40: The Reality Engine (Self-Optimization & Compilation) — ⏳ Planned (research-grade)
+
+### The Vision
+To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codebase simulation engine, Cortex adopts game engine architecture (Entity Component System), intermediate representations (Semantic LLVM), and formal logic solvers (Z3 SMT). This enables infinite monorepo scaling, mathematically verified guardrail checking, and self-improving architectural governance rules.
+
+---
+
+### Phase 40.1: Semantic LLVM Compilation (Semantic IR)
+**Layman's Terms**: Just like code compilers simplify complex program source into intermediate versions to remove dead code before generating final output, Cortex compiles massive codebase contexts into a highly compressed, mathematical "Intermediate Reasoning Representation" (IR). This strips out boilerplate and fluff, leaving only semantic nodes.
+
+**Technical Terms**: Scans AST nodes and wikilink graph to emit a normalized, token-bounded intermediate representation. Runs graph-optimization passes (Semantic Dead-Code Elimination) to trim non-functional text and context dependencies.
+
+**Engineering ROI**: Drops input context sizes by up to 70%, slashing API billing costs and ensuring only critical structural signals enter LLM windows.
+
+---
+
+### Phase 40.2: ECS Knowledge Architecture (Entity Component System)
+**Layman's Terms**: Game engines like Unreal Engine organize massive worlds by separating objects (entities) from their traits (components) and running fast, parallel loops (systems) over them. Cortex migrates the `.knowledge` folder from nested JSONs into an ECS layout on disk.
+
+**Technical Terms**: Rewrites the graph engine to treat files/entities as standard index IDs. Components are flat byte-arrays representing facets (dependencies, constraints, exports). Systems run as raw WebAssembly compilation loops that scan memory-contiguous component tables.
+
+**Engineering ROI**: 10,000x faster local graph traversal. CPU cache-locality optimization drops memory usage by 90% and enables instant scanning of massive monorepos.
+
+---
+
+### Phase 40.3: Gödel Self-Optimizing Graph Rules
+**Layman's Terms**: Instead of humans manually maintaining the `cortex.yaml` rule book, the engine audits the project's evolution. If it finds that developers consistently follow patterns that bypass a rule safely, it auto-submits a PR to refine its own rules.
+
+**Technical Terms**: 
+- **Adaptive Graph Restructuring**: Evaluates historical `log.jsonl` mutation rates and rule exception logs. Dynamically constructs updated schema constraint variations and validates them against the codebase using symbolic logic.
+- **Implicate Order / Invariant Extraction**: Employs statistical dependency mining to identify "negative invariants"—architectural relationships, dependency edges, or import paths that *never* exist or are never co-present across historical graph configurations (e.g., frontend components never directly querying DB models). These statistical exclusions represent the codebase's implicit or "implicate" structural order, allowing Cortex to proactively suggest highly tailored `cortex.yaml` constraint definitions to prevent future boundary erosion.
+
+**Engineering ROI**: Zero-maintenance architectural governance. The system automatically adapts its boundaries as the team's styling and frameworks evolve.
+
+---
+
+### Phase 40.4: SMT-Assisted Constraint Verification
+**Layman's Terms**: LLMs are notoriously bad at strict mathematical logic. Cortex compiles architectural rules and AST edges into boolean logical problems, passing them to a local SAT/SMT theorem solver (like Z3). The LLM is only used to translate the solver's output into english.
+
+**Technical Terms**: Maps AST relations and `cortex.yaml` boundary rules directly to SMT-LIB language constraints. Solves using Z3 or CVC5 engines. If unsatisfiable, outputs the exact counterexample path.
+
+**Engineering ROI**: Mathematical proof of architectural compliance. Eliminates LLM hallucinations during linting.
+
+---
+
+### Phase 40.5: Knot-Theoretic Dependency Untangling
+**Layman's Terms**: Circular dependencies are architectural knots. Cortex applies knot theory mathematics to calculate the topological complexity of import graphs, pinpointing the single file or interface that must be decoupled to free the entire structure.
+
+**Technical Terms**: Models circular import cycles as mathematical links and calculates their Alexander-Conway polynomial invariants. Identifies topological bottleneck vertices that, when split, reduce the graph genus to zero.
+
+**Engineering ROI**: Deterministic, step-by-step refactoring guides for eliminating circular dependencies, removing the guesswork from decoupling spaghetti code.
+
+---
+
+### Phase 40.6: Architectural Fossilization (Cold Storage)
+**Layman's Terms**: Legacy code that hasn't changed in years doesn't need to load into active AI memory. Cortex "fossilizes" stable historical directories, compressing them into a secure cryptographic summary. It only unzips them if a developer changes them.
+
+**Technical Terms**: Computes deep Merkle-hashes of directories with zero change vectors over N months. Compresses target node attributes into a single, high-dimensional holographic tensor.
+
+**Engineering ROI**: Infinite monorepo scalability. 50-million-line codebases can run on standard laptop RAM because only active domains remain unfossilized.
+
+---
+
+### Phase 40.7: Borges Exhaustive Design-Space Generation
+**Layman's Terms**: When generating code, instead of guessing a single structure, Cortex generates every mathematically possible structural variant for the task. It filters them against rules using the SMT solver and only shows you the winning options.
+
+**Technical Terms**: Procedurally expands the AST schema variations for target inputs, generating a closed library of all structural variations. Evaluates each candidate's boundaries via the Phase 40.4 Z3 engine.
+
+**Engineering ROI**: Flawless design generation. Developers receive pre-validated, compliant architectural skeletons with zero trial-and-error.
+
+---
+
+### Definition of Ready (DoR)
+- Phase 39 (Merkle-DAG Integrity) completed.
+- Z3 SMT solver binaries integrated into the local runner toolset.
+- Memory component schema registry established for the ECS layout.
+
+### Definition of Done (DoD)
+- Intermediate representation (IR) parser passes unit tests for context compression.
+- Vector database benchmark shows 10,000x faster graph traversals on a 100,000-entity synthetic codebase.
+- SMT-LIB compiler correctly translates `cortex.yaml` rules.
+- Test suite verifies zero LLM hallucinations during constraint evaluations.
+- Memory consumption remains under 100MB RAM during ingestion.
+
+---
+
+### Phase 40.8: Gödel Self-Improving Synthesis Loop
+**Layman's Terms**: Phase 40.3 makes Cortex rewrite its own rule book. Phase 40.8 goes further: Cortex watches its own synthesis *quality over time*, detects where the Librarian consistently fails (missing service boundaries, under-extracting dependencies, producing stale facts), and automatically mutates its own Librarian prompts and extraction schemas to fix the patterns — then validates the fix against historical ground truth before promoting it.
+
+**Technical Terms**: Builds on `log.jsonl` quality trail and Phase 7.5 quality scores. A meta-synthesis pass computes per-entity-type quality trend vectors (e.g., "service boundary entities in this repo have 23% lower quality scores than the baseline"). Detects systematic under/over-extraction patterns. Generates candidate Librarian prompt mutations, scores them against a held-out golden corpus, and promotes winners via Phase 23 (human-in-loop gate). Mutation history stored in `.knowledge/meta/prompt_evolution.jsonl`.
+
+**Engineering ROI**: Each enterprise deployment becomes uniquely self-tuned. Cortex adapts to a React monorepo differently than a Go microservices repo — no manual prompt engineering. The system gets measurably better over time, creating a genuine deployment moat.
+
+---
+
+### Phase 40.9: JIT-Compiled Synthesis Fast-Path (0-Token Deterministic Route)
+**Layman's Terms**: Currently, every synthesis goes through an LLM call. But many synthesis events are mechanical — file renames, import path updates, simple relationship changes — that don't need LLM judgment at all. Phase 40.9 observes repeated synthesis patterns (same graph mutation shape on same entity types), compiles them into deterministic TypeScript functions, and routes matching events through the function instead of the LLM. Zero tokens, zero latency, zero API cost for those operations.
+
+**Technical Terms**: Builds on the `log.jsonl` synthesis trail. A pattern-detection pass monitors synthesis events grouped by (mutation_type, entity_type, subgraph_shape). When a pattern exceeds `CORTEX_JIT_THRESHOLD` occurrences (default 5), the JIT compiler generates a deterministic function that applies the same graph mutation (add edge, rename node, update field) without invoking any model. Compiled functions are stored in `.knowledge/meta/jit_patterns/` and loaded at MCP server start. The synthesis router checks the JIT cache before any LLM call: JIT (0 tokens, µs) → Distilled model (Phase 19, cheap, ms) → Frontier model (expensive, s). A `cortex jit stats` CLI command shows hit rate, pattern inventory, and token savings.
+
+**Engineering ROI**: Eliminates LLM cost entirely for mechanical synthesis operations (estimated ~25-35% of all synthesis events in codebases with active renaming/refactoring). Creates a zero-token fast-path that deepens Phase 35.7 air-gapped autarky — core mechanical operations work offline without any model. Pattern library grows as the codebase evolves; hits compound over time.
+
+---
+
+## 🔁 Phase 41: Cognitive Cache Invalidation Engine — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Cortex's stale detection currently notices *that* something changed. This phase makes it proactive: when `AuthService` changes, every entity that depends on it gets its confidence score automatically decayed — without waiting for a full re-synthesis. Cortex knows *why* a memory is no longer valid, not just *that* it might be.
+
+**Technical Terms**: Cascade invalidation through the wikilink dependency graph. Every edge carries a propagation weight; on ingest, changed entities trigger a BFS invalidation wave capped at configurable depth. Confidence scores decay proportionally to graph distance from the changed node. TTL-based decay: entities with no recent evidence signal have confidence reduced by a sigmoid function over time. Version-bump triggers: when `package.json` dependency versions change, all entities referencing that dependency's API patterns get flagged.
+
+**Builds on**: Phase 3 (state.json), Phase 7 (staleSince flag), Phase 39.6 (Merkle-DAG hashing), Phase 6 (wikilink graph).
+
+**Engineering ROI**: Enterprise customers' #1 complaint about AI memory is staleness. Cascade invalidation makes Cortex's truth model deterministic and auditable. "Why is this entity stale?" is now answerable with a precise change chain — a major trust and compliance win.
+
+---
+
+## 🌊 Phase 42: Fractal Memory Summarization (Multi-Level Compression) — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Cortex currently stores one level of knowledge — per-entity pages. A 5,000-entity enterprise monorepo is overwhelming. This phase adds automatic multi-level compression: raw entities compress into domain summaries, which compress into a workspace overview. Context pack assembly pulls from the right level depending on the question — surgical detail for specific functions, high-level overview for architectural questions.
+
+**Technical Terms**: Three-tier storage hierarchy:
+- **L0** — per-entity pages (current `.knowledge/entities/*.md`)
+- **L1** — per-domain summaries (`.knowledge/domains/<domain>.md`, one per top-level directory grouping, regenerated when any entity in the domain changes)
+- **L2** — workspace meta-summary (`.knowledge/meta/overview.md`, 1-2 page architectural overview, regenerated on major structural changes)
+
+Context pack assembly selects the minimum sufficient level: entity-scoped queries → L0; domain-scoped queries → L1; workspace-scoped queries → L2. Each level is a lossy compression of the one below, with explicit cross-references preserved.
+
+**Builds on**: Phase 14.2 (RAPTOR hierarchical retrieval), Phase 20.6 (MemGPT tiered memory), Phase 13 (context pack assembly).
+
+**Engineering ROI**: Directly solves the "200+ entity scaling wall." A 5,000-entity monorepo becomes queryable in O(log n) token budget instead of O(n). Extends Cortex's viable enterprise range by 10× without any model context window increase.
+
+---
+
+## 🌡️ Phase 43: Information Thermodynamics & Entropy Scoring — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Some Cortex knowledge is crystal clear — precise, well-evidenced, stable. Other knowledge is murky — vague, contradictory, based on thin evidence. Right now Cortex treats all knowledge equally. This phase gives every entity and every context pack an entropy score: a mathematical measure of how noisy vs. signal-dense it is. High-entropy knowledge is flagged, compressed harder, and evicted first under token pressure.
+
+**Technical Terms**: Per-entity entropy computed from: contradiction density (Phase 16 outputs), evidence count and freshness, linguistic precision of synthesized text (hedging language detection via pattern matching), cross-reference stability (how often this entity's wikilinks change across syncs). Context pack assembly uses entropy as an eviction heuristic — under token budget pressure, high-entropy low-authority nodes are dropped first. Synthesis outputs scored pre-commit; high-entropy outputs trigger Phase 45 (Immune System) quarantine.
+
+**Builds on**: Phase 7.5 (quality governance and quality scores), Phase 16 (contradiction detection), Phase 13 (context pack token management).
+
+**Engineering ROI**: Realistic 30–60% reduction in context pack noise. Direct token cost savings. "Cortex knows what it doesn't know" — measurable uncertainty quantification rather than uniform confidence. Maps directly to enterprise risk and compliance requirements.
+
+---
+
+## ⚖️ Phase 43.1: CPT Asymmetry — Question/Answer Entropy Differential — ⏳ Planned
+
+**Layman's Terms**: If a synthesized entity's question and answer are too similar, it contains zero new information — the entity is just a paraphrase of what prompted it. This phase measures that asymmetry and flags low-information entities for merging or deletion.
+
+**Technical Terms**: Extension to Phase 43 entropy scoring. For each entity, store `promptEmbedding` (embedding of the diff/query that triggered synthesis) alongside the existing description embedding. Compute asymmetry = `cosineDistance(promptEmbedding, descriptionEmbedding)`. Low asymmetry (<0.15) = the entity added nothing new → flag as `lowInformation: true`. High asymmetry (>0.5) = genuine insight → boost quality_score by 0.05. Asymmetry score stored as `cptAsymmetry` on the entity. Surface via `cortex audit --low-info`.
+
+**DoR**: Phase 43 entropy scoring and Phase 18 embeddings are stable.
+
+**DoD**: Prompt embedding captured at synthesis time. Asymmetry computed and stored. Low-asymmetry entities flagged. Tests: identical prompt/description (asymmetry ~0), completely unrelated (asymmetry ~1), mixed.
+
+---
+
+## 🪐 Phase 44: Semantic Authority Ranking — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Not all Cortex entities are equally important. A core service used by 30 other modules is more authoritative than a utility function used by one. This phase gives every entity a dynamic authority score combining: how many entities link to it, how often it surfaces in successful AI coding sessions, how stable its synthesis has been, and whether a human has reviewed and validated it.
+
+**Technical Terms**: Extends Phase 35.1 (Architectural PageRank) with three additional signal layers:
+1. **Usage signal**: tracks entity appearances in context packs accessed during AI coding sessions (via Phase 4 MCP hooks)
+2. **Stability signal**: entities whose synthesis has not changed despite surrounding code changes accumulate authority through consistency
+3. **Human review boost**: Phase 23 (human-in-loop review) explicitly increments `authority_score` on approval
+
+`authority_score: float` stored in each entity's frontmatter. Context pack assembly and Phase 42's fractal summarization both use it as a priority signal. Visual graph (Phase 8) colors nodes by authority. Score decays when evidence goes stale.
+
+**Builds on**: Phase 35.1 (Architectural PageRank), Phase 8 (visual graph), Phase 23 (human review), Phase 13 (context packs).
+
+**Engineering ROI**: Better retrieval without bigger context windows. PageRank tells you centrality; authority ranking tells you trustworthiness. Combined, the 20% of entities that matter most automatically surface in every context pack.
+
+---
+
+## 🛡️ Phase 45: Synthetic Immune System (Knowledge Quality) — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Cortex's knowledge base can be poisoned by bad syntheses — LLM hallucinations inventing non-existent classes, prompt injections hiding in code comments, or a single bad diff causing cascading false dependencies. This phase adds a pre-commit immune layer: before any synthesis is committed to `.knowledge/`, it passes through an anomaly detector that quarantines suspicious outputs for review.
+
+**Technical Terms**: Three-layer immune stack:
+1. **Hallucination antibodies (Boltzmann Entity Detection)**: pattern-match synthesis outputs against known hallucination signatures. This includes the dedicated **Boltzmann Entity Detection** class, which statistically catches hallucinations that are syntactically coherent and stylistically perfect, but completely lack any underlying source-file backing or import-graph grounding, ensuring false entities never contaminate the canonical knowledge base.
+2. **Prompt injection resistance**: scan synthesis inputs (code diffs, file content) for adversarial patterns before they reach the Librarian
+3. **Anomaly quarantine**: statistical anomaly detection on synthesis outputs. If a single diff claims to add 40 new dependency edges to an entity that historically has 3, it is held for human review rather than auto-committed
+
+Quarantine queue surfaced via `cortex audit --quarantine`. Auto-released after human approval or auto-rejected after configurable TTL.
+
+**Builds on**: Phase 6 (guardrails), Phase 16 (contradiction detection), Phase 7.5 (quality governance), Phase 23 (human review).
+
+**Engineering ROI**: Enterprise trust is everything. A single hallucinated architectural fact that propagates through 12 dependent entities and corrupts an AI coding session is catastrophic. The immune system makes Cortex's knowledge base provably clean — certifiable for regulated industries.
+
+---
+
+## ⏮️ Phase 46: Event-Sourced Cognition Replay — ⏳ Planned (research-grade)
+
+**Layman's Terms**: Right now Cortex's `log.jsonl` is a read-only audit trail. This phase makes it fully replayable: `.knowledge/` becomes a deterministic projection of the event log. You can reconstruct exactly what Cortex knew at any point in time — before an incident, before a deployment, before a bad synthesis run — and diff any two points in history.
+
+**Technical Terms**: Event sourcing applied to `state.json` and all entity files. Every synthesis mutation becomes an immutable append to `log.jsonl`. `state.json` becomes a derived projection rebuilt by replaying the log from genesis. New CLI: `cortex replay --to <ISO-timestamp>` reconstructs `.knowledge/` at any past point. `cortex diff-knowledge --from <t1> --to <t2>` shows the architectural delta between two timestamps. Weekly snapshot checkpoints accelerate replay by avoiding full genesis replay on large repos.
+
+**Builds on**: Phase 7 (log.jsonl append-only event log), Phase 26 (audit trail), Phase 3 (state.json).
+
+**Engineering ROI**: Forensic analysis and explainability for AI reasoning decisions. Required by banking, healthcare, and compliance customers. "What did Cortex know about `PaymentService` before the incident?" becomes a one-command answer. Bad ingest runs are now fully recoverable via rollback.
+
+---
+
+## 🔁 Phase 47: Architectural Pattern Recurrence (Poincaré Recurrence) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Cortex keeps a fingerprint of how your codebase's architectural graph looks every time you ingest changes. If you are about to structure a new service or database connection in a way that resembles a past setup that caused major incidents or bugs (like the "PaymentService Incident" three months ago), Cortex will proactively warn you before you even write the code. It is retrospective pattern matching for your architecture's mistakes.
+
+**Technical Terms**
+- **Graph Fingerprinting**: During each ingest, Cortex computes a serialized topological fingerprint of the active sub-graph using graph embedding similarity (Phase 18) and PageRank centrality vectors.
+- **Problematic Configuration Registry**: Leverages Phase 26 audit logs and historical git commit metadata to associate specific historic graph states with incident keywords (e.g., "incident", "hotfix", "regression").
+- **Pattern Matching & Warning Engine**: On new ingests, computes the cosine similarity between the current sub-graph topology and states in the registry. If similarity crosses a configurable threshold (e.g., > 0.85), triggers a warning indicating matching past states, the files/entities involved in that historic incident, and links to the relevant retrospectives.
+
+**Engineering ROI**
+Architectural safety through hindsight. Prevents teams from repeating the same structural mistakes (e.g., introducing circular dependency patterns, or placing an un-cached bottleneck component under high-concurrency loops) that previously caused production outages.
+
+---
+
+## 🕸️ Phase 48: Dependency Entanglement Detection (ER=EPR) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+Sometimes, changing a file in one part of your app unexpectedly breaks a file in a completely different part, even though they don't seem to import or call each other. Phase 48 mines your Git commit history to find files that constantly change together in the same PRs or commits. It maps these hidden "entanglement" links so you are warned of invisible side effects: "I only changed X, why did Y break?"
+
+**Technical Terms**
+- **Git Commit Co-Change Mining**: A background miner scans the git repository's commit graph. It calculates the co-change frequency matrix of all source files over a rolling sliding window (e.g., last 6 months).
+- **Entanglement Edge Synthesis**: If two files A and B co-change in more than N% of commits (and share no explicit imports or wikilinks in the knowledge base), Cortex synthesizes a virtual `entangled_with` relationship between their respective entities.
+- **Impact Warning Hook**: Extends the `cortex before_change` command. When querying the blast-radius of entity A, the engine automatically resolves and prints its entangled dependents, presenting the developer with the exact historical co-change correlation percentage.
+
+**Engineering ROI**
+Eliminates silent dependency failures and "mystery bugs." Developers get instant, empirical warnings about implicit coupling that is invisible to traditional AST and import-graph scanners.
+
+---
+
+## 🧬 Phase 49: Cross-Deployment Synthesis Learning (Morphic Resonance) — ⏳ Planned (research-grade)
+
+**Layman's Terms**
+If your team uses Cortex across multiple separate codebases or departments, they all individually learn how to write better documentation and rules. Phase 49 lets these separate deployments securely share their best-performing Librarian extraction patterns and rule modifications. If a TypeScript team in one department discovers a highly effective way to document API boundaries, other TypeScript teams across the company automatically inherit that wisdom.
+
+**Technical Terms**
+- **Federated Pattern Extraction**: An opt-in synchronization layer that extracts generalized metadata of successful prompt mutations from Phase 40.8 (Gödel loop) while stripping all proprietary code, strings, and domain-specific references.
+- **Anonymized Schema Exchange**: Transmits structural performance metrics (e.g., "this updated extraction prompt yielded a 14% increase in evidence quality scores for TypeScript interface blocks") to a central corporate or public schema registry.
+- **Global Wisdom Injection**: Local Cortex instances query the registry during background maintenance, pulling and applying top-performing generalized extraction schemas and prompt improvements that match the local repository's tech stack.
+- **Navigation Path Inheritance**: The registry also tracks anonymized entity-traversal sequences (entity A → entity B → entity C) that consistently lead to high-quality syntheses. When a new user's context matches the start of a high-performing path, their context packer biases toward that sequence. Routes are stripped of domain-specific identifiers before transmission. Requires Phase 22 central server for cross-user telemetry aggregation.
+
+**Engineering ROI**
+A company-wide network effect for AI documentation. Organizations benefit from a compound learning loop where every local developer's refinement of the AI-pair coding model systematically upgrades the intelligence of the entire fleet.
+
+---
+
+## 🌌 Distributed Cognitive Substrate (Phases 50-55) — The Extended Vision
 
 > [!IMPORTANT]
-> Phases 40-45 are the **extended vision tier** of Cortex — its evolution from "single-codebase architectural memory engine" to "distributed cognitive substrate spanning multiple agents, multiple workspaces, and multiple knowledge graphs." These phases are intentionally placed at the extreme end of the roadmap because they presuppose that Cortex Standard + Enterprise tracks are fully mature in production. They are also the natural integration surface with **Nexus-OS** — where the memory side of Cortex meets the orchestration side of Nexus.
+> Phases 50-55 are the **extended vision tier** of Cortex — its evolution from "single-codebase architectural memory engine" to "distributed cognitive substrate spanning multiple agents, multiple workspaces, and multiple knowledge graphs." These phases are intentionally placed at the extreme end of the roadmap because they presuppose that Cortex Standard + Enterprise tracks are fully mature in production. They are also the natural integration surface with **Nexus-OS** — where the memory side of Cortex meets the orchestration side of Nexus.
 
 ### The Vision
 
@@ -7416,7 +9777,7 @@ Today Cortex assumes: one workspace, one Librarian, one knowledge graph. This wo
 - A developer has **multiple workspaces** open simultaneously (their primary monorepo + a forked OSS library + a documentation site + their team's design system repo). Today these are 4 disjoint knowledge graphs with no cross-pollination.
 - A team runs **specialized agents on different aspects** of the same project (a Security Librarian focused on `src/auth/`, a Performance Librarian focused on `src/services/`). Today they would step on each other if pointed at the same workspace.
 
-Phases 40-45 generalize Cortex from "one agent's memory" to "a cognitive substrate where many agents have their own scoped memories, plus access to shared workspace memories, plus access to a unified multi-workspace memory." It is the natural memory-side evolution of Cortex; it is **not** Nexus-OS rebuilt inside Cortex (Cortex does not absorb visual IDE awareness, real-time event buses, or agent-to-agent messaging — those remain in Nexus).
+Phases 50-55 generalize Cortex from "one agent's memory" to "a cognitive substrate where many agents have their own scoped memories, plus access to shared workspace memories, plus access to a unified multi-workspace memory." It is the natural memory-side evolution of Cortex; it is **not** Nexus-OS rebuilt inside Cortex (Cortex does not absorb visual IDE awareness, real-time event buses, or agent-to-agent messaging — those remain in Nexus).
 
 ### Phase 40: Distributed Cognitive Substrate (Umbrella Phase) — ⏳ Planned (extended vision)
 
@@ -7442,6 +9803,10 @@ A meta-architecture release that introduces the Substrate model: every memory pa
 When multiple AI agents work on the same codebase, each one needs its own scratch space — private working memory, hypotheses, intermediate observations — while still sharing the team's canonical architectural knowledge. Phase 41 makes this explicit: every agent gets its own `.knowledge/agents/<agent-id>/` private partition, plus read access to the shared workspace partition at `.knowledge/`. Writes to the shared partition require explicit promotion ("this hypothesis is now confirmed, promote to shared knowledge").
 
 **Technical Terms**
+> 🔬 **Scientific Foundation: Stigmergy (Swarm Intelligence / Pheromone Decay)**
+> *Source Domain:* Biology (Ant Colony Optimization).
+> Ants coordinate complex tasks without central command by leaving temporary chemical trails (pheromones) that evaporate over time. In a multi-agent environment (Phase 40+), passing massive JSON state payloads between agents is extremely inefficient. Instead, Cortex uses Stigmergy: when an agent interacts with a file or entity, it leaves a digital "pheromone" tag (e.g., `_active_reasoning_weight`). This weight dynamically decays. If another agent visits that entity, it detects the high pheromone concentration, immediately knowing a teammate is currently reasoning about it, allowing implicit, zero-overhead coordination.
+
 Three-tier memory model per workspace:
 
 - **Private partition** (`.knowledge/agents/<agent-id>/`): per-agent scratchpad. Visible only to the owning agent. Stores ephemeral observations, in-progress hypotheses, agent-specific reflexion traces, agent-specific reasoning chains (Phase 20.24).
@@ -7469,6 +9834,7 @@ A senior engineer has 5 projects open: their company's main monorepo, a forked o
 A meta-graph layer above per-workspace knowledge graphs that supports cross-workspace query and entity correlation:
 
 - **Workspace registration**: workspaces opt into the meta-graph via `cortex workspace join --substrate <id>`. Each workspace remains the canonical owner of its own entities; the meta-graph is a derived view.
+- **Cross-workspace API Boundary Linking**: In an enterprise, backend services and frontend clients live in isolated repos. This creates architectural links across workspaces so that when an AI changes an API in the backend repo, it instantly knows it broke the UI in a completely different workspace it doesn't even have open.
 - **Cross-workspace entity correlation**: entities are correlated across workspaces via embedding similarity (Phase 18) + name match + structural match (relationship topology). Correlations are surfaced as `crossWorkspaceMatches` annotations, never as merges.
 - **Cross-workspace queries**:
   - `cortex query "JWT validation pattern" --substrate-wide` searches across all joined workspaces
@@ -8104,6 +10470,9 @@ Phase 43.1 messaging mentions "rate limiting" informally but never specifies how
 **Technical Terms**
 Six coordination-safety primitives enforced by the substrate, configurable via `cortex.coordination.yaml`:
 
+### 0. Atomic File-State Locking (Collision Prevention)
+If you have 5 autonomous agents working in the same repo, Agent A might overwrite a file Agent B just fixed, causing an infinite loop or a recursion bomb that crashes the system. This provides a strict distributed mathematical lock: two AI agents cannot occupy the exact same state (file edit) simultaneously. When agent trajectories collide, the substrate forces one agent to yield and shift to a different task branch, allowing you to safely unleash massive swarms of agents in parallel.
+
 ### 1. Message Depth Limit (Recursion Bomb Prevention)
 
 Every Phase 43.1 message carries a `depth` field incremented on every reply-chain step. Hard cap (default 10) prevents A→B→A→B→... infinite loops:
@@ -8565,6 +10934,103 @@ A dedicated observability layer for the substrate:
 
 ---
 
+## 🔌 Cortex Pro Add-On Modules (Phases 59-63) — Genuinely New Ideas
+
+### ⚙️ Phase 59: Operational Ontology Layer (Palantir-Inspired) — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+Cortex already has all the raw ingredients — knowledge graph, typed relationships, constraints, quality scores, agent mesh, MCP tools, substrate observatory — but lacks a unified operational ontology layer that fuses them into a single executable digital twin of the codebase. What Palantir calls "ontology" — semantic objects + kinetic actions + dynamic security/governance as one coherent model — is exactly the missing meta-layer between Cortex's many subsystems.
+
+**Technical Terms**
+- **59.1: Semantic Object Registry**: Every entity, concept, constraint, and agent is registered as a strongly-typed ontology object with classification, capabilities, and governance metadata in `.knowledge/ontology/registry.json`.
+- **59.2: Kinetic Action Bindings**: Each ontology object declares available kinetic actions (e.g., triggering specific MCP tools, synthesis operations, constraint enforcement checks, and automated code-fixes), transforming the knowledge graph from a static queryable index into an executable runtime substrate.
+- **59.3: Common Operating Picture (COP)**: A real-time, fused user interface that merges the Phase 8 visual graph, Phase 31 analytics, and Phase 45 substrate routing metrics into a single actionable "god-view" dashboard for developers and architects.
+- **59.4: Closed-Loop Decision Chains**: Implements OODA-style (Observe, Orient, Decide, Act) loops. The system detects an architectural anomaly or pattern violation, generates a proposed action or mitigation, routes the proposal to the appropriate developer or supervisor via a designated Slack/CLI/Web hook, and, upon approval, executes the change, updating the graph in a closed loop. Extends the Phase 43.3 approval gate.
+- **59.5: Cross-Temporal Pattern Detection**: Scans across `log.jsonl` and `experience.jsonl` to detect recurring architectural patterns and predict future structural drift before it manifests.
+
+**Engineering ROI**
+Transforms Cortex from "a collection of powerful but separate features" into "a coherent operating system where everything is one unified, actionable reality model." This is the difference between having a knowledge graph and having a digital twin of your codebase's architecture with human-AI closed loops.
+
+**Definition of Done**
+Registry enforces schemas on all objects; kinetic actions execute successfully; COP dashboard displays real-time state; OODA loops execute successfully with human-in-the-loop approval gates.
+
+---
+
+### ⚙️ Phase 60: Circlon Ring Primitives (Topological Composition) — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+While traditional knowledge bases represent concepts as a flat list or standard nodes with arrows, Phase 60 introduces a physical composition metaphor inspired by "circlons" (mechanical ring primitives). Think of your codebase as chainmail: every piece of code is a mechanical ring that physically links with other rings through specific ports. Removing a ring propagates physical tension through the chainmail, giving you a physically intuitive sense of what will break.
+
+**Technical Terms**
+- **Topological Ring Primitives**: Knowledge primitives are modeled as virtual circlons/rings with explicit, addressable interface ports rather than key-value slots.
+- **Chainmail Composition Meshes**: Rings connect by locking ports, building a contiguous topological mesh.
+- **Mechanical Stress Propagation**: Instead of standard breadth-first-search (BFS) for calculating blast-radius, the system simulates mechanical stress propagation through the linked rings. Removing or modifying a high-centrality ring propagates physical tension to all connected rings, highlighting high-stress regions.
+- **Mating & Subdivision Lifecycle**: Reflects refactoring (subdividing a large ring into smaller interlocking rings) and merging (mating two rings into a unified primitive).
+- **Chainmail Renderer**: Extends Phase 8 visual graph to render the topology as a beautiful, interactive physical 3D mesh of interlocking rings instead of traditional node-edge diagrams.
+
+**Engineering ROI**
+Provides a highly intuitive, physically-modeled approach to understanding complex codebase coupling and blast-radius analysis. It replaces abstract graph metrics with visual, structural stress indicators that developers can instantly grasp.
+
+**Definition of Done**
+Primitives support port-based connections; stress propagation algorithm accurately calculates blast-radius; subdivision/mating operations work deterministically; Phase 8 renders interlocking ring meshes.
+
+---
+
+### ⚙️ Phase 61: Plasma Current Routing (Electromagnetic Propagation Model) — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+High-traffic parts of your codebase are like busy highways. Instead of searching through every file one by one, Phase 61 creates high-speed "plasma current channels" through your knowledge graph. When code changes, the updates flow along these currents like electricity. If multiple currents collide at a single file, that file is identified as a critical architectural crossroads that needs special care.
+
+**Technical Terms**
+- **Birkeland Current Highways**: High-frequency query and execution paths through the graph generate self-reinforcing, low-latency "plasma filaments" (optimized hot-paths in the database memory layout).
+- **Stellar Pinch Points (Z-Pinch)**: Identifies nodes where multiple distinct filaments converge. These represent major architectural bottlenecks or hubs that are automatically flagged for strict governance.
+- **Electromagnetic Wave Propagation**: Ingest changes propagate via wave-like equations through current channels rather than standard graph traversals. Nearby nodes along the same filament update almost instantly, while nodes on unrelated branches are updated in a lower-priority lazy queue.
+- **Filament Visualizer**: Renders the graph's filaments with varying glow intensity corresponding to current strength (frequency of use) in the Phase 8 visual graph.
+
+**Engineering ROI**
+Highly efficient, path-based cache-invalidation and propagation. Optimizes search and updates on massive monorepos by focusing compute on active electrical channels rather than uniform traversals.
+
+**Definition of Done**
+Filaments dynamically form and reinforce based on query telemetry; S-pinch hubs are auto-flagged; change propagation follows filament weights; filament intensity renders correctly.
+
+---
+
+### ⚙️ Phase 62: Inverted Reality Mode & Curved Abstraction Layers — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+Sometimes to solve a difficult problem, you have to look at the world inside-out. Phase 62 introduces an "Inverted Reality" view: instead of showing you what a file depends on, it warps the universe so that the file is at the center, and the entire outer codebase is pulled in towards it. It also bends your navigation paths so that the shortest path between two distant services is a curved line of abstract concepts, revealing non-obvious ways they are connected.
+
+**Technical Terms**
+- **Inside-Out View Toggle**: Re-projects the graph coordinate space using a conformal mapping where a single selected entity acts as the center (origin), and the entire rest of the workspace is inverted around it to visualize dependency pull and structural gravity.
+- **Curved Abstraction Paths**: Computes shortest paths between entities using a non-Euclidean metric weighted by semantic abstraction level, allowing developers to trace deep, non-obvious conceptual connections.
+- **Rotating Abstraction Shells**: Abstractions are partitioned into concentric, independently-rotating spherical layers representing different update frequencies (e.g., stable core interfaces on the outer shell, volatile local changes in the core).
+
+**Engineering ROI**
+Unlocks breakthrough architectural insights for senior engineers refactoring complex systems by presenting relationships from an entirely novel mathematical perspective, exposing implicit architectural coupling.
+
+**Definition of Done**
+Toggle swaps coordinate mapping; curved pathfinding calculates abstract links; concentric shells group and rotate based on update frequency.
+
+---
+
+### ⚙️ Phase 63: Outsider Pattern Discovery & Contrarian Analysis — ⏳ Planned (add-on module)
+
+**Layman's Terms**
+Mainstream linters and tools enforce standard, rigid rules, but every codebase has its own unique, successful quirks. Phase 63 is the "lone-wolf" mode: it actively looks for non-standard design patterns that actually work beautifully in your codebase, even if they violate generic textbook rules (like a circular dependency that is actually perfectly safe and performance-optimized). It prevents generic AI tools from breaking these highly specialized, successful designs.
+
+**Technical Terms**
+- **Forbidden Knowledge Paths**: Scans and catalogs custom architectural patterns that violate standard static-analysis rules but exhibit high stability and low regression rates in Git history.
+- **Contrarian Analysis Engine**: A reasoning pass that challenges conventional rules: "What if this god-module is the optimal design for this specific engine?" or "What if this circular dependency is structurally load-bearing for high-throughput messaging?"
+- **Lone-Wolf Theory Registry**: Stores registered "contrarian" architectural theories in `.knowledge/ontology/lone_wolf_patterns.json`, exempting them from standard linting rules and protecting them from destructive generic AI refactoring attempts.
+
+**Engineering ROI**
+Protects custom high-performance optimizations and legacy load-bearing patterns from being accidentally "cleaned up" or broken by generic LLMs or developers attempting standard textbook refactors.
+
+**Definition of Done**
+Detects stable outlier patterns; contrarian analysis correctly runs on linting failures; lone-wolf registry excludes selected patterns from standard violations.
+
+---
+
 ## 🚫 Explicitly out of scope
 
 **Bi-directional source injection** (writing Cortex-generated comments back into `src/`) was proposed and **rejected**. It violates the read-only-source invariant declared in [CORTEX.md §2](CORTEX.md), creates watcher feedback loops, pollutes git history with machine-authored noise, and produces merge conflicts with developer comments. Cortex's authority over `.knowledge/` and its non-authority over `src/` is a load-bearing boundary, not an accident.
@@ -8650,3 +11116,467 @@ Three classes of issues surfaced after the first public release. v0.3.3 addresse
 | 2   | **Antigravity setup not portable across projects**      | Antigravity prioritizes the global `~/.gemini/antigravity/mcp_config.json` over per-project `.antigravity/mcp_config.json`, so the previous per-project setup was silently ignored. Even when local won, every new project required a fresh setup, and entries with hardcoded `node_modules` paths broke on project switches. | [src/cli/setup.ts](src/cli/setup.ts) antigravity target now defaults to writing the **global** config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`, `env: { DOTENV_CONFIG_QUIET: "1" }`). `findProjectRoot()` resolves the active project from CWD at runtime — one global entry serves every project. A `--local` flag on `cortex setup` writes the per-project file instead. Pre-flight check verifies `cortex` is on PATH; aborts with an install hint if not.                                                                                                                                                                                       |
 | 3   | **Bootstrap ingestion documents Project Cortex itself** | Prompt-level guidance ("if index is empty, scan src/") was too weak — `get_pending_changes` still returned a git diff in the user prompt, and LLMs follow what's in front of them. The first diff is invariably "the user installed Cortex," so the first synthesis described Cortex's footprint instead of the user's app.   | Tool-level enforcement: `get_pending_changes` now calls `KnowledgeManager.isEmpty()` and branches. On empty: returns `mode: "bootstrap"` with a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) and `BOOTSTRAP_PROMPT_TEMPLATE` — **the git diff is intentionally absent from the payload**. The file list excludes the Cortex/IDE footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, `.cursor/`, `.vscode/`, etc.), test files (`tests/`, `*.test.*`, `*.spec.*`), and `node_modules`-class noise; includes `docs/`. Capped at 500 entries with a footer. Both ingest prompt files now branch on the `mode` field. |
 | 4   | **Bootstrap is too shallow on large codebases — produces ~5 entities on 1800-file projects** | Fix #3 prevents Cortex-self-documentation but doesn't make bootstrap deep. Three compounding issues remain: (a) the 500-file cap silently truncates large repos (1800 files → 1300 invisible); (b) the prompt receives a *file list*, not *file contents*, so the LLM pattern-matches on filenames instead of reading code; (c) it is a single-shot synthesis — one LLM call summarizing the entire repo naturally compresses to ~5 entities regardless of input size. Observed in production on a real ~1800-file React/Redux/Keycloak project: 4 entities, 3 concepts; user had to manually re-prompt 3+ times to extract any depth, and the result was still ~5 entities. | **Tactical (v0.3.4):** raise the 500-file cap to 2000, group the file list by top-level directory so the LLM at least sees structural hints, and tweak `BOOTSTRAP_PROMPT_TEMPLATE` to explicitly require ≥15 entities and ≥5 concepts as a minimum bar. **Strategic (Phase 33):** the proper fix is multi-phase recursive bootstrap with per-domain deep synthesis, hot-path deepening, cross-domain relationship pass, and quality-gate auto-refine — see [Phase 33: Deep Recursive Bootstrap Ingest](#-phase-33-deep-recursive-graph-bootstrap-ingest----planned-p0--fixes-production-issue) for the full design. Phase 33 produces 40-80 entities and 10-15 concepts on the same 1800-file project in one run (~$2.50-6.50, ~6-10 minutes) vs. the current 4 entities for $0.20 in 30 seconds. |
+
+---
+
+## 🧬 Phase 64: Biogenic Synthesis (Neuroscience & Immunology) — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Drawing from how biological brains and immune systems learn, adapt, and defend: pathways that fire together wire together, new neurons are born throughout life, active cells suppress their neighbors, and the immune system remembers past invaders to mount faster future responses.
+
+**Technical Terms**
+A family of biologically-inspired knowledge dynamics that make the architectural knowledge graph self-optimizing, adaptive, and resilient.
+
+### 64.1 Long-Term Potentiation — Frequency-Strengthened Pathways
+
+**Metaphor**: In neuroscience, synapses that are repeatedly activated undergo long-term potentiation (LTP) — the connection strengthens, making future signal transmission more efficient. The classic Hebbian rule: "cells that fire together, wire together."
+
+**Cortex Analog**: Entities and relationships that are frequently queried together (co-accessed in the same MCP read, co-mentioned in synthesis output, co-traversed in impact analysis) develop a **potentiation weight**. This weight:
+- Elevates the pair in proximity-reranking (Phase 13.6)
+- Shortens the retrieval path — they're pre-joined in the index summary
+- Triggers proactive deep-synthesis on the potentiated pair when either changes (even if the other file was untouched)
+- Decays over time (long-term depression) if the pair stops being co-accessed — the graph self-prunes unused associations
+
+**Implementation**: A `potentiation` adjacency matrix stored in `.knowledge/state.json` (sparse — only stores non-zero pairs). Decay runs as a background tick every N queries. Threshold-triggered events fire into the synthesis queue.
+
+### 64.2 Neurogenesis — Adult-Born Entity Creation
+
+**Metaphor**: The adult mammalian brain continues to generate new neurons throughout life, primarily in the hippocampus and olfactory bulb. These newborn neurons are highly plastic and integrate into existing circuits.
+
+**Cortex Analog**: When a new source file appears (or a fundamentally new module structure emerges), Cortex creates **juvenile entities** — placeholder entity pages with high plasticity (low confidence, wide `## Role` descriptions, tentative `## Wiring` sections). Juvenile entities:
+- Are tagged `stage: juvenile` in `state.json` with a birth timestamp
+- Receive more frequent re-synthesis passes (every N synths vs. the standard every 5N)
+- Have a lower threshold for merge/rename — the system actively proposes consolidating overlapping juveniles
+- Mature to `stage: adult` after surviving K re-synthesis cycles without major revision, at which point synthesis frequency drops to the standard rate
+
+**Implementation**: Extended `EntityMeta` in `state.json` with `stage: "juvenile" | "adult" | "senescent"` and `birthTick`. The synthesis queue priority function ranks juvenile entities higher.
+
+### 64.3 Lateral Inhibition — Competitive Neighbor Suppression
+
+**Metaphor**: In sensory systems (vision, touch), when one neuron fires strongly, it inhibits its immediate neighbors via lateral connections. This sharpens contrast — the "edge" between active and inactive regions becomes crisp.
+
+**Cortex Analog**: When an entity is the direct subject of a synthesis pass (just modified, just read, just impact-analyzed), laterally adjacent entities (its direct `## Wiring` neighbors) receive a **temporary suppression signal**:
+- Their `lastRefined` age does not advance during this window — they're not flagged as stale just because they weren't refined alongside the hot entity
+- Synthesis bandwidth is diverted: while entity A is hot, entities A±1 (direct neighbors) get lower synthesis priority
+- Edge cases between the hot entity and its suppressed neighbors are flagged for explicit attention — "A changed but B (depended by A) was not refined" is a deliberate decision, not an oversight
+
+**Implementation**: A `suppressionRing` computed on every synthesis tick — decrementing priority weights for first-degree neighbors of the synthesized entity. Configurable radius (1-hop default). Clears after synthesis completes.
+
+### 64.4 Immunological Memory — Antigen-Specific Recognition
+
+**Metaphor**: After a pathogen infection, the immune system retains memory B and T cells that recognize the same antigen years later, enabling a faster and stronger secondary response.
+
+**Cortex Analog**: When an architectural smell, pattern violation, or regression is detected and resolved, Cortex stores an **immunological signature** — a hash of the relevant code context, entity topology, and the fix applied. On future code changes, if a similar signature is detected:
+- A `memory recall` event fires ("you fixed this same pattern in PaymentService 3 months ago — same fix pattern applies to AuthService")
+- The previous synthesis output, review notes, and `failedApproaches` are surfaced as context
+- The system proactively suggests the prior fix pattern as a template
+
+**Implementation**: Signature store in `.knowledge/immunity.json` — keyed by SHA-256 of (entity name + relationship topology + code pattern hash). Comparative recall via fuzzy threshold (0.85+ cosine similarity on the signature vector). False-positive rate bounded by requiring at least 2 structural features to match.
+
+### 64.5 Clonal Selection — Amplifying Successful Patterns
+
+**Metaphor**: In the adaptive immune system, B cells whose antibodies bind an antigen undergo clonal expansion — they proliferate rapidly, amplifying the successful binding pattern.
+
+**Cortex Analog**: When an entity or architectural pattern consistently passes quality gates, receives positive human review feedback, and survives multiple regression cycles without issues, it enters a **clonal selection** phase:
+- The pattern is extracted as a reusable **architectural antibody** — encoded as a structured template in `.knowledge/patterns/`
+- When the synthesis engine detects similar structural prerequisites in other parts of the codebase, it proactively proposes the same pattern
+- Amplified patterns get higher `## Wiring` priority — they're surfaced first in `read_entity` results
+
+**Implementation**: Pattern extraction runs as a post-synthesis step, comparing newly-stable entity topologies against a library of recognized patterns. Matches generate `pattern_proposal` entries in the synthesis queue for human review.
+
+---
+
+## ⚒️ Phase 65: Physical Metallurgy Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Learning from how metals are strengthened, shaped, and eventually fail — alloying combines elements for stronger composites, annealing relieves internal stress, fatigue cracks grow under repeated loading, and creep slowly deforms structures under constant strain.
+
+**Technical Terms**
+Metallurgical principles applied to software architecture — compositional hardening, stress-relief refactoring, cyclical stress analysis, and long-term structural drift detection.
+
+### 65.1 Alloy Strengthening — Compositional Hardening
+
+**Metaphor**: Pure metals are soft. Adding alloying elements (carbon to iron → steel, copper to gold → 18k) introduces lattice distortions that impede dislocation movement, dramatically increasing strength.
+
+**Cortex Analog**: Pure architectural patterns (a generic REST API, a plain event bus) are soft — they flex under load but offer little resistance to degradation. When complementary **alloying elements** are added — validation middleware, rate limiting, structured logging, circuit breakers — the composition becomes harder:
+- The composite entity (e.g., "AuthenticatedAPIGateway") receives a higher **hardness score** in quality metrics
+- Hardened compositions are tagged with their constituent elements as `alloyedFrom: [MiddleAuth, RateLimiter, StructuredLogger]`
+- When an alloying element changes, all entities `alloyedFrom` it receive elevated synthesis priority
+
+**Implementation**: `alloyComposition` metadata in entity pages. Hardness score computed as a weighted function of constituent elements' individual quality scores plus a synergy bonus. Breaking change to any alloying element triggers an impact cascade.
+
+### 65.2 Annealing & Tempering — Controlled Stress Relief
+
+**Metaphor**: Annealing heats metal to a specific temperature then cools slowly, relieving internal stresses and reducing hardness. Tempering reheats hardened steel to a lower temperature, trading some hardness for increased toughness.
+
+**Cortex Analog**: After intensive refactoring (heating), the codebase has internal stresses — circular dependencies, inconsistent naming, duplicated logic that hasn't settled. **Annealing** is a scheduled, low-priority synthesis pass that:
+- Identifies stress concentration points (high cyclomatic complexity + high change frequency)
+- Proposes non-functional refactoring candidates (rename, extract, consolidate) without changing behavior
+- Generates "cooling period" recommendations — "wait 3 more commits before merging this module to allow stress to settle"
+
+**Tempering** trades brittleness (perfect purity of abstraction) for toughness (pragmatic tolerance):
+- Identifies overly-abstracted interfaces with zero concrete implementations — "this abstraction is too hard, it will shatter under first real use"
+- Flags purity-at-all-costs refactorings that removed necessary duplication or pragmatic shortcuts
+
+**Implementation**: Annealing temperature modeled as a scalar `codebaseTemperature` updated per-synthesis (based on change volume + refactoring frequency + entity churn). When above threshold, annealing suggestions activate. Tempering triggers on excessive abstraction depth (>3 levels) with low implementation ratio.
+
+### 65.3 Fatigue Crack Propagation — Cyclical Stress Analysis
+
+**Metaphor**: Metals under repeated cyclic loading develop micro-cracks that grow incrementally with each cycle until catastrophic failure. The crack grows slowly at first, then accelerates — most of the component's life is spent with an undetected crack already present.
+
+**Cortex Analog**: Architectural debt that accumulates under repeated, small changes follows the same pattern:
+- Each commit to a high-churn module applies a **stress cycle** — tiny structural deformation that doesn't fail on its own
+- Cortex tracks cycle count per entity (`stressCycleCount` in state.json)
+- When cycle count crosses a material-specific threshold (configurable per module complexity tier), the entity enters `fatigue_warning` state
+- Fatigue-stage entities receive elevated synthesis priority and appear in `cortex status` as "⚠️ Fatigue — N cycles, recommend structural review"
+- At critical crack length (threshold 2× warning threshold), the system recommends a **refactoring intervention** before the next change cycle
+
+**Implementation**: `src/knowledge/fatigue.ts` — stress cycle counter per entity, decay function (cycles decay if module stabilizes), tiered thresholds derived from entity size × change frequency.
+
+### 65.4 Creep Deformation — Slow Structural Drift
+
+**Metaphor**: Materials under constant load below their yield strength still gradually deform over time — called creep. It's imperceptible day-to-day but over months causes significant distortion, especially at elevated temperatures.
+
+**Cortex Analog**: Under constant development load, even well-structured modules slowly drift from their original architecture:
+- API surfaces accumulate optional parameters
+- Single-responsibility classes grow additional concerns
+- Interface contracts silently expand beyond their original scope
+
+Cortex detects creep by comparing each entity's current `## Interface` against its historically-snapshotted signature (stored at each synthesis). When cumulative drift exceeds a threshold without a corresponding documentation/version update, the entity is flagged as `creep_warning`. The delta is surfaced in `cortex status` and the MCP `read_entity` response as "🦎 Creep: this entity's interface has expanded by 40% since last documented — consider formal version bump or extraction."
+
+**Implementation**: Interface snapshot at each synthesis (`interfaceFingerprint: string`). Diff computed on every read. Creep ratio = (current interface surface) / (snapshot surface). Thresholds: warning at 1.25×, critical at 2×.
+
+---
+
+## 🏗️ Phase 66: Mechanical & Structural Engineering Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Applying principles from building bridges, machines, and structures: triangulated trusses distribute load efficiently, every column has a critical buckling load, oscillating systems need damping, and responsible engineers always include a safety factor.
+
+**Technical Terms**
+Structural engineering heuristics for dependency topology, load-bearing capacity, oscillation detection in feedback loops, and safety margins in architectural decisions.
+
+### 66.1 Truss Optimization — Triangulated Dependency Nets
+
+**Metaphor**: In structural engineering, triangles are the strongest shape. A truss made of triangles distributes loads efficiently — any single member failure redistributes the load without collapse.
+
+**Cortex Analog**: Dependency graphs with triangular structures (A depends on B, B depends on C, C depends on A) are not necessarily bad — they can be load-bearing trusses. Cortex distinguishes **pathological cycles** (fragile, tightly-coupled death spirals) from **triangulated trusses** (stable, load-distributing patterns with clear interfaces):
+- Analyzes each cyclic component in the dependency graph and classifies it as `truss` (stable, load-bearing) or `tangle` (fragile, needs refactoring)
+- Truss classification criteria: clear interface contracts between each pair, single responsibility per member, reversible dependencies
+- Tangle criteria: implicit coupling, shared mutable state, bidirectional knowledge of internals
+
+**Implementation**: Graph analysis in `src/knowledge/truss.ts` — Tarjan's algorithm for strongly connected components, then per-component classifier using interface clarity metrics from entity pages.
+
+### 66.2 Buckling Analysis — Critical-Load Prediction
+
+**Metaphor**: A slender column under compression doesn't fail by crushing — it fails by buckling at a critical load far below its material strength. Euler's formula predicts exactly when: P_cr = π²EI / (KL)².
+
+**Cortex Analog**: Modules that depend on many interfaces (compression) don't fail by "crushing" (too many dependencies) — they fail by buckling (the abstraction bends unpredictably under load). Cortex computes a **critical-load score**:
+- I = interface complexity (number of exported functions/classes/types)
+- L = dependency chain length to root module
+- K = end-condition factor (1.0 for leaf modules, 0.5 for core infrastructure, 2.0 for utility modules)
+
+When a module's actual dependency count approaches its critical load, it's flagged as `pre-buckling`. The system recommends: reduce interface surface (increase I? no — reduce effective load) or add lateral bracing (intermediate abstraction layers).
+
+**Implementation**: Euler-inspired formula in `src/knowledge/buckling.ts`. Critical load compared against measured dependency fan-in. Visualization shows margin-to-buckling as a percentage.
+
+### 66.3 Damping & Resonance — Oscillation Absorption
+
+**Metaphor**: Every mechanical system has natural frequencies. When driven at those frequencies, resonance causes runaway oscillation amplitude — Tacoma Narrows Bridge collapse. Damping elements absorb energy and prevent resonance.
+
+**Cortex Analog**: Software systems with feedback loops (build triggers, CI pipelines, auto-scaling, reconciliation loops) can exhibit resonance — small changes amplified into cascading failures:
+- Cortex detects **oscillating dependency patterns**: A triggers B, B triggers C, C triggers A (not just cycle — timed feedback)
+- Flags entities that form **positive feedback loops** — where a change in entity X propagates and returns amplified
+- Recommends **damping elements**: idempotency keys, rate limiters, exponential backoff, dead-letter queues, circuit breakers
+- Monitors **oscillation frequency** via git history — modules that change in lockstep with N-commit cadence are potentially resonant
+
+**Implementation**: Feedback loop detection + frequency analysis from git history timestamps. Damping recommendation library mapped to oscillation type.
+
+### 66.4 Factor of Safety — Engineering Margin in Decisions
+
+**Metaphor**: Every engineered structure includes a factor of safety — the structure is designed to handle 2×, 5×, or 10× the expected maximum load. This accounts for material defects, construction tolerances, and unknown unknowns.
+
+**Cortex Analog**: Architectural decisions should include a factor of safety — known as **engineering margin**. Cortex tracks:
+- **Load margin**: current dependency load vs. estimated capacity of the module's interface
+- **Degradation margin**: current quality score vs. minimum acceptable quality for the entity's tier (core infrastructure gets higher margin)
+- **Complexity margin**: current cyclomatic complexity vs. team's historical failure threshold
+- **Staffing margin**: bus factor vs. module criticality (from `## Wiring` fan-out count)
+
+When any margin drops below 1.5×, Cortex issues an advisory. Below 1.0× (no margin — already at limit), it's a `cortex lint` violation.
+
+**Implementation**: Margin computation in `src/knowledge/safety-margin.ts`. Margins are additive — a module below margin on 3 of 4 axes gets consolidated `cortex status` output.
+
+---
+
+## 📊 Phase 67: Data Science & Statistical Learning Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Applying statistical and machine learning techniques: compressing high-dimensional entity spaces, combining multiple weak signals into strong predictions, modeling entity lifespan, and continuously updating beliefs with new evidence.
+
+**Technical Terms**
+Statistical learning principles for knowledge management — feature extraction, ensemble aggregation, survival modeling, and Bayesian inference over architectural observations.
+
+### 67.1 Dimensionality Reduction — Entity Space Compression
+
+**Metaphor**: High-dimensional data (1000+ features per point) is impossible to visualize or cluster meaningfully. Techniques like PCA, t-SNE, and UMAP project data into 2-3 dimensions while preserving relative distances.
+
+**Cortex Analog**: As entity counts grow, the relationship graph becomes high-dimensional — each entity is a point in N-dimensional space where dimensions are its relationships, quality scores, churn rates, and interface signatures. Dimensionality reduction projects this into a **latent entity map**:
+- Similar entities cluster together in the projection — revealing groups the synthesis engine might not have explicitly named
+- Outliers in the projection are candidates for `cortex lint` — either misclassified entities or genuinely unique modules needing attention
+- The projection is used as a secondary index — read_entity returns "similar entities" based on latent-space proximity
+
+**Implementation**: UMAP or t-SNE via a local Python script or WASM binding (no cloud dependency). Re-computed on a schedule (every N syntheses or on demand via `cortex reduce`). Projection stored in `.knowledge/projection.json`.
+
+### 67.2 Ensemble Methods — Multi-Signal Convergence
+
+**Metaphor**: No single model is reliable. Random forests combine hundreds of weak decision trees; gradient boosting iteratively corrects previous errors. The ensemble nearly always outperforms any individual member.
+
+**Cortex Analog**: No single quality signal is reliable. A module with high churn might be volatile — or it might be the most actively maintained. A module with many dependencies might be coupled — or it might be a well-factored hub. Ensemble methods combine multiple weak architectural signals into a **convergence score**:
+- Signals: churn rate, dependency fan-in/out, interface stability, test coverage (if available), review frequency, comment density, cyclomatic complexity, entity age, `staleSince` recency
+- Each signal is a weak classifier — on its own, noisy and unreliable
+- Combined via weighted ensemble (signal weights tuned per project via historical accuracy on `cortex lint` violations)
+- Convergence score appears in entity pages as `## Quality` with per-signal breakdown
+
+**Implementation**: `src/knowledge/ensemble.ts` — signal extractors, weight vector (per-project configurable), convergence computation. Ensemble weights saved to `.knowledge/ensemble-weights.json`.
+
+### 67.3 Survival Analysis — Entity Lifetime Prediction
+
+**Metaphor**: In medical statistics, survival analysis models time-to-event data: how long until a patient relapses, a machine fails, or a customer churns. Kaplan-Meier curves estimate the survival function from observed lifetimes.
+
+**Cortex Analog**: Architectural entities have lifetimes — from birth (first synthesis) to death (file deleted, module deprecated). Survival analysis models:
+- **Entity survival curve**: probability that an entity survives (is not deleted or fundamentally rewritten) past N days
+- **Risk factors**: high cyclomatic complexity, low quality score, high churn, high dependency count — each contributes a hazard ratio
+- **Cohort effects**: entities born in the same synthesis batch share survival characteristics (a badly-synthesized batch produces short-lived entities)
+- **Censoring**: entities that still exist at analysis time are right-censored — we know they've survived at least this long, but not their eventual lifetime
+
+Used to flag entities with unexpectedly high hazard ratios — "this entity has a 73% probability of being deleted or rewritten within 90 days based on its risk profile."
+
+**Implementation**: `src/knowledge/survival.ts` — Cox proportional hazards model fitted on entity lifecycle history from `log.md`. Hazard ratio per entity computed and surfaced in `cortex status` and MCP responses.
+
+### 67.4 Bayesian Updating — Prior-Driven Belief Revision
+
+**Metaphor**: Bayes' theorem describes how to update the probability of a hypothesis as new evidence arrives. The prior belief is combined with the likelihood of the observed data to produce a posterior belief. This is how science works — not binary true/false, but continuously refined probabilities.
+
+**Cortex Analog**: Every entity and relationship in Cortex has a **belief** — not a binary "this is correct" but a probability distribution over possible states:
+- **Prior**: initial confidence from the first synthesis (always relatively low — the LLM could be wrong)
+- **Evidence**: subsequent synthesis passes, human reviews, manual edits, `--force` re-synths, impact analysis results
+- **Likelihood**: how much each evidence type shifts the belief (a human editor's change is high-likelihood; an automated re-synthesis is lower)
+- **Posterior**: the updated belief — Bayesian Entity Certainty (BEC) score
+
+When contradicting evidence arrives (two synthesis passes disagree, a human review says "this is wrong"), the belief widens (increased variance) rather than jumping to the new value — reflecting genuine uncertainty. Only when multiple independent evidence sources converge does the variance shrink.
+
+**Implementation**: `src/knowledge/bayesian.ts` — conjugate prior updates using Beta distributions (natural for binary-outcome beliefs). BEC score = posterior mean; credibility interval = posterior 90% HDI. Persisted per entity in `state.json`.
+
+---
+
+## 🏥 Phase 68: Medical & Clinical Diagnostic Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Medical diagnostic techniques repurposed for architecture: monitoring the architectural pulse like an ECG, identifying cognitive biases that lead to design errors, tracking how architectural smells spread like infectious diseases, taking cross-sectional scans of the codebase, and using lesion studies to understand function from failure.
+
+### 68.1 Cardiology — Architectural Pulse & Arrhythmia Detection
+
+**Metaphor**: The heart's electrical activity produces a characteristic ECG waveform — P wave, QRS complex, T wave. Cardiologists detect arrhythmias (atrial fibrillation, ventricular tachycardia) from deviations in this pattern.
+
+**Cortex Analog**: The codebase has a **development pulse** — a characteristic rhythm of commits, syntheses, and architectural changes. Cortex tracks:
+- **Heart rate**: commits per day, syntheses per day — normal range varies by project phase
+- **P-R interval**: time between a file change and its synthesis — too long suggests queue build-up
+- **QRS complex**: rapid burst of changes across related files — indicates coordinated refactoring or reactive hotfix
+- **ST elevation**: sustained high change volume with no structural improvement — suggests technical debt accumulation
+- **Arrhythmia detection**: premature architectural contractions (rushed refactors), atrial fibrillation (chaotic, uncoordinated changes across unrelated modules), asystole (flatline — no architectural changes for extended periods)
+
+Arrhythmias are surfaced in `cortex status` as health warnings: "⚠️ Sinus arrhythmia detected — 3 coordinated refactors in 2 hours without intervening stability period. Recommend cooldown."
+
+**Implementation**: `src/knowledge/cardiology.ts` — change-event stream from git log + synthesis log. ECG-style visualization in `cortex status --cardio` (ASCII or Phase 8 graph overlay).
+
+### 68.2 Psychiatry — Cognitive Distortion & Bias Patterns
+
+**Metaphor**: Cognitive behavioral therapy identifies systematic thinking distortions: black-and-white thinking, catastrophizing, overgeneralization, mind reading, emotional reasoning. These biases distort perception of reality.
+
+**Cortex Analog**: Architectural decision-making exhibits systematic biases that degrade knowledge quality:
+- **Anchoring bias**: the first architectural decision about a module anchors all subsequent descriptions, even as the module evolves away — entity pages describe "what it was" not "what it is"
+- **Confirmation bias**: the synthesis engine selectively retains evidence that confirms its initial interpretation and discards contradictory signals
+- **Dunning-Kruger effect**: low-complexity modules receive overconfident descriptions; high-complexity modules receive overly cautious, vague descriptions
+- **Sunk cost fallacy**: entities with long histories resist reclassification even when their role has fundamentally changed
+- **Availability heuristic**: recently-edited entities dominate synthesis attention at the expense of quieter but equally important modules
+- **Groupthink**: in multi-Librarian scenarios, early Librarian outputs anchor later ones, reducing diversity of interpretation
+
+Cortex detects these patterns by analyzing synthesis history across time and surfacing bias indicators: "⚠️ Anchoring bias detected: AuthService's ## Role has not changed in 8 of 9 syntheses despite fan-out increasing 4×. Recommend forced re-synthesis."
+
+**Implementation**: `src/knowledge/cognitive-bias.ts` — per-bias detector functions that compare entity state over time against bias-specific heuristics. Bias events logged in `.knowledge/bias-log.json` and surfaced in `cortex lint` output.
+
+### 68.3 Epidemiology — Architectural Smell Contagion Modeling
+
+**Metaphor**: Infectious diseases spread through populations according to SIR models — Susceptible, Infected, Recovered. The basic reproduction number R₀ determines whether an outbreak grows or dies out.
+
+**Cortex Analog**: Architectural smells (god objects, circular dependencies, leaky abstractions, inconsistent naming) spread through the codebase like infections:
+- **Susceptible**: modules that follow clean patterns but are adjacent to infected modules
+- **Exposed**: modules adjacent to infected modules that share dependencies — they're at risk of "catching" the smell through copy-paste, shared authorship, or dependency-driven scope creep
+- **Infected**: modules exhibiting the smell
+- **Recovered**: modules that were refactored and now test clean
+
+Cortex computes R₀ for each known smell type — how many new infections each existing infection typically causes. R₀ > 1 means the smell is actively spreading and needs containment. R₀ < 1 means the smell is dying out naturally.
+
+**Containment strategies**: architectural quarantine (flagged modules get elevated review requirements), vaccination (pre-emptive lint on similarly-structured modules), contact tracing (all commits touching infected modules in the past N days trigger review).
+
+**Implementation**: `src/knowledge/epidemiology.ts` — SIR model over the entity graph. Smell propagation tracked via git blame + dependency adjacency. Outbreak alerts in `cortex status`.
+
+### 68.4 Radiology — Cross-Sectional Architectural Tomography
+
+**Metaphor**: CT scans and MRIs take multiple cross-sectional slices of the body and reconstruct a 3D model. Different tissue types have different radiodensity, revealing tumors, fractures, and abnormalities invisible from the surface.
+
+**Cortex Analog**: Cortex takes **architectural tomographic slices** — cross-sectional views of the codebase along different axes:
+- **Horizontal slice**: all entities at one layer of abstraction (e.g., all controllers, all repositories) — reveals layer-wide consistency issues
+- **Vertical slice**: all entities involved in one feature end-to-end — reveals cross-cutting coupling
+- **Depth slice**: entities at a specific dependency depth from root — reveals architectural layering violations
+- **Density slice**: entities grouped by quality score quartile — reveals systemic quality gradients
+- **Time slice**: entity state at a specific commit (from log.md snapshots) — reveals temporal evolution
+
+Each slice is rendered as a Mermaid diagram (Phase 8 overlay) with density coloring. Abnormalities appear as radiodense spots — clusters of inconsistent quality, unexpected dependencies, or missing layers.
+
+**Implementation**: `src/knowledge/tomography.ts` — slice engine producing entity sets + relationship subgraphs for each slice axis. Phase 8 integration for visualization.
+
+### 68.5 Neurology — Lesion Studies & Functional Deficit Maps
+
+**Metaphor**: In neurology, lesion studies correlate damaged brain regions with lost functions — damage to Broca's area impairs speech production, not comprehension. This reveals which regions are necessary for which functions.
+
+**Cortex Analog**: When a module is deleted, deprecated, or fundamentally broken (failing tests, compilation errors), Cortex performs a **lesion study**:
+- Identifies which remaining modules exhibit functional deficits after the lesion — failing transitive dependencies, broken imports, unhandled edge cases
+- Maps each deficit to a specific **necessary region** — demonstrating that the removed module was essential for that function
+- Builds a **functional deficit map**: which entities are necessary for which capabilities
+- Over time, synthesizes a necessity gradient — "AuthService is necessary for 12 downstream functions; TokenCache is necessary for 3" — informing refactoring priority
+
+This inverts the standard dependency analysis: instead of "what does X depend on," it answers "what depends on X being correct" — the functional consequence of failure.
+
+**Implementation**: `src/knowledge/lesion.ts` — simulated lesion engine. Given a removed entity, traces git-blame, test failures, and import graphs to identify deficit regions. Necessity gradient stored per entity in state.json.
+
+---
+
+## 🔍 Phase 69: Criminal Forensics & Investigative Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Detective work for software architecture: tracing the chain of evidence from a bug back to its root cause, profiling module behavior patterns, reconstructing the sequence of events leading to an outage, and predicting which problems are likely to recur.
+
+### 69.1 Trace Evidence — Regression Provenance Chain
+
+**Metaphor**: Forensic investigators collect trace evidence (fibers, hair, fingerprints, DNA) at a crime scene and establish a chain of custody — documenting every transfer from collection to courtroom. Each transfer is logged and verified.
+
+**Cortex Analog**: When a regression is detected (test failure, lint violation, behavior change), Cortex establishes a **regression provenance chain**:
+- **Primary evidence**: the diff that introduced the regression (from git bisect or test-mapped commit)
+- **Secondary evidence**: the synthesis record closest to the regression commit — what did the Librarian say about the affected entities at that time?
+- **Tertiary evidence**: dependency topology at the regression point — what else changed in related entities?
+- **Chain of custody**: timeline linking each evidence item with timestamps, commit hashes, and the tool/agent that collected it
+
+The provenance chain is surfaced as a structured report: "Regression in PaymentService.authorize() traced to commit a3f2c1 (2026-05-15, author: jdoe). At that point, the Librarian had not re-synthesized PaymentService in 12 days — stale `## Writing` section masked a changed dependency."
+
+**Implementation**: Git integration (bisect wrapper, blame annotation) + synthesis log cross-reference. Provenance chain stored in `.knowledge/forensics/` as JSON per regression event.
+
+### 69.2 Behavioral Profiling — Module Pattern-of-Life
+
+**Metaphor**: Criminal profilers analyze patterns of behavior — crime locations, times, methods, victimology — to build a profile of an unknown offender. Each crime is a data point revealing the offender's operational style.
+
+**Cortex Analog**: Each module has a **behavioral profile** built from its git history — a pattern-of-life analysis:
+- **Temporal pattern**: commits at specific times of day, days of week — reveals if this module is maintained by a specific team with specific working hours
+- **Modus operandi**: typical change patterns — does this module accumulate small fixes (maintenance pattern) or bulk structural rewrites (refactoring pattern)?
+- **Signature**: author name patterns, commit message style, test coverage patterns — uniquely identifies the maintainer's engineering fingerprint
+- **Victimology**: which downstream modules are most frequently broken by changes to this module?
+
+When anomalous behavior occurs — an unfamiliar author makes a structural change outside the module's typical pattern — Cortex issues an advisory: "⚠️ Anomalous commit in PaymentService: structural change by unfamiliar author, non-standard commit cadence, changes 3 dependencies simultaneously — this is outside the module's established pattern."
+
+**Implementation**: `src/knowledge/profiling.ts` — per-entity behavioral model from git history. Anomaly detection via statistical deviation from historical patterns.
+
+### 69.3 Crime Scene Reconstruction — Post-Mortem Failure Analysis
+
+**Metaphor**: After a crime, forensic investigators reconstruct the sequence of events — establishing a timeline, identifying entry and exit points, determining cause and manner of death. The reconstruction answers: "what happened, in what order, and why?"
+
+**Cortex Analog**: After a production incident or architectural failure, Cortex performs **post-mortem reconstruction**:
+- **Timeline construction**: orders all relevant events (commits, deploys, config changes, synthesis runs) in a coherent timeline
+- **Entry point identification**: pinpoints the first deviation from normal state — the "entry wound"
+- **Causal chain mapping**: traces how the initial deviation propagated through the dependency graph, amplifying at each step
+- **Root cause narrowing**: eliminates coincidental events and identifies the minimal set of changes that must have occurred for the failure to manifest
+- **Contributing factors**: secondary conditions that enabled the failure (unreviewed PRs, stale synthesis, missing tests)
+
+The reconstruction is saved as a structured forensic report in `.knowledge/forensics/` and linked to the affected entities' `## Wiring` sections as a historical note.
+
+**Implementation**: `src/knowledge/reconstruction.ts` — event ordering, causal chain analysis, root cause narrowing via counterfactual elimination. Output format matches incident-postmortem conventions (timeline, cause, contributing factors, action items).
+
+### 69.4 Recidivism Prediction — Recurrence Risk Scoring
+
+**Metaphor**: In criminal justice, recidivism prediction models estimate the likelihood that a convicted individual will re-offend. Factors include criminal history, age, employment status, and social connections.
+
+**Cortex Analog**: Entities that have experienced a regression, quality degradation, or architectural violation have a **recidivism risk** — the probability they will experience the same class of issue again:
+- **Criminal history**: number of past regressions/violations of the same type
+- **Time since last incident**: recent incidents are stronger predictors
+- **Environmental factors**: module churn rate, team size, test coverage, dependency stability
+- **Protective factors**: automated tests, code review requirements, recent refactoring, high quality score
+
+Risk scores are computed using a logistic regression model trained on historical incident data from `log.md`. High-risk entities appear in `cortex status` with intervention recommendations: "⚠️ Recidivism risk: 67% — PaymentService has had 3 NullPointer-related incidents in 6 months. Protective factors (test coverage: 92%) partially mitigate risk. Recommended: add input validation layer."
+
+**Implementation**: `src/knowledge/recidivism.ts` — logistic regression model. Feature extraction from entity history + `log.md`. Risk score per (entity, incident_class) pair.
+
+---
+
+## ⚖️ Phase 70: Jurisdictional & Legal System Synthesis — ⏳ Planned (cross-domain)
+
+**Layman's Terms**
+Legal and governance principles applied to architecture: which component has authority over what, how past architectural decisions create binding precedent, ensuring fair process before enforcement actions, and requiring justification for any constraint on developer freedom.
+
+### 70.1 Subject-Matter Jurisdiction — Component Authority Maps
+
+**Metaphor**: Courts have subject-matter jurisdiction — a family court cannot hear a criminal case, a federal court cannot hear most divorce cases. Jurisdiction defines which court has authority over which type of dispute.
+
+**Cortex Analog**: Every entity has a **jurisdiction** — the domain of architectural concerns it has authority over:
+- **AuthService**: jurisdiction over authentication, authorization, session management — but NOT over payment processing, data storage, or UI rendering
+- **PaymentService**: jurisdiction over transactions, refunds, billing — but NOT over user profiles or notifications
+
+When an entity's synthesis or behavior violates its jurisdiction (an entity describes payment logic inside AuthService's page, or a library function accesses a database it shouldn't), Cortex flags a **jurisdictional overreach**:
+- "AuthService's ## Wiring lists a 'createBillingProfile' relationship — this is outside AuthService's jurisdiction (authentication). Recommend moving to PaymentService or creating a dedicated entity."
+
+Jurisdiction boundaries are defined in entity metadata (`jurisdiction: string[]`) and enforced by a cross-reference check during synthesis and lint passes.
+
+**Implementation**: `src/knowledge/jurisdiction.ts` — jurisdiction registry, overreach detection via cross-reference of entity descriptions with jurisdiction claims. Overreach events surfaced in `cortex lint`.
+
+### 70.2 Stare Decisis — Architectural Precedent Binding
+
+**Metaphor**: Stare decisis (Latin: "to stand by things decided") is the common law principle that courts should follow precedents established in previous rulings. Lower courts are bound by higher courts; same-level courts follow persuasive precedent.
+
+**Cortex Analog**: Architectural decisions create **binding precedent** for future decisions:
+- **Vertical precedent**: core infrastructure entities (libraries, frameworks, platform services) set binding precedent — all consuming entities must conform to their patterns
+- **Horizontal precedent**: peer entities create persuasive precedent — if three microservices all use the same error-handling pattern, a fourth should follow unless there's a compelling reason
+- **Overruling**: an entity can be explicitly overruled by a higher-authority entity (core library changes its API — downstream entities must update)
+- **Distinguishing**: an entity can argue it's distinguishable from precedent — "PaymentService uses a different protocol, so the precedent from SearchService's caching pattern doesn't apply"
+
+Cortex tracks precedent links in entity metadata: `precedent: { source: "EntityName", ruling: "must implement RetryPolicy", binding: "persuasive" | "binding" | "overruled" }`. On reads, precedent network is resolved and displayed: "⚠️ 3 binding precedents apply to this entity. 2/3 are in compliance. 1 (RetryPolicy) is not yet implemented."
+
+**Implementation**: Precedent graph stored in `.knowledge/precedents.json`. Resolution engine computes applicable precedents per entity and compliance status. Integration with Phase 6 constraint engine.
+
+### 70.3 Due Process — Fair Notification Before Enforcement
+
+**Metaphor**: Due process requires that legal proceedings be fair — notice of the charges, an opportunity to be heard, an impartial tribunal, and a decision based on evidence. No one can be deprived of rights without due process.
+
+**Cortex Analog**: Before Cortex enforces any constraint, flags a violation, or modifies an entity's status, it must follow **architectural due process**:
+- **Notice**: the entity is notified (via MCP read response footer, `cortex status`, or lint output) that a constraint is being evaluated against it — before any enforcement action
+- **Hearing**: the developer has an opportunity to respond — override the constraint with a reasoned justification, request an extension, or acknowledge the issue and plan a fix
+- **Evidence basis**: every enforcement action cites the evidence — which entity, which constraint, which specific code or synthesis output triggered it
+- **Impartial review**: for automated enforcement (Phase 43.3 ACP gates), the reviewing agent must not be the same agent that recommended the action — separation of concerns
+- **Appeal path**: every enforcement action has a defined appeal mechanism — human override, re-synthesis with corrected context, or formal exemption registration
+
+**Implementation**: `src/knowledge/due-process.ts` — due process event pipeline: notification → response window → evidence compilation → impartial routing → decision with appeal link. Logged in `.knowledge/due-process-log.json`.
+
+### 70.4 Habeas Corpus — Justification Requirement for Actions
+
+**Metaphor**: Habeas corpus (Latin: "you shall have the body") requires a person under arrest to be brought before a judge — the state must justify the deprivation of liberty. It prevents arbitrary detention.
+
+**Cortex Analog**: Every automated enforcement action — constraint flagging, entity demotion, synthesis rejection, write-prevention — must be accompanied by a **writ of architectural habeas corpus**:
+- What is the specific action being taken?
+- What rule/constraint/precedent authorizes this action?
+- What evidence supports this action?
+- What is the specific harm this action prevents?
+- What is the duration/scope of the action?
+- What must the entity do to be released from this action?
+
+Without a valid writ, the action is not executed. The writ is recorded in `.knowledge/habeas-corpus-log.json` and is reviewable via `cortex lint --writs`.
+
+This prevents the system from taking punitive architectural actions without transparent, auditable justification — arbitrary enforcement undermines trust in the knowledge base.
+
+**Implementation**: `src/knowledge/habeas-corpus.ts` — writ schema, validation before enforcement action execution, writ registry with searchable index.

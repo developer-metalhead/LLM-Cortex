@@ -276,7 +276,7 @@ export class CortexMCPServer {
           description: "Check or configure your active budget limits and runaway protection settings.",
           arguments: [
             { name: "action", description: "The action to perform: 'view' to inspect current safeguards, or 'configure' to update limits", required: false },
-            { name: "maxCost", description: "Optional: Max session cost limit to set (or 'none' to clear)", required: false },
+            { name: "maxCost", description: "Optional: Max rolling 24h cost limit to set (or 'none' to clear)", required: false },
             { name: "maxSyncsHour", description: "Optional: Max hourly sync frequency limit to set (or 'none' to clear)", required: false },
           ]
         },
@@ -718,7 +718,7 @@ export class CortexMCPServer {
               role: "user",
               content: {
                 type: "text",
-                text: "Step 1: Check the status. Call get_cortex_status. Step 2: Present the active budget gating status: Session Limit, Hourly Limit, Session Spent, Quota Remaining, and Hourly Syncs. If any limits are active, explain how they prevent runaway LLM sync loops."
+                text: "Step 1: Check the status. Call get_cortex_status. Step 2: Present the active budget gating status: Rolling 24h Limit, Hourly Limit, Rolling 24h Spent, Quota Remaining, and Hourly Syncs. If any limits are active, explain how they prevent runaway LLM sync loops."
               }
             }],
           };
@@ -732,7 +732,7 @@ export class CortexMCPServer {
               role: "user",
               content: {
                 type: "text",
-                text: "Ask the user: 'What new safety limits would you like to set? Please provide: (1) Max Session Cost in USD (e.g. 0.05 or 'none' to disable), and (2) Max Sync Calls per Hour (e.g. 5 or 'none' to disable).' Wait for their response, then call the configure_safeguards tool with their choices."
+                text: "Ask the user: 'What new safety limits would you like to set? Please provide: (1) Max Rolling 24h Cost in USD (e.g. 0.05 or 'none' to disable), and (2) Max Sync Calls per Hour (e.g. 5 or 'none' to disable).' Wait for their response, then call the configure_safeguards tool with their choices."
               }
             }],
           };
@@ -996,7 +996,7 @@ export class CortexMCPServer {
         {
           name: "audit",
           description:
-            "Perform an architectural audit to find stale entities and blast-radius victims.",
+            "Perform a fast, lightweight architectural health check to identify stale entities. Returns just names/dates—ideal for automated pipelines, CI/CD scripts, or programmatic pass/fail checks.",
           inputSchema: { type: "object", properties: {} },
         },
         {
@@ -1141,7 +1141,8 @@ export class CortexMCPServer {
         },
         {
           name: "smart_audit",
-          description: "Enhanced audit that returns stale entities bundled with their full entity pages and inbound blast-radius — everything needed to triage and fix staleness in one call. Use instead of calling audit + read_entity + impact_analysis separately.",
+          description:
+            "Enhanced audit for interactive AI agents. Returns all stale entities bundled with their full entity pages and inbound blast-radius in one shot. Use this instead of calling audit + read_entity + impact_analysis separately to triage and heal staleness in a single call.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -1336,6 +1337,10 @@ export class CortexMCPServer {
         }
         config.brevity = level;
         await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+
+        // Immediately bust the in-memory cache so subsequent tool calls pick up the new level
+        const { clearBrevityCache } = await import("../knowledge/brevity.js");
+        clearBrevityCache();
         
         return {
           content: [
@@ -2370,7 +2375,34 @@ export class CortexMCPServer {
     };
 
     const response = await executeHandler();
-    if ((brevity === "lite" || brevity === "ultra") && response && Array.isArray(response.content)) {
+
+    // Tools that must NEVER have minifyProse applied:
+    // - JSON-returning tools: compression regex corrupts JSON and adds a useless footer
+    // - File-generating tools: content is written to disk; stripping prose degrades readability permanently
+    // - Instruction-carrying tools: the Librarian prompt structure must be 100% intact for LLM consumption
+    // - Short status/config tools: nothing meaningful to compress, footer adds noise
+    const BREVITY_EXEMPT_TOOLS = new Set([
+      "get_cortex_status",         // returns JSON
+      "log_query",                 // returns raw JSON
+      "evolution_entity",          // returns raw JSON
+      "resolve_refs",              // returns raw JSON
+      "get_entity_quality",        // returns raw JSON
+      "get_savings",               // returns analytics report (no filler prose)
+      "ingest",                    // carries Librarian prompt instructions — must not be mutated
+      "get_pending_changes",       // carries Librarian prompt instructions — must not be mutated
+      "save_synthesis",            // short status message — nothing to compress
+      "save_concept",              // short status message — nothing to compress
+      "refresh_stale_entities",    // short status message — nothing to compress
+      "configure_brevity",         // config confirmation — nothing to compress
+      "configure_safeguards",      // config confirmation — nothing to compress
+      "set_project_root",          // config confirmation — nothing to compress
+      "cortex_onboard",            // writes to disk — compressing degrades on-disk readability
+      "export",                    // writes ARCH_SPEC.md / ARCH_GRAPH.md to disk
+      "compress",                  // is itself the compression tool — skip double-compression
+    ]);
+
+    const { name: toolName } = request.params;
+    if ((brevity === "lite" || brevity === "ultra") && !BREVITY_EXEMPT_TOOLS.has(toolName) && response && Array.isArray(response.content)) {
       const { estimateTokens } = await import("../knowledge/packer.js");
       for (const item of response.content) {
         if (item.type === "text" && item.text) {
