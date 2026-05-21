@@ -66,7 +66,13 @@ export async function runSoul(
     }
 
     case "import": {
-      const importPath = options.file;
+      let importPath = options.file;
+      if (!importPath) {
+        const importIdx = process.argv.indexOf("import");
+        if (importIdx !== -1 && process.argv[importIdx + 1] && !process.argv[importIdx + 1].startsWith("-")) {
+          importPath = process.argv[importIdx + 1];
+        }
+      }
       if (!importPath || !fs.existsSync(importPath)) {
         console.log("Usage: cortex soul import <file>");
         return 1;

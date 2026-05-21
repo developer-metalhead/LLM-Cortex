@@ -1733,12 +1733,20 @@ export class CortexMCPServer {
         }
         const { FindManager } = await import("../knowledge/find.js");
         const fm = new FindManager(this.knowledge);
-        const results = await fm.find(type, query);
+        let results = await fm.find(type, query);
         if (results.length === 0) {
           return {
             content: [{ type: "text", text: "No matches found." }],
           };
         }
+        results = rerankFindResults(
+          results.map(r => ({
+            ...r,
+            nodeType: r.type === "entity" ? "decision" as const : "insight" as const
+          })),
+          activeLens,
+          this.soul
+        );
         const lines = results.map(r => {
           const typeLabel = r.type === "parent" ? "📁 parent" : r.type === "concept" ? "💡 concept" : "📄 entity";
           return `* [[${r.name}]] (${typeLabel})\n  ${r.preview}`;
@@ -2504,10 +2512,18 @@ export class CortexMCPServer {
         const scope = (args as any)?.scope as string | undefined;
         const depth = typeof (args as any)?.depth === "number" ? (args as any).depth : undefined;
         const format = (args as any)?.format === "json" ? "json" as const : "markdown" as const;
-        let pack = buildContextPack(state, { budget, scope, depth, format, projectRoot: this.projectRoot });
+        let pack = buildContextPack(state, {
+          budget,
+          scope,
+          depth,
+          format,
+          projectRoot: this.projectRoot,
+          lens: activeLens,
+          soulEngine: this.soul
+        });
 
         // Phase 13.8 — Relation Graph Hopping for CREATIVE lens
-        if (scope && this.soul && this.soul.state.currentLens === "CREATIVE") {
+        if (scope && this.soul && this.soul.detectActiveLens() === "CREATIVE") {
           const graph = buildGraph(state);
           const hopEntities = graphHop(graph, scope, 2, new Set([...pack.elided, scope]));
           if (hopEntities.length > 0) {

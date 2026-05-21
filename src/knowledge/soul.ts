@@ -98,6 +98,11 @@ export class SoulEngine {
 
   private async acquireLock(): Promise<void> {
     const lockPath = this.lockPath();
+    try {
+      await fs.mkdir(path.dirname(lockPath), { recursive: true });
+    } catch {
+      // ignore
+    }
     for (let attempt = 0; attempt < this.lockRetries; attempt++) {
       try {
         const stat = await fs.stat(lockPath);
@@ -376,7 +381,10 @@ export class SoulEngine {
     );
     const maxFailureBias = Math.max(...matchingFailures.map(n => n.weights.failureBias), 0);
     if (maxFailureBias > 0.6) {
-      this.state.globalBiases.riskTolerance = 0.1;
+      if (this.state.globalBiases.riskTolerance !== 0.1) {
+        this.state.globalBiases.riskTolerance = 0.1;
+        this.dirty = true;
+      }
     }
     return this.state.globalBiases.riskTolerance;
   }

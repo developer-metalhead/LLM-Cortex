@@ -290,4 +290,58 @@ describe("Phase 13.8 — Persistent Experience & Cognitive Mode-Adaptive Context
       assert.equal(result, "CREATIVE");
     });
   });
+
+  describe("Lock Directory Creation & Context Pack Integration", () => {
+    it("SoulEngine load/save succeeds even if .knowledge directory does not exist initially", async () => {
+      const emptyTmp = await fs.mkdtemp(path.join(os.tmpdir(), "cortex-locktest-"));
+      try {
+        const engine = new SoulEngine(emptyTmp);
+        await engine.load(); // should create directory and succeed without throwing
+        engine.addNode({
+          id: "n1", type: "decision", content: "Test", timestamp: Date.now(),
+          metadata: {}, weights: { salience: 1, successBias: 0.5, failureBias: 0, decay: 1, certainty: 0.7, credibility: 0.6, energy: 0.5 },
+        });
+        await engine.save(); // should write soul_state.json and lock file properly
+        assert.equal(engine.getNodes().length, 1);
+      } finally {
+        await fs.rm(emptyTmp, { recursive: true, force: true }).catch(() => {});
+      }
+    });
+
+    it("buildContextPack applies lens reranking based on cognitive lens", async () => {
+      const state = {
+        entities: {
+          A: { description: "Entity A description", relationships: [{ target: "B", kind: "depends_on" }] },
+          B: { description: "Entity B description", relationships: [] }
+        },
+        concepts: {}
+      };
+      
+      const { buildContextPack } = await import("../src/knowledge/packer.js");
+      
+      // Default ordering: B is more central (inbound ref from A)
+      const packNoLens = buildContextPack(state as any, { budget: 4000 });
+      assert.ok(packNoLens.output.indexOf("Entity: B") < packNoLens.output.indexOf("Entity: A"));
+
+      // Configure SoulEngine with failure node for A and low risk tolerance to boost it
+      const soul = new SoulEngine(tmp);
+      soul.addNode({
+        id: "failure-node",
+        type: "failure",
+        content: "A failed",
+        timestamp: Date.now(),
+        metadata: { source: "A" },
+        weights: { salience: 1.0, successBias: 0.0, failureBias: 1.0, decay: 0.0, certainty: 1.0, credibility: 1.0, energy: 1.0 }
+      });
+      soul.evaluateRiskClamping("A"); // sets riskTolerance to 0.1, making boost = 1.9
+
+      // With lens + soulEngine: A should bubble to the top (boosted above B)
+      const packWithLens = buildContextPack(state as any, {
+        budget: 4000,
+        lens: "ENGINEERING",
+        soulEngine: soul
+      });
+      assert.ok(packWithLens.output.indexOf("Entity: A") < packWithLens.output.indexOf("Entity: B"));
+    });
+  });
 });

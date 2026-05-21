@@ -2,6 +2,8 @@ import { buildGraph, KnowledgeGraph, GraphNode } from "./graph.js";
 import fs from "fs";
 import path from "path";
 import { SmartReadCache } from "./readCache.js";
+import { CognitiveLens, SoulEngine } from "./soul.js";
+import { rerankContextPackNodes } from "./cognitive.js";
 
 export interface ContextPackOptions {
   budget?: number;       // token budget
@@ -9,6 +11,8 @@ export interface ContextPackOptions {
   depth?: number;        // blast radius depth
   format?: "markdown" | "json";
   projectRoot?: string;  // required for Phase 13.7.2 grounded fallback
+  lens?: CognitiveLens;
+  soulEngine?: SoulEngine;
 }
 
 export interface ContextPackResult {
@@ -211,12 +215,26 @@ export function buildContextPack(
   // Primary sort: centrality (most-referenced first — never buries important entities).
   // Quality is a tiebreaker only, so a poorly-documented-but-central entity still
   // gets included. Low-quality entities get an inline warning instead of being deprioritized.
-  const sortedNodes = [...graph.nodes].sort((a, b) => {
+  let sortedNodes = [...graph.nodes].sort((a, b) => {
     const ca = centrality.get(a.id) ?? 0;
     const cb = centrality.get(b.id) ?? 0;
     if (ca !== cb) return cb - ca;
     return b.qualityScore - a.qualityScore || a.id.localeCompare(b.id);
   });
+
+  if (options.lens) {
+    const rerankable = sortedNodes.map(n => ({
+      name: n.id,
+      type: n.type,
+      score: centrality.get(n.id) ?? 0,
+      description: n.description,
+      sourceFile: n.sourceFile,
+      nodeType: n.type === "entity" ? "decision" as const : "insight" as const
+    }));
+    const reranked = rerankContextPackNodes(rerankable, options.lens, options.soulEngine);
+    const nodeMap = new Map(sortedNodes.map(n => [n.id, n]));
+    sortedNodes = reranked.map(item => nodeMap.get(item.name)!).filter(Boolean);
+  }
 
   if (options.format === "json") {
     // We don't truncate JSON yet since it's programmatic, but we could filter it
