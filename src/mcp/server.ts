@@ -81,6 +81,12 @@ export class CortexMCPServer {
     this.knowledgeDir = path.join(resolved, ".knowledge");
     this.knowledge = new KnowledgeManager(resolved);
     this._sourceStats = null;
+    
+    // Invalidate the brevity cache immediately so the new workspace's brevity configuration is read
+    import("../knowledge/brevity.js").then(({ clearBrevityCache }) => {
+      clearBrevityCache();
+    }).catch(() => {});
+
     console.error(`[Cortex] Project root resolved via MCP roots: ${resolved}`);
   }
 
@@ -1338,6 +1344,9 @@ export class CortexMCPServer {
         config.brevity = level;
         await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
 
+        // Keep process.env in sync dynamically so that changes take effect immediately in-memory
+        process.env.CORTEX_BREVITY_LEVEL = level;
+
         // Immediately bust the in-memory cache so subsequent tool calls pick up the new level
         const { clearBrevityCache } = await import("../knowledge/brevity.js");
         clearBrevityCache();
@@ -1388,6 +1397,7 @@ export class CortexMCPServer {
           const costStr = String(maxCost).trim();
           if (isClearVal(costStr)) {
             delete envConfig["CORTEX_MAX_SESSION_COST_USD"];
+            delete process.env.CORTEX_MAX_SESSION_COST_USD;
             if (cortexJson.safeguards) {
               delete cortexJson.safeguards.maxSessionCostUsd;
             }
@@ -1396,6 +1406,7 @@ export class CortexMCPServer {
             const val = parseFloat(costStr);
             if (!isNaN(val)) {
               envConfig["CORTEX_MAX_SESSION_COST_USD"] = val.toString();
+              process.env.CORTEX_MAX_SESSION_COST_USD = val.toString();
               cortexJson.safeguards = cortexJson.safeguards || {};
               cortexJson.safeguards.maxSessionCostUsd = val;
               reports.push(`Cost-limit safeguard configured to **$${val.toFixed(4)}**.`);
@@ -1412,6 +1423,7 @@ export class CortexMCPServer {
           const syncStr = String(maxSyncsHour).trim();
           if (isClearVal(syncStr)) {
             delete envConfig["CORTEX_MAX_SYNC_CALLS_PER_HOUR"];
+            delete process.env.CORTEX_MAX_SYNC_CALLS_PER_HOUR;
             if (cortexJson.safeguards) {
               delete cortexJson.safeguards.maxSyncCallsPerHour;
             }
@@ -1420,6 +1432,7 @@ export class CortexMCPServer {
             const val = parseInt(syncStr, 10);
             if (!isNaN(val)) {
               envConfig["CORTEX_MAX_SYNC_CALLS_PER_HOUR"] = val.toString();
+              process.env.CORTEX_MAX_SYNC_CALLS_PER_HOUR = val.toString();
               cortexJson.safeguards = cortexJson.safeguards || {};
               cortexJson.safeguards.maxSyncCallsPerHour = val;
               reports.push(`Hourly sync frequency safeguard configured to **${val} syncs/hour**.`);
