@@ -1303,6 +1303,36 @@ export class CortexMCPServer {
             "Check the current Soul state: active cognitive lens, risk tolerance, creativity/precision biases, memory node/edge counts, and whether a user profile is loaded.",
           inputSchema: { type: "object", properties: {} },
         },
+        {
+          name: "cortex_soul_import",
+          description:
+            "Import a JSON file containing a serialized soul state into the active SoulEngine.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: {
+                type: "string",
+                description: "Repo-relative or absolute path to the JSON file to import from.",
+              },
+            },
+            required: ["filePath"],
+          },
+        },
+        {
+          name: "cortex_soul_export",
+          description:
+            "Export the current active SoulEngine state to a JSON file.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: {
+                type: "string",
+                description: "Repo-relative or absolute path to write the exported JSON to.",
+              },
+            },
+            required: ["filePath"],
+          },
+        },
       ];
       if (brevity === "lite" || brevity === "ultra") {
         for (const t of tools) {
@@ -1388,6 +1418,75 @@ export class CortexMCPServer {
             },
           ],
         };
+      }
+
+      if (name === "cortex_soul_import") {
+        const filePath = request.params.arguments?.filePath as string;
+        if (!filePath) {
+          throw new Error("Missing filePath argument");
+        }
+        const resolvedPath = path.isAbsolute(filePath)
+          ? filePath
+          : path.join(this.projectRoot, filePath);
+        
+        try {
+          await fs.access(resolvedPath);
+          const soulPath = path.join(this.projectRoot, ".knowledge", "soul_state.json");
+          await fs.copyFile(resolvedPath, soulPath);
+          this.soulLoaded = false; // Reload from disk on next access
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Successfully imported soul state from: ${resolvedPath}`,
+              },
+            ],
+          };
+        } catch (err: any) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: `Failed to import soul state: ${err.message}`,
+              },
+            ],
+          };
+        }
+      }
+
+      if (name === "cortex_soul_export") {
+        const filePath = request.params.arguments?.filePath as string;
+        if (!filePath) {
+          throw new Error("Missing filePath argument");
+        }
+        const resolvedPath = path.isAbsolute(filePath)
+          ? filePath
+          : path.join(this.projectRoot, filePath);
+        
+        try {
+          await this.soul.save();
+          const soulPath = path.join(this.projectRoot, ".knowledge", "soul_state.json");
+          await fs.copyFile(soulPath, resolvedPath);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Successfully exported soul state to: ${resolvedPath}`,
+              },
+            ],
+          };
+        } catch (err: any) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: `Failed to export soul state: ${err.message}`,
+              },
+            ],
+          };
+        }
       }
 
       if (name === "configure_brevity") {

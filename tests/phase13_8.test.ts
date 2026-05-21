@@ -344,4 +344,109 @@ describe("Phase 13.8 — Persistent Experience & Cognitive Mode-Adaptive Context
       assert.ok(packWithLens.output.indexOf("Entity: A") < packWithLens.output.indexOf("Entity: B"));
     });
   });
+
+  describe("MCP Soul Tools Integration", () => {
+    it("handles cortex_soul_status, cortex_soul_export and cortex_soul_import correctly", async () => {
+      const { Server } = await import("@modelcontextprotocol/sdk/server/index.js");
+      const { CortexMCPServer } = await import("../src/mcp/server.js");
+      
+      const registeredHandlers: { schema: any; handler: any }[] = [];
+      const originalSetRequestHandler = Server.prototype.setRequestHandler;
+      Server.prototype.setRequestHandler = function(schema: any, handler: any) {
+        registeredHandlers.push({ schema, handler });
+        return originalSetRequestHandler.call(this, schema, handler);
+      };
+
+      try {
+        await fs.mkdir(path.join(tmp, ".knowledge"), { recursive: true });
+        await fs.writeFile(path.join(tmp, "cortex.json"), "{}", "utf-8");
+
+        const server = new CortexMCPServer(tmp, undefined, true);
+        
+        let callToolHandler: any = null;
+        for (const item of registeredHandlers) {
+          try {
+            const res = await item.handler({
+              method: "tools/call",
+              params: {
+                name: "cortex_soul_status",
+                arguments: {},
+              },
+            });
+            if (res && (res.content !== undefined || res.isError !== undefined)) {
+              callToolHandler = item.handler;
+              break;
+            }
+          } catch (e) {
+            // Not the CallToolRequest handler
+          }
+        }
+
+        assert.ok(callToolHandler, "MCP CallToolRequest handler should be registered");
+
+        // 1. Test cortex_soul_status (empty soul state)
+        const statusRes = await callToolHandler({
+          method: "tools/call",
+          params: {
+            name: "cortex_soul_status",
+            arguments: {},
+          },
+        });
+        assert.ok(!statusRes.isError);
+        assert.ok(statusRes.content[0].text.includes("Active Lens:"));
+
+        // 2. Test cortex_soul_export
+        const exportFilePath = path.join(tmp, "exported_soul.json");
+        const exportRes = await callToolHandler({
+          method: "tools/call",
+          params: {
+            name: "cortex_soul_export",
+            arguments: { filePath: exportFilePath },
+          },
+        });
+        assert.ok(!exportRes.isError);
+        assert.ok(exportRes.content[0].text.includes("Successfully exported"));
+        
+        // Verify exported file exists and contains valid JSON
+        const exportContent = await fs.readFile(exportFilePath, "utf-8");
+        const parsedExport = JSON.parse(exportContent);
+        assert.ok(parsedExport.nodes);
+
+        // 3. Test cortex_soul_import
+        const importFilePath = path.join(tmp, "imported_soul.json");
+        parsedExport.nodes.push({
+          id: "imported-node-id",
+          type: "decision",
+          content: "Imported content",
+          timestamp: Date.now(),
+          weights: { salience: 1.0, successBias: 0.5, failureBias: 0.0, decay: 0.0, certainty: 0.8, credibility: 0.8, energy: 0.8 },
+          metadata: {}
+        });
+        await fs.writeFile(importFilePath, JSON.stringify(parsedExport), "utf-8");
+
+        const importRes = await callToolHandler({
+          method: "tools/call",
+          params: {
+            name: "cortex_soul_import",
+            arguments: { filePath: importFilePath },
+          },
+        });
+        assert.ok(!importRes.isError);
+        assert.ok(importRes.content[0].text.includes("Successfully imported"));
+
+        // Check if status now returns the new node
+        const statusRes2 = await callToolHandler({
+          method: "tools/call",
+          params: {
+            name: "cortex_soul_status",
+            arguments: {},
+          },
+        });
+        assert.ok(statusRes2.content[0].text.includes("Nodes: 1"));
+
+      } finally {
+        Server.prototype.setRequestHandler = originalSetRequestHandler;
+      }
+    });
+  });
 });
