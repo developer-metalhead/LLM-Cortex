@@ -29,6 +29,7 @@ import { buildGraph, toMermaid, toJson, buildImpactReport } from "../knowledge/g
 import { readQualityGate } from "../knowledge/quality.js";
 import { runExportGraph } from "../cli/export.js";
 import { compressResponse, resolveRefs } from "./compression.js";
+import { SmartReadCache } from "../knowledge/readCache.js";
 import { buildContextPack } from "../knowledge/packer.js";
 import { computeCostEstimate } from "../cli/test-cost.js";
 import { loadSafeguardConfig } from "../knowledge/safeguards.js";
@@ -48,6 +49,7 @@ export class CortexMCPServer {
   // workspace).
   private projectRootExplicit: boolean;
   private readonly sessionId = randomUUID();
+  private readonly readCache = new SmartReadCache();
 
   constructor(
     projectRoot: string,
@@ -81,6 +83,7 @@ export class CortexMCPServer {
     this.knowledgeDir = path.join(resolved, ".knowledge");
     this.knowledge = new KnowledgeManager(resolved);
     this._sourceStats = null;
+    this.readCache.invalidateAll();
     
     // Invalidate the brevity cache immediately so the new workspace's brevity configuration is read
     import("../knowledge/brevity.js").then(({ clearBrevityCache }) => {
@@ -284,6 +287,15 @@ export class CortexMCPServer {
             { name: "action", description: "The action to perform: 'view' to inspect current safeguards, or 'configure' to update limits", required: false },
             { name: "maxCost", description: "Optional: Max rolling 24h cost limit to set (or 'none' to clear)", required: false },
             { name: "maxSyncsHour", description: "Optional: Max hourly sync frequency limit to set (or 'none' to clear)", required: false },
+          ]
+        },
+        {
+          name: "source",
+          description: "Efficiently read source code files — the source tool caches files and returns compact AST skeletons on re-read (~90% smaller) instead of full content. Pass bypass=true or mode='full' to force the complete file. Pass mode='diff' to see changes since first read.",
+          arguments: [
+            { name: "filePath", description: "Repo-relative path to the source file (e.g. src/auth/service.ts)", required: true },
+            { name: "mode", description: "'auto' (default): first read returns full, re-reads return skeleton/diff; 'full': bypass cache; 'skeleton': force skeleton; 'diff': force diff view", required: false },
+            { name: "bypass", description: "Set to true to force full file content regardless of cache state", required: false },
           ]
         },
       ],
@@ -700,63 +712,43 @@ export class CortexMCPServer {
       }
 
       if (request.params.name === "safeguards") {
-        const action = request.params.arguments?.action;
-        const maxCost = request.params.arguments?.maxCost;
-        const maxSyncsHour = request.params.arguments?.maxSyncsHour;
-
-        if (!action) {
-          return {
-            description: "Check or configure your active budget limits and runaway protection settings — asks for action.",
-            messages: [{
-              role: "user",
-              content: {
-                type: "text",
-                text: "Ask the user: 'Would you like to **view** your active budget settings and sync stats, or **configure** new safety limits?' and wait for their response. Once they reply, reload this prompt with action set to 'view' or 'configure'."
-              }
-            }],
-          };
-        }
-
-        if (action === "view") {
-          return {
-            description: "Inspect current safeguards and spend telemetry.",
-            messages: [{
-              role: "user",
-              content: {
-                type: "text",
-                text: "Step 1: Check the status. Call get_cortex_status. Step 2: Present the active budget gating status: Rolling 24h Limit, Hourly Limit, Rolling 24h Spent, Quota Remaining, and Hourly Syncs. If any limits are active, explain how they prevent runaway LLM sync loops."
-              }
-            }],
-          };
-        }
-
-        // action === "configure"
-        if (maxCost === undefined && maxSyncsHour === undefined) {
-          return {
-            description: "Configure safeguards limits.",
-            messages: [{
-              role: "user",
-              content: {
-                type: "text",
-                text: "Ask the user: 'What new safety limits would you like to set? Please provide: (1) Max Rolling 24h Cost in USD (e.g. 0.05 or 'none' to disable), and (2) Max Sync Calls per Hour (e.g. 5 or 'none' to disable).' Wait for their response, then call the configure_safeguards tool with their choices."
-              }
-            }],
-          };
-        }
-
-        const costPart = maxCost !== undefined ? `, maxCost='${maxCost}'` : "";
-        const syncPart = maxSyncsHour !== undefined ? `, maxSyncsHour='${maxSyncsHour}'` : "";
         return {
-          description: `Configure safeguards with maxCost: ${maxCost || "unchanged"}, maxSyncsHour: ${maxSyncsHour || "unchanged"}.`,
+          description: "Check or configure your active budget limits and runaway protection settings.",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Call get_cortex_status to check current safeguards. To configure, use the configure_safeguards tool.",
+              },
+            },
+          ],
+        };
+      }
+      if (request.params.name === "source") {
+        return {
+          description: "Efficiently read source code with automatic AST caching — returns full content on first read, compact skeletons on re-read.",
           messages: [{
             role: "user",
             content: {
               type: "text",
-              text: `Call the 'configure_safeguards' tool with${costPart}${syncPart} to update the safeguards limits. Present the success response clearly.`
-            }
+              text: [
+                "For reading source code files, use the `source` MCP tool instead of the native Read tool.",
+                "The `source` tool automatically caches files you've already read in this session.",
+                "",
+                "Behavior:",
+                "- First read of a file: returns full content (like Read).",
+                "- Re-read of unchanged file: returns a compact AST skeleton (~10% of original size).",
+                "- Re-read of modified file: returns a unified diff showing only what changed.",
+                "- Pass bypass=true or mode='full' to force the complete file.",
+                "",
+                "This saves 80-90% of token costs on re-reads during debugging or iterative development.",
+              ].join("\n"),
+            },
           }],
         };
       }
+
 
       throw new Error(`Prompt not found: ${request.params.name}`);
     });
@@ -1271,6 +1263,19 @@ export class CortexMCPServer {
                 type: "string",
                 description: "Maximum rolling hourly sync calls limit. Set to 'none', 'clear', 'off', or '0' to disable.",
               },
+            },
+          },
+        },
+        {
+          name: "source",
+          description: "Read source files through an AST cache — first read returns full content; re-reads return ~90% smaller skeletons (unchanged) or unified diffs (modified). Use mode='full' or bypass=true for the complete file.",
+          inputSchema: {
+            type: "object",
+            required: ["filePath"],
+            properties: {
+              filePath: { type: "string", description: "Repo-relative path (e.g. src/auth/service.ts)" },
+              mode: { type: "string", enum: ["auto", "full", "skeleton", "diff"], description: "'auto' (default), 'full', 'skeleton', or 'diff'" },
+              bypass: { type: "boolean", description: "Force full content regardless of cache state" },
             },
           },
         },
@@ -1933,6 +1938,38 @@ export class CortexMCPServer {
         return { content: [{ type: "text", text: JSON.stringify(resolved, null, 2) }] };
       }
 
+      if (name === "source") {
+        const { filePath, mode, bypass } = (args || {}) as any;
+        if (!filePath || typeof filePath !== "string") {
+          return { content: [{ type: "text", text: "source requires a 'filePath' string (repo-relative path)." }], isError: true };
+        }
+        const absolutePath = path.resolve(this.projectRoot, filePath);
+        try {
+          await fs.stat(absolutePath);
+        } catch {
+          return { content: [{ type: "text", text: `Error: file not found — ${filePath}` }], isError: true };
+        }
+        const result = this.readCache.get(absolutePath, bypass ? "full" : (mode || "auto"));
+        if (result.cacheStatus !== "first_read" && result.tokenSavings > 0) {
+          import("../knowledge/ledger.js").then(({ appendTransaction }) => {
+            appendTransaction(this.projectRoot, {
+              category: "source_cache",
+              originalTokens: Math.round(result.originalChars / 4),
+              denseTokens: Math.round(result.returnedChars / 4),
+              savedTokens: Math.round(result.tokenSavings / 4),
+              savedUsd: 0,
+              provider: "source_cache",
+              model: "cached",
+              details: `source:${result.cacheStatus} ${filePath}`,
+            });
+          });
+        }
+        return {
+          content: [{ type: "text", text: result.content }],
+          meta: { cacheStatus: result.cacheStatus, tokenSavings: result.tokenSavings },
+        };
+      }
+
       if (name === "read_knowledge_index") {
         const content = await this.knowledge.getKnowledgeSummary();
         const compressed = compressResponse(content, this.sessionId, true);
@@ -2412,6 +2449,7 @@ export class CortexMCPServer {
       "cortex_onboard",            // writes to disk — compressing degrades on-disk readability
       "export",                    // writes ARCH_SPEC.md / ARCH_GRAPH.md to disk
       "compress",                  // is itself the compression tool — skip double-compression
+      "source",                    // returns code content, not prose — compression would corrupt
     ]);
 
     const { name: toolName } = request.params;

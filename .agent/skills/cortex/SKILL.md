@@ -33,11 +33,10 @@ Do NOT apply when:
    - (a) Which entities you will touch
    - (b) Which dependents could be affected (from the `Wiring` section)
    - (c) Which invariants you must respect (from the `Concepts` section)
-6. **Open source files** and write code.
-7. **Reflex Sync**: Immediately after finishing code changes, you MUST run the `/ingest` workflow (or the `ingest_cortex` command) to synchronize the new architectural state. This is not optional—it ensures your "Second Brain" always reflects your latest actions.
-In your final message to the user, you must provide:
-- A standard summary of the feature/code changes you just implemented.
-- The exact details of the 'Detective Work' and 'Failed Approaches' you recorded. Do not just say 'it was recorded'; write out the specific reasons why the old approach failed so the user can review your architectural reasoning.
+6. **Open source files efficiently** — Use the `source` MCP tool instead of the native Read tool for source code files. The `source` tool caches files you read: first read returns full content, re-reads of unchanged files return compact AST skeletons (~90% smaller), and re-reads of modified files return unified diffs. Pass `bypass=true` if you need the complete file for detailed analysis.
+7. **Write code.**
+8. **Reflex Sync**: Immediately after finishing code changes, you MUST run the `/ingest` workflow (or the `ingest_cortex` command) to synchronize the new architectural state. This is not optional—it ensures your "Second Brain" always reflects your latest actions.
+9. **Report**: In your final message, provide a standard summary of the feature/code changes you just implemented, including the exact details of any 'Detective Work' and 'Failed Approaches' you recorded. Do not just say 'it was recorded'; write out the specific reasons why the old approach failed so the user can review your architectural reasoning.
 
 ## When the knowledge base is empty or missing
 
