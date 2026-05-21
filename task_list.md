@@ -260,9 +260,7 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] MCP tools `cortex_find` and `read_knowledge_index` benefit automatically (consume the same search pipeline)
 - [x] **Tests (7 passing)** in `tests/phase13_6.test.ts`: adjacent vs scattered ranking, single-word no-bonus, same-word proximity, centered snippet, short desc verbatim, no-match fallback, configurable snippet length via env var
 
-## ⏳ Planned — Phases 11–12 & 13.8
-
-## ✅ Done — Phase 13.7
+## ✅ Done — Phase 13.7 & 13.7.2 (verified 2026-05-21)
 
 ### Phase 13.7 — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression (verified 2026-05-21, all tests passing)
 - [x] `src/knowledge/readCache.ts` — `SmartReadCache` class: first read returns full content; re-read returns AST skeleton (~90% smaller); modified file re-read returns unified diff
@@ -283,6 +281,8 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] `src/mcp/server.ts` — passes `projectRoot` to `buildContextPack()`, updated tool description + prompt to mention fallback behavior
 - [x] `src/cli/context.ts` — passes `projectRoot`, prints expanded/groundedFallback stats
 - [x] **Tests (12 passing)** in `tests/phase13_7_2.test.ts`: scope+depth expansion, already-included skip, non-usage kind skip, overage cap, live grep resolution, medium confidence, missing entity fallback, no-projectRoot skip, binary file skip, integrity summary, normal pack regression, elision regression
+
+## ⏳ Planned — Phases 11–12 & 13.8
 
 ### Phase 13.8 — Persistent Experience & Cognitive Mode-Adaptive Context (Adaptive Context Core)
 - [ ] `src/knowledge/profile.ts` — User Profile Modeling: Load/verify clean developer rules, disallowed third-party libraries, and preferred brevity styles via `user_profile.json`

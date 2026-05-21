@@ -423,4 +423,13 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 - **MCP Tool Call:** N/A (runs automatically as a Claude Code hook)
 - **MCP Prompt Trigger:** N/A
 
+---
+
+## 47. Speculative Context Verification & Grounded Fallback (Adaptive Retrieval)
+**What it does:** Ensures that AI co-pilots get a completely self-healing, reliable retrieval safety net. During context-pack compilation (`cortex context build`), Cortex checks if all imports and 1-hop relationships for target entities exist in the pack. If a dependency contract is missing, it dynamically expands the context budget. If a dependency is completely un-ingested (e.g. a brand new utility), it runs a sub-millisecond local source code grep fallback, extracts the missing signature, and appends it to the context pack automatically so the AI never hallucinates or fails.
+**How to use it:**
+- **CLI Command:** Runs automatically during `cortex context build`
+- **MCP Tool Call:** Automatically integrated within `build_context_pack` when `projectRoot` is supplied
+- **MCP Prompt Trigger:** N/A
+
 
