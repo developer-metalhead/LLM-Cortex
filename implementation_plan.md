@@ -3978,6 +3978,88 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 
 ---
 
+## 💰 Phase 13.14: Economic Viability & Zero-Overhead Ingestion — ⏳ Planned
+
+**Layman's Terms**: Right now, every time an AI agent syncs your knowledge base, it is doing the most expensive thing possible — paying for the smartest, most expensive AI model to read documentation it barely changes. Phase 13.14 fixes this by routing all automatic background work through dirt-cheap local or free AI models, moving the expensive "thinking" work off the agent entirely, and teaching the system to skip syncs when nothing architecturally meaningful changed. The result is that the hidden cost of *running* Cortex drops by 95%, making it financially positive even on small codebases.
+
+**Technical Terms**: A set of four targeted architectural changes that address the three root causes of Cortex's negative ROI on small codebases: (1) agent-executed synthesis charged at Opus/Sonnet rates, (2) unlimited auto-sync firehoses, and (3) no pre-screen filter to detect non-architectural changes.
+
+### Sub-phase 13.14.1 — Server-Side Synthesis (Highest Impact)
+
+**The problem**: When the agent calls the `ingest` MCP tool, the MCP server returns the raw Librarian prompt + full diff back to the agent. The *agent* then synthesizes the result and calls `save_synthesis`. This means ingestion is billed at whatever model the agent is — currently Sonnet or Opus at $3–$75/M tokens. A single agent-executed ingest can cost $0.50–$1.00.
+
+**The fix**: Move all synthesis work inside the MCP server process.
+
+- When `ingest` is called, the MCP server fetches the diff, constructs the Librarian prompt, and makes an **internal, server-side LLM call** using the configured `CORTEX_INGEST_MODEL` (defaulting to `gemini-2.0-flash` at $0.075/$0.30 per M).
+- The server calls `save_synthesis` itself and returns only a one-line confirmation to the agent: `"Sync complete. 3 entities updated, 1 concept added."`
+- The agent never sees the diff, never synthesizes, and is billed nothing for the ingestion work.
+- **New env var**: `CORTEX_INGEST_MODEL` — decouples the ingestion model from the agent model. Default: `gemini-2.0-flash`. Set to `ollama/llama3.1` for fully offline $0.00 ingestion.
+- **Fallback**: if `CORTEX_INGEST_MODEL` is not set and no API key is available, surface a clear error rather than silently falling back to the agent model.
+- **Tool description guardrail**: Until server-side synthesis is shipped, update the `ingest` MCP tool description to include: `⚠️ Never call this autonomously. Only invoke when the user explicitly types /ingest.` This prevents agents from auto-triggering costly syncs mid-task.
+
+**Cost delta**: $0.50–$1.00 per agent-triggered sync → $0.002 per server-side sync. **~500x reduction.**
+
+### Sub-phase 13.14.2 — Two-Tier Model Routing
+
+**The problem**: The `cortex watch` daemon uses the same model as manual `cortex sync`, even though auto-saves are incremental and low-stakes.
+
+**The fix**: Introduce explicit model tiers:
+
+| Trigger | Default Model | Rationale |
+|---|---|---|
+| `cortex watch` (auto on file save) | `gemini-2.0-flash` or `ollama/llama3.1` | Frequent, incremental, low-stakes |
+| `cortex sync` (manual CLI) | User-configured model | Intentional, batch, quality matters |
+| Agent `ingest` MCP tool | `CORTEX_INGEST_MODEL` (server-side) | Never the agent's model |
+
+- **New env vars**: `CORTEX_WATCH_MODEL` (default: `gemini-2.0-flash`), `CORTEX_SYNC_MODEL` (default: user's `CORTEX_MODEL`).
+- Both can be set to `none` to disable LLM synthesis for that trigger path entirely.
+
+### Sub-phase 13.14.3 — Local Diff Significance Filter
+
+**The problem**: Every file save triggers a sync, even when only whitespace, comments, or markdown docs changed. These changes have zero architectural impact but consume the full ingestion pipeline.
+
+**The fix**: A deterministic, LLM-free pre-screen pass that runs before any sync:
+
+- Parse the accumulated git diff with a local regex/AST pass (<1ms, zero API cost).
+- Classify each changed file into one of three buckets:
+  - **Skip** (no LLM call): whitespace-only, comment-only, `.md` docs, CSS formatting, `.gitignore`, `package-lock.json`, `*.json` config files with no schema changes.
+  - **Lightweight sync**: single-file changes under 10 lines with no import/export signature changes.
+  - **Full sync**: new files, deleted files, import changes, function signature changes, type changes.
+- If 100% of changed files fall into the **Skip** bucket, log `"skipped — no architectural impact"` and exit without any API call.
+- **New env var**: `CORTEX_DIFF_FILTER=true` (default: `true`). Set to `false` to disable the filter and always run full syncs.
+
+**Expected savings**: Approximately 40–60% of developer file saves are whitespace/doc/formatting changes. This filter eliminates those syncs entirely at zero cost.
+
+### Sub-phase 13.14.4 — Commit-Gated Auto-Sync Mode
+
+**The problem**: `CORTEX_WATCH_MODE=on_save` (the current default) can fire 60+ syncs per hour if a developer saves frequently. Even with cheap models, this is wasteful.
+
+**The fix**: Change the default watch mode and add explicit options:
+
+- **`on_save`**: Current behavior. Syncs on every file save after a debounce window.
+- **`on_commit`** (new default): Syncs only when a `git commit` is detected via the pre-commit hook. Naturally batches all changes from an editing session into one meaningful sync. **Recommended for all developers.**
+- **`manual`**: Disables the watcher entirely. Sync only via `cortex sync` or `/ingest`.
+- **New env var**: `CORTEX_WATCH_MODE` (default: `on_commit`).
+- **Debounce improvement**: When `on_save` is explicitly chosen, increase the default debounce window from the current near-instant fire to **15 minutes of quiet**, accumulating all changes into one batch sync rather than firing per-save.
+
+**Expected savings**: A developer making 10 commits/day instead of 60 saves/hour: **6× fewer syncs at most**, potentially **60× fewer** in heavy editing sessions.
+
+**DoR**: Phase 13.7 (AST Skeleton) is stable. Phase 33.1 (Model Provider Registry) is preferred but not required — two-tier routing can be implemented with direct provider checks before Phase 33.1 lands.
+
+**DoD**:
+- `ingest` MCP tool performs synthesis server-side; agent receives only a one-line confirmation. Agent billing for ingestion = $0.
+- `CORTEX_INGEST_MODEL` defaults to `gemini-2.0-flash`; setting to an Ollama model produces $0.00 ingestion.
+- `CORTEX_WATCH_MODEL` and `CORTEX_SYNC_MODEL` route to separate models.
+- Diff significance filter correctly classifies whitespace/comment/markdown changes as Skip and produces no API call.
+- `CORTEX_WATCH_MODE=on_commit` is the new default; `on_save` with 15-minute debounce is available.
+- Tests cover: server-side synthesis return shape, two-tier model routing, filter correctly skipping whitespace diffs, filter passing through signature changes, commit-mode trigger detection, debounce window batching.
+
+**Pros & Cons**:
+- ✅ **Pros**: Flips Cortex from net-negative to net-positive ROI even on small single-developer codebases. Makes ingestion costs effectively invisible. Eliminates the single largest hidden cost (agent-executed synthesis at Opus rates).
+- ❌ **Cons**: Server-side synthesis removes the agent's ability to review or steer the synthesis output mid-run. The diff significance filter may occasionally misclassify a meaningful change as architectural no-op (mitigated by conservative Skip criteria — only purely syntactic changes qualify).
+
+---
+
 ## 🗂️ Phase 14: Large-Diff Clustering — ⏳ Planned
 
 **Layman's Terms**
