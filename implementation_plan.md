@@ -70,7 +70,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 13.3  | Token & Cost Savings Ledger & Analytics                | ✅ Done                              |
 | 13.4  | API Budget Gating & Runaway Safeguards                | ✅ Done                              |
 | 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
-| 13.6  | Proximity Reranking & Smart Snippets                   | ⏳ Planned                           |
+| 13.6  | Proximity Reranking & Smart Snippets                   | 🚧 In progress                       |
 | 13.7  | Hooks-Based Smart Read Cache & AST Skeleton Delta      | ⏳ Planned                           |
 | 13.7.2| Speculative Static Verification & Grounded Fallback    | ⏳ Planned                           |
 | 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
@@ -2890,7 +2890,7 @@ Implement a dual-strategy search ranker in `src/knowledge/find.ts` without datab
 
 ---
 
-## 💸 Phase 13.6: Proximity Reranking & Smart Snippets — ⏳ Planned
+## 💸 Phase 13.6: Proximity Reranking & Smart Snippets — 🚧 In progress
 
 **Layman's Terms**
 When you search for multiple words (like "auth token"), Cortex boosts the rank of files where those words appear close to each other. It also updates the search preview to show a text window directly around the match, rather than just showing the beginning of the file's description.

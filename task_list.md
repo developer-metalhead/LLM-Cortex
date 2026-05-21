@@ -251,11 +251,16 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] **Reciprocal Rank Fusion (RRF)** — designed an RRF scoring merger to combine exact token substring matches and fuzzy edit-distance candidates deterministically
 - [x] **Performance Optimization** — restricted edit-distance calculations with length differences and prefix gating to keep query response latency under 2ms
 
-## ⏳ Planned — Phases 11–12 & 13.6-13.7
+## 🚧 In Progress — Phase 13.6
 
-### Phase 13.6 — Proximity Reranking & Smart Snippets
-- [ ] Multi-word proximity boosting — boost rank of files where query words appear close to each other
-- [ ] Smart search result previews — display text window surrounding first matching keyword
+### Phase 13.6 — Proximity Reranking & Smart Snippets (started 2026-05-21)
+- [ ] **Proximity Score** — boost rank if multi-term search words appear within 5-word window in entity description/evidence
+- [ ] **Smart Snippets** — replace description-truncation with 120-char window centered on first matching term, prefixed/suffixed with `...`
+- [ ] **File**: `src/knowledge/find.ts` — proximity scoring + smart snippet extraction
+- [ ] MCP tools `cortex_find` and `read_knowledge_index` benefit automatically (consume the same search pipeline)
+- [ ] Tests for: proximity boost coefficient, scattered vs adjacent match ranking, snippet boundary at edges of text
+
+## ⏳ Planned — Phases 11–12 & 13.7
 
 ### Phase 13.7 — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression
 - [ ] Read Cache Hook — intercept file-reading commands inside AI assistant

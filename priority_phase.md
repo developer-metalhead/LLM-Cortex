@@ -26,7 +26,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 | Bucket | Count | Notes |
 |---|---|---|
 | ✅ Done | 18 | Phases 1, 2, 3, 4, 4.5, 5, 6, 7, 7.5, 8, 9, 10, 13, 13.1, 13.2, 13.3, 13.4, 13.5 (verified 2026-05-20) |
-| 🚧 In Progress | 0 | None |
+| 🚧 In Progress | 1 | Phase 13.6 (started 2026-05-21) |
 | ⏳ Planned — Tier-Critical | ~20 | Customer-facing phases driving each tier upgrade |
 | ⏳ Planned — Research-Grade | ~23 | Phases 14-20.24, drive differentiation |
 | ⏳ Planned — Enterprise | ~17 | Phases 22-32 family |
@@ -112,7 +112,7 @@ This ships the **autonomous output-budget-aware wave engine, two-tier synthesis,
 | 2.4 | **Phase 13.3** — Token & Cost Savings Ledger & Analytics | Tracks exact cache hits and compressed tokens saved to show ROI statistics | Phase 13 ✓ | ✅ **Done 2026-05-20** |
 | 2.5 | **Phase 13.4** — API Budget Gating & Runaway Safeguards | Hard limits on session spending and sync count to avoid API budget draining | Phase 13.3 ✓ | ✅ **Done 2026-05-20** |
 | 2.6 | **Phase 13.5** — Fuzzy Levenshtein & RRF Search Ranker | Typo-tolerant search using Lev-distance and Reciprocal Rank Fusion ranking | Phase 10 ✓ | ✅ **Done 2026-05-20** |
-| 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | ⏳ Planned |
+| 2.7 | **Phase 13.6** — Proximity Reranking & Smart Snippets | Boosts adjacent search terms and centers result previews around match window | Phase 13.5 | 🚧 In progress |
 | 2.8 | **Phase 13.7** — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression | Intercepts file reads to return diffs and skeletons (Delta Mode & Structure Map) | Phase 10.3 | ⏳ Planned |
 | 2.9 | **Phase 13.8** — Persistent Experience & Cognitive Mode-Adaptive Context | Active, local-first co-pilot memory tracking developer preferences, past reverts, and task intent | Phase 13.5 ✓, Phase 13.2 ✓ | ⏳ Planned |
 | 3 | **Phase 14** — Large-Diff Clustering | Quality on big refactors — needed to make Phase 33-Full work | Phase 6 ✓, Phase 13 |
@@ -585,7 +585,7 @@ These can be picked up today; no planned phase needs to land first.
 - **Phase 12.13** — Architecturally Aware Commit Scope Linting · deps: 7.5 ✓, 12.3
 - **Phase 12.14** — Agent Token-Use Discovery & Anti-Pattern Auditor · deps: 12.6, 13
 - **Phase 15** — CI Feedback Signal Loop · deps: 12, 7 ✓
-- **Phase 13.6** — Proximity Reranking & Smart Snippets · deps: 13.5
+- **Phase 13.6** — Proximity Reranking & Smart Snippets · deps: 13.5 🚧
 
 ### Wave 4 — Mid-Tier Features & Second Research Wave
 
