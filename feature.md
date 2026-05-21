@@ -260,7 +260,17 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 29. Token-Bounded Context Packs
+## 29. AST Skeleton Smart Read Cache
+**What it does:** Intercepts file reads and caches them in memory. First read returns full content; subsequent reads return a compact AST skeleton (~90% smaller for TS/JS/Py/Go/Rs/Java) showing imports and structural declarations. If the file was modified between reads, it returns a unified diff instead. This slashes repetitive re-read costs and reduces context window bloat when the same files are read multiple times per session.
+**How to use it:**
+- **CLI Command:** `cortex source <file-path> --mode auto|full|skeleton|diff`
+- **MCP Tool Call:** `source` with arguments `filePath`, `mode` (auto/full/skeleton/diff), and optional `bypass=true`
+- **MCP Prompt Trigger:** N/A (handled automatically by MCP agent)
+- **Tuning:** Cache holds up to 50 files per session with LRU eviction. Binary files (>1MB) and binary extensions are auto-excluded. Set in `.env` or `~/.cortexrc`.
+
+---
+
+## 30. Token-Bounded Context Packs
 **What it does:** Packs your massive codebase into "Context Packs" that strictly fit within LLM token limits, prioritizing the most important central files first.
 **How to use it:**
 - **CLI Command:** `cortex context build --budget <tokens> --scope <entity> --depth <hops> --output <file>`
@@ -269,7 +279,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 30. API Cost Estimation & Projections
+## 31. API Cost Estimation & Projections
 **What it does:** Accurately estimates exactly how many tokens and dollars an ingestion will cost before any API calls are made, and provides weekly/monthly ROI projections.
 **How to use it:**
 - **CLI Command:** `cortex test-cost --budget <usd> --compare --projection --runs-per-day <count>`
@@ -278,7 +288,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 31. Tokenized Reference Hashing
+## 32. Tokenized Reference Hashing
 **What it does:** Dynamically replaces repetitive identical text blocks (like recurring code snippets) with short hash identifiers (e.g., `§ref:ab3f8§`), saving massive amounts of API tokens.
 **How to use it:**
 - **CLI Command:** N/A (handled silently during data query operations)
@@ -287,7 +297,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 32. Telegraphic Brevity Engine
+## 33. Telegraphic Brevity Engine
 **What it does:** Actively strips conversational fluff from AI responses in real-time ("Please note that...", "Here is the implementation"), compressing payload sizes over the wire.
 **How to use it:**
 - **CLI Command:** `cortex config --brevity <off|lite|ultra>`
@@ -297,7 +307,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 33. Markdown Compression Engine
+## 34. Markdown Compression Engine
 **What it does:** A standalone engine that forcefully compresses physical markdown files directly on your hard drive, stripping all prose fluff to save tokens during future reads.
 **How to use it:**
 - **CLI Command:** `cortex compress <file-or-dir> --inplace` or `cortex compress <file> --output <dest>`
@@ -306,7 +316,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 34. Token & Cost Savings Ledger
+## 35. Token & Cost Savings Ledger
 **What it does:** A live financial dashboard recording exactly how many tokens and dollars Cortex saves your engineering team across all optimizations, with rolling 30-day ASCII charts.
 **How to use it:**
 - **CLI Command:** `cortex savings` (summary table) or `cortex savings --graph` (chronological bar chart)
@@ -315,7 +325,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 35. API Budget & Runaway Safeguards
+## 36. API Budget & Runaway Safeguards
 **What it does:** Defends your wallet by enforcing hard session budget caps and rolling hourly frequency gates. It blocks autonomous AI agents or local runs from starting runaway billing loops, with support for real-time telemetry tracking and dynamic constraint clearing.
 * **Emergent Cost-Optimal Routing:** When budget limits are armed, smart AI agents will dynamically bypass expensive LLM `ingest` calls and intelligently route requests through free local validation tools (like `refresh_stale_entities` and `export`) to heal state and verify contracts for **$0.00**, delivering maximum quality at zero cost!
 **How to use it:**
@@ -326,7 +336,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 36. Time-Travel Architectural Autopsy
+## 37. Time-Travel Architectural Autopsy
 **What it does:** Allows developers to inspect the exact historical code crime scenes that triggered past architectural failures or constraint violations. By linking the structural history database directly to Git commits, you can travel back in time to audit mistakes.
 **How to use it:**
 1. Read the `## Failed Approaches` section of an entity using `cortex read -e <entityName>` or `read_entity`.
@@ -336,7 +346,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 37. Historical Quality & Debt Progression
+## 38. Historical Quality & Debt Progression
 **What it does:** Tracks the structural health of your codebase over weeks, months, or years. By leveraging the fact that `.knowledge/state.json` is checked into Git, you can analyze your team's quality progression and visualize how technical debt is evolving.
 **How to use it:**
 - Check out any historical commit in your project (e.g. `git checkout main@{1.month.ago}`).
@@ -345,7 +355,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 38. Automatic Stale Repair Guide
+## 39. Automatic Stale Repair Guide
 **What it does:** Converts generic developer onboarding guides into a highly targeted action plan for fixing active technical debt. If you have stale or broken entities, the PageRank onboarding generator automatically appends a step-by-step roadmap to repair them.
 **How to use it:**
 - **CLI Command:** Run `cortex onboard --audience senior --depth thorough` while you have active stale entities in the codebase.
@@ -353,7 +363,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 39. Self-Vaccinating Architectural Immune System
+## 40. Self-Vaccinating Architectural Immune System
 **What it does:** An emergent cycle that turns failed architectural attempts into active AI wisdom. When a constraint violation is detected during sync, the failed approach is automatically logged into long-term memory via `## Failed Approaches`, so future AI agents can pre-emptively avoid repeating the same design mistakes.
 **How to use it:**
 - Run `cortex hook` to install a pre-commit hook that reminds developers to sync before pushing changes.
@@ -362,7 +372,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 40. Centrality-Weighted Semantic Pruning
+## 41. Centrality-Weighted Semantic Pruning
 **What it does:** An emergent feature in our context packing module. When packing files to fit within a strict LLM token limit, Cortex sorts files by graph centrality (importance) and selectively compresses leaf nodes (fluff, utilities) while preserving full architectural fidelity for core hubs.
 **How to use it:**
 - **CLI Command:** `cortex context build --budget <tokens> --scope <entity>`
@@ -370,7 +380,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 41. Zero-Cost Human Curation Loop
+## 42. Zero-Cost Human Curation Loop
 **What it does:** Allows human curators to prune, update, and manage architectural documentation with zero API costs. You can resolve stale warnings and audit downstream blast-radii using fast, completely offline tools, keeping your database pristine for free.
 **How to use it:**
 1. Call `cortex audit stale` (or `smart_audit`) to view stale entities.
@@ -380,7 +390,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 42. Graph Linting as a CI Quality Gate
+## 43. Graph Linting as a CI Quality Gate
 **What it does:** Treats structural technical debt (like cyclical dependencies or bloated god modules) as a CI test failure. Graph lint warnings and Quality Score degradation give you the tools to enforce architectural integrity in your pipeline.
 **How to use it:**
 - Run `cortex lint` — it scans the graph and exits 1 on `error`-severity findings (cycles, orphans, god modules, silos).
@@ -389,7 +399,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 43. Verbatim Source-Code Grounding (Deterministic Proofs)
+## 44. Verbatim Source-Code Grounding (Deterministic Proofs)
 **What it does:** Prevents AI hallucinations by grounding all architectural descriptions in physical, verbatim code snippets and exact line ranges. Cortex tracks these "proofs" and flags them as drifted the second the physical source code lines diverge.
 **How to use it:**
 - When reading an entity with `cortex read -e <entity>` or `read_entity`, check the `Evidence` blocks containing physical code snippets.
@@ -397,7 +407,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 44. Automated Structural Contradiction Alarms
+## 45. Automated Structural Contradiction Alarms
 **What it does:** Actively flags logical contradictions between your implementation and documented contracts. When the AI Librarian detects a contradiction during sync, it drops the entity's Quality Score below the safety gate, surfacing structural drift.
 **How to use it:**
 - **How it triggers:** Automatically evaluated during `cortex sync` or `ingest` using the AI Librarian's contradiction engine.
@@ -406,7 +416,7 @@ Project Cortex is the ultimate architectural memory and governance layer for you
 
 ---
 
-## 45. Pre-Tool Call Knowledge Context Injection
+## 46. Pre-Tool Call Knowledge Context Injection
 **What it does:** Automatically injects the Cortex knowledge index into every AI session before Read or Grep tool calls. The PreToolUse hook (`inject-knowledge.js`) runs as a cross-platform Node.js script triggered by Claude Code, reading the knowledge index and appending relevant context to the system prompt — no manual `/read` needed. Each session gets fresh context via PPID-based session key tracking.
 **How to use it:**
 - **CLI Command:** `cortex setup claude-code` (automatically writes the hook into `.claude/hooks/inject-knowledge.js` and registers the `PreToolUse` matcher in `.claude/settings.json`)

@@ -35,6 +35,13 @@ If `read_knowledge_index` returns no entities, recommend running `/ingest` (or `
 ### MANDATORY: Always Output Brevity Statistics
 If brevity mode is active (the tool response contains a `📉 Cortex Brevity Stats` section), you MUST always preserve, copy, and append this exact statistics block at the very bottom of your final response to the user so they can track their token savings. Do not hide, truncate, or prune it.
 
+### CRITICAL CONSTRAINT: DO NOT USE NATIVE FILE READERS FOR CODE
+- You MUST NOT use native file-reading tools (such as `view_file`, `cat`, or `read_file`) to inspect, check, review, or read any source code files (like `.js`, `.ts`, `.py`, etc.).
+- Using native readers for code is STRICTLY FORBIDDEN and violates project architectural policy.
+- You MUST exclusively call the `source` MCP tool for any and all code inspections to ensure dynamic AST skeleton caching and token-saving compliance.
+
 ---
 
+
 <!-- Add your own project-specific agent instructions below. Cortex will not overwrite this file once it exists. -->
+

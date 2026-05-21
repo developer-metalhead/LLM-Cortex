@@ -89,6 +89,7 @@ function renderSavingsTableString(transactions: SavingsTransaction[]): string {
     reference_compression: { original: 0, dense: 0, saved: 0, usd: 0, count: 0 },
     brevity_transformation: { original: 0, dense: 0, saved: 0, usd: 0, count: 0 },
     command_minification: { original: 0, dense: 0, saved: 0, usd: 0, count: 0 },
+    source_cache: { original: 0, dense: 0, saved: 0, usd: 0, count: 0 },
   };
 
   for (const tx of transactions) {
@@ -132,6 +133,7 @@ function renderSavingsTableString(transactions: SavingsTransaction[]): string {
     reference_compression: "MCP Reference Hashing",
     brevity_transformation: "Brevity Response Minification",
     command_minification: "Command Log Minification",
+    source_cache: "AST Skeleton Cache",
   };
 
   for (const [key, data] of Object.entries(categoryAggregation)) {

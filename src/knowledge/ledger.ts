@@ -3,7 +3,7 @@ import path from "path";
 
 export interface SavingsTransaction {
   timestamp: string;
-  category: "ingest_bypass" | "reference_compression" | "brevity_transformation" | "command_minification";
+  category: "ingest_bypass" | "reference_compression" | "brevity_transformation" | "command_minification" | "source_cache";
   provider: string;
   model: string;
   originalTokens: number;

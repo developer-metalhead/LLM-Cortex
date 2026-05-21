@@ -260,12 +260,19 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] MCP tools `cortex_find` and `read_knowledge_index` benefit automatically (consume the same search pipeline)
 - [x] **Tests (7 passing)** in `tests/phase13_6.test.ts`: adjacent vs scattered ranking, single-word no-bonus, same-word proximity, centered snippet, short desc verbatim, no-match fallback, configurable snippet length via env var
 
-## ⏳ Planned — Phases 11–12 & 13.7
+## ⏳ Planned — Phases 11–12 & 13.8
 
-### Phase 13.7 — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression
-- [ ] Read Cache Hook — intercept file-reading commands inside AI assistant
-- [ ] AST Skeleton Parser — return syntax outline structure for unchanged read-cached files to slash re-read cost by 95%
-- [ ] Delta Diffing Engine — return unified diffs for modified read-cached files
+## ✅ Done — Phase 13.7
+
+### Phase 13.7 — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression (verified 2026-05-21, all tests passing)
+- [x] `src/knowledge/readCache.ts` — `SmartReadCache` class: first read returns full content; re-read returns AST skeleton (~90% smaller); modified file re-read returns unified diff
+- [x] AST skeleton extraction for TS/JS (imports + class/interface/type/enum/function declarations), Python (imports + def/class), Go (func/struct/interface), Rust (fn/struct/enum/trait), Java (class/interface/imports), Ruby (def/class/module), with fallback for other types
+- [x] Binary/size safeguards: skips files >1MB and binary extensions (png, exe, zip, etc.)
+- [x] Delta diffing engine: line-based unified diff with sliding-window match (up to 50 lines); falls back to full content when diff exceeds 1500 chars
+- [x] Cache management: LRU eviction (max 50 entries), `invalidate(filePath)`, `invalidateAll()`, `stats()`
+- [x] `cortex source <file-path> --mode auto|full|skeleton|diff` CLI command with `--bypass` and `--stats` flags
+- [x] `source` MCP tool registered with `filePath`, `mode`, `bypass` arguments
+- [x] **Tests (18 passing)** in `tests/readCache.test.ts`: first-read full content, re-read skeleton, modified-file diff, bypass mode, non-existent file error, binary extension skip, invalidate round-trip, invalidateAll clears store, stats accuracy, short files return full, deleted file handling, unchanged diff mode, TS skeleton extraction (imports + classes), non-code fallback, large diff bypass, session isolation, bypass via get param
 
 ### Phase 13.8 — Persistent Experience & Cognitive Mode-Adaptive Context (Adaptive Context Core)
 - [ ] `src/knowledge/profile.ts` — User Profile Modeling: Load/verify clean developer rules, disallowed third-party libraries, and preferred brevity styles via `user_profile.json`

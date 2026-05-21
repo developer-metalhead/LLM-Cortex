@@ -29,6 +29,7 @@ import { runTestCost } from "./test-cost.js";
 import { runCompress } from "./compress.js";
 import { runStats } from "./stats.js";
 import { runSavings } from "./savings.js";
+import { runSource } from "./source.js";
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;
@@ -416,6 +417,17 @@ program
   .option("-g, --graph", "Display rolling 30-day savings ASCII chart")
   .action(async (options) => {
     await runSavings(projectRoot, options);
+  });
+
+program
+  .command("source <file-path>")
+  .description("Read source files with AST caching — first read returns full content, re-reads return compact skeletons (<10%) or diffs")
+  .option("--mode <mode>", "Reading mode: auto (default), full, skeleton, diff")
+  .option("--bypass", "Force full file content regardless of cache state")
+  .option("--stats", "Show cache statistics instead of reading a file")
+  .action(async (filePath, options) => {
+    const code = await runSource(projectRoot, filePath, options);
+    process.exitCode = code;
   });
 
 program.parse();
