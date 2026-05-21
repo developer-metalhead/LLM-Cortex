@@ -4182,6 +4182,32 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 
 ---
 
+### Sub-phase 13.15.9 — Cross-Session Task Resumption State
+
+**The problem**: AI agents (and human developers) starting a new task often waste 5–10 turns reconstructing what was left unfinished in the previous session (e.g., "which files did I modify?", "what test failures were remaining?").
+
+**The fix**: Save task context state to `.cortex/session_state.json` at the end of each session:
+- **State captured**: Uncommitted changes, active branch name, last failed test file from testing tool history, last modified files sorted by timestamp, and a 1-sentence "remaining work" summary calculated during the final sync.
+- **Zero LLM cost**: Most metrics are gathered via fast, local git/system commands.
+- **MCP tool/CLI command**: `cortex resume` automatically reads and formats this state block to the AI agent upon new session initialization.
+- **ROI**: Avoids 5-10 redundant exploratory tool calls (git status, reading local files, list_dir) to understand state. **Saves ~10k+ input tokens and 1–2 minutes of developer alignment time per context switch.**
+
+---
+
+### Sub-phase 13.15.10 — PR Architecture & Fitness CI Gate
+
+**The problem**: Architecture rules (`mustNotImport`, quality gates) are only checked when a developer manually runs tests/audits. Violations are regularly committed and pushed, and only discovered later or during code review.
+
+**The fix**: Integrate Cortex checks into the CI/CD pipeline (e.g. GitHub Actions, GitLab CI):
+- **Command**: `cortex ci --check` parses the incoming PR diff against the target branch's architecture graph.
+- **Features**:
+  - Automatically posts a markdown comment on the PR containing the Regression Risk Score, affected downstream systems, and any constraint/dependency violations.
+  - Returns exit code 1 to block merging if critical architecture violations (like cyclic dependencies or banned imports) are introduced.
+  - Zero LLM cost: the CI action runs graph-comparison logic locally against the checked-in `.knowledge` index.
+- **ROI**: Prevents high-risk PR merges and architectural decay before it hits main branches. Saves engineering managers from manual architectural compliance reviews.
+
+---
+
 **DoR**: Phase 13.14 (Zero-Overhead Ingestion) is in progress. Phase 6 (Typed Relationships) is stable — graph traversal for tests/risk/dead-code depends on it.
 
 **DoD**:
@@ -4193,8 +4219,10 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 - `cortex lint` surfaces dead code candidates after every sync under the `dead_code` category.
 - `cortex risk` prints a 0–10 regression risk score after every sync, with `--fail-above` CI gate.
 - `cortex ask "<question>"` returns a grounded plain-English answer with entity citations in <3 seconds.
+- `cortex resume` returns a JSON/Markdown task resumption state to immediately bootstrap agents.
+- `cortex ci --check` fails CI runs when PRs introduce cyclic dependencies or violate architectural import rules.
 - All sub-phases are independently shippable — each can be toggled via env vars without affecting others.
-- Tests cover: changelog append format, PR draft structure, test impact ranking, session delta size cap, commit message type inference, dead code age threshold, risk score factor weighting, natural language query grounding.
+- Tests cover: changelog append format, PR draft structure, test impact ranking, session delta size cap, commit message type inference, dead code age threshold, risk score factor weighting, natural language query grounding, session state structure, CI block behaviors.
 
 **Pros & Cons**:
 - ✅ **Pros**: Eliminates negative ROI for all codebase sizes by adding developer value that exists independent of context overflow. Each sub-phase produces concrete, measurable time savings. Most outputs require zero or near-zero additional LLM calls — they are computed from the graph data already built during ingestion. Transforms Cortex from "AI memory tool" to "git-commit pipeline with structured outputs."
