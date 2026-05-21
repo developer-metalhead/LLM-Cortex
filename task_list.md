@@ -251,11 +251,16 @@ Derived from source code inspection + `implementation_plan.md`. Last verified 20
 - [x] **Reciprocal Rank Fusion (RRF)** — designed an RRF scoring merger to combine exact token substring matches and fuzzy edit-distance candidates deterministically
 - [x] **Performance Optimization** — restricted edit-distance calculations with length differences and prefix gating to keep query response latency under 2ms
 
-## ⏳ Planned — Phases 11–12 & 13.6-13.7
+## ✅ Done — Phase 13.6
 
-### Phase 13.6 — Proximity Reranking & Smart Snippets
-- [ ] Multi-word proximity boosting — boost rank of files where query words appear close to each other
-- [ ] Smart search result previews — display text window surrounding first matching keyword
+### Phase 13.6 — Proximity Reranking & Smart Snippets (verified 2026-05-21, all tests passing)
+- [x] **Proximity Score** — `computeProximityBonus()`: sliding-window decayed bonus per query-token pair within `CORTEX_PROXIMITY_WINDOW` (default 5); same-word match gets max bonus; cross-word decays linearly (adjacent=100%, edge=25%) ([src/knowledge/find.ts:55-103](src/knowledge/find.ts#L55-L103))
+- [x] **Smart Snippets** — `extractSnippet()`: best-window algorithm scores each match-position-centered window by nearby-match density; extracts up to `CORTEX_SNIPPET_LENGTH` chars (default 120) with ellipsis-budgeted padding ([src/knowledge/find.ts:105-165](src/knowledge/find.ts#L105-L165))
+- [x] **Integration**: proximity bonus folded into RRF score at `find.ts:318`; old first-sentence truncation replaced by `extractSnippet` at `find.ts:320`
+- [x] MCP tools `cortex_find` and `read_knowledge_index` benefit automatically (consume the same search pipeline)
+- [x] **Tests (7 passing)** in `tests/phase13_6.test.ts`: adjacent vs scattered ranking, single-word no-bonus, same-word proximity, centered snippet, short desc verbatim, no-match fallback, configurable snippet length via env var
+
+## ⏳ Planned — Phases 11–12 & 13.7
 
 ### Phase 13.7 — Hooks-Based Smart Read Cache & AST Skeleton Delta Compression
 - [ ] Read Cache Hook — intercept file-reading commands inside AI assistant
