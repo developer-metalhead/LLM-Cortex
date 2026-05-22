@@ -39,14 +39,36 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 ### T0 — Production-Critical (P0, blocks every tier)
 
-**Goal**: Fix the shipped bootstrap bug that prevents Cortex from being usable on any non-trivial codebase. Without this, no tier above can sell.
+**Goal**: Fix the shipped bootstrap bug that prevents Cortex from being usable on any non-trivial codebase, AND seal the security/data-integrity holes that make it unsafe to recommend to any paying customer. Without both, no tier above can sell.
 
 **Phases (in order)**:
 
 | # | Phase | Why P0 | Effort | Status |
 |---|---|---|---|---|
+| 0 | **Phase 0** — Security & Validation Foundation (Graphify-Derived) | Path traversal CVE (#51), no schema validation (#4/#72), no file lock (#19), broken cache (#27). Cortex is unsafe to ship without these. Blocks Stages 1-2 of flaws.md fix plan. | Small-Medium (~3-5 days) | ⏳ Planned |
 | 1 | **Phase 33-MVP** (a stripped Deep Bootstrap) | Production bug: 1800-file project produced 4 entities. Adoption-blocker. | Medium (2-4 weeks) | ⏳ Planned |
 | 2 | **Phase 6** — complete (Active Guardrail) | Foundation for every later guardrail/policy phase. | Done | ✅ **Done 2026-05-19** |
+
+**Phase 0 subphase breakdown** (14 subphases from graphify deep read — see `implementation_plan.md § Phase 0`):
+
+| Subphase | Title | Flaws closed | Effort |
+|----------|-------|-------------|--------|
+| **0.1** | `security.ts` — path traversal, SSRF, DNS rebinding, NAT64, TOCTOU socket patch, 512 MiB memory-bomb cap, XSS sanitization | #51, #64, #74, #103 | 1 day |
+| **0.2** | `validate.ts` — `REQUIRED_NODE_FIELDS`, `REQUIRED_EDGE_FIELDS`, `VALID_FILE_TYPES`, referential integrity on every write | #4, #72 | 0.5 day |
+| **0.3** | Confidence labels (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) required on every edge; `AMBIGUOUS` excluded from context packs by default | #42, #53, #54, #56 (phantom-entity class) | 0.5 day |
+| **0.4** | Graph-as-cache: skeleton stored in entity body field; SHA256+stat fastpath; atomic `tempfile`→`rename` write; frontmatter strip; Windows `\\?\` paths | #27, stale-cache class | 1 day |
+| **0.5** | OS-native file locking: `fcntl.LOCK_EX|LOCK_NB` on POSIX, named mutex on Windows; PID in lockfile; auto-release on process death; `cortex unlock` | #19, #62-adjacent | 0.5 day |
+| **0.6** | MinHash/LSH 5-stage dedup: normalize → entropy gate → MinHash/LSH blocking → Jaro-Winkler verify → union-find merge | #53, #54 | 1.5 days |
+| **0.7** | `cortex doctor` CLI: 10 structural health checks, color-coded pass/fail, actionable remediation lines, `--json` for CI | #62, #98 | 1 day |
+| **0.8** | MCP hot-reload: `mtime_ns + size` poll on every tool call, double-checked lock, stale-graph fallback, IDF recomputed after reload | #48 | 1 day |
+| **0.9** | IDF-weighted content search: `cortex_search_source(pattern, glob?)` runs ripgrep server-side + graph IDF ranking; `SOURCE_MATCH_BONUS=0.5`; score-gap seed selection; BFS/DFS from seeds; replaces grep ban | #28 | 1 day |
+| **0.10** | Defensive git hook rewrite: marker-fenced insertion, allowlist-regex path guard, rebase/merge skip, `nohup` detached spawn, `cortex hooks status` | #66–#71, #77 | 1 day |
+| **0.11** | Honest benchmarks: `worked/` folder with 3 real corpora (including one showing negative ROI); replace `files×1200` heuristic with `cortex bench` | #6, #68–#70 | 0.5 day |
+| **0.12** | `cortex repair` + backup/restore + `cortex merge-knowledge` (merge two exports, deduped) + `cortex clone <github-url>` (cross-repo knowledge); rolling `.bak`, git-show fallback, `KNOWLEDGE_REPORT.md` | #96 | 1.5 days |
+| **0.13** | Multi-language tree-sitter extractors: fix TS class methods + type aliases; per-language fixture tests; v1=10 languages, target=25 (all graphify languages); contributor guide | #83 | 2 days |
+| **0.14** | Multi-backend LLM: all 8 backends (`anthropic`, `claude-cli`, `openai`, `bedrock`, `gemini`, `kimi`, `deepseek`, `ollama`); adaptive retry on context-exceeded; token-aware chunking; Worker thread pool for parallel extraction | missing capability | 2.5 days |
+
+**Total Phase 0 effort: ~15 days** (can parallelize 0.1+0.2+0.3 / 0.4+0.5 / 0.6+0.7 across engineers → ~6 days wall time with 3 engineers)
 
 **Phase 33-MVP scope clarification**: Phase 33 in `implementation_plan.md` lists Phase 14, 20.9, 20.10, 13 as dependencies. The **MVP variant ships without these** by substituting:
 - Phase 14 clustering → **simple directory-bucket clustering** in Phase A

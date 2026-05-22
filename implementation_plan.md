@@ -6,6 +6,21 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 
 | Phase | Title                                                  | Status                               |
 | ----- | ------------------------------------------------------ | ------------------------------------ |
+| 0     | Security & Validation Foundation (Graphify-Derived)    | ⏳ Planned (P0-Critical)             |
+| 0.1   | `security.ts` — Path Traversal, SSRF, XSS, Memory-Bomb | ⏳ Planned                          |
+| 0.2   | `validate.ts` — Schema Gating & Referential Integrity  | ⏳ Planned                           |
+| 0.3   | Confidence Labels (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) | ⏳ Planned                           |
+| 0.4   | Graph-as-Cache (Replace Skeleton Compression)          | ⏳ Planned                           |
+| 0.5   | OS-Native File Locking (`fcntl` / Named Mutex)         | ⏳ Planned                           |
+| 0.6   | MinHash/LSH Deduplication Pipeline                     | ⏳ Planned                           |
+| 0.7   | `cortex doctor` Self-Diagnostic CLI                    | ⏳ Planned                           |
+| 0.8   | MCP Hot-Reload with Double-Checked Locking             | ⏳ Planned                           |
+| 0.9   | IDF-Weighted Content Search (Replace Grep Ban)         | ⏳ Planned                           |
+| 0.10  | Defensive Git Hook Rewrite                             | ⏳ Planned                           |
+| 0.11  | Honest Benchmarks (`worked/` Corpus)                   | ⏳ Planned                           |
+| 0.12  | `cortex repair` — Backup/Restore & Git-Friendly Output | ⏳ Planned                           |
+| 0.13  | Multi-Language Tree-sitter Extractors (25 languages)   | ⏳ Planned                           |
+| 0.14  | Multi-Backend LLM Abstraction (8 backends)             | ⏳ Planned                           |
 | 1     | Ingestion & Monitoring Foundation                      | ✅ Done                              |
 | 2     | LLM Synthesis Engine                                   | ✅ Done                              |
 | 3     | Knowledge Storage & Cost Control                       | ✅ Done                              |
@@ -277,6 +292,607 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 70.2  | Stare Decisis — Architectural Precedent Binding       | ⏳ Planned (cross-domain)             |
 | 70.3  | Due Process — Fair Notification Before Enforcement    | ⏳ Planned (cross-domain)             |
 | 70.4  | Habeas Corpus — Justification Requirement for Actions  | ⏳ Planned (cross-domain)            |
+
+---
+
+## 🛡️ Phase 0: Security & Validation Foundation (Graphify-Derived, P0-Critical)
+
+**Status**: ⏳ Planned — must ship before any paying customer touches production
+
+**Layman's Terms**
+Before adding any feature, seal the holes. Graphify (a comparable Python knowledge graph tool, YC S26) ships with a dedicated `security.py`, `validate.py`, `diagnostics.py`, OS-native file locking, deduplication, IDF search, and an honest benchmark suite — all before any feature work. Cortex has none of this. Phase 0 is "build the foundation the house needs." It is subdivided into 14 subphases so each piece can be built, tested, and reviewed independently.
+
+**Graphify source modules studied**: `security.py` (336 lines), `validate.py` (72 lines), `cache.py`, `dedup.py`, `watch.py` (fcntl), `serve.py` (hot-reload + IDF search), `diagnostics.py` (390 lines), `hooks.py`, `llm.py` (1,111 lines), `extract.py` (7,810 lines), `worked/` corpus.
+
+**Flaw coverage**: these 14 subphases collectively close flaws #4, #6, #19, #27, #28, #42, #48, #51, #53, #54, #56, #62, #64, #66–#71, #72, #74, #77, #83, #96, #98, #103 from `flaws.md` (30+ flaws, entire phantom-entity and stale-cache classes).
+
+---
+
+### Phase 0.1 — `security.ts`: Path Traversal, SSRF, XSS, Memory-Bomb Prevention
+
+**Flaws closed**: #51 (path traversal), #64 (SSRF / no fetch size cap), #74 (XSS in labels), #103 (metadata injection)
+
+**Problem**
+`source({filePath: "C:/Windows/System32/drivers/etc/hosts"})` succeeded in live audit — arbitrary file read, CVE-severity. No SSRF protection on any external fetch. No XSS sanitization on entity labels written to the graph report.
+
+**What graphify does** (`security.py`, 336 lines):
+
+- `validate_graph_path(base, path)`:
+  ```python
+  resolved = Path(path).resolve()
+  resolved.relative_to(base)   # raises ValueError on escape
+  ```
+  This is a **structural guarantee** — one choke point, every file open passes through it. Not per-call ad-hoc checks.
+
+- `validate_url(url)`: resolves hostname via `socket.getaddrinfo`, checks `ip_address(ip).is_private / is_reserved / is_loopback / is_link_local`, blocks AWS `169.254.169.254` and GCP `metadata.google.internal`, blocks CGN `100.64.0.0/10`, handles NAT64-wrapped IPv4 (`::ffff:192.168.x.x`).
+
+- `_NoFileRedirectHandler`: custom `HTTPHandler` subclass — raises `ValueError` if any redirect target is `file://` or `ftp://`. Prevents open-redirect-to-file SSRF.
+
+- `_ssrf_guarded_socket()`: context manager that **patches `socket.getaddrinfo`** during the fetch. Catches DNS rebinding TOCTOU (hostname resolves to public IP at DNS check time, then to private IP at connect time). Cortex has zero TOCTOU protection.
+
+- `check_graph_file_size_cap(path, max_mb=512)`: checks file size before `json.loads()`. Hard 512 MiB memory-bomb cap. Our `state.json` parser has no cap — crafted large file OOMs the process.
+
+- `sanitize_label(s)`: strip HTML tags, truncate to 500 chars.
+- `sanitize_metadata(obj)`: recurse into dicts/lists, sanitize all string values. Prevents metadata injection when entity descriptions or concept bodies contain injected HTML/script.
+
+**Implementation**
+- Create `src/security.ts` as the single module all file and network paths must pass through.
+- `validateSafePath(root: string, userPath: string): string` — `path.resolve`, assert `resolved.startsWith(root + sep)`, throw on failure.
+- `validateUrl(url: string): void` — DNS-resolve, check private ranges including NAT64, throw on private/loopback/metadata.
+- `sanitizeLabel(s: string): string` — strip HTML, truncate 500 chars.
+- `sanitizeMetadata(obj: unknown): unknown` — recursive sanitizer.
+- `checkFileSizeCap(filePath: string, maxMb = 512): void` — `fs.statSync`, throw if over cap.
+- Patch every `fs.readFile` / `fs.readFileSync` call site in `src/mcp/server.ts` and `src/core/` to call `validateSafePath` first.
+- All fetch calls go through `validateUrl` before execution.
+
+**DoD**
+- Unit tests: path traversal `../../../etc/passwd` → throws; valid path → passes.
+- Unit tests: SSRF `http://169.254.169.254/latest/meta-data` → throws; public URL → passes.
+- Unit tests: NAT64 `::ffff:192.168.1.1` → throws.
+- Unit tests: XSS `<script>alert(1)</script>` in label → sanitized.
+- Unit tests: 600 MiB mock file → throws before parse.
+- Integration: `source({filePath: "C:/Windows/System32/drivers/etc/hosts"})` → rejected with `PathTraversalError`.
+
+---
+
+### Phase 0.2 — `validate.ts`: Schema Gating & Referential Integrity
+
+**Flaws closed**: #4 (any string accepted as entity name), #72 (`save_concept` accepts empty string), phantom-entity class (#42, #53, #56)
+
+**Problem**
+`save_concept({name: "FLAW_TEST_CONCEPT"})` accepted any string. `save_concept({name: ""})` accepted empty string. No referential integrity — edges can reference node IDs that don't exist.
+
+**What graphify does** (`validate.py`, 72 lines):
+```python
+REQUIRED_NODE_FIELDS = {"id", "label", "file_type", "source_file"}
+REQUIRED_EDGE_FIELDS = {"source", "target", "relation", "confidence", "source_file"}
+VALID_FILE_TYPES     = {"code", "document", "paper", "image", "rationale", "concept"}
+VALID_CONFIDENCES    = {"EXTRACTED", "INFERRED", "AMBIGUOUS"}
+```
+`validate_node(node, nodes_by_id)` — checks required fields, validates `file_type` against allowlist, non-empty `label`.
+`validate_edge(edge, nodes_by_id)` — checks required fields, validates `confidence` against allowlist, asserts `edge["source"]` and `edge["target"]` exist in `nodes_by_id`. **No dangling edges allowed.**
+
+This runs as a hard precondition before `build_graph()` consumes anything. Invalid input fails loudly, not silently.
+
+**Implementation**
+- Create `src/validate.ts` with:
+  - `VALID_ENTITY_TYPES`, `VALID_CONFIDENCES`, `REQUIRED_ENTITY_FIELDS`, `REQUIRED_RELATION_FIELDS` as `const` sets.
+  - `validateEntity(e: unknown, knownIds: Set<string>): asserts e is Entity` — throws `ValidationError` with field name + value.
+  - `validateConcept(c: unknown): asserts c is Concept` — non-empty name, valid type.
+  - `validateRelation(r: unknown, knownIds: Set<string>): asserts r is Relation` — referential integrity check.
+- Every write path in `StateManager.saveEntity`, `StateManager.saveConcept`, `StateManager.saveRelation` calls the corresponding validator before mutating state.
+- Zod schemas (already present) are kept; `validate.ts` is the runtime gate that is always called, regardless of caller.
+
+**DoD**
+- `save_concept({name: ""})` → `ValidationError: name must be non-empty`.
+- `save_concept({name: "x", type: "not-a-valid-type"})` → `ValidationError: type 'not-a-valid-type' not in VALID_ENTITY_TYPES`.
+- Edge with `source: "non-existent-id"` → `ValidationError: source node 'non-existent-id' not found in graph`.
+- All existing passing tests continue to pass.
+- Migration script: backfill `confidence: "INFERRED"` on all existing edges that have no confidence field.
+
+---
+
+### Phase 0.3 — Confidence Labels: `EXTRACTED` / `INFERRED` / `AMBIGUOUS` as Required Schema Field
+
+**Flaws closed**: phantom-entity class (#42, #54, #56), `evidence: []` ignored (#56)
+
+**Problem**
+`AuthService` and `JWTStrategy` exist in `state.json` with no codebase backing. `evidence: []` is an optional field; missing evidence is silently accepted. There is no way to distinguish "we extracted this from source" vs "the LLM guessed this."
+
+**What graphify does**:
+Confidence is a required enum field on every edge:
+- `EXTRACTED` (confidence 1.0) — explicit source statement (import, function call, class declaration).
+- `INFERRED` (0.55–0.95) — reasoned inference; graphify provides a discrete rubric for how to assign the level.
+- `AMBIGUOUS` — flagged in `GRAPH_REPORT.md` for human review; excluded from production context packs by default.
+
+Combined with `source_file` being required on every node, a phantom entity is **structurally impossible**: every node must point to a real file, every edge must carry provenance. There is no `evidence: []` that means "we don't know."
+
+**Implementation**
+- Add `confidence: "EXTRACTED" | "INFERRED" | "AMBIGUOUS"` as a required field to the `Relation` type in `src/types.ts`.
+- Add `sourceFile: string` as required on `Entity` (most already have this; patch any that don't).
+- Update `validate.ts` (Phase 0.2) to enforce both.
+- Query tools (`cortex_find`, `build_context_pack`, `read_entity`) accept a `minConfidence` parameter; default is `INFERRED` (excludes `AMBIGUOUS` from production context packs).
+- `cortex doctor` (Phase 0.7) flags any entity with no `sourceFile` and any edge with `confidence: "AMBIGUOUS"` as a review item.
+- `GRAPH_REPORT.md` output section lists all `AMBIGUOUS` edges for human review.
+
+**DoD**
+- Any entity write without `sourceFile` → `ValidationError`.
+- Any edge write without `confidence` → `ValidationError`.
+- `build_context_pack` with default options excludes `AMBIGUOUS` edges.
+- `cortex doctor` output shows count of `AMBIGUOUS` edges as a warning, not an error.
+- Migration script generates `confidence: "INFERRED"` for all existing edges, `confidence: "EXTRACTED"` only where the edge `sourceFile` field is populated.
+
+---
+
+### Phase 0.4 — Graph-as-Cache: Replace Skeleton Compression with Structured Graph Storage
+
+**Flaws closed**: #27 (TS skeleton extractor broken — strips class methods, keeps body locals), entire stale-skeleton class
+
+**Problem**
+`source({filePath: "src/core/soul.ts"})` returned a skeleton that kept `const lockPath = this.lockPath()` (a method-body local) but stripped all actual class method signatures and type aliases. The skeleton is less useful than the raw file and actively wrong about class structure.
+
+**Root cause**: Cortex is solving the wrong problem. We compress source files to reduce tokens. Graphify doesn't have this problem because **the graph IS the compressed form**.
+
+**What graphify does** (`extract.py`, 7,810 lines + `cache.py`):
+- `extract.py` runs `tree-sitter` per language once per file and emits `{nodes: [...], edges: [...]}` — structured graph data (functions, classes, imports, calls), not "minified source."
+- Re-reads are answered from `graph.json`, not by re-compressing source at read time.
+- `cache.py` stores: SHA256 + stat fastpath (`size + mtime_ns`). If stat is unchanged, return cached SHA256 without re-hashing. If stat changed, re-hash and update cache.
+- Cache writes are atomic: `tempfile.mkstemp` → write → `os.replace(tmp, cache_path)` (rename-atomic on both POSIX and Windows — no partial write visible to readers).
+- `atexit` handler flushes pending entries to disk on clean process exit.
+- Markdown special case: strip YAML frontmatter before hashing so metadata-only changes (tags, status, reviewed) don't invalidate the cache for the same content.
+- Windows long-path: `\\?\` prefix + `os.path.normcase` applied before all path comparisons.
+
+**Implementation**
+- In `SmartReadCache` (Phase 13.7), replace the skeleton-compression step with an entity-body cache:
+  - After AST extraction, store the structured skeleton (function names, class members, type aliases) inside the entity's `body` field in `state.json`. No separate cache file.
+  - Cache key: `(filePath, mtime_ns, size)` — stat fastpath first, SHA256 on miss.
+  - Cache write: write to `state.json.tmp`, then `fs.renameSync` (atomic on POSIX and Windows NTFS).
+  - On cache hit (stat unchanged): return entity body without touching disk. No AST parse, no LLM call.
+  - On cache miss: re-extract, update entity body, write atomically.
+- The skeleton stored in `entity.body` is structured (JSON array of members), not "minified TypeScript." Consumers render it as they need.
+- Frontmatter strip: for `.md` entity files, hash content below the `---` separator.
+- Windows path normalization: `path.resolve` + `path.normalize` applied once at ingest boundary.
+
+**DoD**
+- `source({filePath: "src/core/soul.ts"})` returns all class method signatures, all type aliases, no body locals.
+- Stat fastpath: second call to `source` on an unmodified file returns in <5ms without touching disk.
+- Atomic write: concurrent writes to cache do not produce partial reads (test with `Promise.all` of 10 parallel writes).
+- Frontmatter-only edit: changing `# reviewed: true` in an entity `.md` file does not invalidate its body cache.
+- Windows path quirk: `\\?\C:\...` paths compare equal to `C:\...` paths in the cache key.
+
+---
+
+### Phase 0.5 — OS-Native File Locking: Replace Marker-File Lock with `fcntl` / Named Mutex
+
+**Flaws closed**: #19 (concurrent writes corrupt `state.json`), SoulEngine "Dirty: Yes on cold start" (#62-adjacent)
+
+**Problem**
+SoulEngine's lockfile is a marker-file existence check with a 30-second stale detection. Two concurrent `ingest` calls write to the same `state.json` and corrupt it. "Soul Dirty: Yes" appears immediately on a fresh server with zero mutations.
+
+**What graphify does** (`watch.py`):
+```python
+import fcntl
+fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+```
+- `LOCK_NB` (non-blocking): if lock is already held, `IOError` is raised immediately — caller gets the PID of the holder from the lock file content and exits cleanly.
+- PID written to lockfile so external pollers can identify the holder.
+- Lock released by `fcntl.LOCK_UN` + `unlink` on the lockfile. Only the acquirer calls `unlink`.
+- On Windows: falls back to a named mutex (`win32api.CreateMutex`) or no-op graceful degradation.
+- Auto-release on process death: OS reclaims `fcntl` locks when the process exits — no stale lock cleanup needed.
+
+**Implementation**
+- Use `proper-lockfile` npm package (wraps OS-native advisory locking, POSIX + Windows) or implement directly via `node:fs` `O_EXCL` + `cross-process-lock`.
+- `acquireStateLock(stateFile: string): LockHandle` — writes PID to `state.lock`, returns handle with `release()`.
+- `release()` calls OS unlock + `fs.unlinkSync(lockFile)`.
+- `tryAcquire()` variant: returns `{acquired: false, pid: number}` without blocking if lock is held.
+- All `StateManager.write*` methods acquire lock before read-modify-write cycle, release in `finally`.
+- `cortex status` shows lock owner PID when lock is held.
+- Stale-detection: if lock file is >60s old and PID is not running (`process.kill(pid, 0)` returns false), forcibly release and log a warning.
+- Remove all existing marker-file / mtime-based lock logic from `SoulEngine`.
+
+**DoD**
+- Concurrent `ingest` × 10: final `state.json` is valid JSON with all entities present (no partial write).
+- `cortex status` on a locked repo shows `Lock held by PID 12345`.
+- Process kill mid-write: lock releases automatically, next `ingest` succeeds without stale-lock error.
+- `Soul Dirty: Yes` only appears when there are actual uncommitted mutations.
+
+---
+
+### Phase 0.6 — MinHash/LSH Deduplication Pipeline
+
+**Flaws closed**: #53 (duplicate entities), #54 (near-duplicate concepts accumulate silently)
+
+**Problem**
+`Native IDE Workflows` exists as both entity and concept with different descriptions. Every re-ingest of a refactored file creates a parallel entity. No deduplication pass runs at any point.
+
+**What graphify does** (`dedup.py`):
+5-stage pipeline run on every graph load:
+1. **Exact normalization** — NFKC + casefold + collapse non-alphanumeric to single space.
+2. **Shannon entropy gate** — discard labels below threshold (gibberish, single chars).
+3. **MinHash/LSH blocking** — build shingle hashes (`datasketch.MinHash`), insert into `datasketch.MinHashLSH`; query for candidate pairs in O(N), not O(N²).
+4. **Jaro-Winkler verification** — `rapidfuzz.distance.JaroWinkler.similarity(a, b)` above threshold confirms the candidate pair as a duplicate.
+5. **Same-community boost** — pairs in the same graph community get a lower merge threshold (more aggressive dedup within a module).
+6. **Union-find merge** — collapse duplicates into the canonical node (highest `pagerank` score wins, or largest `source_file` count).
+
+**Implementation**
+- Implement `src/dedup.ts` with a pipeline matching graphify's stages:
+  - Stage 1: `normalize(label: string): string` — unicode NFKC, lowercase, collapse punctuation.
+  - Stage 2: entropy gate using `shannonEntropy(s)` — skip strings below threshold 1.5 bits/char.
+  - Stage 3: MinHash via `minhash-js` or manual shingle hashing (64 permutations) + LSH with 0.6 Jaccard threshold.
+  - Stage 4: Jaro-Winkler via `natural` npm package — similarity > 0.88 → confirmed duplicate.
+  - Stage 5: Community boost — if both entities share the same directory cluster, threshold drops to 0.80.
+  - Stage 6: Union-find (`src/dedup/unionFind.ts`) — merge lower-centrality node into higher-centrality canonical.
+- Run `dedup()` pass:
+  - After every `cortex sync` completes (before writing final `state.json`).
+  - As part of `cortex doctor` (Phase 0.7) — report duplicate count without auto-merging (doctor is read-only).
+  - `cortex dedup --dry-run` shows proposed merges; `cortex dedup` executes them.
+- Merge strategy: winning node keeps highest-centrality `entity.body`; merged node's `aliases` field gains the losing node's name.
+
+**DoD**
+- Ingest same codebase twice: entity count after dedup ≤ entity count before second ingest.
+- `Native IDE Workflows` entity + concept: after `cortex dedup`, only one survives with both descriptions merged.
+- `cortex dedup --dry-run` outputs a table: `"A" → merged into "B" (JW=0.94, same cluster)`.
+- 0 false positives on test fixtures with genuinely different entities named similarly (e.g., `UserService` vs `UserServiceV2`).
+
+---
+
+### Phase 0.7 — `cortex doctor`: Self-Diagnostic CLI
+
+**Flaws closed**: #62 (silent corruption), #98 (no self-diagnostic)
+
+**Problem**
+Silent corruption and stale index drift go undetected until an agent produces a wrong answer. There is no way to tell if Cortex is healthy.
+
+**What graphify does** (`diagnostics.py`, 390 lines):
+Structural readiness checks:
+- Edges referencing non-existent nodes.
+- File-type → suspect-relation pairs (e.g., a concept node receiving `calls` edges = symptom of LLM hallucination).
+- Exact-duplicate edge detection (`_exact_signature`).
+- Edges with empty critical fields.
+- Output: color-coded pass/fail per check with an actionable remediation line for each failure.
+
+**Implementation**
+`cortex doctor` prints a structured health report. Checks (in order):
+
+| Check | Pass condition | Remediation on fail |
+|-------|---------------|---------------------|
+| `state.json` parseable | Valid JSON | `cortex repair` auto-restores last-good backup |
+| Schema version current | `schemaVersion` matches latest | Run migration script |
+| No orphan edges | All edge source/target IDs exist as entity IDs | `cortex dedup --fix-orphans` |
+| No empty-name entities | All entities have `name.length > 0` | List affected entities, offer `cortex gc` |
+| No empty critical fields | All edges have non-empty `source`, `target`, `relation`, `confidence`, `sourceFile` | List offenders, offer `cortex migrate --fill-empty` |
+| No zero-confidence relations | All relations have `confidence` field | Backfill with `INFERRED` via `cortex migrate` |
+| No suspect-relation pairs | No concept/rationale entity has an edge of type `calls`, `imports`, or `inherits` (file-type → relation allowlist) | Flag as likely LLM hallucination; list in `GRAPH_REPORT.md` for human review |
+| No duplicate edges | 0 edges with identical `(source, target, relation)` triple (`_exactSignature` check) | `cortex dedup --edges` deduplicate by keeping edge with higher `confidence` |
+| Lock not stale | No lock file OR lock PID is running | `cortex unlock` |
+| Index up to date | All `sourceFile` entries in entities have `mtime_ns` ≤ current | `cortex sync` needed |
+| No AMBIGUOUS-only entities | Entities with all edges `AMBIGUOUS` flagged for review | List in GRAPH_REPORT.md |
+| Duplicate entity count | 0 exact-duplicate entity names | `cortex dedup` |
+| Coverage gap | % of source files with no entity | Warn if <50% coverage |
+
+Exit code 0 = all checks pass. Exit code 1 = at least one failure. CI can run `cortex doctor` as a step.
+
+**DoD**
+- `cortex doctor` on a healthy repo: all checks green, exit 0.
+- `cortex doctor` with injected orphan edge: prints `FAIL: orphan edge 'SomeService→NonExistent'`, exit 1.
+- `cortex doctor` with stale lock file: prints `WARN: stale lock (PID 9999 not running) — run 'cortex unlock'`.
+- `cortex doctor` output is machine-parseable JSON with `--json` flag for CI integration.
+
+---
+
+### Phase 0.8 — MCP Hot-Reload with Double-Checked Locking
+
+**Flaws closed**: #48 (MCP server requires full restart after every sync)
+
+**Problem**
+After every `cortex sync`, the MCP server must be manually restarted to see new entities. In a live coding session this means stopping and restarting after every sync cycle.
+
+**What graphify does** (`serve.py`):
+```python
+def _maybe_reload() -> None:
+    s = Path(graph_path).stat()
+    key = (s.st_mtime_ns, s.st_size)
+    if key == (_reload_state["mtime_ns"], _reload_state["size"]):
+        return
+    with _reload_lock:
+        if key == (_reload_state["mtime_ns"], _reload_state["size"]):
+            return   # double-check inside lock — another thread already reloaded
+        G = _load_graph(graph_path)
+        _reload_state["mtime_ns"] = s.st_mtime_ns
+        _reload_state["size"]     = s.st_size
+```
+- Double-checked locking: first check is outside the lock (fast path), second check is inside (correctness).
+- Prevents thundering-herd: 10 parallel tool calls all hit `_maybe_reload` simultaneously — only one reload happens.
+- Stale-graph fallback: if reload fails transiently, keep serving the old graph (don't crash the MCP server).
+- IDF weights recomputed after reload and cached in-memory.
+
+**Implementation**
+- In `src/mcp/server.ts`, add a `StateWatcher` that polls `state.json` `mtime_ns` on every tool call (not on a timer).
+- Double-checked lock: `isReloading: boolean` flag + `AsyncMutex` from `async-mutex`.
+- On reload success: rebuild in-memory entity index, recompute IDF weights.
+- On reload failure: log error, serve stale state, set `cortex_status: "stale"` in tool responses.
+- Remove the "restart MCP server" instruction from all documentation once this ships.
+
+**DoD**
+- `cortex sync` while MCP server is running: next tool call returns updated entities without server restart.
+- 10 concurrent tool calls during reload: exactly one reload executes, others wait and then use the new state.
+- Reload failure (corrupted `state.json`): tool calls return results from previous good state, not a crash.
+
+---
+
+### Phase 0.9 — IDF-Weighted Content Search (Replace Grep Ban)
+
+**Flaws closed**: #28 (no content-search substitute for `grep` ban)
+
+**Problem**
+`CLAUDE.md` forbids `grep` but Cortex provides no content-search alternative. Agents can't find code patterns, usages, or cross-cutting concerns. The prohibition is unenforceable without a substitute.
+
+**What graphify does** (`serve.py:_score_nodes()`):
+- **IDF weighting** cached per graph load: `idf[term] = log(N / df[term])` where `N` = total nodes, `df` = node count containing term. Common terms (`error`, `service`) get low weight; rare identifiers (`FooBarPaymentGateway`) get high weight.
+- **Three-tier precedence scoring**: exact match → score × 1000 × IDF; prefix match → score × 100 × IDF; substring match → score × 1 × IDF.
+- **Unicode-aware**: `_strip_diacritics()` normalizes before comparison — handles international codebases.
+- **Score-gap thresholding** (`_pick_seeds`): if top score is > 20× next score, only top result is seeded into BFS/DFS traversal — prevents noise matches drowning the true result.
+- **BFS/DFS graph traversal** from seeds: caller chooses depth; returns structurally related entities, not just keyword matches.
+- `_SOURCE_MATCH_BONUS = 0.5`: entities whose `source_file` path contains the query term get a 50% score boost.
+
+**Implementation**
+- New MCP tool `cortex_search_source(pattern: string, glob?: string, depth?: number)`:
+  - Runs `ripgrep` server-side (via `execa`) with the pattern and optional glob filter.
+  - Returns hits with: `filePath`, `lineNumber`, `matchLine`, `surroundingContext` (3 lines before/after).
+  - Also queries the knowledge graph via IDF scoring to include related entities whose `sourceFile` matches.
+  - Results ranked: entity exact-name matches first, then file-hit matches, then graph-neighbor expansions.
+- Reuse graphify's IDF scoring algorithm directly in `src/search.ts`:
+  - `idf[term] = Math.log(N / df[term])` — computed once after each graph load/reload.
+  - Three-tier score: exact → `1000 × idf`, prefix → `100 × idf`, substring → `1 × idf`.
+  - `SOURCE_MATCH_BONUS = 0.5` — entities whose `sourceFile` path contains the query term get their score multiplied by `1 + SOURCE_MATCH_BONUS` (50% boost), matching graphify's `_SOURCE_MATCH_BONUS = 0.5`.
+  - Score-gap seed selection: if `topScore / secondScore > 20`, only top result seeds BFS/DFS (prevents noise flood).
+- Unicode normalization: `String.prototype.normalize('NFKD')` + strip combining characters (mirrors graphify's `_strip_diacritics()`).
+- `cortex_find` (existing tool) updated to use IDF ranking instead of flat substring order.
+
+**DoD**
+- `cortex_search_source("FooBarPaymentGateway")` returns the file and line where the identifier is used, plus related graph entities, ranked by IDF.
+- Common term `"error"` returns only entities with it in the name/body (IDF-filtered), not every entity mentioning error handling.
+- `cortex_find("payments")` returns entities in IDF order (rare names first).
+- Entity whose `sourceFile` contains query term scores 50% higher than otherwise-equal entity without that path match (`SOURCE_MATCH_BONUS` in test assertion).
+- Score-gap: single strong match returns only that entity + BFS neighbors, not a flood of weak substring matches.
+- `CLAUDE.md` instruction updated: "use `cortex_search_source` instead of `grep`."
+
+---
+
+### Phase 0.10 — Defensive Git Hook Rewrite
+
+**Flaws closed**: #66 (hooks fire without timeout), #67 (agent can't see what was injected), #68 (injection vector via metachar in Python path), #69 (blocks git commit during sync), #70 (no rebase-merge skip), #71 (no fallback if Cortex binary missing), #77 (hook leaves `.knowledge/` polluted on failure)
+
+**Problem**
+Hooks fire synchronously (blocking `git commit`), use `execSync` with no timeout, have a shell-metachar injection vector in the Python path, and don't skip during rebase/merge/cherry-pick.
+
+**What graphify does** (`hooks.py`):
+- `_HOOK_MARKER` / `_HOOK_MARKER_END` comments wrap the inserted block — clean uninstall by deleting lines between markers. Idempotent reinstall.
+- `_PYTHON_DETECT` shell function tries three paths (`graphify` shebang → `python3` → `python`); on Windows, falls back to WSL or PowerShell.
+- Allowlist regex on the Python path: `*[!a-zA-Z0-9/_.@-]*)` → `GRAPHIFY_PYTHON=""` — prevents shell-metachar injection if PATH contains adversarial entries.
+- Skip during rebase/merge/cherry-pick: checks `.git/rebase-merge`, `MERGE_HEAD`, `CHERRY_PICK_HEAD` before running.
+- **Detached `nohup` background rebuild**: `nohup graphify build ... &` — git commit returns immediately, rebuild happens async. Logs to `~/.cache/graphify-rebuild.log`.
+- On rebuild failure: writes error to log, does not pollute working tree.
+
+**Implementation**
+- Rewrite `src/hooks/install.ts`:
+  - Use `_CORTEX_HOOK_START` / `_CORTEX_HOOK_END` markers for idempotent install/uninstall.
+  - Allowlist-validate `process.execPath` before embedding in hook script.
+  - Skip during rebase/merge/cherry-pick by checking `MERGE_HEAD`, `.git/rebase-merge`, `CHERRY_PICK_HEAD`.
+  - Run `cortex sync` as `spawn('node', [cortexBin, 'sync'], {detached: true, stdio: 'ignore'})` followed by `child.unref()` — non-blocking, git commit returns immediately.
+  - Log output to `~/.cache/cortex-hook.log`.
+  - Guard: if `cortex` binary is not found, hook exits 0 silently (never blocks commit).
+  - `cortex hooks uninstall` deletes lines between markers, leaves hook file otherwise intact.
+- Install **both** `post-commit` and `post-checkout` hooks (mirrors graphify's dual-hook install):
+  - `post-commit`: triggers `cortex sync` after every commit to keep the knowledge base current.
+  - `post-checkout`: triggers `cortex sync` after every `git checkout` / `git switch` branch change, so the knowledge base reflects the current branch's source. Skips if `$3 == 0` (file checkout, not branch checkout — git passes `1` for branch switch, `0` for file restore).
+- Expose `cortex hooks status` showing: installed hooks (post-commit / post-checkout), marker presence, last run timestamp from log.
+
+**DoD**
+- `git commit` during a 10-second sync: returns in <100ms (non-blocking).
+- `git switch feature-branch`: `post-checkout` fires and enqueues a background sync for the new branch.
+- `git checkout -- file.ts` (file restore, not branch switch): `post-checkout` detects `$3 == 0` and exits 0 without triggering sync.
+- `git rebase -i`: hook detects `rebase-merge` and exits 0 without firing sync.
+- Adversarial `PATH` with `; rm -rf /` in binary path: allowlist regex blocks injection.
+- `cortex hooks uninstall` removes Cortex block from both `post-commit` and `post-checkout` without touching other hook content.
+- Hook missing binary: exit 0 silently.
+
+---
+
+### Phase 0.11 — Honest Benchmarks (`worked/` Corpus)
+
+**Flaws closed**: #6 (dishonest savings claims), #68–#70 (inflated brevity stats)
+
+**Problem**
+Every entity read claims `~147.9k tokens saved` against a strawman baseline of "reading all 58 source files." The heuristic is `files.length × 1200` — not validated against any real workload. On sessions where the index costs more than ad-hoc greps, the savings display is actively misleading.
+
+**What graphify does**:
+Ships a `worked/` folder with real benchmarks:
+
+| Corpus | Files | Reduction |
+|--------|-------|-----------|
+| Karpathy repos + papers + images | 52 | 71.5× |
+| graphify source + Transformer paper | 4 | 5.4× |
+| httpx (synthetic Python library) | 6 | ~1× |
+
+They **admit when their tool doesn't help** (6 files → ~1× reduction). Each benchmark has: raw inputs, the exact prompt used, token counts for with/without, and a `review.md` with the agent's output quality comparison.
+
+**Implementation**
+- Create `worked/` directory with three real benchmarks:
+  - `worked/cortex-self/` — Cortex ingested on its own source; actual token count of `cortex read` output vs `wc -c` of all source files.
+  - `worked/small-project/` — a 5-file project; show honestly that Cortex adds overhead here.
+  - `worked/large-project/` — a 200+ file project where the index pays off.
+- Each benchmark contains: `inputs/` (source files), `cortex-output.txt` (actual `cortex read` output), `baseline-tokens.txt` (actual token count of source files), `delta.md` (honest delta, including cases where delta is negative).
+- Replace `files.length × 1200` heuristic in `inject-knowledge.js` with: measure actual `index.length / 4` (index tokens) vs `sourceTokens` from a sampled real run, stored in `.knowledge/benchmarks.json`. If no benchmark exists, display nothing rather than a fabricated number.
+- `cortex bench` CLI command runs the measurement and writes `benchmarks.json`.
+
+**DoD**
+- `inject-knowledge.js` savings display is blank on first run (no fabricated number).
+- After `cortex bench`, savings display shows a real measured number with `(measured)` suffix.
+- `worked/` folder is committed to the Cortex repo.
+- `worked/small-project/delta.md` shows "Cortex adds ~800 tokens overhead on a 5-file project."
+
+---
+
+### Phase 0.12 — `cortex repair`: Backup / Restore & Git-Friendly Output
+
+**Flaws closed**: #96 (lose `state.json` → lose everything; `.knowledge/` gitignored by default)
+
+**Problem**
+`.knowledge/` is gitignored by default. There is no backup/restore path. Losing `state.json` means re-running full ingest.
+
+**What graphify does**:
+- `graph.json` is the canonical store — **designed to be committed**. It's versionable, diffable, and mergeable via `graphify merge-graphs`.
+- `GRAPH_REPORT.md` is human-readable — reviewers can read it in GitHub PRs.
+- `cache/` is the only thing typically gitignored.
+- `graphify hook install` writes `post-commit` + `post-checkout` git hooks that auto-rebuild on commit/checkout.
+- `graphify clone <github-url>` clones repos to `~/.graphify/repos/` for cross-repo work.
+
+**Implementation**
+- Make `.knowledge/state.json` commit-friendly:
+  - Remove it from `.gitignore` by default (opt-in gitignore via `cortex init --private`).
+  - Add `cortex export` command: produces `cortex-knowledge.json` (pretty-printed, git-diff-friendly, sorted keys).
+  - Add `cortex import cortex-knowledge.json` command: restores from export.
+- `cortex repair` command:
+  - Tries: load `state.json` → if corrupt, try `state.json.bak` → if missing, try last `git show HEAD:.knowledge/state.json`.
+  - Writes repaired state and prints what was recovered.
+- Rolling backup: before every `StateManager` write, atomically copy current `state.json` to `state.json.bak`.
+- `KNOWLEDGE_REPORT.md` auto-generated after every sync: human-readable entity/concept/relation summary, suitable for PR review.
+- **`cortex merge-knowledge <fileA> <fileB> [--output merged.json]`** (mirrors `graphify merge-graphs`):
+  - Loads two exported `cortex-knowledge.json` files.
+  - Merges entities by ID: on conflict, keeps the entity with the higher `pageRank` score; appends non-conflicting entities from both.
+  - Deduplication pass (Phase 0.6 pipeline) runs over the merged set before writing output.
+  - Use case: merging knowledge from two branches, two microservices, or two teammates' exports.
+- **`cortex clone <github-url>` / cross-repo mode** (mirrors `graphify clone`):
+  - Clones target repo to `~/.cortex/repos/<owner>/<repo>/` (shallow clone, depth 1).
+  - Runs `cortex sync` in the cloned repo, produces `.knowledge/state.json` there.
+  - `cortex_find` and `build_context_pack` accept `--repo <owner/repo>` flag to query a cross-repo knowledge base.
+  - Use case: "what does the auth service do?" without switching workspace.
+- Document: "commit `.knowledge/` to your repo; only gitignore `.knowledge/cache/`."
+
+**DoD**
+- Corrupt `state.json`: `cortex repair` restores from backup without data loss.
+- `cortex export` + `cortex import`: round-trips with zero diff on entity count or names.
+- `cortex merge-knowledge repoA.json repoB.json`: output contains all entities from both, deduped, no duplicates.
+- `cortex clone https://github.com/example/repo`: produces a queryable knowledge base in `~/.cortex/repos/example/repo/`.
+- `KNOWLEDGE_REPORT.md` present in `.knowledge/` after `cortex sync`.
+- `.gitignore` template: only excludes `.knowledge/cache/`, not `.knowledge/state.json`.
+
+---
+
+### Phase 0.13 — Multi-Language Tree-sitter Extractors (25 Languages, Per-Language Test Fixtures)
+
+**Flaws closed**: #83 (TS extractor broken for classes; other languages untested)
+
+**Problem**
+The TypeScript skeleton extractor strips class method signatures and keeps body locals. No other language extractor has parity tests. Contributors have no fixture-based workflow for adding or fixing a language.
+
+**What graphify does** (`extract.py`, 7,810 lines):
+- 25 `tree-sitter` language extractors registered in `extract.py:1020-1314`.
+- Each language has its own adapter handling that language's node-type quirks:
+  - `tree_sitter_kotlin` — identifier-node quirks documented inline.
+  - `tree_sitter_swift` — distinct adapter.
+  - `tree_sitter_c_sharp`, `tree_sitter_cpp` — distinct adapters.
+  - etc.
+- Each language has a corresponding test fixture in `tests/fixtures/<lang>/` — a real source file + expected `{nodes, edges}` JSON output. Adding a new language = add one source fixture + one expected output + one test that diffs them.
+
+**Implementation**
+- Fix TypeScript tree-sitter adapter (`src/extract/typescript.ts`):
+  - Walk `class_declaration` → enumerate `method_definition` children → emit each as a node with `type: "method"`.
+  - Walk `type_alias_declaration` → emit as `type: "typeAlias"`.
+  - Exclude `statement_block` children from skeleton (method bodies).
+  - Fix: `interface_declaration` children (`method_signature`, `property_signature`) emitted correctly.
+- Add per-language fixture tests:
+  - `tests/fixtures/typescript/sample.ts` + `tests/fixtures/typescript/expected.json`.
+  - **v1 target (10 languages)**: TypeScript, JavaScript, Python, Go, Rust, Java, C#, C++, Kotlin, Swift.
+  - **Full target (25 languages matching graphify)**: v1 10 + Ruby, PHP, Scala, Haskell, Elixir, Clojure, Lua, R, Julia, Dart, Zig, OCaml, Nim, V, Gleam. Each added by a contributor using the fixture workflow.
+  - Test: `extractSkeleton(source, lang)` JSON-diffs against `expected.json`. Any regression fails CI.
+- Document contributor guide: "to add language X, add `src/extract/<lang>.ts`, a fixture in `tests/fixtures/<lang>/`, and register in `src/extract/registry.ts`." This is the only required step — the fixture test is the spec.
+
+**DoD**
+- `source({filePath: "src/core/soul.ts"})`: returns all class method signatures, all type aliases, no body-local variables.
+- Fixture test suite: all 10 v1 languages pass.
+- CI fails if any fixture diverges from expected output.
+- Contributor guide present in `CONTRIBUTING.md`; adding a new language requires only 3 files (adapter, fixture, expected).
+
+---
+
+### Phase 0.14 — Multi-Backend LLM Abstraction (8 Backends Including Claude CLI Subscription Path)
+
+**Flaws closed**: no direct flaw number — fills missing capability that blocks enterprise and BYO-model customers
+
+**Problem**
+Cortex requires API keys for every LLM call. No path exists for users who already have a Claude Code subscription to use their existing access. No path for AWS Bedrock (IAM auth), Ollama (local model), or other backends enterprise customers have approved.
+
+**What graphify does** (`llm.py`, 1,111 lines):
+8 backends abstracted behind a single `call_llm(prompt, model, **kwargs)` interface:
+1. OpenAI (any OpenAI-compatible endpoint — works for Azure OpenAI, local vLLM, etc.)
+2. Anthropic Claude (API key)
+3. **Claude CLI subscription path** (`_call_claude_cli`) — routes through the user's existing `claude` CLI binary using their Claude Code / claude.ai subscription. Zero API key required.
+4. Gemini
+5. AWS Bedrock (uses IAM role — no API key, works in EC2/ECS/Lambda with instance profile)
+6. Kimi
+7. Ollama (local models, zero cloud dependency)
+8. DeepSeek
+
+Plus:
+- `_extract_with_adaptive_retry`: detects `context_length_exceeded` errors, halves chunk size, retries automatically.
+- `_pack_chunks_by_tokens`: token-aware chunking so large files are split at token boundaries, not line boundaries.
+- `ProcessPoolExecutor` for parallel multi-file extraction.
+
+**Implementation**
+- Create `src/llm/backends/` directory with one file per backend (all 8):
+  - `anthropic.ts` (existing — refactor into this pattern)
+  - `openai.ts` (OpenAI-compatible endpoint: works for Azure OpenAI, local vLLM, etc.)
+  - `claudeCli.ts` — spawn `claude -p "<prompt>"` via `execa`, parse stdout. Uses user's existing Claude Code / claude.ai subscription. Zero API key required.
+  - `bedrock.ts` — AWS SDK v3 `@aws-sdk/client-bedrock-runtime`, uses `fromNodeProviderChain()` (IAM instance profile, ECS task role, Lambda execution role — no API key).
+  - `gemini.ts` — Google Generative AI SDK (`@google/generative-ai`), `GEMINI_API_KEY` env var.
+  - `kimi.ts` — Moonshot AI HTTP API (`https://api.moonshot.cn/v1`), `KIMI_API_KEY` env var; OpenAI-compatible schema so adapter is thin.
+  - `deepseek.ts` — DeepSeek API (`https://api.deepseek.com/v1`), `DEEPSEEK_API_KEY` env var; OpenAI-compatible schema.
+  - `ollama.ts` — HTTP to `http://localhost:11434/api/generate`. Zero cloud dependency, fully offline.
+- `src/llm/index.ts`: `callLlm(prompt, config: LlmConfig)` dispatches to correct backend.
+- `LlmConfig` type: `{backend: "anthropic" | "claude-cli" | "openai" | "bedrock" | "gemini" | "kimi" | "deepseek" | "ollama", model?: string, endpoint?: string, apiKey?: string}`.
+- `adaptiveRetry(fn, maxAttempts=3)`: catch `context_length_exceeded` / `max_tokens` / `400 context window` errors, halve chunk size, retry. Mirrors graphify's `_extract_with_adaptive_retry`.
+- `packChunksByTokens(text, maxTokens)`: split at token boundaries using `tiktoken` for OpenAI/DeepSeek/Kimi models, character-estimate (`chars / 3.5`) for Anthropic. Mirrors graphify's `_pack_chunks_by_tokens`.
+- **Parallel multi-file extraction** via Node.js `worker_threads` (mirrors graphify's `ProcessPoolExecutor`):
+  - `src/llm/pool.ts` — `WorkerPool` class, configurable concurrency (default: `os.cpus().length / 2`).
+  - `cortex sync` submits each file's extraction as a worker task; results collected via `Promise.all`.
+  - Worker receives: `{filePath, llmConfig, chunk}` → returns `{entities, relations}`.
+- `cortex init` wizard: asks user which backend they have, writes `llmBackend` to `cortex.config.json`.
+- Document: "Claude Code users: set `llmBackend: 'claude-cli'` and pay $0 for Cortex syncs."
+
+**DoD**
+- `cortex sync` with `llmBackend: "claude-cli"` uses the local `claude` binary without an API key.
+- `cortex sync` with `llmBackend: "bedrock"` uses IAM role from environment without an API key.
+- `cortex sync` with `llmBackend: "ollama"` calls `http://localhost:11434` — works fully offline.
+- `cortex sync` with `llmBackend: "gemini"` / `"kimi"` / `"deepseek"` calls the correct endpoint with the correct `Authorization` header.
+- Adaptive retry: a mock that returns `context_length_exceeded` on the first call succeeds on second call with halved chunk.
+- Parallel extraction: syncing a 50-file project with 4 workers completes faster than sequential (measured in test).
+- All 8 backends have at least one mock-based integration test covering happy path + auth-error path.
+
+---
+
+### Phase 0 — Master DoD & Cross-References
+
+**Phase 0 is complete when:**
+- All 14 subphases have 0 failing tests.
+- `npm test` reports pass on all 14 new test suites.
+- `cortex doctor` exits 0 on the Cortex repo itself.
+- `source({filePath: "C:/Windows/System32/drivers/etc/hosts"})` → `PathTraversalError` (the live-audit CVE is closed).
+- `save_concept({name: ""})` → `ValidationError`.
+- Two concurrent `cortex sync` processes: final `state.json` is valid JSON (no corruption).
+- `KNOWLEDGE_REPORT.md` exists in `.knowledge/` after any sync.
+- The `worked/` benchmarks folder is committed to the repo.
+
+**Phase 0 unlocks**: every Phase 1–189 is now safe to build. The security and data-integrity foundation is in place. Paying customers can be onboarded without CVE risk.
+
+**Cross-references**
+- Phase 6 (Active Guardrail): `validate.ts` from Phase 0.2 is its enforcement substrate — replace Phase 6's ad-hoc checks with `validate.ts` calls.
+- Phase 7 (Audit & Traceability): `cortex doctor` from Phase 0.7 is the self-audit CLI companion.
+- Phase 7.5 (Quality Governance): confidence labels from Phase 0.3 are the data quality primitive Phase 7.5 reports on.
+- Phase 13.7 (Smart Read Cache): replace skeleton-compression with graph-as-cache from Phase 0.4.
+- Phase 26 (RBAC + Air-Gap): `security.ts` from Phase 0.1 is the path-validation layer Phase 26's file-access controls build on.
+- Phase 29 (FinOps): `cortex bench` from Phase 0.11 provides the real token-count data Phase 29 needs to surface cost savings accurately.
 
 ---
 

@@ -1074,3 +1074,176 @@ These workflow flaws map to a small set of root causes:
 ---
 
 *Generated from live MCP tool invocations on branch `phase13.8`, 2026-05-22.*
+
+---
+
+## 📚 GRAPHIFY PATTERN SOLUTIONS — how each class of flaw is solved by design in graphify
+
+> Graphify is a comparable Python/PyPI knowledge graph tool (v0.8.15, YC S26). Deep read of its codebase (`security.py`, `validate.py`, `cache.py`, `dedup.py`, `watch.py`, `serve.py`, `diagnostics.py`) shows it fixes most of our 115 flaws **by architecture**, not by retrofit. Below maps our flaw categories to graphify's design decisions. These patterns are the input to **Phase 0** in `implementation_plan.md`.
+
+### 1. Security — `security.py` (fixes #51, #64, #74, #103)
+
+Graphify has a **dedicated 336-line `security.py`** that is the only entry point for any external input. No other module calls `open()` on a user-supplied path. Key mechanisms:
+
+- `validate_url()` — blocks SSRF including private RFC-1918 ranges, loopback, and NAT64 bypass (`::ffff:192.168.x.x`)
+- `_NoFileRedirectHandler` — custom HTTPHandler that raises on any redirect to `file://`, preventing redirect-based SSRF
+- `_ssrf_guarded_socket` — patches `socket.create_connection` to prevent TOCTOU race between DNS resolution and connection
+- `validate_graph_path(root, user_path)` — `Path.resolve()` then `Path.is_relative_to(root)`; raises `ValueError` on escape attempt
+- `check_graph_file_size_cap()` — 512 MiB hard cap before mmap/load to prevent memory bombs
+- `sanitize_label()`, `sanitize_metadata()` — strip HTML, truncate to 500 chars, recurse into nested dicts/lists
+
+**Our gap**: Cortex has no equivalent. Any `ingest` call with a crafted path can read `/etc/passwd` on Linux or `C:\Windows\System32\` on Windows (flaw #51). No fetch size cap means a 2 GB file OOMs the process (flaw #64 class).
+
+### 2. Schema Validation — `validate.py` (fixes #4, #72, phantom-entity class)
+
+Graphify defines `REQUIRED_NODE_FIELDS`, `REQUIRED_EDGE_FIELDS`, `VALID_FILE_TYPES`, `VALID_CONFIDENCES` as module-level constants. Every write path calls `validate_node()` / `validate_edge()` before the object is accepted. Edge validation includes referential integrity: source and target node IDs must exist in the current graph.
+
+- **Confidence labels** (`EXTRACTED` / `INFERRED` / `AMBIGUOUS`) are a required field on every edge. Phantom/hallucinated relations are forced into `AMBIGUOUS` — which callers can filter out at query time.
+
+**Our gap**: `save_concept` accepted an empty-string name live during this audit session (flaw #72). `ingest` produces entities with no file-type guard. No referential integrity check means broken edges persist silently (flaw #53, #54).
+
+### 3. Caching — `cache.py` (fixes #27 and the stale-skeleton class)
+
+Graphify's cache uses **SHA256 + stat-based fastpath** (file size + `mtime_ns`). Cache writes are atomic: write to a temp file, then `os.replace()` (rename-atomic on both POSIX and Windows). An `atexit` handler flushes pending entries. Windows long-path normalization (`\\?\` prefix) is applied automatically.
+
+The skeleton content is stored **inside the entity body** in the knowledge graph itself — not in a separate opaque cache file. This means the skeleton is:
+- versioned (git-trackable)
+- auditable (readable by `cortex doctor`)
+- invalidated automatically when the entity is updated
+
+**Our gap**: Our skeleton extractor strips TS class method signatures and type bodies (flaw #27). The "cache" is a parallel file that can drift from the source of truth with no detection mechanism.
+
+### 4. File Locking — `watch.py` (fixes #19)
+
+Graphify uses **OS-native `fcntl.LOCK_EX | LOCK_NB`** with the PID written to the lockfile. On Windows it falls back to a named mutex. Lock release calls `unlink` on cleanup. If a second process tries to acquire the lock and fails, it logs the PID of the holder and exits cleanly rather than proceeding with a race.
+
+**Our gap**: Cortex's state.json has no real exclusive lock. Two concurrent `ingest` calls write to the same file and corrupt it (flaw #19). The "lock" file is a marker file, not a kernel-enforced mutex.
+
+### 5. Deduplication — `dedup.py` (fixes #53, #54)
+
+Graphify runs a 5-stage deduplication pipeline on every graph load:
+1. Exact normalization (lowercase, strip punctuation)
+2. Entropy gate (discard trivially short strings)
+3. MinHash/LSH blocking (candidate pairs only, O(n) not O(n²))
+4. Jaro-Winkler verification (confirm similarity above threshold)
+5. Community boost (same-cluster nodes get higher merge confidence)
+6. Union-find merge (collapse duplicates into canonical node)
+
+**Our gap**: Cortex accumulates near-duplicate entities silently. Every re-ingest of a refactored file creates a parallel entity with a slightly different name. No deduplication pass runs at any point (flaws #53, #54).
+
+### 6. MCP Hot-Reload — `serve.py` (fixes #48)
+
+Graphify's MCP server uses **double-checked locking** to reload the in-memory graph when the backing file changes. The reload acquires a lock, checks if reload is still needed (another thread may have beaten it), reloads, and releases — without restarting the server process. IDF weights are recomputed after reload and cached.
+
+**Our gap**: After every `cortex sync`, the MCP server must be restarted to see new entities. In a live coding session this means manually stopping and restarting the server after every sync cycle (flaw #48).
+
+### 7. Search Ranking — `serve.py` IDF+BFS/DFS (fixes #28)
+
+Graphify's `_score_nodes()` is production-grade IR:
+- `idf[term] = log(N / df[term])` — computed once per graph load; common terms (`error`, `service`) get low weight, rare identifiers high weight.
+- Three-tier precedence: exact match → `1000 × IDF`; prefix match → `100 × IDF`; substring match → `1 × IDF`.
+- `_SOURCE_MATCH_BONUS = 0.5` — if the entity's `source_file` path contains the query term, its score is multiplied by `1.5` (50% boost).
+- `_pick_seeds()` score-gap threshold: if top score > 20× the next score, only the top result seeds BFS/DFS — prevents noise matches flooding the traversal.
+- Unicode-aware: `_strip_diacritics()` normalizes before comparison for international codebases.
+- BFS/DFS graph traversal from seeds — returns structurally related entities, not just keyword matches.
+
+**Our gap**: `cortex_find` returns flat substring-match results in insertion order. No IDF, no source-path bonus, no score-gap, no graph traversal. On a 100+ entity graph this produces noise (flaw #28 — grep ban unenforceable without a real substitute).
+
+### 8. Diagnostics — `diagnostics.py` (fixes #62, #98)
+
+Graphify's `diagnostics.py` (390 lines) runs structural readiness checks:
+- Edges referencing non-existent nodes (orphan edges).
+- **File-type → suspect-relation pairs**: e.g., a concept node receiving `calls` or `imports` edges is a symptom of LLM hallucination — concepts don't call code.
+- **Exact-duplicate edge detection** (`_exact_signature`): edges with identical `(source, target, relation)` triple counted and reported.
+- Edges with empty critical fields (`source`, `target`, `relation`, `confidence`, `source_file`).
+- Output: color-coded pass/fail per check with an actionable remediation line for each failure. `--json` flag for CI.
+
+**Our gap**: Cortex has no self-diagnostic. Silent corruption (flaw #62) and stale index drift go undetected until an agent produces a wrong answer (flaw #98). No way to detect LLM-hallucinated relation types on non-code entity nodes.
+
+### 9. Benchmark Honesty — `worked/` directory (fixes #6, #68-#70)
+
+Graphify ships a `worked/` folder with real benchmarks — exact prompts, token counts, agent output diffs. Critically, they **include cases where their tool doesn't help**:
+
+| Corpus | Files | Reduction |
+|--------|-------|-----------|
+| Karpathy repos + papers + images | 52 | 71.5× |
+| graphify source + Transformer paper | 4 | 5.4× |
+| httpx (synthetic Python library) | 6 | ~1× |
+
+The `~1×` row is the honest admission that graphify adds overhead on small projects. Each benchmark has raw inputs and a `review.md` so anyone can reproduce.
+
+**Our gap**: Cortex's brevity engine reports savings as `~Xk tokens saved` based on `files.length × 1200` heuristic, not measured against any real workload. On sessions where the index costs more than ad-hoc greps would, the savings display is actively misleading (flaws #6, #68-#70).
+
+### 10. Centralized Path Validation (fixes #51 structurally)
+
+Every path that enters any graphify module passes through `security.validate_graph_path(root, user_path)` before the file handle is opened. This is a structural guarantee — no parallel code path opens files without validation. New features inherit the protection automatically.
+
+**Our gap**: Cortex has multiple call sites that open files using user-supplied strings with no centralized guard. Adding path validation means auditing every call site individually, not adding one function.
+
+### 11. Backup / Restore / Git-Friendly Output (fixes #96)
+
+Graphify's `graph.json` is **designed to be committed**:
+- Versionable, diffable, mergeable via `graphify merge-graphs <A> <B>`.
+- `GRAPH_REPORT.md` is human-readable in GitHub PRs.
+- `cache/` is the only thing typically gitignored (not the main knowledge store).
+- `graphify hook install` writes **both `post-commit` and `post-checkout`** git hooks — knowledge base auto-rebuilds on commit and on branch switch. `post-checkout` checks `$3 == 1` (branch switch) vs `$3 == 0` (file restore) before triggering sync.
+- `graphify clone <github-url>` clones repos to `~/.graphify/repos/` for cross-repo knowledge queries without switching workspace.
+
+**Our gap**: `.knowledge/` is gitignored by default — lose `state.json` = lose everything, no recovery path. No merge-graphs equivalent. No post-checkout hook (flaw #96).
+
+### 12. Defensive Git Hooks (fixes #66-#71, #77)
+
+Graphify's `hooks.py` is defensive-by-default:
+- `_HOOK_MARKER` / `_HOOK_MARKER_END` comments wrap the inserted block — idempotent install, clean uninstall by line-deletion.
+- `_PYTHON_DETECT` shell function: tries `graphify` shebang → `python3` → `python` → Windows WSL/PowerShell fallback.
+- Allowlist regex on binary path: `*[!a-zA-Z0-9/_.@-]*)` → `GRAPHIFY_PYTHON=""` — prevents shell-metachar injection if PATH contains adversarial entries.
+- Skips during rebase/merge/cherry-pick by checking `.git/rebase-merge`, `MERGE_HEAD`, `CHERRY_PICK_HEAD`.
+- **Detached `nohup` background rebuild**: git commit returns in <100ms; rebuild runs async, logs to `~/.cache/graphify-rebuild.log`. (Concern documented in code: "full repo rebuilds can take hours; blocking post-commit stalls the shell.")
+- On failure: writes to log only, does not pollute working tree.
+
+**Our gap**: Cortex hooks fire synchronously (blocking git commit), use `execSync` with no timeout, have a shell-metachar injection vector in the binary path, don't skip during rebase/merge/cherry-pick, and don't install a `post-checkout` hook (flaws #66–#71, #77).
+
+### 13. Multi-Language Tree-sitter Extractors (fixes #83)
+
+Graphify's `extract.py` (7,810 lines) registers 25 tree-sitter language adapters (`extract.py:1020-1314`), each handling that language's AST node-type quirks (`tree_sitter_kotlin` identifier quirks, `tree_sitter_swift` adapter, etc.). Every language has a test fixture in `tests/fixtures/<lang>/` — a real source file + expected `{nodes, edges}` JSON. Adding a language = add one adapter + one fixture + one test.
+
+**Our gap**: The TypeScript extractor strips class method signatures but keeps body-local variables (flaw #83). No other language has a parity test. Contributors have no fixture-based workflow.
+
+### 14. Multi-Backend LLM Abstraction (missing capability)
+
+Graphify's `llm.py` (1,111 lines) abstracts 8 backends behind a single `call_llm()` interface:
+1. OpenAI (any OpenAI-compatible endpoint — Azure OpenAI, vLLM, etc.)
+2. Anthropic Claude (API key)
+3. **Claude CLI subscription path** — routes through the user's existing `claude` CLI binary; zero API key required.
+4. Gemini
+5. AWS Bedrock — IAM role auth, no API key, works in EC2/ECS/Lambda.
+6. Kimi (Moonshot AI)
+7. Ollama — fully offline, local models.
+8. DeepSeek
+
+Plus: `_extract_with_adaptive_retry` (halves chunk on context-length errors, retries), `_pack_chunks_by_tokens` (token-boundary splitting), `ProcessPoolExecutor` for parallel multi-file extraction.
+
+**Our gap**: Cortex requires API keys for every LLM call. No path for Claude Code subscription holders, Bedrock IAM users, or Ollama local deployments. No parallel extraction. Every file is synthesized sequentially (missing capability, enterprise blocker).
+
+---
+
+### Full pattern summary table (14 patterns → Phase 0 subphases)
+
+| Pattern | Graphify module | Flaws closed in Cortex | Phase 0 subphase |
+|---------|----------------|------------------------|-----------------|
+| `security.ts` (SSRF, path traversal, DNS rebinding TOCTOU, NAT64, 512 MiB cap, XSS) | `security.py` | #51, #64, #74, #103 | 0.1 |
+| `validate.ts` (schema + referential integrity on every write) | `validate.py` | #4, #72, phantom-entity class | 0.2 |
+| Confidence labels (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) required on every edge | `models.py` confidence enum | #42, #53, #54, #56 | 0.3 |
+| Graph-as-cache (skeleton in entity body, SHA256+stat fastpath, atomic write, frontmatter strip) | `cache.py` | #27, stale-cache class | 0.4 |
+| OS-native exclusive file lock (`fcntl`/named mutex, PID in lockfile, auto-release) | `watch.py` | #19 | 0.5 |
+| MinHash/LSH 5-stage deduplication pipeline | `dedup.py` | #53, #54 | 0.6 |
+| `cortex doctor` self-diagnostic (orphan edges, suspect-relation pairs, duplicate edges, empty fields) | `diagnostics.py` | #62, #98 | 0.7 |
+| MCP hot-reload with double-checked locking + IDF recompute | `serve.py` hot-reload | #48 | 0.8 |
+| IDF-weighted content search (`SOURCE_MATCH_BONUS=0.5`, score-gap, BFS/DFS) replaces grep ban | `serve.py:_score_nodes` | #28 | 0.9 |
+| Defensive git hooks (markers, allowlist regex, rebase skip, nohup, post-commit + post-checkout) | `hooks.py` | #66–#71, #77 | 0.10 |
+| Honest benchmarks (`worked/` with negative-ROI case, replace `files×1200` heuristic) | `worked/` convention | #6, #68, #69, #70 | 0.11 |
+| Backup/restore + `cortex merge-knowledge` + `cortex clone` + git-friendly `.knowledge/` | `graph.json` convention + hooks | #96 | 0.12 |
+| Multi-language tree-sitter extractors (v1=10, target=25), per-language fixtures | `extract.py` | #83 | 0.13 |
+| Multi-backend LLM (8 backends incl. Claude CLI + Bedrock IAM + Ollama), parallel Worker pool | `llm.py` | missing capability | 0.14 |
+
+**Implementation target**: Phase 0 in `implementation_plan.md` — ships before any paying customer touches production.
