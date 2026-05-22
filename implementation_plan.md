@@ -471,6 +471,41 @@ Combined with `source_file` being required on every node, a phantom entity is **
 - `cortex doctor` output shows count of `AMBIGUOUS` edges as a warning, not an error.
 - Migration script generates `confidence: "INFERRED"` for all existing edges, `confidence: "EXTRACTED"` only where the edge `sourceFile` field is populated.
 
+**Refinement: Per-Relation-Type Numeric Confidence Floors (from GitNexus)**
+
+GitNexus assigns a numeric `0–1` confidence value to every edge and enforces a minimum floor per relation type — weaker evidence types cannot produce the same confidence as strong structural signals. Cortex's enum system (EXTRACTED/INFERRED/AMBIGUOUS) captures the concept but loses the numeric granularity that lets agents auto-suppress low-confidence edges without a hardcoded threshold.
+
+Add a parallel numeric `weight: number` field alongside the enum `confidence`:
+
+```typescript
+// Per-relation confidence floors — if an LLM-produced weight is below the floor,
+// it is clamped up (or the edge is demoted to AMBIGUOUS).
+const CONFIDENCE_FLOORS: Record<string, number> = {
+  CALLS:       0.90,   // explicit call expression in AST → very high certainty
+  IMPORTS:     0.90,   // import/require statement → structural certainty
+  HAS_METHOD:  0.95,   // class member declaration → near-certain
+  INHERITS:    0.95,   // extends/implements clause → near-certain
+  ACCESSES:    0.80,   // field/property access → slightly noisier
+  DEPENDS_ON:  0.75,   // inferred logical dependency → more uncertain
+  RELATED_TO:  0.60,   // concept-level association → explicitly uncertain
+};
+
+function applyConfidenceFloor(relationType: string, weight: number): number {
+  return Math.max(weight, CONFIDENCE_FLOORS[relationType] ?? 0.60);
+}
+```
+
+- **Schema change**: `Relation` gains `weight: number` (0–1, required). Enum `confidence` is derived: `weight >= 0.9 → EXTRACTED; weight >= 0.55 → INFERRED; else AMBIGUOUS`.
+- **Query tools**: `minWeight` parameter (default `0.55`). `CONFIDENCE_FLOORS` is also exported and used by `build_context_pack` — relation types with floor < `minWeight` are pruned.
+- **`cortex doctor`**: reports edges whose `weight` is below their type's floor (signals the LLM under-estimated something structurally certain).
+- **Migration**: existing enum-only edges get synthetic weights: `EXTRACTED → 0.95`, `INFERRED → 0.70`, `AMBIGUOUS → 0.40`.
+
+**DoD extension**
+- Every written edge must have `weight: number` in `[0, 1]` — validator rejects missing or out-of-range values.
+- `build_context_pack` with `minWeight: 0.8` returns only CALLS/IMPORTS/HAS_METHOD/INHERITS edges (the high-floor types).
+- `cortex doctor` flags an edge whose `weight < CONFIDENCE_FLOORS[relationType]` as `⚠ weight below floor for type`.
+- `applyConfidenceFloor` unit tests: CALLS edge with weight 0.6 → clamped to 0.9; RELATED_TO edge with weight 0.5 → clamped to 0.6; unknown type → clamped to 0.6.
+
 ---
 
 ### Phase 0.4 — Graph-as-Cache: Replace Skeleton Compression with Structured Graph Storage
@@ -502,6 +537,64 @@ Combined with `source_file` being required on every node, a phantom entity is **
 - Frontmatter strip: for `.md` entity files, hash content below the `---` separator.
 - Windows path normalization: `path.resolve` + `path.normalize` applied once at ingest boundary.
 
+**Refinement: Content-Addressed Synthesis Cache (from GitNexus)**
+
+Phase 0.4's `SmartReadCache` uses a stat fastpath `(filePath, mtime_ns, size)` as the cache key. This is fast but file-path-dependent — the same file at a different path is a cache miss even if the content is identical. GitNexus adds a content-addressed layer: synthesis artifacts are keyed by SHA256 of the file content, so:
+- Moving a file doesn't invalidate the cache.
+- Two workspaces with a shared library (e.g., a monorepo package) reuse each other's synthesis cache.
+- CI agents (which checkout to a fresh path each run) can reuse a warm cache from a prior run if content hasn't changed.
+
+```typescript
+// src/core/contentCache.ts
+
+// Two-level cache: stat fastpath → content-hash lookup → cache miss.
+interface CacheEntry {
+  contentHash: string;     // SHA256 of file content
+  entities: Entity[];      // synthesis result for this file
+  relations: Relation[];
+  synthesizedAt: number;   // epoch ms — for TTL expiry
+}
+
+// Global content-addressed store: keyed by SHA256, not file path.
+const contentStore = new Map<string, CacheEntry>();
+
+async function getOrSynthesize(filePath: string, statKey: string): Promise<CacheEntry> {
+  // Fast path: if stat unchanged, return cached result directly (no hashing).
+  const byPath = pathCache.get(filePath);
+  if (byPath && byPath.statKey === statKey) return byPath.entry;
+
+  // Stat changed or new file: compute content hash.
+  const content = await fs.readFile(filePath);
+  const contentHash = crypto.createHash("sha256").update(content).digest("hex");
+
+  // Content-addressed lookup: same hash → same result, regardless of path.
+  const existing = contentStore.get(contentHash);
+  if (existing) {
+    pathCache.set(filePath, { statKey, entry: existing });
+    return existing;
+  }
+
+  // Cache miss: synthesize.
+  const result = await synthesize(content.toString(), filePath);
+  const entry: CacheEntry = { contentHash, ...result, synthesizedAt: Date.now() };
+  contentStore.set(contentHash, entry);
+  pathCache.set(filePath, { statKey, entry });
+  return entry;
+}
+```
+
+- **Persistence**: `contentStore` is serialized to `~/.cortex/content-cache.json` on process exit (via `atexit`-equivalent `process.on("exit")`). Loaded on startup. File mode `0o600`.
+- **TTL**: entries older than 30 days are evicted on load (`synthesizedAt < now - 30d`).
+- **Monorepo benefit**: workspace A and workspace B both depend on `shared/auth.ts` — only one LLM synthesis call for that file across all workspaces.
+- **CI benefit**: `~/.cortex/content-cache.json` cached as a CI artifact → warm cache on next CI run.
+- `CORTEX_CACHE_DIR` env var overrides the cache location (useful for CI cache path configuration).
+
+**DoD extension**
+- Moving `src/auth.ts` to `src/services/auth.ts` with identical content → cache HIT (no re-synthesis).
+- Two different file paths with identical content → second file uses first file's cache entry.
+- `~/.cortex/content-cache.json` exists after `cortex ingest`; re-running ingest with no file changes → zero LLM calls.
+- Entry older than 30 days → evicted on next startup; next ingest re-synthesizes.
+
 **Gap 3 addition — incremental file-list diffing (fixes flaw #10)**
 Graphify's `--update` mode diffs the current file list against the last-indexed list. Cortex's "58 source files baseline is frozen" (flaw #10) is exactly this missing capability.
 
@@ -522,6 +615,48 @@ Graphify's `--update` mode diffs the current file list against the last-indexed 
 - Deleting a source file and running `cortex ingest` marks its entity `[ORPHAN]`; `cortex doctor` surfaces it; `cortex ingest --prune` removes it cleanly (flaw #10 closed).
 - Adding a new source file and running `cortex ingest` creates its entity; `state.json:indexedFiles` is updated.
 - Renaming a file detected via MinHash similarity → `sourceFile` updated in place, no orphan+duplicate created.
+
+**Refinement: Bounded Retry with Full-Jitter Exponential Backoff (from GitNexus)**
+
+Currently any LLM call or file-write failure in Cortex propagates immediately as a thrown error. GitNexus uses a `withRetry` utility on all external I/O (LLM API calls, git commands, file writes) with full-jitter backoff — `delay = random() × min(cap, base × 2^attempt)`. Full jitter (rather than truncated or equal-jitter) prevents thundering-herd when multiple ingest workers retry simultaneously.
+
+```typescript
+interface RetryOpts {
+  maxAttempts?: number;   // default 3
+  baseDelayMs?: number;   // default 200
+  capDelayMs?: number;    // default 10_000
+  retryIf?: (err: unknown) => boolean;  // default: always retry (except AbortError)
+}
+
+async function withRetry<T>(fn: () => Promise<T>, opts: RetryOpts = {}): Promise<T> {
+  const { maxAttempts = 3, baseDelayMs = 200, capDelayMs = 10_000, retryIf } = opts;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isLast = attempt === maxAttempts - 1;
+      const shouldRetry = retryIf ? retryIf(err) : !(err instanceof AbortError);
+      if (isLast || !shouldRetry) throw err;
+      // Full-jitter: avoids correlated retry storms from parallel workers.
+      const delay = Math.random() * Math.min(capDelayMs, baseDelayMs * 2 ** attempt);
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+  throw new Error("unreachable");
+}
+```
+
+- Wrap in `src/utils/retry.ts` — imported by LLM clients, git runner, and file writers.
+- **LLM calls**: wrap `callLlm()` in `withRetry` with `retryIf: (e) => isRateLimitError(e) || isNetworkError(e)`. Rate-limit responses (HTTP 429) get 3 attempts with backoff; auth errors (HTTP 401) throw immediately.
+- **`fs.rename` (state.json writes)**: wrap in `withRetry` with `retryIf: (e) => e.code === 'EBUSY' || e.code === 'EPERM'` — handles Windows file-lock contention.
+- **git commands**: wrap `execa('git', ...)` in `withRetry` with `retryIf: (e) => e.exitCode !== 128` (exit 128 = fatal git error, no retry; other failures may be transient).
+- `CORTEX_MAX_RETRIES` env var overrides `maxAttempts` globally for debugging.
+
+**DoD extension**
+- `withRetry` unit tests: success on attempt 2 → 1 retry + correct result; always-failing fn → throws after `maxAttempts`; `retryIf: () => false` → throws on first error without retry.
+- Full-jitter: two parallel `withRetry` calls with same fn → delays differ by >10ms in >80% of simulation runs (statistical test).
+- LLM call on rate-limit (mock HTTP 429 twice, then 200) → succeeds on 3rd attempt.
+- `EBUSY` on `fs.rename` (mock) → retried; `ENOENT` → throws immediately (not retried).
 
 ---
 
@@ -836,6 +971,56 @@ def _maybe_reload() -> None:
 - 10 concurrent tool calls during reload: exactly one reload executes, others wait and then use the new state.
 - Reload failure (corrupted `state.json`): tool calls return results from previous good state, not a crash.
 
+**Refinement: Stdout Sentinel — AsyncLocalStorage-Tagged MCP Writes (from GitNexus)**
+
+MCP stdio transport requires that `process.stdout` contain **only** JSON-RPC frames. A single stray `console.log` from any imported module corrupts the protocol silently — the client receives mangled JSON and disconnects. This is the highest-priority correctness gap in Cortex's MCP server; it's invisible until it happens in production.
+
+GitNexus solves this at the protocol level with AsyncLocalStorage: every legitimate MCP write is tagged, and an interceptor at the process level redirects any untagged write to stderr.
+
+```typescript
+import { AsyncLocalStorage } from "async_hooks";
+
+// Shared context — set to true inside MCP write calls, false everywhere else.
+const mcpWriteContext = new AsyncLocalStorage<boolean>();
+
+// Call this wrapper around every write the MCP transport makes to stdout.
+export function withMcpWrite<T>(fn: () => T): T {
+  return mcpWriteContext.run(true, fn);
+}
+
+// Install once, at the top of the MCP server entry point — before ANY other imports.
+// Must be the very first thing that runs, so no module can bypass it.
+export function installStdoutSentinel(): void {
+  const realWrite = process.stdout.write.bind(process.stdout);
+  (process.stdout as any).write = function(chunk: any, ...rest: any[]) {
+    if (mcpWriteContext.getStore() === true) {
+      // Legitimate MCP frame — pass through to real stdout.
+      return realWrite(chunk, ...rest);
+    }
+    // Stray write (console.log, native module banner, debug output, etc.)
+    // Redirect to stderr with a prefix so it's visible in server logs without corrupting the protocol.
+    process.stderr.write(`[mcp:stdout-redirect] ${chunk}`);
+    return true;
+  };
+}
+```
+
+**Where to call it:**
+- `installStdoutSentinel()` must be the **very first line** of `src/cli/index.ts` (before any `import`), so it intercepts writes from any dynamically loaded module.
+- The MCP transport's `send()` / `write()` methods must be wrapped: `withMcpWrite(() => transport.send(frame))`.
+- `console.log` in `src/mcp/server.ts` and all tool handlers must be converted to `console.error` — they will now correctly appear in stderr even from stdio clients.
+
+**What this fixes:**
+- Eliminates the entire class of "MCP client disconnects randomly with parse error" bugs.
+- Makes debug logging safe inside an MCP session — write to `console.error` / `process.stderr` without protocol risk.
+- Removes the current requirement to suppress all logging during MCP mode.
+
+**DoD extension**
+- `installStdoutSentinel()` is the first call in the MCP entry point, before any import.
+- Stray `console.log("debug")` from any imported module during MCP session → redirected to stderr with `[mcp:stdout-redirect]` prefix; client does not disconnect.
+- Tool handler that calls `console.log` → also redirected; tool response JSON arrives intact.
+- Integration test: mock MCP client reads 10 consecutive tool responses; assert all are valid JSON; inject a stray `process.stdout.write("oops\n")` mid-session; assert client still receives valid next frame.
+
 ---
 
 ### Phase 0.9 — IDF-Weighted Content Search (Replace Grep Ban)
@@ -886,6 +1071,49 @@ Graphify uses `rapidfuzz` so `cortex_find("AuthSrv")` returns `AuthService`. The
 - **Hub-aware traversal**: `cortex_find("config")` on a repo where `ConfigLoader` has 200 edges does not expand `ConfigLoader` unless it is the seed — BFS returns its neighbors without recursing into all 200 edges.
 - **Context filter**: `cortex_find("what calls AuthService")` traverses only `calls` relation edges.
 - `CLAUDE.md` instruction updated: "use `cortex_search_source` instead of `grep`."
+
+**Refinement: Progressive Degradation Flag (from GitNexus)**
+
+GitNexus exposes an `ftsAvailable: boolean` flag in every search response. If BM25/FTS is unavailable (index not built, SQLite extension missing), the system falls back to semantic-only search and advertises that gracefully instead of erroring. Cortex's `cortex_search_source` has no equivalent — it currently throws when ripgrep is unavailable.
+
+Add `searchMode` to every search response and implement two-tier fallback:
+
+```typescript
+type SearchMode = "bm25+semantic" | "semantic-only" | "entity-only";
+
+interface SearchResponse {
+  results: SearchResult[];
+  searchMode: SearchMode;    // always present — agents can branch on this
+  warning?: string;          // set when degraded, e.g. "ripgrep unavailable, semantic-only"
+}
+
+async function cortexSearch(query: string, opts: SearchOpts): Promise<SearchResponse> {
+  let ftsAvailable = true;
+  let ftsResults: SearchResult[] = [];
+  try {
+    ftsResults = await ripgrepSearch(query, opts);
+  } catch {
+    ftsAvailable = false;
+  }
+
+  const semanticResults = await idfEntitySearch(query, opts);
+
+  if (!ftsAvailable) {
+    return { results: semanticResults, searchMode: "semantic-only", warning: "ripgrep unavailable — falling back to entity index search" };
+  }
+  return { results: mergeAndDedup(ftsResults, semanticResults), searchMode: "bm25+semantic" };
+}
+```
+
+- `cortex doctor` check [N]: "ripgrep available" — pass/fail with install instructions.
+- `cortex_find` and `cortex_search_source` both return `searchMode` — agents can prompt the user to install ripgrep if `semantic-only`.
+- `CORTEX_DISABLE_FTS=1` env var forces `semantic-only` mode (useful in constrained CI environments).
+
+**DoD extension**
+- ripgrep not on PATH → search returns results with `searchMode: "semantic-only"` + warning; no throw.
+- `CORTEX_DISABLE_FTS=1` → `ftsAvailable` treated as false regardless of ripgrep presence.
+- `cortex doctor` reports ripgrep status as a dedicated check.
+- Agent receiving `searchMode: "semantic-only"` must surface the warning to the user (test via mock MCP client asserting warning is not suppressed).
 
 ---
 
@@ -1117,6 +1345,51 @@ export async function ingestScip(dumpPath: string, state: State): Promise<Ingest
 - Unresolvable symbol → edge kept with `confidence: "AMBIGUOUS"`, not dropped.
 - SCIP ingest: given a `dump.scip.json` with 50 documents, `cortex sync --scip dump.scip.json` produces 50 entities with `meta.source: "scip"`.
 - SCIP edges have higher average relation accuracy than tree-sitter edges for the same codebase (verified on test fixture).
+
+**Refinement: LanguageProvider Interface — Zero-Branching Multi-Language Extensibility (from GitNexus)**
+
+The current plan adds per-language adapters but does not enforce a shared interface — the shared code will accumulate `if (lang === "typescript") { ... } else if (lang === "python") { ... }` branches over time. GitNexus avoids this with a `LanguageProvider` interface: each language is a self-contained module; the pipeline dispatches through the interface with zero branching.
+
+```typescript
+// src/extract/LanguageProvider.ts
+export interface LanguageProvider {
+  readonly language: string;                    // e.g. "typescript", "python"
+  readonly extensions: readonly string[];       // e.g. [".ts", ".tsx"]
+
+  // Return the tree-sitter parser for this language.
+  getParser(): Parser;
+
+  // Extract entities and relations from a parsed tree.
+  extract(tree: Parser.Tree, source: string, filePath: string): ExtractionResult;
+
+  // (Optional) resolve cross-file references after all files are extracted.
+  resolveSymbols?(table: SymbolTable): void;
+}
+
+// src/extract/registry.ts — the only place languages are registered
+const PROVIDERS: LanguageProvider[] = [
+  new TypeScriptProvider(),
+  new PythonProvider(),
+  new GoProvider(),
+  new RustProvider(),
+  // Adding a new language = adding one line here + one new file. No other file changes.
+];
+
+export function getProvider(filePath: string): LanguageProvider | null {
+  const ext = path.extname(filePath).toLowerCase();
+  return PROVIDERS.find(p => p.extensions.includes(ext)) ?? null;
+}
+```
+
+- **`src/extract/<lang>.ts`**: one file per language, implements `LanguageProvider`. No branching in shared code.
+- **`src/extract/pipeline.ts`**: calls `getProvider(filePath)` → `provider.extract(tree, source, filePath)`. No language-specific logic here.
+- **Adding a language**: create `src/extract/<lang>.ts`, add to `PROVIDERS` array. The fixture test framework (3-file rule from above) enforces coverage automatically.
+- The `resolveSymbols?` optional method lets languages that need cross-file resolution (TypeScript path aliases, Go package imports) participate in the post-extraction pass without modifying the shared resolver.
+
+**DoD extension**
+- All 10 v1 language adapters implement `LanguageProvider` — TypeScript `implements` keyword enforced.
+- `pipeline.ts` contains zero `if (lang === ...)` conditionals.
+- Adding a mock 11th language (`MockProvider`) to the registry: fixture test passes, no other file changes required.
 
 ---
 
@@ -1352,6 +1625,85 @@ The auto-config writer injects the `--project` arg using IDE-specific workspace 
 - Hot-reload from Phase 0.8 applies unchanged.
 - `mcp` ecosystem dep stays in `dependencies` (not optional).
 
+**Refinement: Auto-Detecting Transport Framing (from GitNexus's `CompatibleStdioServerTransport`)**
+
+Different MCP clients use different framing conventions. Some (Claude Desktop, older clients) use content-length headers: `Content-Length: 123\r\n\r\n{...}`. Others (newer clients, Cursor v1.x) send newline-delimited JSON: `{...}\n`. The standard MCP SDK only supports one; clients using the other framing silently fail with parse errors.
+
+GitNexus solves this by peeking at the first byte of the read buffer and auto-selecting:
+
+```typescript
+export class CompatibleStdioServerTransport extends StdioServerTransport {
+  private framingDetected: "content-length" | "newline" | null = null;
+  private readBuffer: Buffer = Buffer.alloc(0);
+
+  protected detectFraming(): "content-length" | "newline" | null {
+    if (this.readBuffer.length === 0) return null;
+    const firstByte = this.readBuffer[0];
+    // Newline-framed JSON starts with '{' (0x7b)
+    if (firstByte === 0x7b) return "newline";
+    // Content-length framed starts with 'C' from "Content-Length"
+    if (this.readBuffer.slice(0, 14).toString("ascii").startsWith("Content-Length")) return "content-length";
+    return null;
+  }
+
+  protected parseNextMessage(): object | null {
+    if (!this.framingDetected) {
+      this.framingDetected = this.detectFraming();
+    }
+    if (this.framingDetected === "newline") return this.parseNewlineFrame();
+    if (this.framingDetected === "content-length") return this.parseContentLengthFrame();
+    return null;
+  }
+}
+```
+
+- Replace `StdioServerTransport` with `CompatibleStdioServerTransport` in `src/mcp/server.ts`.
+- Zero config — works with any MCP client regardless of framing convention.
+- After detecting framing on the first message, locks in the detected mode for the session (no per-message overhead).
+
+**Refinement: Dual Transport Server Factory (from GitNexus)**
+
+GitNexus uses a single `createMcpServer(backend)` transport-agnostic factory. The entry point decides which transport to connect:
+
+```typescript
+// Transport-agnostic factory — same server, different wire protocols.
+export function createCortexMcpServer(
+  knowledgeManager: KnowledgeManager
+): McpServer {
+  const server = new McpServer({ name: "project-cortex", version: pkg.version });
+  registerAllTools(server, knowledgeManager);
+  registerAllResources(server, knowledgeManager);
+  registerAllPrompts(server, knowledgeManager);
+  return server;
+}
+
+// --- stdio entry (cortex serve --stdio) ---
+const server = createCortexMcpServer(km);
+await server.connect(new CompatibleStdioServerTransport(process.stdin, safeStdout));
+
+// --- HTTP entry (cortex serve --http --port=N) ---
+const server = createCortexMcpServer(km);
+const transport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: () => randomUUID(),
+  sessionTtlMs: 30 * 60 * 1000,        // 30-min session TTL
+  cleanupIntervalMs: 5 * 60 * 1000,     // 5-min cleanup sweep
+});
+await server.connect(transport);
+const app = express();
+app.post("/mcp", transport.requestHandler);
+app.listen(port);
+```
+
+- The factory is tested once; transport bugs are isolated to transport code.
+- HTTP mode enables: multi-project roots over one persistent process, browser-based MCP Inspector testing, CI integration without stdio piping.
+- `cortex serve --http --port=3001 --session-ttl=1800` starts the HTTP server. `cortex doctor` includes a check that the HTTP port responds within timeout.
+
+**DoD extension (transport)**
+- `CompatibleStdioServerTransport` handles both content-length and newline framing in the same session binary.
+- Integration test: mock client sends newline-framed `initialize` → server responds with valid JSON-RPC; same test with content-length framing.
+- `cortex serve --http --port=3002` starts an HTTP server; `curl -X POST localhost:3002/mcp` with a valid `initialize` JSON body returns a valid MCP response.
+- HTTP and stdio transports use the same `createCortexMcpServer` factory — verified by asserting both return identical tool lists.
+
 #### Layer 3: Skill distribution with template compiler (universal fallback)
 
 **The problem with 19 hand-maintained skill files**: any change to the decision playbook (new command, renamed verb, new workflow rule) must be applied manually to every file. They will drift. Graphify already has this problem.
@@ -1412,6 +1764,52 @@ The skill content encodes the **full agent decision playbook**:
 
 Each platform's skill destination mirrors graphify's `_PLATFORM_CONFIG` table. Skill-only platforms (Aider, Codex, OpenCode, Trae, Pi, Hermes, Droid, Copilot CLI, Claw) get the template output; no MCP step.
 
+#### Layer 3.5: Next-Step Hints Baked into Every MCP Tool Response (from GitNexus)
+
+GitNexus appends a `---\n**Next:**` section to every tool response, guiding agents through a deterministic workflow without requiring any system prompt instructions. This is critical: an agent that calls `read_knowledge_index` and then immediately starts editing code skips the impact check — the hint nudges it to call `impact_analysis` next.
+
+```typescript
+const NEXT_STEP_HINTS: Partial<Record<CortexToolName, (args: unknown) => string>> = {
+  read_knowledge_index: () =>
+    `\n\n---\n**Next:** use \`cortex_find({query: "<entity-name>"})\` to locate a specific entity, or \`read_entity({name: "..."})\` to drill into one.`,
+  read_entity: (args: any) =>
+    `\n\n---\n**Next:** use \`impact_analysis({name: "${args?.name ?? "..."}"})\` to see blast radius before editing, or \`before_change\` prompt for the full pre-flight workflow.`,
+  impact_analysis: () =>
+    `\n\n---\n**Next:** Review hop-1 dependents first (will directly break). Use \`build_context_pack({entities: [...]})\` to fetch full context for all affected entities in one call.`,
+  cortex_find: (args: any) =>
+    `\n\n---\n**Next:** use \`read_entity({name: "<match>"})\` to read the full entity page, or \`impact_analysis({name: "<match>"})\` to see dependents.`,
+  build_context_pack: () =>
+    `\n\n---\n**Next:** you now have full context — proceed with the implementation. Call \`save_synthesis\` after synthesis is complete to persist new entities.`,
+  ingest: () =>
+    `\n\n---\n**Next:** use \`read_knowledge_index\` to see the updated entity index.`,
+};
+
+// Wrap every tool handler's return value:
+function withNextStepHint(toolName: CortexToolName, args: unknown, result: McpToolResult): McpToolResult {
+  const hintFn = NEXT_STEP_HINTS[toolName];
+  if (!hintFn || result.isError) return result;
+  return {
+    ...result,
+    content: result.content.map(c =>
+      c.type === "text" ? { ...c, text: c.text + hintFn(args) } : c
+    ),
+  };
+}
+```
+
+- Applied in the MCP tool dispatcher, not inside individual tool handlers — one wrapper, zero per-tool boilerplate.
+- Hints are **not** appended when `result.isError` — error responses should be clean.
+- Hints are suppressible via `CORTEX_NO_HINTS=1` env var for agents/contexts that manage their own workflow.
+- Hint content mirrors the `before_change` MCP prompt workflow already shipped in Phase 4.5 — they reinforce each other.
+- `cortex doctor` check: "Hints enabled" — verify `CORTEX_NO_HINTS` is not set in the CI environment (CI should suppress hints to keep output clean).
+
+**DoD**
+- `read_entity` response ends with a `---\n**Next:**` block referencing `impact_analysis` with the entity name pre-filled.
+- `impact_analysis` response ends with a hint to review hop-1 dependents first.
+- `isError: true` responses have no hint appended.
+- `CORTEX_NO_HINTS=1` suppresses all hints — verified by integration test asserting no `---\n**Next:**` in output.
+- Hints for all 6 tools above are covered in unit tests.
+
 #### Layer 4: MCP auto-config writer with expanded registry and smart command resolution
 
 This is what graphify chose not to build. Cortex builds it.
@@ -1441,6 +1839,7 @@ async function resolveCommand(projectDir: string, pinnedVersion?: string): Promi
 ```typescript
 export type McpConfigTarget = {
   ide: string;
+  autoWrite: boolean;  // true = Cortex can surgically inject the stanza; false = print snippet only
   scopes: {
     project?: string;
     user?: Record<NodeJS.Platform, string>;
@@ -1448,12 +1847,18 @@ export type McpConfigTarget = {
   schemaKey: "mcpServers" | "servers" | "context_servers" | "experimental.modelContextProtocolServers";
   format: "json" | "jsonc" | "xml";
   transport: "stdio" | "http" | "both";
-  stanza: (cmd: {command: string; args: string[]}) => object;
+  supportsCwd?: boolean;  // true = stanza supports a cwd/workingDirectory field
+  stanza: (cmd: {command: string; args: string[]}, projectDir?: string) => object;
 };
 
+// ── Auto-write IDEs (11): Cortex surgically injects the stanza via mergeJsoncFile ─────────────
+// ── Snippet-only IDEs (4): VS Code, Zed, JetBrains, Continue — config is deeply nested in a
+//    large shared settings file; auto-patching risks clobbering user edits. Print snippet + path.
 export const MCP_REGISTRY: McpConfigTarget[] = [
+  // ── AUTO-WRITE ──────────────────────────────────────────────────────────────────────────────
   {
     ide: "claude-desktop",
+    autoWrite: true,
     scopes: {
       user: {
         darwin: "~/Library/Application Support/Claude/claude_desktop_config.json",
@@ -1467,7 +1872,9 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     stanza: (cmd) => cmd,
   },
   {
+    // Claude Code CLI — ~/.claude/mcp.json (separate from the VS Code extension)
     ide: "claude-code",
+    autoWrite: true,
     scopes: { project: ".claude/mcp.json", user: { darwin: "~/.claude/mcp.json", win32: "~/.claude/mcp.json", linux: "~/.claude/mcp.json" } },
     schemaKey: "mcpServers",
     format: "json",
@@ -1475,7 +1882,25 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     stanza: (cmd) => cmd,
   },
   {
+    // Claude Code VS Code extension — ~/.claude/settings.json (distinct file, distinct key)
+    // Detected by: existence of ~/.claude/ directory; or $CLAUDECODE === "1" env
+    // Format: plain JSON (no comments), key = "mcpServers", supports "cwd" field
+    ide: "claude-code-extension",
+    autoWrite: true,
+    scopes: { user: { darwin: "~/.claude/settings.json", win32: "~/.claude/settings.json", linux: "~/.claude/settings.json" } },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    supportsCwd: true,
+    stanza: (cmd, projectDir) => ({
+      command: cmd.command,
+      args: cmd.args,
+      ...(projectDir ? { cwd: projectDir } : {}),
+    }),
+  },
+  {
     ide: "cursor",
+    autoWrite: true,
     scopes: { project: ".cursor/mcp.json" },
     schemaKey: "mcpServers",
     format: "json",
@@ -1483,15 +1908,8 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     stanza: (cmd) => ({ ...cmd, env: { CORTEX_PROJECT_ROOT: "${workspaceFolder}" } }),
   },
   {
-    ide: "vscode",
-    scopes: { project: ".vscode/mcp.json" },
-    schemaKey: "servers",        // VS Code uses a different top-level key
-    format: "jsonc",
-    transport: "both",
-    stanza: (cmd) => ({ type: "stdio", ...cmd }),  // VS Code wraps in a `type` field
-  },
-  {
     ide: "windsurf",
+    autoWrite: true,
     scopes: { user: { darwin: "~/.codeium/windsurf/mcp_config.json", win32: "~/.codeium/windsurf/mcp_config.json", linux: "~/.codeium/windsurf/mcp_config.json" } },
     schemaKey: "mcpServers",
     format: "json",
@@ -1499,15 +1917,8 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     stanza: (cmd) => cmd,
   },
   {
-    ide: "zed",
-    scopes: { user: { darwin: "~/Library/Application Support/Zed/settings.json", linux: "~/.config/zed/settings.json", win32: "%APPDATA%/Zed/settings.json" } },
-    schemaKey: "context_servers",
-    format: "json",
-    transport: "stdio",
-    stanza: (cmd) => ({ command: cmd.command, args: cmd.args }),
-  },
-  {
     ide: "antigravity",
+    autoWrite: true,
     scopes: { user: { darwin: "~/.gemini/antigravity/mcp_config.json", linux: "~/.gemini/antigravity/mcp_config.json", win32: "~/.gemini/antigravity/mcp_config.json" } },
     schemaKey: "mcpServers",
     format: "json",
@@ -1515,16 +1926,8 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     stanza: (cmd) => cmd,
   },
   {
-    ide: "continue",
-    scopes: { user: { darwin: "~/.continue/config.json", linux: "~/.continue/config.json", win32: "~/.continue/config.json" } },
-    // Continue uses experimental.modelContextProtocolServers (nested path), not top-level mcpServers
-    schemaKey: "experimental.modelContextProtocolServers",
-    format: "json",
-    transport: "stdio",
-    stanza: (cmd) => ({ name: "cortex", transport: "stdio", command: cmd.command, args: cmd.args }),
-  },
-  {
     ide: "kiro",
+    autoWrite: true,
     scopes: { project: ".kiro/mcp.json" },
     schemaKey: "mcpServers",
     format: "json",
@@ -1532,21 +1935,8 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     stanza: (cmd) => cmd,
   },
   {
-    ide: "jetbrains",
-    scopes: {
-      user: {
-        darwin: "~/Library/Application Support/JetBrains/MPS2024.3/options/mcp.xml",  // path varies per IDE version; probe glob
-        linux:  "~/.config/JetBrains/mps/options/mcp.xml",
-        win32:  "%APPDATA%/JetBrains/mps/options/mcp.xml",
-      },
-    },
-    schemaKey: "mcpServers",
-    format: "xml",       // JetBrains uses XML options format, not JSON
-    transport: "stdio",
-    stanza: (cmd) => cmd,   // mcpWriter handles XML serialization separately for this IDE
-  },
-  {
     ide: "cline",
+    autoWrite: true,
     scopes: { project: ".vscode/cline_mcp_settings.json" },
     schemaKey: "mcpServers",
     format: "json",
@@ -1555,14 +1945,80 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
   },
   {
     ide: "roo-code",
+    autoWrite: true,
     scopes: { project: ".vscode/roo_code_mcp_settings.json" },
     schemaKey: "mcpServers",
     format: "json",
     transport: "stdio",
     stanza: (cmd) => cmd,
   },
-  // Skill-only platforms (no MCP path): codex, opencode, aider, droid, trae,
-  // pi, hermes, copilot-cli, claw — they get Layer 3 only.
+  {
+    ide: "trae",
+    autoWrite: true,
+    scopes: { user: { darwin: "~/.trae/mcp_config.json", linux: "~/.trae/mcp_config.json", win32: "%APPDATA%/Trae/mcp_config.json" } },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "opencode",
+    autoWrite: true,
+    scopes: { user: { darwin: "~/.config/opencode/config.json", linux: "~/.config/opencode/config.json", win32: "%APPDATA%/opencode/config.json" } },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => ({ type: "local", command: [cmd.command, ...cmd.args] }),
+  },
+
+  // ── SNIPPET-ONLY (autoWrite: false) ──────────────────────────────────────────────────────────
+  // These configs live inside large shared settings files. Auto-patching risks clobbering
+  // unrelated user preferences. Print the stanza + exact path; let the user paste it.
+  {
+    ide: "vscode",
+    autoWrite: false,
+    scopes: { project: ".vscode/mcp.json" },
+    schemaKey: "servers",
+    format: "jsonc",
+    transport: "both",
+    stanza: (cmd) => ({ type: "stdio", ...cmd }),
+  },
+  {
+    ide: "zed",
+    autoWrite: false,
+    scopes: { user: { darwin: "~/Library/Application Support/Zed/settings.json", linux: "~/.config/zed/settings.json", win32: "%APPDATA%/Zed/settings.json" } },
+    schemaKey: "context_servers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => ({ command: cmd.command, args: cmd.args }),
+  },
+  {
+    ide: "continue",
+    autoWrite: false,
+    scopes: { user: { darwin: "~/.continue/config.json", linux: "~/.continue/config.json", win32: "~/.continue/config.json" } },
+    schemaKey: "experimental.modelContextProtocolServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => ({ name: "cortex", transport: "stdio", command: cmd.command, args: cmd.args }),
+  },
+  {
+    ide: "jetbrains",
+    autoWrite: false,
+    scopes: {
+      user: {
+        darwin: "~/Library/Application Support/JetBrains/MPS2024.3/options/mcp.xml",
+        linux:  "~/.config/JetBrains/mps/options/mcp.xml",
+        win32:  "%APPDATA%/JetBrains/mps/options/mcp.xml",
+      },
+    },
+    schemaKey: "mcpServers",
+    format: "xml",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+
+  // Skill-only platforms (no MCP path at all): codex, aider, droid, pi,
+  // hermes, copilot-cli, claw — they get Layer 3 only.
 ];
 ```
 
@@ -1572,42 +2028,105 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
 - `cortex uninstall` restores from `<config>.cortex.backup` if present.
 - No backup file accumulation in the user's IDE config dir.
 
-**`src/install/mcpWriter.ts` — updated atomic merge writer:**
+**`src/install/mcpWriter.ts` — JSONC-preserving surgical writer (replaces atomic overwrite):**
+
+The old approach (`JSON.parse → mutate → fs.rename`) overwrites the entire file, destroying any comments or formatting the user has. The new approach uses `jsonc-parser` (`parseTree` + `modify` + `applyEdits`) to surgically inject exactly one key while leaving everything else untouched — identical to GitNexus's `mergeJsoncFile`.
 
 ```typescript
+import { parseTree, modify, applyEdits, ParseError } from "jsonc-parser";
+
+// Detect existing file's indentation style so we match it on write.
+function detectIndentation(raw: string): string {
+  const match = raw.match(/^[ \t]+/m);
+  if (!match) return "  ";
+  return match[0].startsWith("\t") ? "\t" : match[0].slice(0, match[0].search(/[^ ]/)) || "  ";
+}
+
+// Idempotency: return true if the stanza is already present and identical.
+function stanzaAlreadyPresent(raw: string, keyPath: string[], stanzaJson: string): boolean {
+  try {
+    const parsed = JSON.parse(raw);  // jsonc-parser for JSONC files
+    let cursor: any = parsed;
+    for (const key of keyPath) cursor = cursor?.[key];
+    return JSON.stringify(cursor) === stanzaJson;
+  } catch { return false; }
+}
+
+// Surgically inject one key into a JSON/JSONC file without touching anything else.
+// Skips the file entirely if corrupt (parse errors) — never silently destroys user config.
+async function mergeJsoncFile(
+  filePath: string,
+  keyPath: string[],  // e.g. ["mcpServers", "cortex"]
+  value: object
+): Promise<"written" | "already-present" | "skipped-corrupt"> {
+  let raw = "";
+  if (await pathExists(filePath)) {
+    raw = await fs.readFile(filePath, "utf8");
+    const errors: ParseError[] = [];
+    parseTree(raw, errors);
+    if (errors.length > 0) {
+      console.warn(`[cortex] Skipping ${filePath}: parse errors detected. Fix manually.`);
+      return "skipped-corrupt";
+    }
+    if (stanzaAlreadyPresent(raw, keyPath, JSON.stringify(value))) return "already-present";
+    await fs.copyFile(filePath, `${filePath}.cortex.backup`);
+  }
+
+  const indent = raw ? detectIndentation(raw) : "  ";
+  const edits = modify(raw || "{}", keyPath, value, { formattingOptions: { tabSize: indent === "\t" ? 1 : indent.length, insertSpaces: indent !== "\t" } });
+  const updated = applyEdits(raw || "{}", edits);
+
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  if (opts.dryRun) {
+    console.log(`Would write to ${filePath}:\n${updated}`);
+    return "written";
+  }
+  await fs.writeFile(filePath, updated, { mode: 0o600, encoding: "utf8" });
+  return "written";
+}
+
+// Windows: prefer .cmd/.bat wrappers over bare binary names (shebangs not supported in cmd.exe).
+async function resolveCommandWin32(bin: string): Promise<string> {
+  for (const ext of [".cmd", ".bat", ""]) {
+    const candidate = `${bin}${ext}`;
+    try { execFileSync("where", [candidate], { stdio: "ignore" }); return candidate; } catch {}
+  }
+  return bin;
+}
+
 async function wireMcp(
   target: McpConfigTarget,
   scope: "project" | "user",
   opts: { dryRun: boolean; pinnedVersion?: string; projectDir: string }
 ) {
-  const configPath = resolveConfigPath(target, scope);
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
-
-  const cmd = await resolveCommand(opts.projectDir, opts.pinnedVersion);
-
-  let existing: any = {};
-  if (await pathExists(configPath)) {
-    const raw = await fs.readFile(configPath, "utf8");
-    existing = target.format === "jsonc" ? parseJsonc(raw) : JSON.parse(raw);
-    // Single rolling backup — no timestamp accumulation
-    await fs.copyFile(configPath, `${configPath}.cortex.backup`);
-  }
-
-  // Nested key support (e.g. "experimental.modelContextProtocolServers")
-  setNestedKey(existing, target.schemaKey, "cortex", target.stanza(cmd));
-
-  if (opts.dryRun) {
-    console.log(`Would write to ${configPath}:\n${JSON.stringify(existing, null, 2)}`);
+  if (!target.autoWrite) {
+    // Snippet-only: print stanza + path, do not touch file.
+    const cmd = await resolveCommand(opts.projectDir, opts.pinnedVersion);
+    const stanza = target.stanza(cmd, opts.projectDir);
+    console.log(`\n[${target.ide}] Paste into ${resolveConfigPath(target, scope)}:\n`);
+    console.log(JSON.stringify({ [target.schemaKey.split(".").pop()!]: { cortex: stanza } }, null, 2));
+    console.log(`\nFor a full example: cortex install --snippet --platform ${target.ide}\n`);
     return;
   }
 
-  const tmp = `${configPath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(existing, null, 2), { mode: 0o600 });
-  await fs.rename(tmp, configPath);
+  const configPath = resolveConfigPath(target, scope);
+  let cmd = await resolveCommand(opts.projectDir, opts.pinnedVersion);
+  if (process.platform === "win32") cmd = { ...cmd, command: await resolveCommandWin32(cmd.command) };
 
-  const verified = JSON.parse(await fs.readFile(configPath, "utf8"));
-  const stanza = getNestedKey(verified, target.schemaKey, "cortex");
-  if (!stanza) throw new Error(`MCP wiring verification failed for ${target.ide}`);
+  const stanza = target.stanza(cmd, target.supportsCwd ? opts.projectDir : undefined);
+  const keyPath = [...target.schemaKey.split("."), "cortex"];
+
+  const result = await mergeJsoncFile(configPath, keyPath, stanza);
+  if (result === "already-present") {
+    console.log(`[${target.ide}] Already wired — no change.`);
+  } else if (result === "skipped-corrupt") {
+    console.warn(`[${target.ide}] Config file has parse errors. Fix it, then re-run cortex install.`);
+  } else {
+    const verified = JSON.parse(await fs.readFile(configPath, "utf8"));
+    const written = getNestedKey(verified, target.schemaKey, "cortex");
+    if (!written) throw new Error(`MCP wiring verification failed for ${target.ide}`);
+    console.log(`[${target.ide}] Wired → ${configPath}`);
+  }
 }
 ```
 
@@ -1668,14 +2187,17 @@ function detectEnvironment(): "wsl" | "devcontainer" | "codespaces" | "native" {
 
 ```
 1. $CURSOR_IDE env var set → cursor
-2. $TERM_PROGRAM === "vscode" → vscode
-3. $CLAUDECODE === "1" → claude-code
-4. $WINDSURF_IDE → windsurf
-5. $ZED_TERM → zed
-6. $KIRO_IDE → kiro
-7. detect WSL/devcontainer/Codespaces → adjust --target automatically
-8. probe marker dirs: ~/.claude/ → claude-code, ~/.cursor/ → cursor, ~/.config/JetBrains/ → jetbrains
-9. fallback → print list, require --platform flag (no silent wrong guess)
+2. $TERM_PROGRAM === "vscode" → vscode (snippet-only)
+3. $CLAUDECODE === "1" AND ~/.claude/settings.json exists → claude-code-extension
+4. $CLAUDECODE === "1" → claude-code (CLI)
+5. $WINDSURF_IDE → windsurf
+6. $ZED_TERM → zed (snippet-only)
+7. $KIRO_IDE → kiro
+8. detect WSL/devcontainer/Codespaces → adjust --target automatically
+9. probe marker dirs: ~/.claude/settings.json → claude-code-extension,
+                      ~/.claude/ → claude-code, ~/.cursor/ → cursor,
+                      ~/.config/JetBrains/ → jetbrains (snippet-only)
+10. fallback → print list, require --platform flag (no silent wrong guess)
 ```
 
 Step 9 is a deliberate change from the original design: silent fallback is worse than an explicit error when detection is ambiguous. A wrong auto-detect wastes user trust. Better to ask.
@@ -1683,10 +2205,14 @@ Step 9 is a deliberate change from the original design: silent fallback is worse
 Persist the last-used platform in `~/.cortex/install.json` so repeat `cortex install` runs without re-prompting.
 
 **Safety guarantees:**
-- Never delete other `mcpServers` / `servers` / `context_servers` entries. Only touch the `cortex` key.
-- Single rolling backup per config file (no accumulation).
-- Atomic via `fs.rename`.
+- **Surgical injection** via `mergeJsoncFile` (jsonc-parser `modify` + `applyEdits`) — never overwrites the whole file. All other keys, all comments, all formatting are preserved.
+- **Idempotent** — if the `cortex` stanza already exists and is identical, the file is not touched at all.
+- **Corrupt-safe** — if the config file fails to parse, skip it and warn; never silently destroy it.
+- **Indentation-preserving** — `detectIndentation()` reads the existing file's tab/space style and matches it on write.
+- **Windows binary resolution** — prefers `.cmd`/`.bat` wrappers over bare binary (shebangs don't work in cmd.exe).
+- Single rolling backup per config file (`<config>.cortex.backup`, overwritten each install, no accumulation).
 - File mode `0o600`.
+- Snippet-only IDEs (`autoWrite: false`): print stanza + path. `cortex install --snippet --platform <ide>` for manual paste.
 - If IDE not in registry: log "MCP auto-config unavailable for <ide> — skill route only" and proceed with Layer 3 without error.
 
 #### Layer 5: `cortex doctor` integration (extended with install diagnostics)
@@ -1969,6 +2495,120 @@ jobs:
 - GitHub Release CI job uploads all 4 binaries.
 - `curl https://cortex.sh/install | sh` (stub script) downloads and installs the correct binary for the detected platform.
 
+**Refinement: Typed 12-Phase Ingest DAG — Compile-Time Pipeline Safety (from GitNexus)**
+
+GitNexus's ingest pipeline is a typed DAG where each phase declares explicit inputs/outputs. The pipeline validates its own topology at startup — if PhaseB depends on PhaseA but PhaseA isn't registered, the process crashes loudly rather than running silently incomplete. Cortex's current ingest is an unstructured sequence of imperative calls; adding a new step means knowing which other steps depend on it, which is a hidden coupling risk as the codebase grows.
+
+```typescript
+// src/ingest/pipeline.ts
+interface Phase<InputType, OutputType> {
+  name: string;
+  deps: string[];           // phases that must complete before this one
+  run: (input: InputType, ctx: PipelineContext) => Promise<OutputType>;
+}
+
+// Phase registry — each phase registered by name.
+// Pipeline validates at startup: all deps must be registered; no cycles.
+const PHASES: Phase<any, any>[] = [
+  { name: "scan",         deps: [],                    run: scanFiles },
+  { name: "filter",       deps: ["scan"],               run: filterSensitive },
+  { name: "hash",         deps: ["filter"],             run: hashFiles },
+  { name: "parse",        deps: ["hash"],               run: parseWithTreeSitter },
+  { name: "symbolResolve",deps: ["parse"],              run: resolveSymbols },
+  { name: "dedup",        deps: ["symbolResolve"],      run: dedupNodes },
+  { name: "embed",        deps: ["dedup"],              run: embedEntities },
+  { name: "llmSynth",     deps: ["embed"],              run: synthesizeWithLlm },
+  { name: "validate",     deps: ["llmSynth"],           run: validateEntities },
+  { name: "community",    deps: ["validate"],           run: detectCommunities },
+  { name: "write",        deps: ["community"],          run: writeState },
+  { name: "report",       deps: ["write"],              run: generateGraphReport },
+];
+
+function buildPipeline(phases: Phase<any, any>[]): () => Promise<void> {
+  // Topological sort — detect cycles at startup, not at runtime.
+  const sorted = topologicalSort(phases);
+  return async () => {
+    const timer = new PhaseTimer();   // Phase 9 PhaseTimer integrated here
+    const results: Record<string, any> = {};
+    for (const phase of sorted) {
+      results[phase.name] = await timer.time(phase.name, phase.run(results, ctx));
+    }
+    console.log("Ingest timings:", timer.report());
+  };
+}
+```
+
+- **Compile-time safety**: `Phase<InputType, OutputType>` generics mean the TypeScript compiler rejects any phase whose `run` function returns the wrong type.
+- **Startup validation**: `topologicalSort` throws a descriptive error if a dep is missing or a cycle exists — this surfaces during `cortex serve` startup, not mid-ingest.
+- **Parallelizable phases**: phases with no shared deps can be batched into `Promise.all` — e.g., `embed` and `scan` of the next file can run concurrently.
+- **Adding a phase**: add one entry to `PHASES`. The pipeline infers the execution order. No other file changes.
+- **`cortex ingest --phases report`**: skip to a named phase; prior phase outputs loaded from cache. Useful for regenerating `GRAPH_REPORT.md` without re-running LLM synthesis.
+
+**DoD extension**
+- `buildPipeline` with a missing dep throws a descriptive error at startup: `"Phase 'embed' depends on 'dedup' which is not registered"`.
+- `buildPipeline` with a cycle (`A → B → A`) throws: `"Cycle detected: A → B → A"`.
+- All 12 phases are registered; `cortex ingest` runs them in topological order.
+- `cortex ingest --phases report` runs only `write` + `report`, loading prior outputs from cache — integration test verifies LLM is not called.
+- `PhaseTimer.report()` is printed at end of every `cortex ingest` run.
+
+**Refinement: Shadow CI Harness — Parallel Old/New Code Path Validation (from GitNexus)**
+
+When Cortex migrates a synthesis engine (e.g., switching from direct LLM prompts to the typed DAG pipeline), how do we know the new path produces equivalent output? Running the old and new paths in parallel in CI and failing on divergence is the safest migration strategy — it proves correctness without requiring a full test suite rewrite.
+
+```typescript
+// src/test/shadow.ts
+interface ShadowResult<T> {
+  primary: T;
+  shadow: T;
+  diverged: boolean;
+  divergenceDetails?: string;
+}
+
+async function runShadow<T>(
+  primaryFn: () => Promise<T>,
+  shadowFn: () => Promise<T>,
+  compare: (a: T, b: T) => boolean,
+  opts: { failOnDivergence?: boolean } = {}
+): Promise<ShadowResult<T>> {
+  const [primaryResult, shadowResult] = await Promise.allSettled([primaryFn(), shadowFn()]);
+
+  if (primaryResult.status === "rejected") throw primaryResult.reason;
+
+  const primary = primaryResult.value;
+  const shadow = shadowResult.status === "fulfilled" ? shadowResult.value : null;
+  const diverged = shadow !== null && !compare(primary, shadow as T);
+
+  if (diverged && opts.failOnDivergence) {
+    throw new Error(`Shadow divergence: ${JSON.stringify({ primary, shadow }, null, 2)}`);
+  }
+
+  return { primary, shadow: shadow as T, diverged };
+}
+```
+
+**Usage pattern for engine migrations:**
+```typescript
+// During migration of synthesis engine: run old + new in parallel.
+// Old path always wins (primary); new path result is compared and logged.
+const result = await runShadow(
+  () => legacySynthesizeEntity(file),    // old path
+  () => dagSynthesizeEntity(file),       // new DAG path
+  (a, b) => entityEqual(a, b),
+  { failOnDivergence: process.env.CI === "true" }
+);
+// In CI: divergence = test failure. Locally: divergence = warning.
+```
+
+- Enabled via `CORTEX_SHADOW_MODE=1` env var during migrations. Disabled by default (zero overhead in production).
+- CI job: `CORTEX_SHADOW_MODE=1 npm test` — any divergence fails the build. The diverged outputs are diffed and logged for debugging.
+- Remove shadow harness once migration is validated — it's scaffolding, not permanent infrastructure.
+
+**DoD extension**
+- `runShadow` with matching functions → `diverged: false`, primary result returned.
+- `runShadow` with differing functions + `failOnDivergence: true` → throws with diff details.
+- Shadow function crash → `diverged: false` (primary result returned safely); crash logged to stderr.
+- Integration test: `CORTEX_SHADOW_MODE=1 cortex ingest` with legacy + new pipeline on a test fixture → zero divergence on clean repo.
+
 ---
 
 ### Phase 0 — Master DoD & Cross-References
@@ -2225,6 +2865,57 @@ A second ingestion route where the IDE's own model is the Librarian. The MCP ser
 **✅ Shipped — token-savings footer via Claude Code Stop hook.** The PreToolUse hook ([.claude/hooks/inject-knowledge.js](.claude/hooks/inject-knowledge.js)) now computes a token-savings estimate at injection time (source-file count from `git ls-files` × ~1200 tokens/file heuristic, minus the actual index size) and stashes it in a temp marker file keyed on PPID. A new Stop hook ([.claude/hooks/cortex-savings-footer.js](.claude/hooks/cortex-savings-footer.js)) — registered automatically by `cortex setup claude-code` — reads the marker after the agent's response, prints a one-line footer (`*Cortex: ~X.Xk tokens saved this session — used synthesized knowledge instead of scanning N source files.*`), then deletes the marker so the footer appears once per session, not per turn. This closes the gap left by the MCP-only savings footer: now even prompts that don't invoke a Cortex MCP tool (`code this feature`, `explain this code`) get a savings line appended after the response. Footer is Claude Code-specific because the Stop hook mechanism is Claude Code-specific; other IDEs continue to get the inline footer on MCP read tools only. [src/cli/setup.ts](src/cli/setup.ts) wires the registration and writes both scripts (with inline fallbacks `HOOK_SCRIPT_INLINE` and `STOP_HOOK_INLINE` for global npm installs without the `.claude/` template).
 
 **✅ Shipped — layered entity pages with domain-aware synthesis.** The Librarian now emits each entity's `description` as a multi-section markdown document (`## Role` / `## Interface` / `## Behavior` / `## Wiring`). The index renders only the `## Role` section (one line per entity, fast); the full layered body lives on the drill-down page returned by `read_entity`. Domain hints in [src/llm/prompts.ts](src/llm/prompts.ts) tune depth focus per file type — UI components get prop/interaction depth, backend services get request-response/idempotency depth, libraries get API-surface/edge-case depth. Writer in [src/knowledge/writer.ts](src/knowledge/writer.ts) detects layered descriptions via section-heading regex (`isLayeredDescription`) and extracts the Role section for the index (`extractRoleSection`); legacy flat descriptions still render via the original blockquote wrapper for backward compatibility. Net effect: read paths stay the same size; entity drill-downs get 2–3× richer. Also tightens the link-sweep mandate in the system prompt — under-linking was the most common Librarian quality regression, now framed as a mandatory pre-emit check covering imports, contexts, patterns, and reverse-deps.
+
+**Refinement: MCP Resource URIs for Lazy Context Loading (from GitNexus)**
+
+GitNexus exposes data not only as MCP tools but also as MCP _resources_ — addressable by URI, lazy-loaded only when the client subscribes. This matters because tool responses are always fetched eagerly; resources let the agent read large blobs (full cluster context, community graph) on demand without paying the token cost upfront.
+
+Add MCP resource registrations alongside the existing tools in `src/mcp/server.ts`:
+
+```typescript
+// Resources are lazy — client reads only what it needs, when it needs it.
+server.registerResource(
+  "cortex://project/knowledge-index",
+  "The full knowledge index (same as read_knowledge_index tool). Read this when you need a bird's-eye view of all entities.",
+  async () => fs.readFile(path.join(knowledgeDir, "index.md"), "utf8")
+);
+
+server.registerResource(
+  "cortex://project/graph-report",
+  "GRAPH_REPORT.md — confidence audit, isolated nodes, thin community warnings, growth delta.",
+  async () => fs.readFile(path.join(knowledgeDir, "GRAPH_REPORT.md"), "utf8")
+);
+
+server.registerResource(
+  "cortex://entity/{name}",
+  "Full entity page for a named entity. Equivalent to read_entity but addressable by URI.",
+  async (params) => {
+    const entity = state.entities.find(e => e.name === params.name);
+    return entity ? renderEntityPage(entity) : `Entity '${params.name}' not found`;
+  }
+);
+
+server.registerResource(
+  "cortex://community/{id}/context",
+  "Full entity listing for a Leiden community cluster. Lazy — only fetched when the agent explicitly addresses this URI.",
+  async (params) => {
+    const community = getCommunity(Number(params.id));
+    return community ? renderCommunityContext(community) : `Community ${params.id} not found`;
+  }
+);
+```
+
+- Resources are declared in the MCP `initialize` response (`capabilities.resources: { subscribe: false }`). Clients see them in their resource list; agents can `resources/read` any URI without a tool call.
+- Enables IDE integrations (like Claude Desktop's resources panel) to browse entities without writing tool-invocation prompts.
+- `cortex://entity/{name}` is the URI form of `read_entity` — both paths hit the same handler. URI form is preferred for agents that prefer declarative addressing over imperative tool calls.
+- `cortex://project/knowledge-index` is always up to date — reads the live `.knowledge/index.md` file at request time.
+
+**DoD extension**
+- MCP `initialize` response includes `capabilities.resources`.
+- `resources/list` returns all 4 resource URIs with descriptions.
+- `resources/read cortex://entity/AuthService` returns the same content as `read_entity({name:"AuthService"})`.
+- `resources/read cortex://entity/NonExistent` returns a 404-style error message without throwing.
+- `cortex doctor` check: MCP resources endpoint responds — verified via integration test.
 
 ---
 
@@ -3883,6 +4574,94 @@ The inverse of Phase 6's blast-radius propagation. Where Phase 6 reacts to an `a
 - ✅ **Pros**: Closes the loop with Phase 6. Together they form a full guardrail: Phase 9 informs the refactor, Phase 6 enforces it. The hypothetical-delete mode is especially valuable for code archaeology — "can I delete this old helper?" becomes a one-command query.
 - ❌ **Cons**: Graph quality depends on link-quality in synthesis. If the Librarian under-links, impact analysis under-reports. Mitigated by Phase 6's CURRENT CONTEXT injection, which already pushes the LLM to link aggressively.
 
+**Refinement: BFS Depth Limit + Timeout + StopReason (from GitNexus)**
+
+GitNexus's `impact_analysis` enforces two safety guards on graph traversal: a maximum hop depth _and_ a wall-clock timeout. Without these, a deeply connected "god entity" can cause BFS to run for seconds or minutes on large graphs. The result always carries a `stopReason` so the caller knows whether the report is complete.
+
+```typescript
+const DEFAULT_IMPACT_DEPTH = 5;
+const DEFAULT_IMPACT_TIMEOUT_MS = 5000;
+
+type StopReason = "completed" | "depthExceeded" | "budgetExhausted";
+
+interface ImpactResult {
+  entityName: string;
+  dependents: Array<{ name: string; hop: number; relationTypes: string[] }>;
+  stopReason: StopReason;
+  truncated: boolean;    // true if depth or timeout caused early exit
+  elapsedMs: number;
+}
+
+async function runImpactBfs(
+  rootName: string,
+  opts: { maxDepth?: number; timeoutMs?: number }
+): Promise<ImpactResult> {
+  const maxDepth = opts.maxDepth ?? DEFAULT_IMPACT_DEPTH;
+  const deadline = Date.now() + (opts.timeoutMs ?? DEFAULT_IMPACT_TIMEOUT_MS);
+  const visited = new Set<string>();
+  const queue: Array<{ name: string; hop: number }> = [{ name: rootName, hop: 0 }];
+  const results: ImpactResult["dependents"] = [];
+  let stopReason: StopReason = "completed";
+
+  while (queue.length > 0) {
+    if (Date.now() > deadline) { stopReason = "budgetExhausted"; break; }
+    const { name, hop } = queue.shift()!;
+    if (hop > maxDepth) { stopReason = "depthExceeded"; break; }
+    if (visited.has(name)) continue;
+    visited.add(name);
+    const dependents = getInboundLinks(name);
+    for (const dep of dependents) {
+      results.push({ name: dep.name, hop, relationTypes: dep.types });
+      if (!visited.has(dep.name)) queue.push({ name: dep.name, hop: hop + 1 });
+    }
+  }
+  return { entityName: rootName, dependents: results, stopReason, truncated: stopReason !== "completed", elapsedMs: Date.now() - (deadline - (opts.timeoutMs ?? DEFAULT_IMPACT_TIMEOUT_MS)) };
+}
+```
+
+- `impact_analysis` MCP tool accepts `maxDepth?: number` and `timeoutMs?: number` parameters.
+- Response always includes `stopReason` + `truncated` — agents must surface a warning when `truncated: true`.
+- `cortex impact <entity> --depth 10 --timeout 10000` — CLI passthrough.
+- `cortex doctor` check: `cortex impact` on the highest-degree entity in graph must complete within `DEFAULT_IMPACT_TIMEOUT_MS` — fail → warning to reduce graph density.
+
+**Refinement: PhaseTimer — Concurrent Wall-Clock Profiling (from GitNexus)**
+
+GitNexus uses a `PhaseTimer` to record independent wall-time for each stage of a multi-phase operation (e.g., BM25 indexing, semantic embedding, graph write). This lets `cortex doctor` and `GRAPH_REPORT.md` report where time is actually spent without instrumenting each call site.
+
+```typescript
+class PhaseTimer {
+  private records: Map<string, number> = new Map();
+
+  async time<T>(phase: string, work: Promise<T>): Promise<T> {
+    const start = Date.now();
+    try { return await work; }
+    finally { this.records.set(phase, (this.records.get(phase) ?? 0) + (Date.now() - start)); }
+  }
+
+  report(): Record<string, number> { return Object.fromEntries(this.records); }
+}
+
+// Usage in cortex ingest:
+const timer = new PhaseTimer();
+const [graphResult, embeddingResult] = await Promise.all([
+  timer.time("graph-extract", extractGraph(files)),
+  timer.time("embed", embedEntities(entities)),
+]);
+console.log("Phase timings:", timer.report());
+// → { "graph-extract": 1240, "embed": 890 }
+```
+
+- `cortex ingest --profile` prints `PhaseTimer.report()` at the end — shows exactly where ingest time is spent.
+- `GRAPH_REPORT.md` includes a "Ingest timing" section populated by `PhaseTimer`.
+- Use in: `impact_analysis` (BFS vs. ranking vs. serialization phases), `build_context_pack` (fetch vs. pack vs. compress), `ingest` (extract vs. embed vs. write).
+
+**DoD extension (BFS timeout + PhaseTimer)**
+- `impact_analysis("GodEntity", {timeoutMs: 100})` returns within 100ms + `stopReason: "budgetExhausted"`.
+- `impact_analysis("LeafEntity", {maxDepth: 3})` with no dependents beyond depth 3 returns `stopReason: "completed"`.
+- `cortex impact --depth 2` CLI flag is forwarded to `runImpactBfs` correctly.
+- `PhaseTimer.time` accumulates correctly when called multiple times with the same phase name.
+- `cortex ingest --profile` output includes at least 3 named phase timings.
+
 ---
 
 ## 🗺️ Phase 9.1: Dependency Path Querying — ⏳ Planned
@@ -4191,6 +4970,91 @@ Cortex becomes monorepo-aware. The CLI gains a workspace concept; `cortex init` 
 
 - ✅ **Pros**: Unblocks Cortex for real-world team repos, which are overwhelmingly monorepos. Cross-workspace constraints are uniquely valuable — they enforce module-boundary contracts that no language tooling enforces at the workspace level.
 - ❌ **Cons**: Significant scope. Federation adds a coordination layer that touches every existing component. Mitigated by keeping per-workspace `.knowledge/` independent — the federation is a derived view, not a parallel store.
+
+**Refinement: Lazy Multi-Repo LRU Connection Pool (from GitNexus)**
+
+GitNexus maintains a global registry of repos (`registry.json`) and a lazy LRU pool of active connections — max 5 repos open at once, max 8 concurrent tool calls per repo, 5-minute idle timeout, 5-second staleness check throttle. This is the right architecture for Cortex's Phase 11 multi-repo mode: loading all workspace state files at startup would be prohibitively expensive for large monorepos.
+
+```typescript
+// src/core/repoPool.ts
+
+interface RepoConnection {
+  workspaceName: string;
+  knowledgeManager: KnowledgeManager;
+  lastUsed: number;          // epoch ms — for LRU eviction
+  activeRequests: number;    // current concurrent tool calls
+  lastStalenessCheck: number;// epoch ms — throttle staleness probes
+}
+
+const MAX_OPEN_REPOS = 5;
+const MAX_CONCURRENT_PER_REPO = 8;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;        // 5 minutes
+const STALENESS_CHECK_THROTTLE_MS = 5 * 1000; // 5 seconds
+
+class RepoPool {
+  private pool: Map<string, RepoConnection> = new Map();
+
+  async acquire(workspaceName: string): Promise<KnowledgeManager> {
+    // Evict LRU entry if at capacity and new workspace needed.
+    if (!this.pool.has(workspaceName) && this.pool.size >= MAX_OPEN_REPOS) {
+      const lru = [...this.pool.entries()]
+        .filter(([, c]) => c.activeRequests === 0)
+        .sort(([, a], [, b]) => a.lastUsed - b.lastUsed)[0];
+      if (lru) this.pool.delete(lru[0]);
+    }
+
+    let conn = this.pool.get(workspaceName);
+    if (!conn) {
+      conn = await this.openConnection(workspaceName);
+      this.pool.set(workspaceName, conn);
+    }
+
+    // Throttled staleness check — at most once every 5 seconds per repo.
+    if (Date.now() - conn.lastStalenessCheck > STALENESS_CHECK_THROTTLE_MS) {
+      conn.lastStalenessCheck = Date.now();
+      await conn.knowledgeManager.checkStaleness();  // triggers hot-reload if needed
+    }
+
+    if (conn.activeRequests >= MAX_CONCURRENT_PER_REPO) {
+      throw new Error(`Workspace '${workspaceName}' is busy (${MAX_CONCURRENT_PER_REPO} concurrent requests). Retry shortly.`);
+    }
+
+    conn.activeRequests++;
+    conn.lastUsed = Date.now();
+    return conn.knowledgeManager;
+  }
+
+  release(workspaceName: string): void {
+    const conn = this.pool.get(workspaceName);
+    if (conn) conn.activeRequests = Math.max(0, conn.activeRequests - 1);
+  }
+
+  // Called by a periodic sweeper to evict idle connections.
+  evictIdle(): void {
+    const cutoff = Date.now() - IDLE_TIMEOUT_MS;
+    for (const [name, conn] of this.pool) {
+      if (conn.lastUsed < cutoff && conn.activeRequests === 0) this.pool.delete(name);
+    }
+  }
+}
+
+export const repoPool = new RepoPool();
+```
+
+- **Global registry** (`~/.cortex/registry.json`): maps workspace name → path to `.knowledge/` directory. `cortex register [path]` adds a new workspace; `cortex registry --list` shows all registered repos.
+- **Lazy load**: workspace state is not loaded until the first tool call targets it.
+- **LRU eviction**: when pool is full and a new workspace is requested, the least-recently-used idle workspace is closed. Active workspaces (with in-flight requests) are never evicted.
+- **Idle cleanup**: `setInterval(repoPool.evictIdle, 60_000)` runs in the MCP server process.
+- **MCP tool `workspace` param**: all tools gain an optional `workspace: string` parameter; without it, they use the current project root (backward compatible).
+- `cortex.config.json: multiRepo: true` enables multi-repo mode; default false (single-repo stays unchanged).
+
+**DoD extension**
+- `repoPool.acquire("ws-a")` 5 times with no releases → 5th call succeeds; 6th (new workspace) evicts LRU.
+- `acquire` on a workspace with 8 active requests → throws "busy" error.
+- Idle workspace after 5 minutes → `evictIdle()` removes it; next `acquire` re-opens cleanly.
+- Staleness check fired at most once every 5 seconds per workspace — verified by counting check calls in 4-second window (must be ≤1).
+- `cortex register ./frontend` → `registry.json` updated; `cortex registry --list` shows the entry.
+- MCP `read_entity({name: "AuthService", workspace: "backend"})` → loads `backend` workspace's KM, returns entity.
 
 ---
 
