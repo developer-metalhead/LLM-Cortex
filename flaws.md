@@ -364,25 +364,29 @@ The implementation plan **partially** anticipates the small-codebase pain:
 - **Phase 13.14 (Planned)** — *Economic Viability & Zero-Overhead Ingestion*: server-side synthesis, two-tier model routing, local diff filter, commit-gated auto-sync. Addresses cost ROI.
 - **Phase 13.15 (Planned)** — *Multi-Output Pipeline*: changelog, PR draft, affected tests, session warm-up from sync side effects. Addresses value ROI.
 
-**Not covered by any planned phase:**
+**Coverage status (updated after graphify pattern mapping):**
 
 | Flaw | Coverage status |
 |------|-----------------|
-| #1 maxBuffer overflow on diff | not covered |
-| #2 impact_analysis "safe to refactor" on typos | not covered |
-| #3 phantom entity detection (no live `sourceFile`) | not covered |
-| #4 save_concept validation / deletion API | not covered |
-| #5 lint cycles ignored by quality | not covered |
-| #6 inflated "147.9k saved" footer | not covered |
-| #7 USD-value inconsistency in ledger | not covered |
-| #8 build_context_pack ignoring invalid scope | not covered |
-| #13 zero-variance quality scoring | not covered |
-| #14 architectural log never written | not covered |
-| #16 dangling lastSyncCommit | not covered |
-| #17 onboarding template rationales | not covered |
-| #18 find vs before_change fuzzy mismatch | partially — Phase 13.5 ranker exists but not in find |
-| #19 cold-start dirty flag | not covered |
-| #20 brevity footer only in non-default mode | not covered |
+| #1 maxBuffer overflow on diff | ⚠️ not covered — needs dedicated fix in `get_pending_changes` diff layer |
+| #2 `impact_analysis` "safe to refactor" on typos | ✅ **Phase 0.2** — `validateEntityExists()` catches unknown entity names; fuzzy suggestions via `fuse.js` (Phase 0.9 gap 4) |
+| #3 phantom entity detection (no live `sourceFile`) | ✅ **Phase 0.3** (sourceFile required) + **Phase 0.4** (orphan detection on file deletion) |
+| #4 `save_concept` validation / deletion API | ✅ **Phase 0.2** — `validate.ts` gates all writes; empty/invalid names throw `ValidationError` |
+| #5 `lint` cycles ignored by quality | ⚠️ not covered — needs `lint` + `audit_quality` integration fix |
+| #6 inflated "147.9k saved" footer | ✅ **Phase 0.11** — `worked/` honest benchmarks + `cortex bench` replaces heuristic |
+| #7 USD-value inconsistency in ledger | ✅ **Phase 0.11** — ledger anchored to real `cortex bench` measurements |
+| #8 `build_context_pack` ignoring invalid `scope` | ✅ **Phase 0.2** — `validateEntityExists(scope, state)` throws with fuzzy suggestions (gap 4) |
+| #10 "58 source files" frozen baseline | ✅ **Phase 0.4** — `indexedFiles[]` diffed on every sync; additions/removals/renames tracked (gap 3) |
+| #12 tools write files without consent | ✅ **Phase 0.2** — `dryRun: boolean` parameter on all write tools (gap 2) |
+| #13 zero-variance quality scoring | ⚠️ not covered — needs quality formula fix in `audit_quality` |
+| #14 architectural log never written | ⚠️ not covered — needs `log.jsonl` writer fix |
+| #16 dangling `lastSyncCommit` | ⚠️ not covered — needs reachability check in `get_cortex_status` |
+| #17 onboarding template rationales | ⚠️ not covered — needs per-entity rationale generation |
+| #18 `cortex_find` no fuzzy suggestions | ✅ **Phase 0.9** — `fuse.js` fuzzy layer returns `"fuzzy": true` matches (gap 1) |
+| #19 cold-start dirty flag | ⚠️ not covered — needs dirty-flag initialization fix |
+| #20 brevity footer only in non-default mode | ⚠️ not covered — needs server to emit minimal footer always |
+
+**Summary**: 8 of the 17 uncovered flaws are now addressed by Phase 0 graphify-pattern work. 9 remain uncovered and need dedicated fixes outside the Phase 0 pattern work.
 
 The plan addresses **cost** on small codebases. The hands-on audit shows the bigger small-codebase killer is **correctness** — Cortex confidently surfaces phantom knowledge, silently corrupts on diff overflow, and reports green on quality while harboring cycles and orphans.
 
@@ -1242,7 +1246,27 @@ But graphify **never writes an IDE's MCP config file automatically**. Every `ski
 
 ---
 
-### Full pattern summary table (15 patterns → Phase 0 subphases)
+### 16. Multi-Format File Ingestion (market-segment gap)
+
+Graphify ingests code + docs + PDF (`pypdf`/`markdownify`) + images (vision model) + video transcription (`faster-whisper` + `yt-dlp`) + Office (`python-docx`/`openpyxl`) + Google Workspace. Every format is an optional pip extra that the user opts into. The adapter pattern routes each file by extension + magic bytes.
+
+**Our gap**: Cortex ingests code only. Enterprise customers store architectural decisions in Confluence PDF exports, design reviews in Google Docs, onboarding videos, and system diagrams as PNG images — all invisible to Cortex. A knowledge graph built only from code is missing 30–50% of an enterprise team's architectural documentation.
+
+**Implementation target**: Phase 0.16 — `src/ingest/adapters/` with PDF (`pdfjs-dist`), image (vision model passthrough), video (Whisper API / CLI subprocess), Office DOCX (`mammoth`) + XLSX (`xlsx`). Opt-in via `cortex.config.json: ingest.fileTypes`. Default: `["code"]` for backward compatibility.
+
+---
+
+### 17. Dev Hygiene: Security CI Gate, Property Tests, Pre-Commit Hooks, Standalone Binary (developer-trust gap)
+
+Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency CVE scanning), `safety` (supply-chain), `hypothesis` (property-based tests), `pre-commit` hooks, and `Nuitka` standalone binary builds. The result is a project that security-conscious enterprises can evaluate without finding obvious red flags in the supply chain.
+
+**Our gap**: Cortex has TypeScript strict mode but no security CI gate, no supply-chain scanning, no property-based tests, and no standalone binary (users must install Node.js). A project with 115 known flaws and no automated security scanning is difficult to recommend to enterprise security teams. The `npx -y project-cortex` install surface has never been audited.
+
+**Implementation target**: Phase 0.17 — `npm audit` + `socket.dev` + `eslint-plugin-security` + `semgrep` in CI; `fast-check` property tests on every Phase 0 module; `husky` + `lint-staged` pre-commit; `bun build --compile` producing self-contained binaries for Linux/macOS/Windows; `curl install.sh` one-liner published to GitHub Releases.
+
+---
+
+### Full pattern summary table (17 patterns → Phase 0 subphases)
 
 | Pattern | Graphify module | Flaws closed in Cortex | Phase 0 subphase |
 |---------|----------------|------------------------|-----------------|
@@ -1260,6 +1284,8 @@ But graphify **never writes an IDE's MCP config file automatically**. Every `ski
 | Backup/restore + `cortex merge-knowledge` + `cortex clone` + git-friendly `.knowledge/` | `graph.json` convention + hooks | #96 | 0.12 |
 | Multi-language tree-sitter extractors (v1=10, target=25), per-language fixtures | `extract.py` | #83 | 0.13 |
 | Multi-backend LLM (8 backends incl. Claude CLI + Bedrock IAM + Ollama), parallel Worker pool | `llm.py` | missing capability | 0.14 |
-| Dual-track distribution (CLI mirror + MCP server + per-IDE skill + atomic MCP auto-config writer for 9 IDEs) | `__main__.py:_PLATFORM_CONFIG` + `serve.py` (extended) | distribution gap, strategic | 0.15 |
+| Dual-track distribution (CLI mirror + MCP server + per-IDE skill + atomic MCP auto-config writer for 12 IDEs, 8 refinements) | `__main__.py:_PLATFORM_CONFIG` + `serve.py` (extended) | distribution gap, strategic | 0.15 |
+| Multi-format ingestion: PDF (`pdfjs-dist`), image (vision model), video (Whisper), Office DOCX/XLSX; `ingest.fileTypes` opt-in; backward-compatible | `extract.py` + optional deps | market-segment gap | 0.16 |
+| Dev hygiene: `npm audit` CI gate, `socket.dev` supply-chain, `eslint-plugin-security`, `semgrep`, `fast-check` property tests, `husky` pre-commit, `bun --compile` standalone binaries | `bandit` + `pip-audit` + `hypothesis` + `Nuitka` | developer-trust gap | 0.17 |
 
 **Implementation target**: Phase 0 in `implementation_plan.md` — ships before any paying customer touches production.

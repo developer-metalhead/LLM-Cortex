@@ -49,7 +49,7 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 | 1 | **Phase 33-MVP** (a stripped Deep Bootstrap) | Production bug: 1800-file project produced 4 entities. Adoption-blocker. | Medium (2-4 weeks) | ⏳ Planned |
 | 2 | **Phase 6** — complete (Active Guardrail) | Foundation for every later guardrail/policy phase. | Done | ✅ **Done 2026-05-19** |
 
-**Phase 0 subphase breakdown** (15 subphases from graphify deep read — see `implementation_plan.md § Phase 0`):
+**Phase 0 subphase breakdown** (17 subphases from graphify deep read — see `implementation_plan.md § Phase 0`):
 
 | Subphase | Title | Flaws closed | Effort |
 |----------|-------|-------------|--------|
@@ -68,8 +68,10 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 | **0.13** | Multi-language tree-sitter extractors: fix TS class methods + type aliases; per-language fixture tests; v1=10 languages, target=25 (all graphify languages); contributor guide | #83 | 2 days |
 | **0.14** | Multi-backend LLM: all 8 backends (`anthropic`, `claude-cli`, `openai`, `bedrock`, `gemini`, `kimi`, `deepseek`, `ollama`); adaptive retry on context-exceeded; token-aware chunking; Worker thread pool for parallel extraction | missing capability | 2.5 days |
 | **0.15** | Dual-track distribution (8 refinements): Layer-1 CLI mirror of every MCP tool; `cortex serve --stdio\|--http`; skill template compiler (`skill.md.tmpl` → 19 platforms, no drift); `mcpRegistry.ts` covering 12 IDEs (Claude Desktop/Code, Cursor, VS Code, Windsurf, Zed, Antigravity, Continue, Kiro, JetBrains, Cline, Roo Code) + smart command resolution (PATH → local bin → npx + `--pin`); `.cortex.backup` single rolling backup; project-root walk in `cortex serve`; WSL/devcontainer/Codespaces detection + `--target=wsl\|host\|both`; `cortex.config.json` project config; `cortex init` wizard; `cortex update`; auto-detect prompts to confirm (no silent wrong guess) | distribution gap | 4 days |
+| **0.16** | Multi-format file ingestion: `fileType.ts` router + adapters for PDF (`pdfjs-dist`), images (vision model), video (Whisper API / `whisper` CLI subprocess), Office DOCX (`mammoth`) + Excel (`xlsx`); `cortex.config.json` `ingest.fileTypes` opt-in list; graceful skip when external tool unavailable; backward-compatible default (code only) | market-segment gap | 2 days |
+| **0.17** | Dev hygiene: `npm audit` CI gate + `socket.dev` supply-chain scan + `eslint-plugin-security` + `semgrep`; `fast-check` property tests on every Phase 0 module (1,000 random cases per suite); `husky` + `lint-staged` pre-commit hooks; `bun build --compile` standalone binaries (Linux x64, macOS arm64/x64, Windows x64); `curl install.sh` one-liner; GitHub Releases CI upload | developer-trust gap | 2 days |
 
-**Total Phase 0 effort: ~19 days** (can parallelize 0.1+0.2+0.3 / 0.4+0.5 / 0.6+0.7 / 0.13+0.14+0.15 across engineers → ~7 days wall time with 3 engineers)
+**Total Phase 0 effort: ~23 days** (can parallelize 0.1+0.2+0.3 / 0.4+0.5 / 0.6+0.7 / 0.13+0.14+0.15 / 0.16+0.17 across engineers → ~8 days wall time with 3 engineers)
 
 **Phase 33-MVP scope clarification**: Phase 33 in `implementation_plan.md` lists Phase 14, 20.9, 20.10, 13 as dependencies. The **MVP variant ships without these** by substituting:
 - Phase 14 clustering → **simple directory-bucket clustering** in Phase A

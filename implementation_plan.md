@@ -59,6 +59,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 7.17  | Keystone Index — Entity Impact-to-Size Ratio             | ⏳ Planned                           |
 | 7.18  | Regulatory Suppression — Alert Correlation Dampening     | ⏳ Planned                           |
 | 7.19  | Synaptic Tagging — Retroactive Importance Boost           | ⏳ Planned                           |
+| 7.20  | Surprising Connections — Cross-Community & Cross-Language Edge Detection | ⏳ Planned         |
 | 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
 | 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
 | 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
@@ -345,6 +346,36 @@ Before adding any feature, seal the holes. Graphify (a comparable Python knowled
 - Patch every `fs.readFile` / `fs.readFileSync` call site in `src/mcp/server.ts` and `src/core/` to call `validateSafePath` first.
 - All fetch calls go through `validateUrl` before execution.
 
+**Sensitive File Detection (graphify `detect.py` pattern)**
+
+Graphify's `detect.py` blocks ingestion of sensitive directories and files before any LLM call touches them — preventing credentials from leaking into the knowledge graph.
+
+*What graphify does*:
+- 6 regex patterns matching credential content: `(?i)api[_-]?key\s*[:=]`, `(?i)secret\s*[:=]`, `(?i)password\s*[:=]`, `(?i)token\s*[:=]`, `(?i)private[_-]?key`, `BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY`.
+- Directory blocklist: `.ssh/`, `.gnupg/`, `.aws/`, `.config/gcloud/`, `.azure/`, `secrets/`, `credentials/`.
+- File blocklist: `.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `id_rsa`, `id_ed25519`, `credentials.json`.
+- If a match is found: logs `WARN: skipping <path> — matched sensitive pattern`, increments `sensitiveSkipCount`, never sends to LLM.
+- Reports total `sensitiveSkipCount` at end of sync: "Skipped 3 sensitive files."
+
+*Cortex implementation — add to `src/security.ts`*:
+```typescript
+const SENSITIVE_DIR_PATTERNS = [".ssh", ".gnupg", ".aws", ".config/gcloud", ".azure", "secrets", "credentials"];
+const SENSITIVE_FILE_PATTERNS = [/^\.env($|\.)/, /\.(pem|key|p12|pfx|jks)$/, /^id_(rsa|ed25519|ecdsa|dsa)$/, /^credentials\.json$/];
+const SENSITIVE_CONTENT_PATTERNS = [
+  /(?i)api[_-]?key\s*[:=]/i,
+  /(?i)secret\s*[:=]/i,
+  /(?i)password\s*[:=]/i,
+  /(?i)token\s*[:=]/i,
+  /BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY/,
+];
+
+export function isSensitivePath(filePath: string): boolean { /* dir + filename checks */ }
+export function hasSensitiveContent(text: string): boolean { /* content pattern scan (first 4KB only) */ }
+```
+- `cortex sync` calls `isSensitivePath(filePath)` before opening any file. If true → skip, log WARN.
+- `cortex sync` calls `hasSensitiveContent(firstChunk)` on code files before sending to LLM. If true → skip, log WARN.
+- `cortex doctor` reports `sensitiveSkipCount` from last sync (stored in `state.json:meta.lastSyncStats`).
+
 **DoD**
 - Unit tests: path traversal `../../../etc/passwd` → throws; valid path → passes.
 - Unit tests: SSRF `http://169.254.169.254/latest/meta-data` → throws; public URL → passes.
@@ -352,6 +383,10 @@ Before adding any feature, seal the holes. Graphify (a comparable Python knowled
 - Unit tests: XSS `<script>alert(1)</script>` in label → sanitized.
 - Unit tests: 600 MiB mock file → throws before parse.
 - Integration: `source({filePath: "C:/Windows/System32/drivers/etc/hosts"})` → rejected with `PathTraversalError`.
+- Unit tests: `.ssh/id_rsa` → `isSensitivePath` returns true, file skipped.
+- Unit tests: file containing `BEGIN RSA PRIVATE KEY` → `hasSensitiveContent` returns true, skipped.
+- Unit tests: `.env.production` → skipped; `.env.example.md` → allowed (contains no secrets).
+- Integration: project with a `.env` file → `cortex sync` skips it, reports "Skipped 1 sensitive file", entity for `.env` does NOT appear in `state.json`.
 
 ---
 
@@ -383,10 +418,24 @@ This runs as a hard precondition before `build_graph()` consumes anything. Inval
 - Every write path in `StateManager.saveEntity`, `StateManager.saveConcept`, `StateManager.saveRelation` calls the corresponding validator before mutating state.
 - Zod schemas (already present) are kept; `validate.ts` is the runtime gate that is always called, regardless of caller.
 
+**Gap 2 addition — `--dry-run` on all write tools (fixes flaw #12)**
+- Every MCP write tool (`save_concept`, `save_synthesis`, `ingest`, `save_entity`) gains an optional `dryRun: boolean` parameter.
+- When `dryRun: true`: run all validation, compute the would-be write diff, return `{preview: ..., wouldWrite: [...paths]}` without touching disk. No side effects.
+- `validate.ts` runs first (so dry-run still catches `ValidationError`). Only the final `fs.writeFile` is gated.
+- CLI mirror: `cortex concept save <name> --dry-run` prints the entity JSON without writing.
+
+**Gap 4 addition — scope validation in `build_context_pack` (fixes flaw #8)**
+- Add `validateEntityExists(scope: string, state: State): void` to `validate.ts`.
+- Called at the top of `build_context_pack` before any graph traversal.
+- Throws `ValidationError: scope entity '<name>' not found in graph` with a fuzzy-match suggestion: "Did you mean: AuthService, AuthMiddleware?"
+- Same guard applies to `impact_analysis` and `cortex_find` when passed an exact entity name as scope.
+
 **DoD**
 - `save_concept({name: ""})` → `ValidationError: name must be non-empty`.
 - `save_concept({name: "x", type: "not-a-valid-type"})` → `ValidationError: type 'not-a-valid-type' not in VALID_ENTITY_TYPES`.
 - Edge with `source: "non-existent-id"` → `ValidationError: source node 'non-existent-id' not found in graph`.
+- `save_concept({name: "Test"}, {dryRun: true})` → returns preview JSON, zero files written, `cortex doctor` backup check unchanged.
+- `build_context_pack({scope: "NonExistentEntity"})` → `ValidationError` with fuzzy suggestions rather than silent empty result (flaw #8 closed).
 - All existing passing tests continue to pass.
 - Migration script: backfill `confidence: "INFERRED"` on all existing edges that have no confidence field.
 
@@ -453,12 +502,26 @@ Combined with `source_file` being required on every node, a phantom entity is **
 - Frontmatter strip: for `.md` entity files, hash content below the `---` separator.
 - Windows path normalization: `path.resolve` + `path.normalize` applied once at ingest boundary.
 
+**Gap 3 addition — incremental file-list diffing (fixes flaw #10)**
+Graphify's `--update` mode diffs the current file list against the last-indexed list. Cortex's "58 source files baseline is frozen" (flaw #10) is exactly this missing capability.
+
+- `state.json` gains a top-level `indexedFiles: string[]` array — the canonical list of all files included in the last sync.
+- At the start of every `cortex ingest`: scan current file list (respecting `.gitignore`), diff against `indexedFiles`.
+  - **Added files**: extract + synthesize as new entities.
+  - **Removed files**: mark all entities with that `sourceFile` as `[ORPHAN]`; `cortex doctor` surfaces them; `cortex ingest --prune` deletes them.
+  - **Renamed files**: detected via MinHash similarity (Phase 0.6) on the entity label — if old entity matches new file path entity with >90% similarity, update `sourceFile` in place rather than orphan+create.
+- `indexedFiles` is updated atomically alongside `state.json` after every successful sync.
+- `cortex audit` reports: `N files added, M files removed, K files renamed since last sync`.
+
 **DoD**
 - `source({filePath: "src/core/soul.ts"})` returns all class method signatures, all type aliases, no body locals.
 - Stat fastpath: second call to `source` on an unmodified file returns in <5ms without touching disk.
 - Atomic write: concurrent writes to cache do not produce partial reads (test with `Promise.all` of 10 parallel writes).
 - Frontmatter-only edit: changing `# reviewed: true` in an entity `.md` file does not invalidate its body cache.
 - Windows path quirk: `\\?\C:\...` paths compare equal to `C:\...` paths in the cache key.
+- Deleting a source file and running `cortex ingest` marks its entity `[ORPHAN]`; `cortex doctor` surfaces it; `cortex ingest --prune` removes it cleanly (flaw #10 closed).
+- Adding a new source file and running `cortex ingest` creates its entity; `state.json:indexedFiles` is updated.
+- Renaming a file detected via MinHash similarity → `sourceFile` updated in place, no orphan+duplicate created.
 
 ---
 
@@ -528,11 +591,87 @@ fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
   - `cortex dedup --dry-run` shows proposed merges; `cortex dedup` executes them.
 - Merge strategy: winning node keeps highest-centrality `entity.body`; merged node's `aliases` field gains the losing node's name.
 
+**3-Layer Node Deduplication (graphify `build.py` pattern)**
+
+Graphify performs dedup at three distinct layers, preventing duplicates from ever accumulating:
+1. **Within-file AST dedup** — while extracting a single file's AST, identical node IDs are idempotently deduplicated before they're emitted. A class with two docstrings doesn't produce two nodes.
+2. **Between-file graph idempotent add** — `graph.add_node(id, **attrs)` is idempotent; re-adding an existing node updates attributes but does not duplicate. Graphify uses NetworkX's `add_node` semantics; Cortex's `StateManager.saveEntity` must mirror this by checking `if (state.entities[id]) { mergeAttrs(); return; }` instead of always pushing.
+3. **Semantic merge** — post-extraction, the 6-stage MinHash/LSH pipeline above handles entities that are semantically identical but have different IDs (e.g., extracted from two different call sites).
+
+*Cortex implementation*:
+- **Layer 1** (within-file): tree-sitter adapters track a `seenIds: Set<string>` per file extraction pass. If `id` already in set, skip emission.
+- **Layer 2** (between-file): `StateManager.upsertEntity(entity)` — if entity ID already exists, merge `aliases`, `evidence`, `relations` arrays; keep higher-confidence `body`. Never duplicate.
+- **Layer 3** (semantic): existing MinHash/LSH pipeline (stages 1-6 above).
+
+**LLM Tiebreak in Dedup (graphify `dedup.py` pattern)**
+
+Graphify uses LLM to resolve ambiguous dedup pairs the JW similarity score alone can't decide. Pairs with JW similarity between 0.75–0.92 are "ambiguous" — neither clearly the same nor clearly different.
+
+*What graphify does*: batch up to 30 ambiguous pairs into a single LLM prompt: "Are these the same concept? Answer YES or NO with one sentence of reasoning." YES pairs are merged; NO pairs are kept separate. Batch limit prevents cost runaway.
+
+*Cortex implementation — add to `src/dedup.ts`*:
+```typescript
+async function llmTiebreak(ambiguousPairs: [Entity, Entity][], llmConfig: LlmConfig): Promise<MergeDecision[]> {
+  const BATCH_SIZE = 30;
+  const batches = chunk(ambiguousPairs, BATCH_SIZE);
+  const decisions: MergeDecision[] = [];
+  for (const batch of batches) {
+    const prompt = buildTiebreakPrompt(batch);  // "Q1: Are 'UserService' and 'User Service' the same? ..."
+    const response = await callLlm(prompt, llmConfig);
+    decisions.push(...parseTiebreakResponse(response, batch));
+  }
+  return decisions;
+}
+```
+- JW similarity ≥ 0.93 → auto-merge (no LLM call).
+- JW similarity 0.75–0.92 → add to `ambiguousPairs` batch for LLM tiebreak.
+- JW similarity < 0.75 → keep separate (no LLM call).
+- `cortex dedup --no-llm` flag skips tiebreak to avoid API cost during CI.
+
+**Semantic Cleanup / Rationale-to-Attribute (graphify `semantic_cleanup.py` pattern)**
+
+Graphify detects nodes whose labels are too long or too wordy (rationale text accidentally extracted as a node name) and converts them to attributes on their neighbor entities instead.
+
+*What graphify does* (`semantic_cleanup.py`):
+- Node label > 80 characters OR ≥ 8 words → classified as a "rationale node" (LLM extracted a sentence, not a symbol).
+- Find the closest neighbor entity (by edge count or by semantic proximity).
+- Convert: delete the rationale node, add its text as an `attributes.rationale` field on the target entity.
+- Prevents graph pollution: "This service handles authentication for all downstream consumers" should be an attribute of `AuthService`, not a standalone node.
+
+*Cortex implementation — new `src/dedup/semanticCleanup.ts`*:
+```typescript
+export function isRationaleNode(entity: Entity): boolean {
+  const wordCount = entity.name.split(/\s+/).length;
+  return entity.name.length > 80 || wordCount >= 8;
+}
+
+export function semanticCleanup(state: State): { removed: string[]; converted: number } {
+  const rationaleNodes = state.entities.filter(isRationaleNode);
+  for (const node of rationaleNodes) {
+    const target = findClosestNeighbor(node, state);
+    if (target) {
+      target.attributes ??= {};
+      target.attributes.rationale ??= [];
+      (target.attributes.rationale as string[]).push(node.name);
+      removeEntity(node.id, state);
+    }
+  }
+}
+```
+- Run `semanticCleanup()` after `dedup()` pass on every `cortex sync`.
+- `cortex doctor` reports count of potential rationale nodes (without removing them — doctor is read-only).
+- `cortex dedup --semantic` flag explicitly triggers semantic cleanup + standard dedup together.
+
 **DoD**
 - Ingest same codebase twice: entity count after dedup ≤ entity count before second ingest.
 - `Native IDE Workflows` entity + concept: after `cortex dedup`, only one survives with both descriptions merged.
 - `cortex dedup --dry-run` outputs a table: `"A" → merged into "B" (JW=0.94, same cluster)`.
 - 0 false positives on test fixtures with genuinely different entities named similarly (e.g., `UserService` vs `UserServiceV2`).
+- Layer 2 upsert: ingesting same entity twice → entity appears exactly once in `state.json`.
+- LLM tiebreak: mock pair with JW=0.83 → LLM called once, returns YES → merged; NO → kept separate.
+- `cortex dedup --no-llm` completes without any LLM API call.
+- A node with name "This service handles authentication for all downstream consumers" → converted to `AuthService.attributes.rationale`, removed from entity list.
+- `cortex dedup --dry-run --semantic` shows proposed rationale-to-attribute conversions without touching disk.
 
 ---
 
@@ -572,11 +711,90 @@ Structural readiness checks:
 
 Exit code 0 = all checks pass. Exit code 1 = at least one failure. CI can run `cortex doctor` as a step.
 
+**GRAPH_REPORT.md Full Spec (graphify `report.py` pattern)**
+
+Graphify auto-generates a `GRAPH_REPORT.md` alongside every sync, giving human reviewers a plain-English audit of graph quality. Cortex's `KNOWLEDGE_REPORT.md` is a partial implementation; this expands it to match graphify's full spec.
+
+*What graphify does* (`report.py`):
+1. **Confidence audit %** — `EXTRACTED: N (X%)`, `INFERRED: N (X%)`, `AMBIGUOUS: N (X%)` across all edges. If AMBIGUOUS > 20%, adds a warning block.
+2. **Isolated node list** — entities with 0 edges (no relationships). Listed by name. "3 isolated nodes — consider adding relationships or removing these."
+3. **Knowledge gaps** — source files with 0 entities extracted from them. Listed as file paths. "5 files produced no knowledge — may be config or generated files."
+4. **Suggested questions** — generated from hub entities: "What does `AuthService` do?", "How does `PaymentGateway` relate to `OrderService`?" — 3–5 auto-generated starter questions for new engineers.
+5. **Thin community warnings** — communities with < 3 entities are flagged as potential over-segmentation. "Community 7 has only 1 member — consider merging or reviewing Leiden resolution."
+6. **Sensitive file skip count** — "3 sensitive files were skipped during ingest."
+7. **Entity growth delta** — vs. previous sync: "+12 entities, -3 entities, 2 renamed."
+
+*Cortex implementation — expand `src/knowledge/report.ts`*:
+```typescript
+export function generateKnowledgeReport(state: State, prevState?: State): string {
+  const sections: string[] = [];
+  sections.push(renderConfidenceAudit(state));       // confidence % breakdown
+  sections.push(renderIsolatedNodes(state));          // 0-edge entities
+  sections.push(renderKnowledgeGaps(state));          // 0-entity source files
+  sections.push(renderSuggestedQuestions(state));     // hub-entity starter Qs
+  sections.push(renderThinCommunities(state));        // communities < 3 members
+  sections.push(renderSensitiveSkipCount(state));     // from lastSyncStats
+  if (prevState) sections.push(renderGrowthDelta(state, prevState));
+  return sections.join('\n\n');
+}
+```
+- Written to `.knowledge/KNOWLEDGE_REPORT.md` after every `cortex sync` (already planned; this expands the content).
+- Also exposed as MCP tool `get_entity_quality` response body (already exists — expand its output fields).
+
+**Corpus Health Warnings (graphify `detect.py` pattern)**
+
+Graphify checks total word count of the corpus before ingesting and warns users when the graph is unnecessary (too small) or risky (too large for LLM token budget).
+
+*What graphify does* (`detect.py`):
+- `< 50,000 words total across all files`: emit `INFO: Small corpus detected — a knowledge graph may not provide significant benefit over full-file context. Consider using cortex only if the codebase grows.`
+- `> 500,000 words total across all files`: emit `WARN: Large corpus — LLM extraction will incur high token costs. Estimated: ~$X at current model pricing. Consider narrowing scope with .cortexignore or splitting into sub-projects.`
+
+*Cortex implementation — add to `src/ingest/pipeline.ts`*:
+```typescript
+const totalWords = countCorpusWords(filePaths);
+if (totalWords < 50_000) {
+  logger.info("Small corpus detected — knowledge graph may not add significant benefit at this scale.");
+}
+if (totalWords > 500_000) {
+  const estimatedCost = estimateLlmCost(totalWords, state.config.llmBackend);
+  logger.warn(`Large corpus — estimated extraction cost: $${estimatedCost.toFixed(2)}. Use .cortexignore to narrow scope.`);
+}
+```
+- Estimated cost uses `costPerToken` from `LlmBackendRegistry` (each backend has a configured $/1K token rate).
+- Warning surfaced in `cortex doctor` output and in `KNOWLEDGE_REPORT.md`.
+
+**Edge-Collapse Audit (graphify `diagnostics.py` pattern)**
+
+Graphify tracks how many edges were "collapsed" (suppressed) due to producer-side deduplication and reports a breakdown of directed vs. undirected collapses. This is a key graph quality signal — high collapse counts indicate noisy extraction.
+
+*What graphify does* (`diagnostics.py`):
+- Scans each edge's `producer` metadata field to identify the suppression site (which extraction rule collapsed it).
+- Counts: `directed_collapses: N`, `undirected_collapses: N`, `total_suppressed: N`.
+- If `total_suppressed > 20%` of total edges emitted → warning: "High edge suppression rate — extraction quality may be low for these file types."
+
+*Cortex implementation — add to `src/knowledge/audit.ts`*:
+```typescript
+interface EdgeCollapseStats {
+  directedCollapses: number;
+  undirectedCollapses: number;
+  suppressedByProducer: Record<string, number>;  // producer name → count
+}
+export function auditEdgeCollapses(state: State): EdgeCollapseStats { ... }
+```
+- Every emitted edge carries `meta.producer: string` (which extractor/rule produced it) — add this field to the `Relation` schema.
+- Collapsed/suppressed edges are logged to `state.json:meta.lastSyncStats.edgeCollapseStats`.
+- `cortex doctor` table gains a new row: `Edge suppression rate | < 20% | Run cortex sync --verbose to see suppressed edges`.
+
 **DoD**
 - `cortex doctor` on a healthy repo: all checks green, exit 0.
 - `cortex doctor` with injected orphan edge: prints `FAIL: orphan edge 'SomeService→NonExistent'`, exit 1.
 - `cortex doctor` with stale lock file: prints `WARN: stale lock (PID 9999 not running) — run 'cortex unlock'`.
 - `cortex doctor` output is machine-parseable JSON with `--json` flag for CI integration.
+- `KNOWLEDGE_REPORT.md` after sync contains: confidence % breakdown, isolated node list, knowledge gap file list, 3–5 suggested questions, thin community warnings.
+- Corpus with 40,000 words → INFO logged: "Small corpus…"
+- Corpus with 600,000 words → WARN logged with estimated dollar cost.
+- Edge collapse stats written to `state.json:meta.lastSyncStats.edgeCollapseStats` after every sync.
+- `cortex doctor` reports suppression rate; if > 20%, check shows WARN status.
 
 ---
 
@@ -649,12 +867,24 @@ def _maybe_reload() -> None:
 - Unicode normalization: `String.prototype.normalize('NFKD')` + strip combining characters (mirrors graphify's `_strip_diacritics()`).
 - `cortex_find` (existing tool) updated to use IDF ranking instead of flat substring order.
 
+**Gap 1 addition — fuzzy entity matching via `fuse.js` (fixes flaw #18)**
+Graphify uses `rapidfuzz` so `cortex_find("AuthSrv")` returns `AuthService`. The IDF scoring above handles exact/prefix/substring matches but not typos or abbreviations. This is a separate layer.
+
+- Add `fuse.js` to `dependencies` (TypeScript port of `rapidfuzz`-style fuzzy search, widely used in Node ecosystem).
+- `cortex_find` pipeline: (1) exact/prefix/substring IDF scoring (existing); (2) if no results score above threshold, run `fuse.js` Jaro-Winkler fuzzy match against all entity labels and source file paths; (3) return fuzzy matches ranked by similarity score, annotated with `"fuzzy": true` flag.
+- **Hub-aware BFS/DFS with dynamic P99 threshold** (from graphify's `_bfs`/`_dfs`): compute the P99 degree of all nodes; when traversing from seeds, skip expanding any hub node above the P99 threshold unless it IS the seed. Prevents traversal getting stuck in highly connected "god nodes" (e.g., a config singleton referenced everywhere). Hub nodes are still returned as results, just not expanded.
+- **Gap ratio seed selection** (from graphify's `_pick_seeds`): stop adding seeds when score drops >80% below top score. Prevents low-quality matches stealing BFS expansion slots from the true result.
+- **Context filter inference from natural language**: if query contains keywords like "call", "import", "inherit", "use" — narrow BFS traversal to those relation types. `"what calls AuthService"` → traverse only `calls` edges from seed, not all edge types.
+
 **DoD**
 - `cortex_search_source("FooBarPaymentGateway")` returns the file and line where the identifier is used, plus related graph entities, ranked by IDF.
 - Common term `"error"` returns only entities with it in the name/body (IDF-filtered), not every entity mentioning error handling.
 - `cortex_find("payments")` returns entities in IDF order (rare names first).
 - Entity whose `sourceFile` contains query term scores 50% higher than otherwise-equal entity without that path match (`SOURCE_MATCH_BONUS` in test assertion).
 - Score-gap: single strong match returns only that entity + BFS neighbors, not a flood of weak substring matches.
+- **Fuzzy gap 1**: `cortex_find("AuthSrv")` returns `AuthService` with `"fuzzy": true` annotation (flaw #18 closed).
+- **Hub-aware traversal**: `cortex_find("config")` on a repo where `ConfigLoader` has 200 edges does not expand `ConfigLoader` unless it is the seed — BFS returns its neighbors without recursing into all 200 edges.
+- **Context filter**: `cortex_find("what calls AuthService")` traverses only `calls` relation edges.
 - `CLAUDE.md` instruction updated: "use `cortex_search_source` instead of `grep`."
 
 ---
@@ -809,11 +1039,84 @@ The TypeScript skeleton extractor strips class method signatures and keeps body 
   - Test: `extractSkeleton(source, lang)` JSON-diffs against `expected.json`. Any regression fails CI.
 - Document contributor guide: "to add language X, add `src/extract/<lang>.ts`, a fixture in `tests/fixtures/<lang>/`, and register in `src/extract/registry.ts`." This is the only required step — the fixture test is the spec.
 
+**Symbol Resolution (graphify `symbol_resolution.py` pattern)**
+
+Graphify resolves cross-file call edges deterministically rather than relying on the LLM to guess. When `fileA.ts` calls `AuthService.login()`, the extractor emits a symbolic reference `{callee: "AuthService.login"}` — the resolver then walks the full graph to find the definitive entity that owns that symbol and replaces the symbolic reference with a concrete edge.
+
+*What graphify does* (`symbol_resolution.py`):
+- Maintains a `symbol_table: Dict[str, str]` — fully-qualified symbol → entity ID.
+- After all files are extracted, runs a post-processing pass: for every edge with `target_symbol` field, look up `symbol_table[target_symbol]`; if found, replace with the real entity ID.
+- Handles `tsconfig.json` path aliases: parses `compilerOptions.paths` to map `@auth/*` → `src/auth/*`, so `import { AuthService } from "@auth/service"` resolves correctly.
+- Handles `package.json` `exports` map for sub-path imports.
+- Fallback: if a symbol can't be resolved, edge is kept with `confidence: "AMBIGUOUS"` and `target_symbol` preserved for human review.
+
+*Cortex implementation — new `src/extract/symbolResolver.ts`*:
+```typescript
+interface SymbolTable { [fullyQualifiedName: string]: string; }  // → entity ID
+
+export class SymbolResolver {
+  private table: SymbolTable = {};
+  private aliases: Record<string, string> = {};  // from tsconfig.paths + package.json exports
+
+  loadAliases(projectRoot: string): void {
+    // parse tsconfig.json compilerOptions.paths
+    // parse package.json exports map
+  }
+
+  register(symbol: string, entityId: string): void { this.table[symbol] = entityId; }
+
+  resolveEdges(relations: Relation[]): Relation[] {
+    return relations.map(r => {
+      if (!r.targetSymbol) return r;
+      const resolvedId = this.table[r.targetSymbol] ?? this.table[this.applyAlias(r.targetSymbol)];
+      if (resolvedId) return { ...r, target: resolvedId, targetSymbol: undefined };
+      return { ...r, confidence: "AMBIGUOUS" };  // unresolved
+    });
+  }
+}
+```
+- Run after all per-file extractors complete, before `dedup()` and `semanticCleanup()`.
+- `cortex sync --verbose` reports unresolved symbol count: "12 symbols unresolved (kept as AMBIGUOUS)."
+
+**SCIP JSON Ingestion (graphify `scip_ingest.py` pattern)**
+
+SCIP (Sourcegraph Code Intelligence Protocol) is a language-agnostic code graph format emitted by many language servers (scip-typescript, scip-java, scip-python, etc.). Graphify ingests SCIP JSON dumps as a high-fidelity alternative to tree-sitter extraction — SCIP provides type-resolved references that tree-sitter cannot.
+
+*What graphify does* (`scip_ingest.py`):
+- Reads a `dump.scip` (protobuf) or `dump.scip.json` file produced by a SCIP indexer.
+- Maps SCIP `Document` → entity (one per file), SCIP `Occurrence` → relationship edge with `confidence: "EXTRACTED"`.
+- SCIP-sourced edges are marked `meta.source: "scip"` — distinguishable from tree-sitter edges.
+- Falls back to tree-sitter if no SCIP dump is present.
+
+*Cortex implementation — new `src/ingest/adapters/scip.ts`*:
+```typescript
+export async function ingestScip(dumpPath: string, state: State): Promise<IngestResult> {
+  const dump = await readScipDump(dumpPath);  // supports .scip.json; .scip (protobuf) via @bufbuild/protobuf
+  for (const doc of dump.documents) {
+    const entity = scipDocumentToEntity(doc);
+    state = upsertEntity(entity, state);
+    for (const occ of doc.occurrences) {
+      const rel = scipOccurrenceToRelation(occ, dump.externalSymbols);
+      if (rel) state = upsertRelation(rel, state);
+    }
+  }
+  return { entitiesAdded: ..., relationsAdded: ... };
+}
+```
+- `cortex.config.json` → `ingest.scip: "dump.scip.json"` to enable. Default: disabled.
+- `cortex sync --scip dump.scip.json` one-shot override.
+- CI workflow note: run `npx @sourcegraph/scip-typescript index` before `cortex sync` for maximum relation accuracy.
+
 **DoD**
 - `source({filePath: "src/core/soul.ts"})`: returns all class method signatures, all type aliases, no body-local variables.
 - Fixture test suite: all 10 v1 languages pass.
 - CI fails if any fixture diverges from expected output.
 - Contributor guide present in `CONTRIBUTING.md`; adding a new language requires only 3 files (adapter, fixture, expected).
+- Symbol resolver: after ingesting a project with `import { AuthService } from "@auth/service"`, the `calls` edge from `UserController → AuthService` has a concrete entity ID target (not a dangling symbol).
+- `tsconfig.json` with `"paths": { "@auth/*": ["src/auth/*"] }` — alias correctly resolved.
+- Unresolvable symbol → edge kept with `confidence: "AMBIGUOUS"`, not dropped.
+- SCIP ingest: given a `dump.scip.json` with 50 documents, `cortex sync --scip dump.scip.json` produces 50 entities with `meta.source: "scip"`.
+- SCIP edges have higher average relation accuracy than tree-sitter edges for the same codebase (verified on test fixture).
 
 ---
 
@@ -861,6 +1164,82 @@ Plus:
 - `cortex init` wizard: asks user which backend they have, writes `llmBackend` to `cortex.config.json`.
 - Document: "Claude Code users: set `llmBackend: 'claude-cli'` and pay $0 for Cortex syncs."
 
+**Ollama `num_ctx` Auto-Derivation (graphify `llm.py` pattern)**
+
+Graphify automatically derives the optimal `num_ctx` (context window size) for Ollama models rather than using a fixed default. Ollama's default `num_ctx` is 2,048 tokens — far too small for code extraction. Without auto-derivation, long files get silently truncated.
+
+*What graphify does* (`llm.py`):
+```python
+def _derive_ollama_num_ctx(model: str, client: httpx.Client) -> int:
+    info = client.post("/api/show", json={"name": model}).json()
+    max_ctx = info.get("model_info", {}).get("context_length", 4096)
+    return min(max_ctx, 32768)  # cap at 32K to avoid OOM on consumer hardware
+```
+- Queries `GET /api/show` on Ollama to get the model's declared `context_length`.
+- Uses `min(declared, 32768)` to prevent OOM on consumer hardware with large models.
+- Falls back to `4096` if the endpoint fails or the field is absent.
+
+*Cortex implementation — add to `src/llm/backends/ollama.ts`*:
+```typescript
+async function deriveNumCtx(model: string, baseUrl: string): Promise<number> {
+  try {
+    const info = await fetch(`${baseUrl}/api/show`, { method: "POST", body: JSON.stringify({ name: model }) });
+    const json = await info.json() as { model_info?: { context_length?: number } };
+    return Math.min(json.model_info?.context_length ?? 4096, 32768);
+  } catch {
+    return 4096;  // safe default
+  }
+}
+
+// In callOllama():
+const numCtx = await deriveNumCtx(model, baseUrl);
+body = { model, prompt, options: { num_ctx: numCtx } };
+```
+- `cortex sync --verbose` with Ollama backend logs: "Ollama num_ctx auto-derived: 16384 (from model llama3.2)."
+
+**Hollow LLM Response Detection (graphify `llm.py` pattern)**
+
+Graphify detects when an LLM returns HTTP 200 but with an empty or truncated response body — a sign that the model silently hit its context limit and returned nothing useful. Without this guard, Cortex silently produces 0 entities from a file, which looks like a successful extraction.
+
+*What graphify does* (`llm.py`):
+```python
+def _is_hollow_response(text: str) -> bool:
+    stripped = text.strip()
+    return len(stripped) < 20 or stripped in ("[]", "{}", "null", "None", "")
+
+if _is_hollow_response(response_text):
+    # Bisect: split chunk in half, retry each half independently
+    half = len(chunk) // 2
+    results = _extract_with_adaptive_retry(chunk[:half]) + _extract_with_adaptive_retry(chunk[half:])
+```
+- Empty/near-empty response → **bisection retry**: split the chunk in half, retry each half separately.
+- Bisection is applied recursively up to depth 3 (8 chunks max from one original chunk).
+- If all bisections are hollow → log `WARN: file <path> produced no entities after bisection — may be boilerplate or binary`.
+
+*Cortex implementation — add to `src/llm/index.ts`*:
+```typescript
+const HOLLOW_RESPONSES = new Set(["", "[]", "{}", "null", "undefined"]);
+
+function isHollowResponse(text: string): boolean {
+  const stripped = text.trim();
+  return stripped.length < 20 || HOLLOW_RESPONSES.has(stripped);
+}
+
+async function callLlmWithBisection(chunk: string, config: LlmConfig, depth = 0): Promise<LlmResult> {
+  const response = await callLlm(chunk, config);
+  if (!isHollowResponse(response.text) || depth >= 3) return response;
+  const half = Math.floor(chunk.length / 2);
+  const [left, right] = await Promise.all([
+    callLlmWithBisection(chunk.slice(0, half), config, depth + 1),
+    callLlmWithBisection(chunk.slice(half), config, depth + 1),
+  ]);
+  return mergeResults(left, right);
+}
+```
+- `callLlmWithBisection` replaces direct `callLlm` in the extraction pipeline.
+- Each bisection attempt is logged at DEBUG level: "Hollow response for chunk [0-2048] — bisecting."
+- Max depth 3 = at most 8 LLM calls per original chunk; prevents runaway cost.
+
 **DoD**
 - `cortex sync` with `llmBackend: "claude-cli"` uses the local `claude` binary without an API key.
 - `cortex sync` with `llmBackend: "bedrock"` uses IAM role from environment without an API key.
@@ -869,6 +1248,10 @@ Plus:
 - Adaptive retry: a mock that returns `context_length_exceeded` on the first call succeeds on second call with halved chunk.
 - Parallel extraction: syncing a 50-file project with 4 workers completes faster than sequential (measured in test).
 - All 8 backends have at least one mock-based integration test covering happy path + auth-error path.
+- Ollama backend: `num_ctx` set to model's declared context length (mocked via `POST /api/show` response), not hardcoded 2048.
+- Ollama num_ctx fallback: if `/api/show` returns 500, defaults to 4096 without crashing.
+- Hollow response detection: mock returning `"[]"` triggers bisection; mock returning actual JSON does not.
+- Bisection depth guard: mock that always returns hollow → stops after depth 3, logs WARN, returns empty result.
 
 ---
 
@@ -1410,6 +1793,82 @@ Today LLM backend, brevity level, soul opts, and project root are scattered acro
 - Install-time prompts: `cortex init` asks "What types of files do you want Cortex to learn from?" with checkboxes.
 - External tool requirements are gated — if `whisper` CLI is not on PATH and `openai.apiKey` is not set, `video` adapter emits a clear "cannot transcribe without Whisper CLI or OpenAI key" and skips gracefully.
 
+**URL Ingestion (graphify `ingest.py` pattern)**
+
+Graphify ingests external URLs as knowledge sources — not just files on disk. This covers four URL categories: tweets, arXiv papers, general web pages, and YouTube videos. Cortex should support the same to allow teams to ingest RFCs, design docs, research papers, and architecture blog posts as first-class knowledge.
+
+*What graphify does* (`ingest.py`):
+- **Tweets** (`twitter.com` / `x.com`): fetches via Twitter's oEmbed endpoint (`https://publish.twitter.com/oembed?url=<url>`). Extracts tweet text as a `document` entity. No API key required.
+- **arXiv papers** (`arxiv.org/abs/<id>`): fetches abstract via arXiv API (`https://export.arxiv.org/api/query?id_list=<id>`). Extracts title, authors, abstract as a `paper` entity.
+- **General web pages**: fetches HTML → converts to markdown via `markdownify`. Treated as `document` entity. Respects `robots.txt` (fetches via `urllib.robotparser`).
+- **YouTube** (`youtube.com`, `youtu.be`): downloads transcript via `youtube-transcript-api` (no yt-dlp for URL ingest; yt-dlp is for local video files). Transcript chunked as a `document` entity.
+
+*Cortex implementation — new `src/ingest/adapters/url.ts`*:
+```typescript
+export type UrlIngestResult = { text: string; entityType: "document" | "paper"; title?: string; authors?: string[] };
+
+export async function ingestUrl(url: string): Promise<UrlIngestResult> {
+  if (/twitter\.com|x\.com/.test(url)) return ingestTweet(url);
+  if (/arxiv\.org\/abs\//.test(url)) return ingestArxiv(url);
+  if (/youtube\.com\/watch|youtu\.be\//.test(url)) return ingestYouTubeTranscript(url);
+  return ingestWebPage(url);  // markdownify fallback
+}
+
+async function ingestWebPage(url: string): Promise<UrlIngestResult> {
+  const html = await fetchWithRobotsCheck(url);  // respects robots.txt
+  const md = htmlToMarkdown(html);  // via 'turndown' npm package
+  return { text: md, entityType: "document" };
+}
+```
+- `cortex ingest <url>` CLI command: `cortex ingest https://arxiv.org/abs/2310.11511` → ingests the paper.
+- `cortex.config.json` → `ingest.urls: ["https://...", "https://..."]` for always-on URL ingestion on every sync.
+- MCP tool `ingest` gains optional `url: string` parameter alongside `filePath`.
+- robots.txt compliance: if `User-agent: *` `Disallow: /` → skip with INFO log "robots.txt disallows scraping <url>."
+
+**Paper Signal Detection (graphify `detect.py` pattern)**
+
+Graphify classifies `.md` and `.txt` files as academic papers vs. regular documents, then handles them differently — papers get their abstract extracted and get `file_type: "paper"` in the graph, enabling paper-specific analysis.
+
+*What graphify does* (`detect.py`): 11 regex patterns that collectively signal "this is an academic paper":
+```python
+PAPER_SIGNALS = [
+  r"^#{1,2}\s+Abstract",          # ## Abstract heading
+  r"^#{1,2}\s+Introduction",      # ## Introduction
+  r"^#{1,2}\s+Related Work",
+  r"^#{1,2}\s+Conclusion",
+  r"^#{1,2}\s+References",
+  r"\[\d+\]",                     # [1] citation style
+  r"arXiv:\d{4}\.\d{4,5}",       # arXiv ID
+  r"doi:\s*10\.\d{4,9}/",         # DOI
+  r"et al\.",                     # academic attribution
+  r"@\w+\{[\w]+,",               # BibTeX entry
+  r"\\begin\{document\}",        # LaTeX
+]
+
+def classify_document(path, text) -> Literal["paper", "document"]:
+    signals_found = sum(1 for p in PAPER_SIGNALS if re.search(p, text, re.MULTILINE))
+    return "paper" if signals_found >= 3 else "document"
+```
+- Files classified as `paper` get `file_type: "paper"` in the graph. This enables paper-specific knowledge extraction prompts (extract hypotheses, methodology, results — not code entities).
+
+*Cortex implementation — add to `src/ingest/fileType.ts`*:
+```typescript
+const PAPER_SIGNALS = [
+  /^#{1,2}\s+Abstract/m, /^#{1,2}\s+Introduction/m, /^#{1,2}\s+Related Work/m,
+  /^#{1,2}\s+Conclusion/m, /^#{1,2}\s+References/m,
+  /\[\d+\]/m, /arXiv:\d{4}\.\d{4,5}/, /doi:\s*10\.\d{4,9}\//,
+  /et al\./, /@\w+\{[\w]+,/, /\\begin\{document\}/,
+];
+
+export function classifyDocument(text: string): "paper" | "document" {
+  const hits = PAPER_SIGNALS.filter(p => p.test(text)).length;
+  return hits >= 3 ? "paper" : "document";
+}
+```
+- Papers use a different LLM synthesis prompt: "Extract the key hypothesis, methodology, results, and limitations of this paper."
+- Papers are excluded from `calls`/`imports` relationship extraction (those are code-only relation types).
+- `KNOWLEDGE_REPORT.md` includes a "Papers ingested: N" count.
+
 **DoD**
 - A `.pdf` file in the project → Cortex extracts text, synthesizes entities, writes knowledge entries.
 - A `.png` architecture diagram → Cortex sends to vision model, extracts entity names and relationships from the image.
@@ -1418,6 +1877,12 @@ Today LLM backend, brevity level, soul opts, and project root are scattered acro
 - `cortex.config.json` with `"ingest.fileTypes": ["code"]` (default) — no regression on existing behavior.
 - Unsupported format is skipped with a debug log line, not an error.
 - Tests: PDF text extraction round-trip, image adapter with mocked vision response, Office DOCX text extraction, video adapter graceful skip when Whisper unavailable.
+- `cortex ingest https://arxiv.org/abs/2310.11511` → entity with `file_type: "paper"`, title, abstract extracted.
+- `cortex ingest https://twitter.com/karpathy/status/123` → entity with tweet text (mocked oEmbed response).
+- `cortex ingest https://example.com` with `Disallow: /` in robots.txt → skipped with INFO log.
+- A `.md` file with `## Abstract`, `## Introduction`, `[1]`, `et al.`, and `doi:10.1234/` → classified as `paper`.
+- A `.md` file with 1 paper signal → classified as `document`.
+- Paper entity uses the paper-specific synthesis prompt (verified by checking LLM call args in test mock).
 
 ---
 
@@ -3158,6 +3623,69 @@ Two complementary surfaces over the existing `state.json` graph — no new data,
 
 ---
 
+## 🔗 Phase 7.20: Surprising Connections — Cross-Community & Cross-Language Edge Detection — ⏳ Planned
+
+**Layman's Terms**
+Most edges in the graph connect entities in the same module. The interesting ones are the unexpected cross-module connections — a frontend component calling a backend auth service directly, or a Python script importing a TypeScript type definition via a build artifact. Phase 7.20 finds these surprising connections and surfaces them as architectural signals: not necessarily bugs, but always worth understanding.
+
+**Technical Terms**
+Implement `analyze.py:surprising_connections()` equivalent — a multi-factor surprise score that ranks edges by how unexpected they are given the graph topology.
+
+**What graphify does** (`analyze.py:surprising_connections()`):
+- **Base definition of "surprising"**: an edge between two entities that have no other neighbors in common (Jaccard similarity of their neighbor sets < 0.1) and are in different Leiden communities.
+- **Multi-factor surprise score** (weighted sum):
+  1. `community_distance` — number of community hops between source and target communities in the inter-community graph. Higher = more surprising.
+  2. `neighbor_jaccard` — `1 - jaccard(neighbors(source), neighbors(target))`. Near-0 Jaccard = no structural overlap = more surprising.
+  3. `language_cross` — `+0.5` bonus if source and target entities are in different programming languages (e.g., Python calls TypeScript-compiled artifact). Cross-language edges are inherently less expected.
+  4. `confidence_weight` — `EXTRACTED` edges score higher than `INFERRED` (extracted surprises are real; inferred ones may be hallucinations). Formula: `1.0` for EXTRACTED, `0.7` for INFERRED, `0.3` for AMBIGUOUS.
+  5. `centrality_penalty` — subtract `min(source_centrality, target_centrality) × 0.3`. High-centrality entities are "connectors by nature" — connections through them are less surprising.
+
+Final score: `surprise = (0.3 × community_distance + 0.3 × neighbor_jaccard + 0.2 × language_cross) × confidence_weight - centrality_penalty`. Normalized to [0, 1].
+
+**Implementation** — new `src/analyze/surprising.ts`:
+```typescript
+interface SurprisingEdge {
+  source: string;
+  target: string;
+  relation: string;
+  surpriseScore: number;
+  reasons: string[];  // human-readable: ["different communities (4→7)", "no shared neighbors", "cross-language: TS→Python"]
+}
+
+export function findSurprisingConnections(state: State, topN = 20): SurprisingEdge[] {
+  const edges = state.relations.filter(r => r.confidence !== "AMBIGUOUS");
+  return edges
+    .map(r => ({ ...r, surpriseScore: computeSurprise(r, state), reasons: explainSurprise(r, state) }))
+    .sort((a, b) => b.surpriseScore - a.surpriseScore)
+    .slice(0, topN);
+}
+```
+
+**CLI and MCP surfaces**:
+- `cortex analyze --surprising` — prints top-20 surprising connections with their scores and human-readable reasons.
+- `cortex analyze --surprising --threshold 0.7` — only show highly surprising connections.
+- `cortex analyze --surprising --format=json` — machine-readable output for integration with other tools.
+- New MCP tool `analyze_surprising(topN?, threshold?)` — returns the surprise list as structured JSON.
+- Integration with `KNOWLEDGE_REPORT.md`: a "Top 5 Surprising Connections" section added to every report (surfaces automatically without manual `cortex analyze` call).
+
+**DoR**: Phase 14.1 (Leiden communities) must be available — community distance is a core score component. Phase 0.3 (confidence labels) must be stable — confidence weight requires it.
+
+**DoD**
+- `cortex analyze --surprising` produces a ranked list of edge pairs with surprise scores ≥ 0 for a real codebase.
+- `cortex analyze --surprising --threshold 0.7` filters correctly.
+- MCP tool `analyze_surprising` returns equivalent structured data.
+- `KNOWLEDGE_REPORT.md` includes "Top 5 Surprising Connections" section after sync.
+- Tests:
+  - Two entities in different communities with no shared neighbors → surprise score > 0.5.
+  - Two entities in same community with many shared neighbors → surprise score < 0.2.
+  - Cross-language edge (Python→TypeScript marker) → `language_cross` bonus applied, score increases.
+  - God-node entity → `centrality_penalty` reduces its edges' surprise scores.
+  - AMBIGUOUS confidence edge → filtered out (not scored).
+  - `topN = 5` → returns at most 5 edges.
+- `reasons[]` field is human-readable: `["cross-community: auth→payments", "0 shared neighbors", "cross-language bonus"]`.
+
+---
+
 ## 💾 Phase 8.1: Live Graph Stream (WebSocket) — ⏳ Planned
 
 **Layman's Terms**
@@ -3205,17 +3733,58 @@ Open your Cortex architectural memory vault directly inside Obsidian for free. P
    - **Slate Gray (`#64748B`)**: Orphan Siloed Node
    Optimizes markdown templates to front-load headers, warnings, summaries, and quality metrics so native Obsidian tooltips (Hover Page Preview) serve as instant visual diagnostic cards.
 
+**Obsidian Wiki Export — Per-Community Articles + God-Node Articles + Index (graphify `wiki.py` pattern)**
+
+Graphify generates a full Obsidian wiki from the knowledge graph: one article per community (summarizing all entities in that community), one article per god-node (because god-nodes span communities and deserve dedicated coverage), and a master `index.md` linking everything. Cortex's Phase 8.2 already makes `.knowledge/` Obsidian-compatible — this adds the community-level and god-node articles.
+
+*What graphify does* (`wiki.py`):
+- **Per-community article** (`wiki/<community_label>.md`): generated via a single LLM call. Prompt: "Given these entities and their relationships: [entity list], write a 3-paragraph architectural summary of this module. Include: (1) the module's purpose, (2) its key components and their roles, (3) how it interfaces with the rest of the system." Saved to `wiki/<community_label>.md`.
+- **God-node articles** (`wiki/god_nodes/<entity_name>.md`): generated for each god-node. Prompt: "This entity connects multiple architectural modules. Summarize its cross-cutting role, list each module it bridges, and explain why it cannot be split." Saved to `wiki/god_nodes/<entity_name>.md`.
+- **`index.md`**: auto-generated master index listing all community articles with Obsidian wikilinks, god-node articles, plus a "Module Map" Mermaid diagram showing community-to-community relationships (which communities have cross-community edges).
+
+*Cortex implementation — new `src/wiki/` directory*:
+```typescript
+// src/wiki/communityArticle.ts
+export async function generateCommunityArticle(
+  communityId: number, entities: Entity[], llmConfig: LlmConfig
+): Promise<string> {
+  const prompt = buildCommunityPrompt(entities);
+  const text = await callLlm(prompt, llmConfig);
+  return formatAsObsidianArticle(text, entities);
+}
+
+// src/wiki/godNodeArticle.ts
+export async function generateGodNodeArticle(
+  godNode: Entity, bridgedCommunities: number[], llmConfig: LlmConfig
+): Promise<string> { ... }
+
+// src/wiki/index.ts
+export function generateWikiIndex(communities: CommunityMeta[], godNodes: Entity[]): string { ... }
+```
+- New CLI command: `cortex wiki` — generates all community articles, god-node articles, and `index.md` into `.knowledge/wiki/`.
+- `cortex wiki --dry-run` shows what would be generated without writing.
+- `cortex wiki --community auth` regenerates only the `auth` community article.
+- Articles are cached: if `communities.json` is unchanged, wiki generation is skipped (same cache-key as community detection).
+- Articles use Obsidian wikilinks `[[entity_name]]` for cross-references — fully clickable in the Obsidian graph.
+
 **Definition of Ready (DoR)**
 - Phase 8 is completed.
+- Phase 14.1 (Leiden communities) should be available for community-aware articles; falls back to directory buckets if absent.
 
 **Definition of Done (DoD)**
 - **Obsidian Vault Compliance**: Scaffolds a compliant `.knowledge/index.md` and generates relative, folder-scoped markdown links for maximum clickable portability across VS Code and GitHub.
 - **Sleek Theming Presets**: Generates local-only, gitignored `.obsidian/graph.json` and `.obsidian/appearance.json` presets mapping HSL color signals to quality scores, God modules, and active safeguards. Hover tooltips cleanly display diagnostic headers.
+- `cortex wiki` generates one article per community under `.knowledge/wiki/<community_label>.md`.
+- `cortex wiki` generates one article per god-node under `.knowledge/wiki/god_nodes/<entity_name>.md`.
+- `.knowledge/wiki/index.md` links all community and god-node articles with a Mermaid community-map diagram.
+- Cached: running `cortex wiki` twice without graph changes produces no new LLM calls.
+- `cortex wiki --dry-run` outputs a list of files that would be created without calling the LLM.
+- Tests cover: community article generation with mocked LLM, god-node article generation, index.md wikilink format, cache invalidation when communities change.
 - Tests cover offline parsing compatibility, relative link resolver robustness, and preset generation checks.
 
 **Pros & Cons**
-- ✅ **Pros**: Turns architectural understanding into a shareable, stunning, zero-overhead interactive graph viewer; clickable links in standard VS Code and GitHub previews; zero runtime desktop bloat.
-- ❌ **Cons**: Changing directory layout or names requires re-mapping link paths in the compilation pass (handled in-memory using `state.json` to preserve speed). Committing default `.obsidian/` folders to git could clutter developer preferences, mitigated by standard gitignore rules.
+- ✅ **Pros**: Turns architectural understanding into a shareable, stunning, zero-overhead interactive graph viewer; clickable links in standard VS Code and GitHub previews; zero runtime desktop bloat. Community articles make the graph legible to non-engineers (PM/EM onboarding).
+- ❌ **Cons**: Changing directory layout or names requires re-mapping link paths in the compilation pass (handled in-memory using `state.json` to preserve speed). Committing default `.obsidian/` folders to git could clutter developer preferences, mitigated by standard gitignore rules. Community article generation requires one LLM call per community — can be expensive on large repos; mitigated by caching.
 
 ---
 
@@ -4056,6 +4625,149 @@ When using AI agents, developers often waste thousands of tokens because the age
 **Pros & Cons**:
 - ✅ **Pros**: Closes the ecosystem blindness gap — architectural memory now knows when external API contracts may have changed. Prevents agents from using deprecated external APIs because "Cortex said it was fine." Particularly valuable for teams running automated dependency updates (Renovate, Dependabot).
 - ❌ **Cons**: Import scanning via grep is heuristic — dynamic imports, aliased package names, and barrel re-exports can be missed. Mitigated by flagging affected entities conservatively (prefer false-positive staleness over silent drift).
+
+---
+
+## 🔀 Phase 12.16: PR Triage Dashboard — Graph-Aware Conflict Detection — ⏳ Planned
+
+**Layman's Terms**
+Graphify ships `graphify prs --triage --conflicts` today. It looks at all open pull requests at once, maps each PR's changed files to the knowledge graph's community clusters, and flags PR pairs that are touching the same cluster — meaning they're likely to conflict with each other at merge time or step on each other's architectural assumptions. Cortex doesn't have this. This phase adds `cortex prs --triage` as a first-class CLI command and three MCP tools.
+
+**What graphify does** (`serve.py`: `list_prs`, `get_pr_impact`, `triage_prs`):
+- `list_prs` — fetches all open PRs from the GitHub API; returns title, author, files changed, and entity names matched via path lookup.
+- `get_pr_impact(pr_number)` — resolves which Cortex entities are touched by a PR's file changes; returns impact list with confidence scores.
+- `triage_prs` — runs `get_pr_impact` across all open PRs; builds a PR × PR conflict matrix; flags pairs sharing ≥1 graph community; ranks by conflict severity (shared-community size × number of shared entities).
+
+**Implementation**
+
+- **GitHub API layer** (`src/git/prClient.ts`):
+  - `listOpenPRs(repo)` — fetches all open PRs via GitHub REST API (`GET /repos/{owner}/{repo}/pulls`). Auth via `GITHUB_TOKEN` env var. Returns `{number, title, author, headBranch, files: string[]}[]`.
+  - `getPrFiles(prNumber)` — fetches the file list for one PR (`GET /repos/{owner}/{repo}/pulls/{number}/files`).
+
+- **Entity-to-PR mapping** (`src/git/prImpact.ts`):
+  - `getPrImpact(prNumber)` — for each file in the PR, look up matching entities in `state.json` by `sourceFile` path (exact match + prefix match for directory-level entities). Returns `{prNumber, entities: string[], communities: number[]}`.
+  - Community assignment uses Leiden community IDs from Phase 14.1 if available; falls back to directory-bucket IDs from Phase 14.
+
+- **Triage engine** (`src/git/triage.ts`):
+  - `triagePrs(repo)` — runs `getPrImpact` on all open PRs; builds a conflict matrix:
+    ```
+    PR #12 vs PR #17: shared communities [4, 7], shared entities [AuthService, TokenStore] — HIGH conflict risk
+    PR #9  vs PR #12: no overlap — safe to merge in any order
+    ```
+  - Conflict severity score: `sharedEntityCount × avgCommunityCentrality`. Higher centrality communities = higher risk.
+  - Returns sorted conflict pairs, highest-risk first.
+
+- **MCP tools** (add to `src/mcp/`):
+  - `list_prs` — calls `listOpenPRs`; returns PR list with entity impact counts.
+  - `get_pr_impact({prNumber})` — calls `getPrImpact`; returns entity list + community IDs.
+  - `triage_prs` — calls `triagePrs`; returns conflict matrix.
+
+- **CLI commands** (add to Layer-1 CLI from Phase 0.15):
+  ```bash
+  cortex prs --list                    # list all open PRs with entity impact counts
+  cortex prs --impact 42               # impact analysis for PR #42
+  cortex prs --triage                  # full conflict matrix across all open PRs
+  cortex prs --conflicts               # show only conflicting PR pairs (skip safe ones)
+  cortex prs --triage --format=json    # machine-readable for CI use
+  ```
+
+- **CI integration** (extends Phase 12 GitHub Action): on each PR push, run `cortex prs --conflicts --format=json` and append a "⚠️ Concurrent PR conflicts" section to the sticky comment if any conflicts are found.
+
+**Worktree-to-PR Correlation (graphify `prs.py` pattern)**
+
+Graphify maps local git worktrees to open PR branches, so `cortex prs --list` can show the developer their local worktrees alongside their GitHub PR status — all in one view.
+
+*What graphify does* (`prs.py`):
+- Runs `git worktree list --porcelain` to get all registered worktrees and their current branch names.
+- For each worktree branch, searches the open PR list for a PR with `head.ref == branch_name`.
+- Returns a merged view: `{worktree: "/path/to/worktree", branch: "feature/auth", pr: {number: 42, status: "PENDING", title: "..."} | null}`.
+- This means `graphify prs` shows which of your local worktrees have open PRs and their current CI/review status — no context-switching to GitHub required.
+
+*Cortex implementation — add to `src/git/prClient.ts`*:
+```typescript
+interface WorktreePrMapping {
+  worktreePath: string;
+  branch: string;
+  pr: PullRequest | null;  // null = no open PR for this branch
+}
+
+export async function getWorktreePrMappings(repo: string): Promise<WorktreePrMapping[]> {
+  const worktrees = await parseGitWorktrees();  // parse `git worktree list --porcelain`
+  const openPRs = await listOpenPRs(repo);
+  return worktrees.map(wt => ({
+    worktreePath: wt.path,
+    branch: wt.branch,
+    pr: openPRs.find(pr => pr.headBranch === wt.branch) ?? null,
+  }));
+}
+```
+- `cortex prs --list` default output now shows worktree-linked PRs first (with worktree path), then unlinked PRs.
+- `cortex prs --worktrees` shows only worktrees that have open PRs.
+
+**PR 8-State Machine Full Spec (graphify `prs.py` pattern)**
+
+Graphify models each PR as an 8-state machine with ANSI-colored output and a 14-day staleness threshold. Cortex's existing `cortex prs --list` returns raw GitHub state — this adds the full state machine layer on top.
+
+*What graphify does* (`prs.py`):
+
+| State | Condition | ANSI Color |
+|-------|-----------|------------|
+| `DRAFT` | PR is a draft | Dim gray |
+| `READY` | Ready for review, no reviews yet | Green |
+| `PENDING` | Awaiting reviewer response (review requested) | Yellow |
+| `APPROVED` | All required reviewers approved | Bold green |
+| `CHANGES-REQ` | At least one reviewer requested changes | Red |
+| `CI-FAIL` | Latest commit CI status = failure | Red + CI icon |
+| `STALE` | No activity in > 14 days | Dim yellow |
+| `WRONG-BASE` | Base branch is not the default branch (merge target mismatch) | Magenta |
+
+State priority (when multiple apply): `CI-FAIL > CHANGES-REQ > STALE > WRONG-BASE > APPROVED > PENDING > DRAFT > READY`.
+
+Staleness: if `updated_at < now - 14 days` → `STALE`. Configurable via `cortex.config.json:pr.staleDays` (default: 14).
+
+*Cortex implementation — new `src/git/prState.ts`*:
+```typescript
+export type PrState = "DRAFT" | "READY" | "PENDING" | "APPROVED" | "CHANGES-REQ" | "CI-FAIL" | "STALE" | "WRONG-BASE";
+
+const STATE_COLORS: Record<PrState, string> = {
+  DRAFT: "\x1b[2m", READY: "\x1b[32m", PENDING: "\x1b[33m",
+  APPROVED: "\x1b[1;32m", "CHANGES-REQ": "\x1b[31m", "CI-FAIL": "\x1b[31m",
+  STALE: "\x1b[2;33m", "WRONG-BASE": "\x1b[35m",
+};
+
+export function classifyPrState(pr: PullRequest, defaultBranch: string, staleDays = 14): PrState {
+  if (pr.ciStatus === "failure") return "CI-FAIL";
+  if (pr.reviewDecision === "CHANGES_REQUESTED") return "CHANGES-REQ";
+  if (daysSince(pr.updatedAt) > staleDays) return "STALE";
+  if (pr.baseRef !== defaultBranch) return "WRONG-BASE";
+  if (pr.reviewDecision === "APPROVED") return "APPROVED";
+  if (pr.reviewRequests.length > 0) return "PENDING";
+  if (pr.draft) return "DRAFT";
+  return "READY";
+}
+```
+- `cortex prs --list` output format (one line per PR):
+  ```
+  #42  [APPROVED ]  feature/auth    → main   AuthService, TokenStore (+3 entities)
+  #17  [CI-FAIL  ]  fix/payment     → main   PaymentGateway (+1 entity)   ⚠️ conflicts: #42
+  #9   [STALE    ]  chore/cleanup   → main   (no entities)                 14 days idle
+  ```
+- `--no-color` flag for CI environments.
+- `cortex prs --state STALE` filters to show only PRs in a specific state.
+
+**DoR**: Phase 12 (Git & CI) is stable. Phase 14.1 (Leiden communities) is helpful but not required — falls back to directory buckets.
+
+**DoD**
+- `cortex prs --list` authenticates via `GITHUB_TOKEN` and returns open PR list with entity impact counts.
+- `cortex prs --triage` produces a conflict matrix identifying PR pairs sharing graph communities.
+- `cortex prs --conflicts` shows only conflicting pairs, sorted by severity score.
+- MCP tools `list_prs`, `get_pr_impact`, `triage_prs` return equivalent structured data.
+- Phase 12 GitHub Action appends conflict warning to PR comment when `--conflicts` output is non-empty.
+- Tests: mock GitHub API → 3 PRs with overlapping files → assert correct conflict pair detected; 3 PRs with no overlap → assert empty conflict list; `GITHUB_TOKEN` missing → clear error with remediation.
+- Worktree-to-PR: `git worktree list --porcelain` with 2 worktrees where 1 has an open PR → `cortex prs --list` shows the worktree path next to the matched PR.
+- PR state machine: PR with `ciStatus: "failure"` → classified as `CI-FAIL`; PR with `updatedAt` 20 days ago → classified as `STALE`; all 8 states covered in unit tests.
+- `cortex prs --state STALE` filters output to STALE-only; `--no-color` strips ANSI codes.
+- `cortex.config.json:pr.staleDays: 7` → STALE threshold changed to 7 days.
 
 ---
 
@@ -5566,6 +6278,121 @@ Introduce a deterministic clustering step that runs _before_ the LLM synthesis c
 
 - ✅ **Pros**: Directly improves synthesis quality on the class of diffs where it degrades today — large, cross-cutting changes. Each cluster is small enough for the LLM to reason about precisely. Costs more tokens per large sync (N synthesis calls instead of 1), but produces N focused entries instead of 1 vague one — net knowledge quality improves.
 - ❌ **Cons**: Adds latency on large syncs (N sequential or parallel LLM calls). Parallel calls are faster but multiply the concurrent API load; sequential calls are safer but slower. Default to sequential; expose a `CORTEX_CLUSTER_PARALLEL=true` flag for users on rate-limit-generous API tiers. The edge-merge heuristic can over-merge tightly coupled directories into one large cluster — mitigated by capping each cluster at `2 × CORTEX_CLUSTER_THRESHOLD` files and splitting oversized merged clusters by sub-directory.
+
+---
+
+## 🕸️ Phase 14.1: Leiden Community Detection on the Knowledge Graph — ⏳ Planned
+
+**Layman's Terms**
+Phase 14 groups changed files by directory when a diff is too large. That's a blunt heuristic — two files in the same folder might be completely unrelated, while two files in different folders might be tightly coupled. Phase 14.1 replaces directory bucketing with **Leiden community detection**: a proper graph algorithm that reads the actual relationship edges in the knowledge graph and groups entities by how strongly they're connected to each other. The result is clusters that reflect real architectural boundaries, not just where files happen to live on disk.
+
+**What graphify does** (`cluster.py`, `graspologic` optional dep):
+- Builds an adjacency matrix from the knowledge graph's entity nodes and relationship edges.
+- Runs the **Leiden algorithm** (an improvement over Louvain; converges faster, produces better modularity scores).
+- Each entity is assigned a `community_id` integer. Highly connected entities share a community. Loosely connected entities are in different communities.
+- `god_nodes` detection: entities with edges into many different communities — architectural hotspots that are cross-cutting by nature.
+- Communities are used for: PR conflict triage (same community = likely conflict), graph visualization coloring (Phase 8), cluster-aware context packing (Phase 13).
+
+**Implementation**
+
+- **Graph builder** (`src/cluster/graphBuilder.ts`): read `state.json` edges → build a weighted adjacency list. Edge weight: `EXTRACTED` = 1.0, `INFERRED` = 0.7, `AMBIGUOUS` = 0.3 (uses confidence labels from Phase 0.3). Self-loops excluded.
+
+- **Leiden implementation**: Pure TypeScript Leiden using the `graphology` + `graphology-communities-louvain` npm packages as the starting point (Louvain is the predecessor to Leiden; use as the base, add resolution-refinement step that characterizes Leiden).
+  - `src/cluster/leiden.ts` — `runLeiden(graph, resolution?: number): Map<string, number>`. Returns entity name → community ID.
+  - Resolution parameter: higher = more, smaller communities. Default 1.0. Exposed as `CORTEX_LEIDEN_RESOLUTION` env var.
+  - Deterministic seed for reproducibility: `seed = 42` by default.
+
+- **Community storage**: write `community_id` field onto each entity in `state.json` after every sync where the graph structure changes. Store community metadata in `.knowledge/communities.json`:
+  ```json
+  {
+    "communities": {
+      "4": { "size": 12, "centralEntities": ["AuthService", "TokenStore"], "label": "auth" },
+      "7": { "size": 8,  "centralEntities": ["PaymentGateway"], "label": "payments" }
+    },
+    "godNodes": ["ApiRouter", "ConfigLoader"],
+    "modularity": 0.73,
+    "computedAt": "2026-05-23T10:00:00Z"
+  }
+  ```
+- `cortex doctor` gains check [13]: Leiden communities computed and current (`communities.json` mtime ≤ `state.json` mtime).
+
+- **Downstream consumers** (Phase 14, 12.16, 8 all benefit):
+  - Phase 14 clustering: replace directory-bucket heuristic with Leiden community assignments. Files in the same community cluster together for synthesis.
+  - Phase 12.16 PR triage: uses `community_id` per entity for conflict detection.
+  - Phase 8 visualization: color nodes by `community_id` (already has node coloring; just wire the field).
+  - Phase 13 context packing: prefer entities from the same community when building scoped context packs.
+
+- **God-node detection**: entity is a god-node if it has edges into ≥3 distinct communities. Stored in `communities.json:godNodes[]`. Surfaces as a `cortex lint` warning: `"ApiRouter is a god-node (connected to 5 communities) — consider splitting."` Mirrors graphify's `god_nodes` MCP tool.
+
+**DoR**: Phase 0.3 (confidence labels) is stable — edge weights depend on it. Phase 8 (graph visualization) benefits immediately. Phase 14 and 12.16 use community IDs.
+
+**DoD**
+- After `cortex ingest`, `.knowledge/communities.json` is written with community assignments and modularity score.
+- Each entity in `state.json` has a `community_id` integer field.
+- `cortex lint` surfaces god-nodes with community count.
+- Phase 8 graph visualization colors nodes by community (test: 2 entities in community 4 share color; entity in community 7 has different color).
+- Phase 14 clustering uses Leiden communities when `communities.json` is present; falls back to directory buckets when absent.
+- Phase 12.16 PR triage reads `community_id` from entities.
+- `CORTEX_LEIDEN_RESOLUTION=2.0` produces more granular communities than default.
+- **Gap 5 — Community auto-labeling**: after Leiden assigns `community_id` integers, auto-label each community using the most frequent keyword across entity labels in that community. Algorithm: tokenize all entity labels in the community (split camelCase/snake_case → words), count word frequency, take the top-1 non-stopword token as the community label. Store in `communities.json:communities[id].label`. Example: community 4 contains `AuthService`, `AuthMiddleware`, `TokenAuthHandler` → label `"auth"`. Label is used in `cortex doctor` output, Phase 8 visualization tooltips, and `cortex prs --triage` conflict descriptions.
+- **Community ID stability across re-runs**: after each Leiden pass, remap new community IDs to previous IDs by intersection overlap (largest overlap = same community). Prevents community 4 becoming community 7 on the next sync and confusing downstream consumers. Store `previousCommunityIds` mapping in `communities.json`.
+
+**Cohesion-Based Community Re-Splitting (graphify `cluster.py` pattern)**
+
+Graphify runs a secondary Leiden pass on communities that have low internal cohesion — communities where edges within the community are sparse relative to the community size. A large community with few internal edges is likely an over-merged cluster that should be split.
+
+*What graphify does* (`cluster.py`):
+- After the primary Leiden pass, computes **internal cohesion** for each community: `cohesion = actual_internal_edges / possible_internal_edges` (density formula).
+- Communities with `cohesion < 0.15` (configurable threshold) are flagged as low-cohesion.
+- A secondary Leiden pass is run on the subgraph of each low-cohesion community independently, with a higher resolution parameter (`resolution × 1.5`) — this forces more granular splitting within the weak community.
+- Re-split sub-communities are assigned new IDs and merged back into the global community map.
+- Runs recursively at most once per community (no infinite re-splitting: only the primary communities are re-split, not the secondary ones).
+
+*Cortex implementation — add to `src/cluster/leiden.ts`*:
+```typescript
+const COHESION_THRESHOLD = 0.15;  // configurable via CORTEX_COHESION_THRESHOLD env var
+
+function computeCohesion(communityId: number, graph: Graphology): number {
+  const members = graph.filterNodes(n => graph.getNodeAttribute(n, "community_id") === communityId);
+  if (members.length < 2) return 1.0;  // single-node community is perfectly cohesive
+  const actualEdges = countInternalEdges(members, graph);
+  const possibleEdges = (members.length * (members.length - 1)) / 2;
+  return actualEdges / possibleEdges;
+}
+
+export function resplitLowCohesionCommunities(
+  initialAssignment: Map<string, number>,
+  graph: Graphology,
+  resolution: number
+): Map<string, number> {
+  let nextId = Math.max(...initialAssignment.values()) + 1;
+  const finalAssignment = new Map(initialAssignment);
+  
+  const communityIds = new Set(initialAssignment.values());
+  for (const cid of communityIds) {
+    if (computeCohesion(cid, graph) < COHESION_THRESHOLD) {
+      const subgraph = extractSubgraph(cid, graph);
+      const subAssignment = runLeiden(subgraph, resolution * 1.5);
+      // Remap sub-community IDs to globally unique IDs
+      for (const [entity, subCid] of subAssignment) {
+        finalAssignment.set(entity, nextId + subCid);
+      }
+      nextId += new Set(subAssignment.values()).size;
+    }
+  }
+  return finalAssignment;
+}
+```
+- `communities.json` gains per-community `cohesion: number` field.
+- `cortex doctor` gains check: "Low-cohesion communities: N (re-split threshold: 0.15)."
+- `cortex lint` warns: `"Community 3 has low cohesion (0.08) — was auto-split into 2 sub-communities."` 
+- `CORTEX_COHESION_THRESHOLD=0.20` tightens the re-split threshold.
+- `CORTEX_COHESION_THRESHOLD=0` disables re-splitting entirely.
+
+- Tests: small graph (5 entities, known edges) → assert expected community assignments; god-node detection (entity with edges to 4 communities → flagged); modularity score > 0.3 on the Cortex repo's own knowledge graph; auto-label test: 3 entities with "Auth" prefix → community label `"auth"`; stability test: add one entity, re-run Leiden, assert majority of community IDs unchanged.
+- Cohesion re-split test: a community of 6 entities with only 1 internal edge (cohesion = 0.067 < 0.15) → secondary Leiden pass runs → community split into 2 sub-communities.
+- `CORTEX_COHESION_THRESHOLD=0` → no re-splitting occurs even for sparse communities.
+- `communities.json` `cohesion` field present for every community after sync.
 
 ---
 
@@ -7766,6 +8593,15 @@ Most enterprises don't use one giant monorepo — they have dozens or hundreds o
 
 **How this differs from Phase 11 (Monorepo Federation)**
 Phase 11 covers multiple workspaces inside a single Git repository (same disk, same CI, same team). Phase 21 covers entirely separate repositories (different Git remotes, different teams, different CI pipelines, network transport required). Phase 11 uses a shared file system; Phase 21 requires a push protocol over the network and a central registry that each repo's CI can write to.
+
+**Pre-requisite: Personal Global Registry (`~/.cortex/`)**
+Before the full enterprise federated registry (Phase 21), ship a lightweight personal-scope version targeting individual developers who work across multiple unrelated projects. Graphify does this with `~/.graphify/` — a local directory that accumulates cross-project patterns.
+
+- `~/.cortex/global/` — user-level knowledge store. When a developer runs `cortex concept save <name>` with `--global`, the concept is written to `~/.cortex/global/` instead of `.knowledge/`.
+- `cortex index --global` — shows the global concept library alongside local entities.
+- `cortex pack --include-global` — includes global concepts when building context packs.
+- Use case: a developer discovers a recurring pattern ("this team always puts auth middleware here") and saves it globally so it shows up in every future project they onboard Cortex to.
+- This is local-only, zero-network, zero-auth — ships before Phase 21 as Phase 20.X or as an addendum to Phase 12. The full federated registry (Phase 21) extends this by adding network push/pull and team-level sharing.
 
 **Technical Terms**
 Each repo publishes a signed knowledge export (a subset of its `state.json` — public entities only) to a central **Cortex Registry** after each merge. Consuming repos subscribe to upstream registry entries and materialize read-only "foreign" entities in their local `.knowledge/`. Cross-repo `[[repo:Entity]]` links resolve against these materialized entities. Constraints can span repos: a `cortex.constraints.yaml` rule in `payment-service` can declare `mustNotImport: auth-service/InternalTokenStore`.
