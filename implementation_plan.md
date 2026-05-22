@@ -21,6 +21,9 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 0.12  | `cortex repair` — Backup/Restore & Git-Friendly Output | ⏳ Planned                           |
 | 0.13  | Multi-Language Tree-sitter Extractors (25 languages)   | ⏳ Planned                           |
 | 0.14  | Multi-Backend LLM Abstraction (8 backends)             | ⏳ Planned                           |
+| 0.15  | Dual-Track Distribution: MCP + Skill with Auto-Config Writer | ⏳ Planned                     |
+| 0.16  | Multi-Format File Ingestion (PDF, Images, Video, Office, Docs) | ⏳ Planned                   |
+| 0.17  | Dev Hygiene: Security CI Gate, Property Tests, Pre-Commit Hooks, Standalone Binary | ⏳ Planned |
 | 1     | Ingestion & Monitoring Foundation                      | ✅ Done                              |
 | 2     | LLM Synthesis Engine                                   | ✅ Done                              |
 | 3     | Knowledge Storage & Cost Control                       | ✅ Done                              |
@@ -169,6 +172,7 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 | 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
 | 33.1  | Model Provider Registry & Cost-Tier Routing            | ⏳ Planned (enterprise)              |
 | 33.2  | Remote Operations & Mobile Status PWA                  | ⏳ Planned (enterprise)              |
+| 33.5  | Unified Two-Stage Ingestion Pipeline                   | ⏳ Planned (P0 — bootstrap + watch)  |
 | 34    | Cognitive Engine Optimizations (Gaming/ML Inspired)    | ⏳ Planned (research-grade)          |
 | 34.1  | Virtualized Context Streaming (UE5 Nanite)             | ⏳ Planned (research-grade)          |
 | 34.2  | Speculative Architectural Decoding (ML)                | ⏳ Planned (research-grade)          |
@@ -14912,3 +14916,286 @@ Without a valid writ, the action is not executed. The writ is recorded in `.know
 This prevents the system from taking punitive architectural actions without transparent, auditable justification — arbitrary enforcement undermines trust in the knowledge base.
 
 **Implementation**: `src/knowledge/habeas-corpus.ts` — writ schema, validation before enforcement action execution, writ registry with searchable index.
+
+---
+
+## Phase 33.5: Unified Two-Stage Ingestion Pipeline — ⏳ Planned
+
+> **Cross-references**: Phase 0.4 (content-addressed synthesis cache), Phase 0.13 (LanguageProvider interface), Phase 14.1 (incremental writeback), Phase 33 (graph extraction)
+>
+> **Non-breaking**: this pipeline wraps the existing `CortexWatcher → diff → synthesizeChanges()` path. No existing components are replaced; Stage 1 runs before the LLM call, Stage 2 wraps the existing LLM client, Stage 3 reuses `KnowledgeManager.saveSynthesis()`.
+
+### 33.5.0 Motivation
+
+The current Cortex ingestion path has two structural weaknesses identified by comparison with GitNexus and Graphify:
+
+1. **Bootstrap cold-start**: on first run against a large repo, `getFileDiff()` returns the entire codebase against the empty-tree hash. A single `synthesizeChanges()` call receives a diff that may be hundreds of thousands of tokens — exceeding context limits and producing low-quality synthesis.
+2. **No fast-path**: every watch cycle re-hashes and re-diffs even when git HEAD and worktree are clean. On busy developer machines this creates unnecessary background load.
+
+The Unified Two-Stage Ingestion Pipeline resolves both by separating deterministic graph extraction (no LLM, parallelisable, cacheable) from semantic synthesis (LLM, chunked by community, resumable).
+
+### 33.5.1 Pipeline Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ INGESTION PIPELINE                                      │
+│                                                         │
+│  [Input: changed files OR full repo]                    │
+│        │                                                │
+│        ▼                                                │
+│  Stage 0: Fast-Path Check  ──────────────────► EXIT    │
+│    git HEAD == meta.lastCommit?                (no-op)  │
+│    worktree clean?                                      │
+│        │ (changes detected)                             │
+│        ▼                                                │
+│  Stage 1: Deterministic Graph Extraction (no LLM)      │
+│    ├─ Tree-sitter parse (via LanguageProvider)          │
+│    ├─ Symbol resolution + dedup                         │
+│    ├─ Edge extraction with per-relation confidence      │
+│    ├─ Content-addressed cache check (SHA-256)           │
+│    └─ Parallel worker pool (cpu-1 workers)              │
+│        │                                                │
+│        ▼                                                │
+│  Stage 2: LLM Semantic Synthesis (chunked)             │
+│    ├─ Leiden community detection on Stage 1 graph       │
+│    ├─ Chunk into ~8k token groups by community          │
+│    ├─ Synthesize each chunk (withRetry + full-jitter)   │
+│    ├─ Adaptive retry on context_length_exceeded (halve) │
+│    └─ Checkpoint-per-chunk (resumable on crash)         │
+│        │                                                │
+│        ▼                                                │
+│  Stage 3: Atomic Write                                  │
+│    ├─ Validate all entities (constraint checks)         │
+│    ├─ KnowledgeManager.saveSynthesis() per entity       │
+│    ├─ Update meta.lastCommit + meta.lastSync            │
+│    └─ Emit graph report + staleness propagation         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 33.5.2 Stage 0: Fast-Path Check
+
+Runs in under 1 second with no file I/O beyond git plumbing.
+
+```typescript
+interface FastPathResult {
+  status: "up-to-date" | "changes-detected";
+  changedFiles?: string[];
+  reason?: string;
+}
+
+async function fastPathCheck(projectRoot: string, meta: CortexMeta): Promise<FastPathResult> {
+  const headCommit = await git.revparse(["HEAD"]).catch(() => null);
+  if (!headCommit) return { status: "changes-detected", reason: "no git HEAD" };
+
+  if (meta.lastCommit === headCommit) {
+    // HEAD matches — check worktree cleanliness
+    const status = await git.status();
+    if (status.files.length === 0) {
+      return { status: "up-to-date" };
+    }
+    const changedFiles = status.files.map(f => f.path);
+    return { status: "changes-detected", changedFiles };
+  }
+
+  // HEAD advanced — get changed files since lastCommit
+  const changedFiles = await git.diff([`${meta.lastCommit}..HEAD`, "--name-only"])
+    .then(out => out.split("\n").filter(Boolean));
+  return { status: "changes-detected", changedFiles };
+}
+```
+
+**Integration point**: `src/core/diff.ts` — `fastPathCheck()` is called at the top of `getFileDiff()`. If `status === "up-to-date"`, return early with an empty diff and set a `CORTEX_FAST_PATH=1` env signal so the watcher skips the LLM call entirely.
+
+### 33.5.3 Stage 1: Deterministic Graph Extraction
+
+Parallelised across CPU cores via a worker pool. Zero LLM calls. Results are content-addressed so unchanged files are never re-parsed.
+
+```typescript
+interface ExtractionResult {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  contentHash: string;
+  extractedAt: number;
+}
+
+interface WorkerPool {
+  submit(filePath: string): Promise<ExtractionResult>;
+  drain(): Promise<void>;
+  terminate(): void;
+}
+
+function createExtractionPool(concurrency = Math.max(1, os.cpus().length - 1)): WorkerPool {
+  // Each worker: reads file, SHA-256 hashes content, checks cache,
+  // calls LanguageProvider.getParser() + extract(), applies confidence floors,
+  // writes result to content-addressed cache.
+  // ...
+}
+
+async function runStage1(
+  changedFiles: string[],
+  pool: WorkerPool,
+  cache: ContentAddressedCache,
+): Promise<GraphExtractionReport> {
+  const results = await Promise.all(changedFiles.map(f => pool.submit(f)));
+  const nodes = results.flatMap(r => r.nodes);
+  const edges = results.flatMap(r => r.edges);
+  // Dedup nodes by canonical ID, resolve cross-file symbol references
+  return { nodes: dedup(nodes), edges: applyConfidenceFloors(edges) };
+}
+```
+
+**Per-relation confidence floors** (from Phase 0.3) are applied here at graph build time — not at query time — so the stored graph already reflects enforced minimums:
+
+```typescript
+const CONFIDENCE_FLOORS: Record<string, number> = {
+  CALLS: 0.90, IMPORTS: 0.90, HAS_METHOD: 0.95,
+  INHERITS: 0.95, ACCESSES: 0.80, DEPENDS_ON: 0.75, RELATED_TO: 0.60,
+};
+```
+
+**Integration point**: `src/core/extractor.ts` (new file, calls existing `LanguageProvider` impls). The `ContentAddressedCache` is the same cache described in Phase 0.4 — `~/.cortex/content-cache.json`, SHA-256 keyed, 30-day TTL.
+
+### 33.5.4 Stage 2: LLM Semantic Synthesis
+
+Takes the Stage 1 graph, clusters into Leiden communities, and synthesises each community with the existing `synthesizeChanges()` LLM client — but chunked and resumable.
+
+```typescript
+interface SynthesisChunk {
+  communityId: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  tokenEstimate: number;
+}
+
+async function runStage2(
+  report: GraphExtractionReport,
+  checkpoint: SynthesisCheckpoint,
+  llmClient: LlmClient,
+): Promise<SynthesisResult[]> {
+  const communities = detectLeidenCommunities(report.nodes, report.edges);
+  const chunks = communities.map(c => buildChunk(c, TARGET_CHUNK_TOKENS));
+  const results: SynthesisResult[] = [];
+
+  for (const chunk of chunks) {
+    if (checkpoint.completed.has(chunk.communityId)) {
+      results.push(checkpoint.results.get(chunk.communityId)!);
+      continue; // resume: skip already-synthesised chunks
+    }
+
+    const result = await withRetry(
+      () => llmClient.synthesize(chunk),
+      {
+        maxAttempts: 3,
+        baseDelayMs: 200,
+        capDelayMs: 10_000,
+        retryIf: (err) => !(err instanceof AbortError),
+      }
+    );
+
+    // Adaptive context-overflow: halve chunk and retry once
+    if (result.stopReason === "context_length_exceeded") {
+      const halves = splitChunk(chunk);
+      for (const half of halves) {
+        results.push(await llmClient.synthesize(half));
+      }
+    } else {
+      results.push(result);
+    }
+
+    // Checkpoint after every chunk — crash-safe resumability
+    checkpoint.completed.add(chunk.communityId);
+    checkpoint.results.set(chunk.communityId, results.at(-1)!);
+    await checkpoint.flush();
+  }
+
+  return results;
+}
+```
+
+**Checkpoint file**: `.knowledge/.bootstrap-checkpoint.json` — presence indicates an in-progress bootstrap. Deleted on successful Stage 3 completion. On restart, Stage 2 reads the checkpoint and skips completed communities.
+
+```typescript
+interface SynthesisCheckpoint {
+  startedAt: number;
+  totalChunks: number;
+  completed: Set<string>;
+  results: Map<string, SynthesisResult>;
+  flush(): Promise<void>;
+}
+```
+
+**Integration point**: wraps the existing `src/llm/client.ts` `synthesizeChanges()` — the LLM call itself is unchanged. Only the batching/retry/checkpoint layer is new.
+
+### 33.5.5 Stage 3: Atomic Write
+
+Identical to the existing `KnowledgeManager` write path, with one addition: update `meta.lastCommit` to close the fast-path loop.
+
+```typescript
+async function runStage3(
+  results: SynthesisResult[],
+  km: KnowledgeManager,
+  headCommit: string,
+): Promise<void> {
+  // Validate all entities before any writes (fail-fast)
+  for (const r of results) validateEntity(r.entity);
+
+  // Write entities (existing KnowledgeManager.saveSynthesis)
+  await Promise.all(results.map(r => km.saveSynthesis(r.entity, r.synthesis)));
+
+  // Seal the fast-path: next run will see HEAD == meta.lastCommit
+  await km.updateMeta({ lastCommit: headCommit, lastSync: Date.now() });
+
+  // Clean up checkpoint on success
+  await fs.rm(".knowledge/.bootstrap-checkpoint.json", { force: true });
+}
+```
+
+### 33.5.6 Three Flows Mapped to the Pipeline
+
+| Flow | Stage 0 | Stage 1 | Stage 2 | Stage 3 |
+|------|---------|---------|---------|---------|
+| **Bootstrap (cold start)** | skip (no meta) | all repo files, parallel pool | all communities, checkpoint-per-chunk | write all, set lastCommit |
+| **Automatic (watch cycle)** | fast-path check | changed files only | changed communities only | incremental write |
+| **Manual (`cortex ingest`)** | optional `--force` flag | scope = CLI args or changed files | targeted communities | write + report |
+
+### 33.5.7 Implementation Phasing (Ordered by ROI)
+
+**Phase A — Fast-path check** (1 day, zero risk)
+- Add `fastPathCheck()` to `src/core/diff.ts`
+- Guard the watch loop with it
+- Result: eliminates wasteful no-op re-ingestion on clean worktrees
+
+**Phase B — Content-addressed cache** (1 day, zero risk)
+- Implement `ContentAddressedCache` at `src/core/content-cache.ts`
+- Wire into existing `synthesizeChanges()` as a pre-check
+- Result: unchanged files are never re-synthesised, even if the watcher fires
+
+**Phase C — Worker pool Stage 1 extraction** (2 days, low risk)
+- Add `src/core/extractor.ts` with `WorkerPool` and `LanguageProvider` wiring
+- Run Stage 1 for changed files before calling the LLM
+- Result: parallel deterministic extraction, per-relation confidence floors applied early
+
+**Phase D — Chunked Stage 2 synthesis** (2 days, medium risk — touches LLM call path)
+- Add Leiden community detection (`src/core/communities.ts`)
+- Wrap `synthesizeChanges()` with chunked loop + adaptive retry
+- Add checkpoint file write/read
+- Result: bootstrap works on large repos without context overflow
+
+**Phase E — Bootstrap flow** (1 day, low risk)
+- Wire all stages into `cortex ingest --bootstrap` CLI command
+- Auto-detect cold start (missing `.knowledge/state.json`) and run full bootstrap
+- Result: first-run experience goes from "LLM context overflow" to "resumable chunked bootstrap"
+
+### 33.5.8 Current Architecture Compatibility
+
+This pipeline is **strictly additive**. The existing components it touches:
+
+| Existing Component | Touch Type | What Changes |
+|---|---|---|
+| `src/cli/watch.ts` CortexDaemon | **call site** | `fastPathCheck()` guard added before `performSync()` |
+| `src/core/diff.ts` `getFileDiff()` | **prepend** | early return when fast-path is clean |
+| `src/llm/client.ts` `synthesizeChanges()` | **wrapped** | called inside Stage 2 loop, not replaced |
+| `src/knowledge/writer.ts` `saveSynthesis()` | **call site** | called inside Stage 3 loop, signature unchanged |
+| `.knowledge/state.json` | **read + additive write** | `meta.lastCommit` field added, no existing fields removed |
+
+No existing code paths are deleted. The pipeline can be feature-flagged with `CORTEX_TWO_STAGE=1` during rollout so the old single-call path remains the default until Phase D is validated in CI.
