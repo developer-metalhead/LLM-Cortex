@@ -1227,7 +1227,22 @@ Plus: `_extract_with_adaptive_retry` (halves chunk on context-length errors, ret
 
 ---
 
-### Full pattern summary table (14 patterns → Phase 0 subphases)
+### 15. Dual-Track Distribution (MCP + Skill) with Auto-Config Writer (distribution gap, strategic)
+
+Graphify ships SKILL.md to 18 platforms (`_PLATFORM_CONFIG` in `__main__.py`) and runs MCP as an optional extra (`pip install graphifyy[mcp]` + `python -m graphify.serve`). Every install path writes one file (the skill) to a known platform directory. Hot-reload (`_maybe_reload` in `serve.py`) keeps the MCP server alive across graph changes.
+
+But graphify **never writes an IDE's MCP config file automatically**. Every `skill-*.md` ships the same static Step 7d snippet pointing at `claude_desktop_config.json`. The graphify user must still know where their IDE stores MCP config, find the file, and paste in JSON by hand. Only Antigravity prints (not writes) a `~/.gemini/antigravity/mcp_config.json` path. This is a deliberate trade-off in graphify — universal skill, manual MCP — but it leaves a clear opportunity.
+
+**Our gap**: Cortex is the opposite extreme. Today it ships **only** as an MCP server with no CLI mirror, so:
+1. Users on IDEs whose MCP config path they don't know are stuck. They get a binary they can't connect.
+2. Agents-with-Bash (Aider, Codex, OpenCode, Trae, Pi, Hermes, Droid, Copilot CLI) are entirely unsupported — they have no MCP plumbing and there's no CLI for the skill route to shell out to.
+3. Every Cortex feature is locked behind one connection path (stdio MCP) that breaks the moment the IDE's config moves.
+
+**Implementation target**: Phase 0.15 in `implementation_plan.md` — five-layer architecture: (1) CLI mirror of every MCP tool, (2) MCP server as a thin wrapper, (3) per-platform SKILL.md, (4) **MCP-config registry + atomic auto-writer** (the part graphify skipped), (5) `cortex doctor` install diagnostics. Net result: zero-config install on the 9 IDEs the registry knows, graceful skill-only fallback on the 10+ that don't speak MCP, identical agent behavior in both modes because both paths reach the same Layer-1 implementation.
+
+---
+
+### Full pattern summary table (15 patterns → Phase 0 subphases)
 
 | Pattern | Graphify module | Flaws closed in Cortex | Phase 0 subphase |
 |---------|----------------|------------------------|-----------------|
@@ -1245,5 +1260,6 @@ Plus: `_extract_with_adaptive_retry` (halves chunk on context-length errors, ret
 | Backup/restore + `cortex merge-knowledge` + `cortex clone` + git-friendly `.knowledge/` | `graph.json` convention + hooks | #96 | 0.12 |
 | Multi-language tree-sitter extractors (v1=10, target=25), per-language fixtures | `extract.py` | #83 | 0.13 |
 | Multi-backend LLM (8 backends incl. Claude CLI + Bedrock IAM + Ollama), parallel Worker pool | `llm.py` | missing capability | 0.14 |
+| Dual-track distribution (CLI mirror + MCP server + per-IDE skill + atomic MCP auto-config writer for 9 IDEs) | `__main__.py:_PLATFORM_CONFIG` + `serve.py` (extended) | distribution gap, strategic | 0.15 |
 
 **Implementation target**: Phase 0 in `implementation_plan.md` — ships before any paying customer touches production.

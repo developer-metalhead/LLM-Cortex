@@ -45,11 +45,11 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 
 | # | Phase | Why P0 | Effort | Status |
 |---|---|---|---|---|
-| 0 | **Phase 0** — Security & Validation Foundation (Graphify-Derived) | Path traversal CVE (#51), no schema validation (#4/#72), no file lock (#19), broken cache (#27). Cortex is unsafe to ship without these. Blocks Stages 1-2 of flaws.md fix plan. | Small-Medium (~3-5 days) | ⏳ Planned |
+| 0 | **Phase 0** — Security & Validation Foundation + Dual-Track Distribution (Graphify-Derived) | Path traversal CVE (#51), no schema validation (#4/#72), no file lock (#19), broken cache (#27) — Cortex is unsafe to ship without these. Plus dual-track distribution (0.15): today Cortex is MCP-only and locked out of every IDE whose MCP config path the user doesn't know — without 0.15 the skill route has no CLI to call. Blocks Stages 1-2 of flaws.md fix plan AND blocks every non-MCP-native customer. | Medium (~18 days, ~7 days wall with 3 engineers) | ⏳ Planned |
 | 1 | **Phase 33-MVP** (a stripped Deep Bootstrap) | Production bug: 1800-file project produced 4 entities. Adoption-blocker. | Medium (2-4 weeks) | ⏳ Planned |
 | 2 | **Phase 6** — complete (Active Guardrail) | Foundation for every later guardrail/policy phase. | Done | ✅ **Done 2026-05-19** |
 
-**Phase 0 subphase breakdown** (14 subphases from graphify deep read — see `implementation_plan.md § Phase 0`):
+**Phase 0 subphase breakdown** (15 subphases from graphify deep read — see `implementation_plan.md § Phase 0`):
 
 | Subphase | Title | Flaws closed | Effort |
 |----------|-------|-------------|--------|
@@ -67,8 +67,9 @@ If you have limited bandwidth, ship in this order. Each tier's revenue ceiling d
 | **0.12** | `cortex repair` + backup/restore + `cortex merge-knowledge` (merge two exports, deduped) + `cortex clone <github-url>` (cross-repo knowledge); rolling `.bak`, git-show fallback, `KNOWLEDGE_REPORT.md` | #96 | 1.5 days |
 | **0.13** | Multi-language tree-sitter extractors: fix TS class methods + type aliases; per-language fixture tests; v1=10 languages, target=25 (all graphify languages); contributor guide | #83 | 2 days |
 | **0.14** | Multi-backend LLM: all 8 backends (`anthropic`, `claude-cli`, `openai`, `bedrock`, `gemini`, `kimi`, `deepseek`, `ollama`); adaptive retry on context-exceeded; token-aware chunking; Worker thread pool for parallel extraction | missing capability | 2.5 days |
+| **0.15** | Dual-track distribution (8 refinements): Layer-1 CLI mirror of every MCP tool; `cortex serve --stdio\|--http`; skill template compiler (`skill.md.tmpl` → 19 platforms, no drift); `mcpRegistry.ts` covering 12 IDEs (Claude Desktop/Code, Cursor, VS Code, Windsurf, Zed, Antigravity, Continue, Kiro, JetBrains, Cline, Roo Code) + smart command resolution (PATH → local bin → npx + `--pin`); `.cortex.backup` single rolling backup; project-root walk in `cortex serve`; WSL/devcontainer/Codespaces detection + `--target=wsl\|host\|both`; `cortex.config.json` project config; `cortex init` wizard; `cortex update`; auto-detect prompts to confirm (no silent wrong guess) | distribution gap | 4 days |
 
-**Total Phase 0 effort: ~15 days** (can parallelize 0.1+0.2+0.3 / 0.4+0.5 / 0.6+0.7 across engineers → ~6 days wall time with 3 engineers)
+**Total Phase 0 effort: ~19 days** (can parallelize 0.1+0.2+0.3 / 0.4+0.5 / 0.6+0.7 / 0.13+0.14+0.15 across engineers → ~7 days wall time with 3 engineers)
 
 **Phase 33-MVP scope clarification**: Phase 33 in `implementation_plan.md` lists Phase 14, 20.9, 20.10, 13 as dependencies. The **MVP variant ships without these** by substituting:
 - Phase 14 clustering → **simple directory-bucket clustering** in Phase A

@@ -872,11 +872,518 @@ Plus:
 
 ---
 
+### Phase 0.15 — Dual-Track Distribution: MCP + Skill with Auto-Config Writer
+
+**Flaws closed**: no direct flaw number — fills a strategic distribution gap. Today Cortex is MCP-only and only ergonomic on the 2–3 IDEs the user happens to know how to wire by hand. Every other IDE / agent / new product Anthropic ships is a customer Cortex loses by default.
+
+**Problem**
+
+1. **MCP-only is fragile.** Cortex tools live behind an MCP server. The user must hand-edit a JSON config in a path that varies per IDE (`.claude/mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `~/.codeium/windsurf/mcp_config.json`, `~/Library/Application Support/Zed/settings.json` with a different `context_servers` key, etc.) and per OS. If they get the path wrong, nothing works and there's no clear error.
+2. **The CLI doesn't exist.** Every MCP tool is invoked through the `mcp__project-cortex__*` namespace. There is no `cortex before-change <entity>` or `cortex ingest` shell command. That means the skill / Bash route is impossible — an agent reading a SKILL.md has nothing to call.
+3. **Non-MCP agents are locked out.** Aider, Codex, OpenCode, Trae, Pi, Hermes, Factory Droid, GitHub Copilot CLI — none of these wire to MCP servers cleanly. They are agents-with-Bash. Today every one of them is a zero-customer.
+4. **Graphify proves the demand but didn't go far enough.** Graphify ships SKILL.md to 18 platforms but documents only `claude_desktop_config.json` for MCP, never writes it automatically, and falls back to "ask user to copy-paste" — the graphify user still has to find their own config path. We can do strictly better.
+
+**What graphify does** (`__main__.py:_PLATFORM_CONFIG`, `serve.py`)
+- Skill-first distribution to 18 platforms. Each install copies a per-platform `skill-*.md` to a known directory plus optional rule/hook/steering files.
+- MCP is an optional pip extra (`pip install graphifyy[mcp]`) and `python -m graphify.serve <graph.json>` starts a stdio server with 8 tools.
+- **MCP config is 100% manual.** Every `skill-*.md` contains the same static Step 7d JSON snippet pointing at `claude_desktop_config.json`. No code path writes to any IDE's config file. Antigravity is the lone exception: `_antigravity_install()` *prints* (not writes) a `~/.gemini/antigravity/mcp_config.json` snippet.
+- Hot-reload + `_filter_blank_stdin` keep the MCP server stable when the graph changes underneath it.
+
+**Cortex's improvement over graphify**: ship the CLI mirror that graphify already has, add an MCP-config auto-writer that graphify deliberately skipped, and keep skill as the universal fallback. Net result: zero-config install on the IDEs we know, and graceful skill-only fallback everywhere else.
+
+**Implementation**
+
+#### Layer 1: CLI-compatible core (every MCP tool gets a `cortex <verb>` mirror)
+
+- Create `src/cli/index.ts` with `commander` as the top-level dispatcher.
+- For every MCP tool currently exposed in `src/mcp/`, add a sibling CLI command:
+
+| MCP tool | CLI verb |
+|----------|----------|
+| `mcp__project-cortex__before_change` | `cortex before-change <entity>` |
+| `mcp__project-cortex__ingest` | `cortex ingest [--scope=...]` |
+| `mcp__project-cortex__audit` | `cortex audit [entity]` |
+| `mcp__project-cortex__source` | `cortex source <filePath> [--lines a-b]` |
+| `mcp__project-cortex__cortex_find` | `cortex find <pattern>` |
+| `mcp__project-cortex__read_knowledge_index` | `cortex index` |
+| `mcp__project-cortex__build_context_pack` | `cortex pack <entities...>` |
+| `mcp__project-cortex__impact_analysis` | `cortex impact <entity>` |
+| `mcp__project-cortex__get_pending_changes` | `cortex pending` |
+| `mcp__project-cortex__resolve_refs` | `cortex resolve <ref...>` |
+| `mcp__project-cortex__lint` | `cortex lint` |
+| `mcp__project-cortex__refresh_stale_entities` | `cortex refresh` |
+| `mcp__project-cortex__save_concept` | `cortex concept save <name> --body=...` |
+| `mcp__project-cortex__read_concept` | `cortex concept read <name>` |
+| `mcp__project-cortex__compress` | `cortex compress <file>` |
+| `mcp__project-cortex__get_savings` | `cortex savings` |
+| `mcp__project-cortex__cortex_soul_status` | `cortex soul status` |
+
+- Output contract:
+  - Default: `--format=json` (structured, agent-readable).
+  - Human flag: `--format=text` (color-coded, pretty).
+  - Exit codes: 0 = ok, 1 = runtime error, 2 = validation error (matches graphify).
+- **All MCP handlers refactor to call the CLI implementations** so there is exactly one code path. The MCP server becomes a thin schema/stdio adapter around the CLI core. This is the anti-drift invariant: no behavior can differ between MCP and CLI because they share code, not just types.
+- Add `cortex --version` and `cortex --help` listing every verb.
+- Publish to npm so `npx cortex …` works without `npm link`.
+
+#### Layer 2: MCP server with transport choice and project-root discovery
+
+**Entrypoints:**
+- `cortex serve --stdio` — stdio transport (existing behavior, used by all current IDEs).
+- `cortex serve --http --port=3001` — HTTP/SSE transport for IDEs that prefer it (Cursor and Claude Code already support both). One server can handle multiple simultaneous project roots over HTTP, unlike stdio which is single-connection.
+
+**Project-root discovery** (critical gap in the original design — without this the MCP server blindly uses the spawn cwd which is often the user home dir, not the project):
+
+```typescript
+function resolveProjectRoot(explicit?: string): string {
+  // 1. Explicit flag beats everything
+  if (explicit) return path.resolve(explicit);
+
+  // 2. Walk up from process.cwd() looking for .knowledge/
+  let dir = process.cwd();
+  while (true) {
+    if (fs.existsSync(path.join(dir, ".knowledge"))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;  // reached filesystem root
+    dir = parent;
+  }
+
+  // 3. Env var fallback
+  if (process.env.CORTEX_PROJECT_ROOT) return process.env.CORTEX_PROJECT_ROOT;
+
+  // 4. Fail loudly with actionable fix
+  throw new Error(
+    "Could not locate .knowledge/ directory.\n" +
+    "Fix: run `cortex serve --project=/absolute/path/to/repo --stdio`\n" +
+    "  or set CORTEX_PROJECT_ROOT env var\n" +
+    "  or run `cortex ingest` first to create .knowledge/"
+  );
+}
+```
+
+The auto-config writer injects the `--project` arg using IDE-specific workspace variable when available:
+- Cursor/VS Code: `--project=${workspaceFolder}`
+- Claude Code: `--project=${workspaceRoot}` (if supported by the IDE version) or omit and rely on cwd walk
+- Claude Desktop (no workspace var): user must supply `--project=/absolute/path`; the install wizard prompts for it and bakes it into the stanza
+
+- Hot-reload from Phase 0.8 applies unchanged.
+- `mcp` ecosystem dep stays in `dependencies` (not optional).
+
+#### Layer 3: Skill distribution with template compiler (universal fallback)
+
+**The problem with 19 hand-maintained skill files**: any change to the decision playbook (new command, renamed verb, new workflow rule) must be applied manually to every file. They will drift. Graphify already has this problem.
+
+**Solution: skill template compiler.**
+
+```
+assets/
+  skill.md.tmpl          ← single source of truth for playbook content
+  frontmatter/
+    claude-code.yaml     ← trigger: /cortex, name, description, extra hooks
+    cursor.yaml          ← .mdc frontmatter
+    vscode.yaml          ← copilot-instructions format
+    kiro.yaml            ← .kiro/skills format + steering file
+    aider.yaml           ← /add convention
+    ... (one per platform)
+```
+
+`cortex build-skills` (part of the release pipeline) compiles each frontmatter + template → platform-specific output file. The template uses Mustache-style `{{platform}}`, `{{trigger}}`, `{{mcp_available}}` vars that each frontmatter.yaml provides.
+
+The skill content encodes the **full agent decision playbook**:
+
+```markdown
+## When to call which Cortex command
+
+**Start of session** (once per repo, before any work):
+→ `cortex index`  — prints the knowledge index. Read it before touching source files.
+
+**Before editing any file**:
+→ `cortex before-change <entityName>`  — returns blast radius (all affected entities).
+   Read it before writing code.
+
+**After creating a new file or significant refactor**:
+→ `cortex ingest`  — re-syncs the knowledge graph.
+
+**Impact / deletion analysis**:
+→ `cortex impact <X>`  — "is X safe to delete?"
+
+**Reading source code**:
+→ NEVER use `cat`, `head`, `grep`, `rg`, or Read tool on `.ts`/`.js`/`.py` files.
+→ ALWAYS use `cortex source <filePath>`  — returns cached AST skeleton, saves tokens.
+
+**Stale knowledge**:
+→ `cortex refresh`  — re-extracts entities flagged as stale since last sync.
+
+**Checking correctness**:
+→ `cortex audit [entity]`  — validate an entity page against the live source.
+→ `cortex lint`  — structural checks across the whole graph.
+
+**Understanding a concept**:
+→ `cortex concept read <name>`  — fetch a saved cross-cutting concept.
+
+**Cost tracking**:
+→ `cortex savings`  — copy the brevity stats footer into your final reply.
+```
+
+**If MCP is wired**: the agent's tool list will include `mcp__project-cortex__*` tools. Use those instead of the `cortex …` bash commands — they are identical implementations and return structured data more efficiently. The skill does not need to mention this explicitly; the agent's native tool-list visibility handles preference routing.
+
+Each platform's skill destination mirrors graphify's `_PLATFORM_CONFIG` table. Skill-only platforms (Aider, Codex, OpenCode, Trae, Pi, Hermes, Droid, Copilot CLI, Claw) get the template output; no MCP step.
+
+#### Layer 4: MCP auto-config writer with expanded registry and smart command resolution
+
+This is what graphify chose not to build. Cortex builds it.
+
+**Refinement 2 — Smart command resolution** (replaces naive `npx -y`):
+
+```typescript
+async function resolveCommand(projectDir: string, pinnedVersion?: string): Promise<{command: string; args: string[]}> {
+  // 1. Global install on PATH — fastest, no download
+  const globalPath = which.sync("cortex", { nothrow: true });
+  if (globalPath) return { command: globalPath, args: ["serve", "--stdio"] };
+
+  // 2. Local node_modules — works in monorepos
+  const localBin = path.join(projectDir, "node_modules", ".bin", "cortex");
+  if (fs.existsSync(localBin)) return { command: localBin, args: ["serve", "--stdio"] };
+
+  // 3. npx fallback — cold-start downloads, but works on fresh machines
+  const ver = pinnedVersion ? `project-cortex@${pinnedVersion}` : "project-cortex";
+  return { command: "npx", args: ["-y", ver, "serve", "--stdio"] };
+}
+```
+
+`cortex install --pin=2.5.0` bakes a specific version into the stanza, avoiding surprise upgrades. `cortex update` re-runs install with the latest version.
+
+**Refinement 3 — Expanded IDE registry** (adds JetBrains, Cline, Roo Code; fixes Continue.dev schema):
+
+```typescript
+export type McpConfigTarget = {
+  ide: string;
+  scopes: {
+    project?: string;
+    user?: Record<NodeJS.Platform, string>;
+  };
+  schemaKey: "mcpServers" | "servers" | "context_servers" | "experimental.modelContextProtocolServers";
+  format: "json" | "jsonc" | "xml";
+  transport: "stdio" | "http" | "both";
+  stanza: (cmd: {command: string; args: string[]}) => object;
+};
+
+export const MCP_REGISTRY: McpConfigTarget[] = [
+  {
+    ide: "claude-desktop",
+    scopes: {
+      user: {
+        darwin: "~/Library/Application Support/Claude/claude_desktop_config.json",
+        win32:  "%APPDATA%/Claude/claude_desktop_config.json",
+        linux:  "~/.config/Claude/claude_desktop_config.json",
+      },
+    },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "claude-code",
+    scopes: { project: ".claude/mcp.json", user: { darwin: "~/.claude/mcp.json", win32: "~/.claude/mcp.json", linux: "~/.claude/mcp.json" } },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "both",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "cursor",
+    scopes: { project: ".cursor/mcp.json" },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "both",
+    stanza: (cmd) => ({ ...cmd, env: { CORTEX_PROJECT_ROOT: "${workspaceFolder}" } }),
+  },
+  {
+    ide: "vscode",
+    scopes: { project: ".vscode/mcp.json" },
+    schemaKey: "servers",        // VS Code uses a different top-level key
+    format: "jsonc",
+    transport: "both",
+    stanza: (cmd) => ({ type: "stdio", ...cmd }),  // VS Code wraps in a `type` field
+  },
+  {
+    ide: "windsurf",
+    scopes: { user: { darwin: "~/.codeium/windsurf/mcp_config.json", win32: "~/.codeium/windsurf/mcp_config.json", linux: "~/.codeium/windsurf/mcp_config.json" } },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "zed",
+    scopes: { user: { darwin: "~/Library/Application Support/Zed/settings.json", linux: "~/.config/zed/settings.json", win32: "%APPDATA%/Zed/settings.json" } },
+    schemaKey: "context_servers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => ({ command: cmd.command, args: cmd.args }),
+  },
+  {
+    ide: "antigravity",
+    scopes: { user: { darwin: "~/.gemini/antigravity/mcp_config.json", linux: "~/.gemini/antigravity/mcp_config.json", win32: "~/.gemini/antigravity/mcp_config.json" } },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "continue",
+    scopes: { user: { darwin: "~/.continue/config.json", linux: "~/.continue/config.json", win32: "~/.continue/config.json" } },
+    // Continue uses experimental.modelContextProtocolServers (nested path), not top-level mcpServers
+    schemaKey: "experimental.modelContextProtocolServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => ({ name: "cortex", transport: "stdio", command: cmd.command, args: cmd.args }),
+  },
+  {
+    ide: "kiro",
+    scopes: { project: ".kiro/mcp.json" },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "jetbrains",
+    scopes: {
+      user: {
+        darwin: "~/Library/Application Support/JetBrains/MPS2024.3/options/mcp.xml",  // path varies per IDE version; probe glob
+        linux:  "~/.config/JetBrains/mps/options/mcp.xml",
+        win32:  "%APPDATA%/JetBrains/mps/options/mcp.xml",
+      },
+    },
+    schemaKey: "mcpServers",
+    format: "xml",       // JetBrains uses XML options format, not JSON
+    transport: "stdio",
+    stanza: (cmd) => cmd,   // mcpWriter handles XML serialization separately for this IDE
+  },
+  {
+    ide: "cline",
+    scopes: { project: ".vscode/cline_mcp_settings.json" },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  {
+    ide: "roo-code",
+    scopes: { project: ".vscode/roo_code_mcp_settings.json" },
+    schemaKey: "mcpServers",
+    format: "json",
+    transport: "stdio",
+    stanza: (cmd) => cmd,
+  },
+  // Skill-only platforms (no MCP path): codex, opencode, aider, droid, trae,
+  // pi, hermes, copilot-cli, claw — they get Layer 3 only.
+];
+```
+
+**Refinement 7 — Single rolling backup** (replaces timestamped backups that accumulate indefinitely):
+
+- Always write to `<config>.cortex.backup` (fixed name, overwritten each install).
+- `cortex uninstall` restores from `<config>.cortex.backup` if present.
+- No backup file accumulation in the user's IDE config dir.
+
+**`src/install/mcpWriter.ts` — updated atomic merge writer:**
+
+```typescript
+async function wireMcp(
+  target: McpConfigTarget,
+  scope: "project" | "user",
+  opts: { dryRun: boolean; pinnedVersion?: string; projectDir: string }
+) {
+  const configPath = resolveConfigPath(target, scope);
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+
+  const cmd = await resolveCommand(opts.projectDir, opts.pinnedVersion);
+
+  let existing: any = {};
+  if (await pathExists(configPath)) {
+    const raw = await fs.readFile(configPath, "utf8");
+    existing = target.format === "jsonc" ? parseJsonc(raw) : JSON.parse(raw);
+    // Single rolling backup — no timestamp accumulation
+    await fs.copyFile(configPath, `${configPath}.cortex.backup`);
+  }
+
+  // Nested key support (e.g. "experimental.modelContextProtocolServers")
+  setNestedKey(existing, target.schemaKey, "cortex", target.stanza(cmd));
+
+  if (opts.dryRun) {
+    console.log(`Would write to ${configPath}:\n${JSON.stringify(existing, null, 2)}`);
+    return;
+  }
+
+  const tmp = `${configPath}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(existing, null, 2), { mode: 0o600 });
+  await fs.rename(tmp, configPath);
+
+  const verified = JSON.parse(await fs.readFile(configPath, "utf8"));
+  const stanza = getNestedKey(verified, target.schemaKey, "cortex");
+  if (!stanza) throw new Error(`MCP wiring verification failed for ${target.ide}`);
+}
+```
+
+**Install commands** (adds `--pin`, `--http`, `--target` flags):
+
+```bash
+cortex install                                          # auto-detect IDE, skill only (safe default)
+cortex install --with-mcp                               # auto-detect + wire MCP
+cortex install --platform cursor --with-mcp             # explicit IDE
+cortex install --platform cursor --with-mcp --scope=project
+cortex install --platform cursor --with-mcp --scope=user
+cortex install --platform cursor --with-mcp --dry-run   # preview merged JSON without writing
+cortex install --platform cursor --with-mcp --pin=2.5.0 # lock stanza to a specific version
+cortex install --list                                   # show all platforms + MCP availability + transport
+cortex uninstall --platform cursor                      # remove skill + MCP entry; restore .cortex.backup
+cortex update                                           # re-run install with latest version (idempotent)
+```
+
+**Refinement 4 — HTTP transport flag in install:**
+
+When IDE supports HTTP/SSE transport, `cortex install --with-mcp --transport=http --port=3001` writes a URL-based stanza instead of a command stanza:
+
+```json
+{
+  "mcpServers": {
+    "cortex": { "url": "http://localhost:3001/mcp" }
+  }
+}
+```
+
+The user runs `cortex serve --http --port=3001` as a persistent process (or via `launchd`/`systemd` service that `cortex install --with-mcp --transport=http` can optionally configure).
+
+**Refinement 5 — WSL / devcontainer / Codespaces awareness:**
+
+```typescript
+function detectEnvironment(): "wsl" | "devcontainer" | "codespaces" | "native" {
+  // WSL: /proc/version contains "Microsoft" or "WSL"
+  if (process.platform === "linux") {
+    const procVersion = fs.readFileSync("/proc/version", "utf8");
+    if (/microsoft|wsl/i.test(procVersion)) return "wsl";
+  }
+  // Devcontainer: REMOTE_CONTAINERS env or /.dockerenv exists
+  if (process.env.REMOTE_CONTAINERS || fs.existsSync("/.dockerenv")) return "devcontainer";
+  // Codespaces: CODESPACES env
+  if (process.env.CODESPACES) return "codespaces";
+  return "native";
+}
+```
+
+- `cortex install --target=wsl` — installs inside WSL, writes to WSL paths.
+- `cortex install --target=host` — installs on Windows host (runs via `cmd.exe /c cortex.exe`), writes to Windows paths.
+- `cortex install --target=both` — installs in both environments (needed for VS Code + WSL Remote).
+- Default: auto-detect from `detectEnvironment()` and prompt to confirm.
+- Devcontainer: publish `ghcr.io/project-cortex/devcontainer-feature/cortex` that runs `cortex install --with-mcp` as part of the container build. Add to devcontainer.json features with one line.
+- Codespaces: same devcontainer feature; runs `cortex serve --http --port=3001` as a forwarded port service.
+
+**Auto-detect rules** (refined — prompts to confirm rather than silent guess):
+
+```
+1. $CURSOR_IDE env var set → cursor
+2. $TERM_PROGRAM === "vscode" → vscode
+3. $CLAUDECODE === "1" → claude-code
+4. $WINDSURF_IDE → windsurf
+5. $ZED_TERM → zed
+6. $KIRO_IDE → kiro
+7. detect WSL/devcontainer/Codespaces → adjust --target automatically
+8. probe marker dirs: ~/.claude/ → claude-code, ~/.cursor/ → cursor, ~/.config/JetBrains/ → jetbrains
+9. fallback → print list, require --platform flag (no silent wrong guess)
+```
+
+Step 9 is a deliberate change from the original design: silent fallback is worse than an explicit error when detection is ambiguous. A wrong auto-detect wastes user trust. Better to ask.
+
+Persist the last-used platform in `~/.cortex/install.json` so repeat `cortex install` runs without re-prompting.
+
+**Safety guarantees:**
+- Never delete other `mcpServers` / `servers` / `context_servers` entries. Only touch the `cortex` key.
+- Single rolling backup per config file (no accumulation).
+- Atomic via `fs.rename`.
+- File mode `0o600`.
+- If IDE not in registry: log "MCP auto-config unavailable for <ide> — skill route only" and proceed with Layer 3 without error.
+
+#### Layer 5: `cortex doctor` integration (extended with install diagnostics)
+
+Phase 0.7's `cortex doctor` exists from earlier subphases. Extend it:
+
+```
+$ cortex doctor
+
+[1/12] CLI binary on PATH ............................... ✓ /usr/local/bin/cortex (v2.5.0)
+[2/12] cortex.config.json found ......................... ✓ .cortex.config.json (llmBackend: claude-cli)
+[3/12] Knowledge index exists ........................... ✓ .knowledge/index.md (1,247 entities)
+[4/12] state.json valid JSON ............................ ✓ 18.4 MB, no corruption
+[5/12] Skill installed (claude-code) .................... ✓ ~/.claude/skills/cortex/SKILL.md (v2.5.0)
+[6/12] MCP config wired ................................. ✓ ~/.claude/mcp.json → cortex stanza found
+[7/12] MCP server starts (stdio) ........................ ✓ responds in 142 ms
+[8/12] Project root discoverable ........................ ✓ .knowledge/ found via cwd walk
+[9/12] Orphan edges ..................................... ✓ 0
+[10/12] Confidence labels on every edge ................. ✓ 100%
+[11/12] Lock file ...................................... ✓ none (no sync in flight)
+[12/12] Rolling backup present .......................... ✓ ~/.claude/mcp.json.cortex.backup (2 days ago)
+
+Doctor: all systems green.
+```
+
+Lines [5][6][7][8] fail with `→ run: cortex install --with-mcp` as the remediation. Line [2] fails with `→ run: cortex init`.
+
+#### Refinement 8: `cortex.config.json` — project-level config file
+
+Today LLM backend, brevity level, soul opts, and project root are scattered across env vars and internal state. Formalize them into a config file that both the CLI and MCP server discover via the same upward walk used for `.knowledge/`.
+
+```json
+{
+  "$schema": "https://cortex.sh/schema/config/v1.json",
+  "llmBackend": "claude-cli",
+  "llmModel": "claude-opus-4-7",
+  "brevity": "standard",
+  "soulEnabled": true,
+  "projectRoot": ".",
+  "install": {
+    "platform": "claude-code",
+    "scope": "user",
+    "pinnedVersion": "2.5.0"
+  }
+}
+```
+
+- `cortex init` wizard creates `cortex.config.json` (asks: which backend? which IDE? pin version?).
+- `cortex install` reads `install.*` fields — no flags needed on repeat runs.
+- `cortex serve` reads `llmBackend`, `projectRoot`, `soulEnabled`.
+- The file is project-specific and committed to the repo. Sensitive fields (API keys) stay in env vars, never in this file.
+- Schema URL provides IDE autocompletion in VS Code JSON editor.
+
+**DoD**
+- `cortex` binary on `PATH` after `npm install -g project-cortex`; `cortex --help` lists ≥17 verbs.
+- Every existing MCP tool has a CLI mirror that returns equivalent JSON when invoked with `--format=json`.
+- `cortex serve --stdio` starts an MCP server identical to today's behavior (regression-tested).
+- `cortex serve --http --port=3001` starts an HTTP/SSE server; a `curl http://localhost:3001/mcp` returns the tool list in MCP JSON-RPC format.
+- `cortex serve` discovers project root via cwd walk; fails with a clear actionable error if `.knowledge/` is not found.
+- `cortex install --platform cursor --with-mcp --dry-run` prints the merged `.cursor/mcp.json` without modifying the filesystem.
+- `cortex install --platform cursor --with-mcp` writes `.cursor/mcp.json` atomically, preserves any pre-existing `mcpServers.foo` entry, writes exactly one `<config>.cortex.backup` file, and `cortex doctor` step [6] reports ✓.
+- `cortex install --platform cursor --with-mcp --pin=2.5.0` bakes `npx -y project-cortex@2.5.0` into the stanza.
+- `cortex install --platform aider` writes the skill and logs "MCP auto-config unavailable for aider — skill route only" without erroring.
+- `cortex install --platform continue --with-mcp` writes to the nested `experimental.modelContextProtocolServers` key, not the top-level `mcpServers`.
+- VS Code stanza correctly uses `type: "stdio"` wrapper and top-level key `servers`; Zed uses `context_servers`; JetBrains writes XML.
+- `cortex uninstall --platform cursor` removes the `cortex` key from `mcpServers`, restores from `.cortex.backup` if present, and removes the skill file.
+- `cortex update` re-runs `cortex install` with the latest version; all stanzas in all registered configs are updated atomically.
+- WSL detection: running `cortex install --with-mcp` inside a WSL2 shell targets WSL paths by default and logs the detected environment.
+- `cortex init` creates `cortex.config.json`; subsequent `cortex install` reads `install.platform` and `install.scope` without requiring flags.
+- `build-skills` pipeline: `npm run build-skills` compiles `skill.md.tmpl` + each `frontmatter/*.yaml` → 19 platform-specific skill files; the compiled files are what `cortex install` ships. Any change to playbook content requires only editing `skill.md.tmpl`.
+- Test suite: `tests/install/mcpWriter.test.ts` covers (a) empty config, (b) pre-existing other server, (c) re-install over existing cortex entry, (d) backup restore on uninstall, (e) JSONC parse for VS Code, (f) nested key write for Continue, (g) XML write for JetBrains, (h) global-install PATH resolution beats npx, (i) WSL environment detection.
+- Integration test: spawn `cortex serve --stdio` as a child process, send an MCP `tools/list` request over stdio, assert tool list matches Layer-1's verb list exactly (no drift).
+
+---
+
 ### Phase 0 — Master DoD & Cross-References
 
 **Phase 0 is complete when:**
-- All 14 subphases have 0 failing tests.
-- `npm test` reports pass on all 14 new test suites.
+- All 15 subphases have 0 failing tests.
+- `npm test` reports pass on all 15 new test suites.
 - `cortex doctor` exits 0 on the Cortex repo itself.
 - `source({filePath: "C:/Windows/System32/drivers/etc/hosts"})` → `PathTraversalError` (the live-audit CVE is closed).
 - `save_concept({name: ""})` → `ValidationError`.
@@ -893,6 +1400,7 @@ Plus:
 - Phase 13.7 (Smart Read Cache): replace skeleton-compression with graph-as-cache from Phase 0.4.
 - Phase 26 (RBAC + Air-Gap): `security.ts` from Phase 0.1 is the path-validation layer Phase 26's file-access controls build on.
 - Phase 29 (FinOps): `cortex bench` from Phase 0.11 provides the real token-count data Phase 29 needs to surface cost savings accurately.
+- Phase 0.15 (Dual-Track Distribution): unlocks every IDE / agent that isn't pre-wired for MCP. Layer-1's CLI mirror is the foundation that lets Phase 0.7 `cortex doctor`, Phase 0.11 `cortex bench`, Phase 0.12 `cortex repair`, and every subsequent CLI verb in the plan actually run. Without 0.15 the skill route is meaningless because there is nothing for the agent to shell out to.
 
 ---
 
