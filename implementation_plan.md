@@ -874,7 +874,12 @@ export function generateKnowledgeReport(state: State, prevState?: State): string
   sections.push(renderThinCommunities(state));        // communities < 3 members
   sections.push(renderSensitiveSkipCount(state));     // from lastSyncStats
   if (prevState) sections.push(renderGrowthDelta(state, prevState));
-  return sections.join('\n\n');
+  return sections.join('\n| 71    | Genuine Gaps & Ideological Expansions (Graphify/GitNexus) | ⏳ Planned                           |
+| 71.1  | Tier 1 — High ROI, Low Effort (Foundation & Performance) | ⏳ Planned                           |
+| 71.2  | Tier 2 — High Value, Medium Effort (Insights & Workflows)| ⏳ Planned                           |
+| 71.3  | Tier 3 — High Value, High Effort (Federation & Ecosystem)| ⏳ Planned                           |
+| 71.4  | Tier 4 — Refinements to Existing Cortex Ideas          | ⏳ Planned                           |
+| 71.5  | Genuinely New (Synthesized Expansions)                 | ⏳ Planned                           |\n\n');
 }
 ```
 - Written to `.knowledge/KNOWLEDGE_REPORT.md` after every `cortex sync` (already planned; this expands the content).
@@ -15199,3 +15204,115 @@ This pipeline is **strictly additive**. The existing components it touches:
 | `.knowledge/state.json` | **read + additive write** | `meta.lastCommit` field added, no existing fields removed |
 
 No existing code paths are deleted. The pipeline can be feature-flagged with `CORTEX_TWO_STAGE=1` during rollout so the old single-call path remains the default until Phase D is validated in CI.
+\n---
+
+## 🌟 Phase 71: Genuine Gaps & Ideological Expansions (Graphify & GitNexus Derived)
+
+**Status**: ⏳ Planned
+
+This phase incorporates a set of high-value architectural features derived from the **Graphify** and **GitNexus** reference implementations, alongside genuinely new synthesis concepts. These have been carefully categorized so they do not conflict ideologically with pre-existing phases, but rather act as natural evolutions of Cortex's core design.
+
+### 71.1 Tier 1 — High ROI, Low Effort (Foundation & Performance)
+
+These items map ideologically to **Phase 0 (Foundation)** and **Phase 5 (CLI Polish)**:
+
+**1. AST-only incremental update mode (Graphify `--update`)**
+When only code files changed (no docs, no synthesis-requiring changes), skip the LLM entirely. Re-extract AST edges, update the graph structurally, mark synthesis as stale but don't re-synthesize until queried. For 80% of watch cycles this would be zero LLM cost.
+
+**2. Lazy CLI module loading (GitNexus)**
+The mcp startup path currently imports everything eagerly. GitNexus defers heavy imports (tree-sitter, graph DB) until the CLI verb actually runs. Result: `cortex mcp` cold-start goes from ~800ms to ~150ms. Single-file change, massive daily UX improvement.
+
+**3. Entity ID stability tags (GitNexus)**
+Right now if a function is renamed, Cortex creates a new entity and orphans the synthesis from the old name. GitNexus generates IDs with collision-only tags (`#<arity>` for overloads, `~type1,type2` for type-union) so IDs only change when the actual signature changes — not on renames or moves. Synthesis persists through refactors.
+
+**4. Memory limit on watcher (Graphify `GRAPHIFY_REBUILD_MEMORY_LIMIT_MB`)**
+Cortex's daemon has no RSS cap. On large repos a watch cycle can spike memory and stay there. Graphify caps RSS and aborts the rebuild if exceeded, then schedules a retry. One env var + one `process.memoryUsage()` check.
+
+**5. Structured confidence reasons (GitNexus)**
+Currently Cortex edges carry a numeric weight. GitNexus also carries a human-readable reason string: "import-resolved", "local-call", "interface-dispatch", "global", "write". This makes `cortex lint` output actionable ("this CALLS edge is interface-dispatch — check the implementing classes") instead of just numeric.
+
+**6. Rationale node extraction (Graphify)**
+Mine `// NOTE:`, `// HACK:`, `// TODO:`, `// FIXME:` inline comments and multi-line docstrings as separate graph nodes with `HAS_RATIONALE` edges to the entity they annotate. Zero LLM cost. Makes `cortex explain` way richer — you get the author's intent, not just synthesized description.
+
+### 71.2 Tier 2 — High Value, Medium Effort (Insights & Workflows)
+
+These items map ideologically to **Phase 9 (Refactoring Impact Preview)** and **Phase 12 (Git & CI Integration)**:
+
+**7. PR blast-radius dashboard (Graphify `graphify prs`)**
+`cortex prs` command: given open PRs (via GitHub API), for each PR compute affected entities, which Leiden communities they touch, and flag PRs that share communities as merge-order risks. LLM-ranks the review queue by blast radius. Currently you'd have to run impact_analysis manually per file.
+
+**8. PR conflict detection via shared communities (Graphify `--conflicts`)**
+Separate from blast radius: two PRs touching the same Leiden community have a high chance of semantic conflict even if there's no git line conflict. Surface this before merge, not after.
+
+**9. Shortest-path query (Graphify `graphify path "A" "B"`)**
+`cortex path AuthService UserController` — BFS shortest path between two named entities, with arrow directions shown. Currently impact_analysis does forward BFS from one node; there's no "how are these two things connected?" query.
+
+**10. `cortex explain <symbol>` (Graphify)**
+Focused single-symbol explain optimized for "I just saw this in a stack trace / error log." Pulls synthesis + nearest 1-hop neighbors + usage count + confidence. Different from `read_entity` (which is broader). Should work even if the symbol isn't a top-level entity — fuzzy match fallback.
+
+**11. Suggested questions per corpus (Graphify)**
+After bootstrap or full re-synthesis, auto-generate 4–5 natural-language questions the knowledge graph can answer well ("What calls AuthService.validateToken?", "Which entities have no test coverage?"). Output in `cortex status` or as a `cortex doctor` hint. Helps new users discover what to ask.
+
+**12. Execution flow tracing (GitNexus process detection)**
+Currently Cortex extracts static call graph (function A calls function B). GitNexus additionally traces execution flows — starting from entry points (CLI handlers, HTTP routes, event listeners), follows the dynamic call chain and groups entities by the flows they participate in. This is runtime topology, not just import topology. Enables "what actually runs when the user hits POST /auth/login?" queries.
+
+**13. API route handler analysis (GitNexus `api_impact`)**
+`cortex api-impact "POST /auth/login"` maps route → handler function → downstream entities. Currently you'd have to manually trace from the router file. This would make Cortex genuinely useful for backend API review.
+
+### 71.3 Tier 3 — High Value, High Effort (Federation & Ecosystem)
+
+These items map ideologically to **Phase 11 (Monorepo Federation)** and **Phase 8 (Visual Knowledge Graph)**:
+
+**14. Repository groups with contracts (GitNexus)**
+`cortex group create platform-team repo-a repo-b repo-c` — defines a cross-repo group. Cortex then extracts provider/consumer contracts between repos (exported symbols from repo-a that repo-b imports) and builds a bridge graph with cross-repo edges. `@platform-team/repo-a:AuthService` as a scoped query. This is more structured than Phase 11 Monorepo Federation — it's about explicit contractual relationships, not just shared files.
+
+**15. Cross-repo RRF query merging (GitNexus)**
+When querying a group, run the search against each member repo independently, then merge results using Reciprocal Rank Fusion. Better than just concatenating results — RRF handles relevance normalization across differently-sized repos.
+
+**16. Skill file generation per community (GitNexus)**
+After Leiden community detection, generate `.claude/skills/generated/<community-name>.md` files — one per community — with key entities, entry points, and execution flows pre-written. Any Claude Code session in the repo automatically gets community-scoped skills without any manual setup. Currently Cortex only exposes MCP tools, not skills.
+
+**17. Wiki generation (GitNexus)**
+`cortex wiki` — LLM-powered documentation pages from graph structure. Per-module pages with cross-references, auto-linked to entity names. Output to `.wiki/` or push to GitHub Wiki. Different from `cortex export` (which is graph data) — this is human-readable documentation generated from synthesis.
+
+**18. Mermaid call-flow diagrams auto-regenerated on commit (Graphify)**
+Git hook: on each commit, regenerate `ARCHITECTURE.mermaid` and `CALLFLOW.mermaid` from the current graph. Store in repo root. Zero additional LLM cost (graph already exists), gives any developer a current visual without running any command.
+
+**19. Neo4j / GraphML export (Graphify)**
+`cortex export --neo4j` generates Cypher script. `cortex export --graphml` outputs GraphML for Gephi/yEd. Phase 8 has visual graph but it's Cortex's own viewer — these exports let power users bring the graph into professional graph analysis tools.
+
+**20. SCIP ingest (Graphify)**
+Support ingesting SCIP (Sourcegraph Code Intelligence Protocol) indexes as an alternative to tree-sitter extraction. Language servers (rust-analyzer, typescript-language-server, pyright) produce SCIP indexes that are more accurate than tree-sitter for cross-file symbol resolution. Cortex would accept a SCIP index and build graph edges from it — more precise than AST parsing, especially for generics and dynamic dispatch.
+
+**21. Global cross-project registry (Graphify)**
+`cortex global add ~/projects/repo-b` — registers another repo's knowledge graph. `cortex global query "AuthService"` searches across all registered graphs. `cortex merge-graphs a.json b.json` for explicit merge. Phase 52 plans this but without the CLI verbs for managing it.
+
+### 71.4 Tier 4 — Refinements to Existing Cortex Ideas
+
+**22. Semantic dedup with LLM tiebreaker (Graphify)**
+*(Enhances Phase 0.6)* Graphify does a 3-pass approach: Pass 1 = exact filename merge, Pass 2 = Jaro-Winkler fuzzy string match, Pass 3 = LLM tiebreaker only when fuzzy score is in the ambiguous range (0.7–0.85). Better than pure MinHash for small repos; more precise than pure LLM for large ones.
+
+**23. Dated backup snapshots for graph artifacts (Graphify)**
+*(Enhances Phase 0.12)* Before any synthesis that costs significant tokens (detected via diff size), automatically backup the current `.knowledge/` state to `.knowledge/snapshots/YYYY-MM-DD/`. Phase 33.5 has checkpoint files but no named historical snapshots. Enables `cortex restore 2025-05-01` without git.
+
+**24. gitnexus setup style auto-detection wizard (GitNexus)**
+*(Enhances Phase 0.15)* `cortex install` currently writes MCP config but requires the user to know what IDE they're using. GitNexus detects installed editors by checking config file locations and executable presence, then writes the correct config per IDE automatically. Combine with Phase 0.15's McpConfigTarget registry — this makes it a true one-command install.
+
+**25. God node detection (Graphify)**
+*(Enhances Phase 7.17)* Rank entities by (in-degree + out-degree) weighted by cross-community edges. Flag top-N as "god nodes" — entities so central they're implicit coupling points. Surface in `cortex lint` with a specific warning class. Different from Phase 7.17 Keystone Index (which is impact/size ratio) — god nodes are specifically about unexpected high degree, not just centrality.
+
+### 71.5 Genuinely New (Synthesized Expansions)
+
+These items represent novel synthesis techniques that expand Cortex's ideological footprint:
+
+**26. LLM-free rule-based synthesis for micro-diffs**
+For diffs that are 1–5 lines and only change: a parameter name, a string literal, a comment, or a return type — skip the LLM entirely and apply deterministic synthesis rules ("parameter userId renamed to accountId in AuthService.login"). Deterministic, instant, zero cost. Fallback to LLM for anything that doesn't match a rule pattern.
+
+**27. Semantic versioning of the knowledge graph**
+Every `saveSynthesis()` call bumps a graph semver stored in `state.json`. Major = entity added/removed. Minor = synthesis content changed. Patch = metadata/confidence updated. Enables `cortex diff v2.1.0 v2.3.0` to show architectural changes between two graph versions, and `cortex restore v2.1.0` to roll back.
+
+**28. Test coverage as entity metadata (new synthesis)**
+Parse Jest/Mocha/Vitest `coverage-summary.json` and attach `testCoverage: number` to each entity. `cortex lint` flags entities where: `testCoverage < 0.5` AND `inDegree > 3` (low-tested high-dependency entities). `build_context_pack` can sort by coverage to surface riskiest entities first.
+
+**29. Hallucination cross-check (new synthesis)**
+After each LLM synthesis, run a fast deterministic check: does the synthesis claim entity X calls entity Y? If yes, verify that edge exists in the Stage 1 graph. Flag divergences as potential hallucinations with a `hallucination_risk: boolean` field. Zero extra LLM calls — just comparing LLM output against the source-of-truth AST graph.\n
