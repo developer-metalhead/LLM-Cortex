@@ -1379,11 +1379,138 @@ Today LLM backend, brevity level, soul opts, and project root are scattered acro
 
 ---
 
+### Phase 0.16 — Multi-Format File Ingestion (PDF, Images, Video, Office, Docs)
+
+**Flaws closed**: no direct flaw number — closes a market-segment gap. Graphify ingests `code + docs + PDF + images + video transcription + Office + Google Workspace` today. Cortex ingests code only. Enterprise customers store architectural decisions in Confluence PDFs, design reviews in Google Docs, onboarding videos, and system architecture images — all invisible to Cortex.
+
+**What graphify does** (`extract.py` + optional deps):
+- **PDF**: `pypdf` (text extraction) + `markdownify` (HTML→MD conversion). Enabled via `pip install graphifyy[pdf]`.
+- **Images**: sent to the configured vision-capable LLM (Claude, GPT-4V, Gemini Vision) for description + entity extraction.
+- **Video**: `faster-whisper` transcribes audio track → text; `yt-dlp` downloads YouTube/Loom URLs. The transcript is then treated as a document. Enabled via `pip install graphifyy[video]`.
+- **Office**: `python-docx` (Word .docx) + `openpyxl` (Excel .xlsx). Enabled via `pip install graphifyy[office]`.
+- **Google Workspace**: `openpyxl` for exported Sheets. Google Docs export to Markdown via Drive API (optional).
+- **Markdown/text**: always handled natively.
+
+**Implementation**
+
+- `src/ingest/fileType.ts` — file type router: extension + magic-byte sniff → adapter selection.
+- `src/ingest/adapters/` — one file per format:
+  - `pdf.ts` — `pdfjs-dist` (pure Node, no Python subprocess). Extracts text per page → chunk → LLM entity extraction. Page metadata preserved as `sourceFile` with `page` field.
+  - `image.ts` — Base64-encode image → send to vision model. Returns structured entity list. Supports PNG/JPG/GIF/WebP. Model must support vision; falls back to "image not extractable" if LLM backend has no vision API.
+  - `video.ts` — Two paths: (a) local file: shell-out to `whisper` CLI if installed, or Whisper API (OpenAI). (b) URL: `yt-dlp` subprocess to download audio track, then transcribe. Transcript chunked by timestamp blocks.
+  - `office.ts` — `xlsx` npm package for Excel; `mammoth` npm package for Word DOCX. Both produce plain text + heading structure.
+  - `markdown.ts` — pass-through text extraction (already handled, make it explicit in the adapter pattern).
+- `src/ingest/pipeline.ts` — updated ingest pipeline:
+  1. Scan for all non-gitignored files (existing).
+  2. Route each file through `fileType.ts` to select adapter.
+  3. Adapter produces raw text (or structured entities for image).
+  4. Text adapters hand text to the standard LLM synthesis path.
+  5. Image adapter can short-circuit synthesis with a direct entity list.
+- `cortex.config.json` — new `ingest.fileTypes` array: `["code", "pdf", "image", "video", "office"]`. Default: `["code"]` for backward compatibility. Users opt in per format.
+- Install-time prompts: `cortex init` asks "What types of files do you want Cortex to learn from?" with checkboxes.
+- External tool requirements are gated — if `whisper` CLI is not on PATH and `openai.apiKey` is not set, `video` adapter emits a clear "cannot transcribe without Whisper CLI or OpenAI key" and skips gracefully.
+
+**DoD**
+- A `.pdf` file in the project → Cortex extracts text, synthesizes entities, writes knowledge entries.
+- A `.png` architecture diagram → Cortex sends to vision model, extracts entity names and relationships from the image.
+- A `.docx` Word doc → Cortex extracts text via `mammoth`, synthesizes knowledge entries.
+- `cortex.config.json` with `"ingest.fileTypes": ["code", "pdf"]` ingests only code + PDF; ignores Word/Excel/images.
+- `cortex.config.json` with `"ingest.fileTypes": ["code"]` (default) — no regression on existing behavior.
+- Unsupported format is skipped with a debug log line, not an error.
+- Tests: PDF text extraction round-trip, image adapter with mocked vision response, Office DOCX text extraction, video adapter graceful skip when Whisper unavailable.
+
+---
+
+### Phase 0.17 — Dev Hygiene: Security CI Gate, Property Tests, Pre-Commit Hooks, Standalone Binary
+
+**Flaws closed**: no direct flaw number — closes a developer-trust gap. Graphify ships with `bandit` (security linter), `pip-audit` (dependency CVE scanner), `hypothesis` (property tests), `pre-commit` hooks, `safety` (supply-chain scanner), and `Nuitka` standalone binary builds. Cortex has TypeScript strict mode but none of the CI hygiene infrastructure. A project with 115 known flaws and no security scanning is difficult to recommend to enterprise security teams.
+
+**What graphify does** (`pyproject.toml:dev deps`, `.pre-commit-config.yaml`, Nuitka pipeline):
+- `bandit` — static analysis for common Python security anti-patterns (no `eval`, no `shell=True`, etc.).
+- `pip-audit` — checks all dependencies against CVE databases.
+- `safety` — supply-chain vulnerability scanning.
+- `hypothesis` — property-based testing: generate random inputs, find edge cases the developer didn't think of.
+- `pre-commit` — hooks run `ruff`, `pyright`, `bandit` on every `git commit`.
+- `Nuitka` — compiles Python to a standalone C binary; no Python interpreter required at install time. `patchelf` used on Linux to fix RPATH.
+- `ruff` — linter + formatter (replaces flake8 + isort + black).
+
+**Implementation**
+
+**Security CI gate:**
+- Add `npm audit --audit-level=high` to CI. Fail the build on any high or critical CVE.
+- Add `socket.dev` GitHub App (or `@npmjs/socket` CLI) for supply-chain analysis — detects typosquatting, malware, obfuscation in new/updated deps.
+- Add `eslint-plugin-security` + `eslint-plugin-no-unsanitized` to `eslint` config — catches `eval`, `innerHTML`, dynamic `require`, prototype pollution patterns.
+- Add `semgrep` CI job with `semgrep.dev/c/r/typescript.lang.security` ruleset — catches path traversal, SSRF, SQL injection patterns in TypeScript.
+
+**Property-based tests (`fast-check`):**
+- Add `fast-check` (TypeScript `hypothesis` equivalent) to `devDependencies`.
+- Write property tests for the highest-risk modules:
+  - `security.ts` (Phase 0.1): `fc.string()` → `validatePath()` → assert path never escapes sandbox.
+  - `validate.ts` (Phase 0.2): `fc.record(...)` with random extra fields → assert `validate()` rejects invalid shapes and accepts valid ones.
+  - `dedup.ts` (Phase 0.6): `fc.array(fc.string())` → MinHash dedup → assert no exact duplicate survives.
+  - `mcpWriter.ts` (Phase 0.15): `fc.jsonObject()` → `wireMcp()` → assert `mcpServers.cortex` key always present, all other keys preserved.
+- Target: every Phase 0 module gets at least one property test suite.
+
+**Pre-commit hooks (`husky` + `lint-staged`):**
+```json
+// .husky/pre-commit
+npx lint-staged
+
+// package.json
+"lint-staged": {
+  "*.ts": ["eslint --fix --max-warnings=0", "prettier --write"],
+  "*.{json,md}": ["prettier --write"]
+}
+```
+- `husky install` added to `npm prepare` script (runs automatically on `npm install`).
+- Pre-commit blocks commit if any TypeScript error or ESLint security-plugin violation is present.
+- `cortex install` (Phase 0.15) optionally registers the Cortex knowledge-sync pre-commit hook from Phase 0.10 alongside husky's hooks.
+
+**Standalone binary builds (Bun `--compile`):**
+```bash
+# Release pipeline
+bun build src/cli/index.ts --compile --outfile=dist/cortex-linux-x64
+bun build src/cli/index.ts --compile --outfile=dist/cortex-macos-arm64 --target=bun-darwin-arm64
+bun build src/cli/index.ts --compile --outfile=dist/cortex-windows-x64.exe --target=bun-windows-x64
+```
+- Bun's `--compile` bundles runtime + app into a single self-contained binary (equivalent to Nuitka for Python).
+- Binaries published to GitHub Releases automatically by CI.
+- Install script: `curl -fsSL https://cortex.sh/install | sh` detects platform, downloads the correct binary, places in `/usr/local/bin/cortex`.
+- Fallback: `npm install -g project-cortex` still works for Node users.
+- Windows: PowerShell install script equivalent.
+
+**CI pipeline additions (`ci.yml`):**
+```yaml
+jobs:
+  security:
+    - run: npm audit --audit-level=high
+    - run: npx socket scan .
+    - run: npx semgrep --config=auto --error src/
+  lint:
+    - run: npx eslint src/ --max-warnings=0
+  test:
+    - run: npm test -- --coverage
+    - run: npx fast-check-cli   # property test runner
+  build:
+    - run: bun build src/cli/index.ts --compile --outfile=dist/cortex-${{ matrix.platform }}
+```
+
+**DoD**
+- `npm audit --audit-level=high` passes on CI with 0 high/critical CVEs.
+- `eslint-plugin-security` catches any `eval()` or `shell=true` equivalent introduced in new code — test by adding one deliberately, verifying CI fails.
+- At least one `fast-check` property test per Phase 0 module (security, validate, dedup, mcpWriter minimum). Each property test runs 1,000 random cases.
+- `husky` pre-commit hook: committing a file with an ESLint security violation fails the commit with a clear message.
+- `bun build --compile` produces working binaries for Linux x64, macOS arm64, macOS x64, Windows x64.
+- GitHub Release CI job uploads all 4 binaries.
+- `curl https://cortex.sh/install | sh` (stub script) downloads and installs the correct binary for the detected platform.
+
+---
+
 ### Phase 0 — Master DoD & Cross-References
 
 **Phase 0 is complete when:**
-- All 15 subphases have 0 failing tests.
-- `npm test` reports pass on all 15 new test suites.
+- All 17 subphases have 0 failing tests.
+- `npm test` reports pass on all 17 new test suites.
 - `cortex doctor` exits 0 on the Cortex repo itself.
 - `source({filePath: "C:/Windows/System32/drivers/etc/hosts"})` → `PathTraversalError` (the live-audit CVE is closed).
 - `save_concept({name: ""})` → `ValidationError`.
@@ -1717,6 +1844,46 @@ Implement a suite of persona-based MCP Prompts inside the `CortexMCPServer` wrap
 **Pros & Cons**
 - ✅ **Pros**: Dramatically reduces context consumption by filtering for specific requirements; improves AI compliance with specialized coding standards.
 - ❌ **Cons**: Relies on accurate categorizations/tags in the knowledge graph; mitigated by default-mapping based on centrality, test patterns, and lint errors.
+
+---
+
+## 📣 Phase 4.9: Developer Ecosystem & GTM Surface — ⏳ Planned
+
+**Layman's Terms**
+Graphify (direct competitor) has 35 README translations, a published ebook ("The Memory Layer"), and an active X/LinkedIn presence that drives organic installs. Cortex has none of this. Phase 4.9 builds the developer ecosystem surface that converts engineering quality into discoverability: multi-language README, a free technical guide, social presence infrastructure, and a community extension gallery.
+
+**Technical Terms**
+
+**Multi-language README (35+ translations, CI-maintained):**
+- Source of truth: `README.md` in English.
+- `scripts/translate-readme.ts` — calls LLM (Claude) to translate to target languages; writes `README.{lang}.md`. Runs in CI on every README change.
+- Target languages v1 (match graphify): Chinese (Simplified + Traditional), Japanese, Korean, Spanish, French, German, Portuguese (BR), Russian, Hindi, Arabic, Turkish, Italian, Dutch, Polish, Vietnamese, Thai, Indonesian, Malay, Persian, Swahili, Ukrainian, Czech, Romanian, Greek, Hebrew, Swedish, Norwegian, Danish, Finnish, Hungarian, Bengali, Tagalog.
+- Translation quality gate: character count within 20% of English (catches empty outputs). Manual review for first-time additions.
+- GitHub README language picker: `<!-- BEGIN TRANSLATIONS -->` block at top of README with flag emoji links to each translated version.
+
+**Free technical guide ("The Memory Layer"):**
+- A concise (20–40 page) free ebook / guide explaining: why AI coding agents need architectural memory, how knowledge graphs work, what makes Cortex different from naive RAG, practical patterns for onboarding a new repo.
+- Format: Markdown source in `docs/book/` → compiled to PDF + EPUB via `pandoc` + `weasyprint` in CI.
+- Distribution: free PDF on the Cortex website + GitHub Releases; paid expanded edition as an optional revenue stream (Gumroad / Lemon Squeezy).
+- Purpose: establishes Cortex as the authoritative voice on "memory for AI coding agents." Drives SEO and trust.
+
+**Social presence infrastructure:**
+- Weekly "Cortex Tip" posts on X and LinkedIn — short (280 char) + 1 code snippet. Written in `docs/social/tips.md`, automated via `scripts/post-tip.ts` (Buffer/Typefully API).
+- Demo GIF/video generator: `scripts/record-demo.ts` — uses `asciinema` to record CLI sessions, converts to GIF for social posts.
+- Product Hunt launch checklist in `docs/launch/producthunt.md`.
+- Hacker News "Show HN" template in `docs/launch/hn-show.md`.
+
+**Community SKILL.md extension gallery:**
+- `docs/community/skills/` — a curated list of user-submitted skill variants (custom decision trees, domain-specific playbooks, e.g. "Cortex for Solidity", "Cortex for data science pipelines").
+- Contribution guide: `CONTRIBUTING_SKILLS.md`.
+- Gallery rendered on the website as a searchable table.
+
+**DoD**
+- `npm run translate-readme` produces valid Markdown files for ≥10 languages; CI validates character count gate.
+- `docs/book/` exists with a complete outline (chapter headings + one-paragraph summaries) and ≥3 chapters of draft content.
+- `docs/social/tips.md` has ≥20 ready-to-post tips.
+- `docs/community/skills/` exists with a contribution guide and ≥1 example contributed skill.
+- GitHub README displays language picker block with ≥5 language links.
 
 ---
 
