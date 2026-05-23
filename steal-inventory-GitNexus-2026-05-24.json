@@ -1,0 +1,456 @@
+{
+  "schema_version": "1.0",
+  "audited_iso": "2026-05-24T00:00:00Z",
+  "target": "GitNexus",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\GitNexus",
+  "commit_sha": "87b91c821e412f4b80d91137225c2d6f0dbb3ce5",
+  "mode": "full",
+  "calibration": "deep",
+  "spot_check": "pass",
+  "hallucination_check": "pass",
+  "bucket_counts": { "A": 10, "B": 2, "C": 16, "D": 6, "E": 6, "F": 2, "G": 2 },
+  "items": [
+    {
+      "id": 1, "bucket": "E", "score": 75,
+      "name": "assertSafePath path traversal defense",
+      "source": "gitnexus/src/server/validation.ts:77-90",
+      "closes_flaw": [51, 74],
+      "severity": 5, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Resolves user-supplied paths against an allowed root, rejects null bytes and traversals — closes Cortex CRITICAL Flaw #51 (unsandboxed source) and #74 (read_entity path injection)",
+      "counter_case": "Cortex's source tool serves only .knowledge/ — a path-allow-list might be simpler than full canonicalization; but canonicalization is more robust if roots ever expand.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 2, "bucket": "E", "score": 60,
+      "name": "assertString type-confusion prevention",
+      "source": "gitnexus/src/server/validation.ts:57-65",
+      "closes_flaw": [74],
+      "severity": 4, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Rejects array parameters (?x=a&x=b) before any string operation — closes CodeQL js/type-confusion-through-parameter-tampering, relevant to Cortex's MCP tool parameter handling",
+      "counter_case": "MCP parameters arrive as typed JSON, not HTTP query strings — this is most relevant only if Cortex adds HTTP routes (Phase 22).",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 3, "bucket": "E", "score": 45,
+      "name": "Schema version guard for incremental state",
+      "source": "gitnexus/src/storage/repo-manager.ts:75-81",
+      "closes_flaw": [63],
+      "severity": 3, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "INCREMENTAL_SCHEMA_VERSION constant bumped on breaking change forces full rebuild — directly closes Flaw #63 (state.json version never checked)",
+      "counter_case": "Cortex's state.json is simpler than GitNexus's registry; schema changes are infrequent — but the guard is near-zero effort and the payoff is high.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 4, "bucket": "E", "score": 45,
+      "name": "Doctor capabilities fingerprint",
+      "source": "gitnexus/src/cli/doctor.ts:1-32",
+      "closes_flaw": [98],
+      "severity": 3, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "getRuntimeFingerprint() + getRuntimeCapabilities() reports OS/Node/DB/ONNX, graph store, FTS, vector, semantic mode — closes Flaw #98 (no cortex doctor)",
+      "counter_case": "Phase 0.7 already plans cortex doctor; GitNexus's version adds ONNX/DB capability probing that Cortex doesn't need until Phase 0.14.",
+      "has_tests": false, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 5, "bucket": "E", "score": 32,
+      "name": "RRF K=60 hybrid search + BM25 top-3 aggregation",
+      "source": "gitnexus/src/core/search/hybrid-search.ts:18; gitnexus/src/core/search/bm25-index.ts:120-131",
+      "closes_flaw": [26],
+      "severity": 4, "fit": 4, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "RRF (1/(K+rank+1), K=60) merges BM25 + semantic ranks without score normalization; top-3 node aggregation per file prevents test-file score inflation — closes Flaw #26 (ranks by substring, not relevance)",
+      "counter_case": "Cortex's Phase 0.9 plans IDF+BFS ranking already; RRF requires both FTS and vector indexes operational — adds complexity without full embedding support.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 6, "bucket": "E", "score": 30,
+      "name": "Crash-recovery dirty flag (incrementalInProgress)",
+      "source": "gitnexus/src/storage/repo-manager.ts:96-101",
+      "closes_flaw": [120],
+      "severity": 2, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "incrementalInProgress written to meta.json BEFORE destructive mutation, cleared only on success — next run sees the flag and forces full rebuild, closes Flaw #120 (partial manifest overwrite)",
+      "counter_case": "Cortex doesn't yet have an incremental update mode — this is a Phase 33.6 concern, not immediately needed.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 7, "bucket": "C", "score": 48,
+      "name": "Content-addressed incremental reindex fileHashes map",
+      "source": "gitnexus/src/storage/repo-manager.ts:84-88",
+      "phase_placement": "Phase 33.6",
+      "severity": 4, "fit": 4, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "fileHashes: Record<string,string> maps repo-relative paths to SHA-256 content hashes; next run diffs hashes, rewrites only changed-file rows — prevents full re-extract of unchanged files",
+      "counter_case": "Cortex ingests LLM-synthesized knowledge, not just parse output — content hash only answers 'did the source change', not 'did the synthesis change'; needs a separate knowledge hash.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 8, "bucket": "C", "score": 45,
+      "name": "SHA1 embedding version hash (EMBEDDING_TEXT_VERSION)",
+      "source": "gitnexus/src/core/embeddings/embedding-pipeline.ts:66-88",
+      "phase_placement": "Phase 0.14",
+      "severity": 3, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "EMBEDDING_TEXT_VERSION prefix + SHA1(text) stored per node; incremental runs skip re-embed when hash unchanged; bump version to invalidate all embeddings on template change",
+      "counter_case": "Only needed once Phase 0.14 embeddings ship; premature if embeddings aren't incrementally generated yet.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 9, "bucket": "C", "score": 45,
+      "name": "Cross-platform path canonicalization (realpathSync.native)",
+      "source": "gitnexus/src/storage/repo-manager.ts:46-53",
+      "phase_placement": "Phase 0.1 / Phase 0.12",
+      "severity": 3, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "realpathSync.native() resolves symlinks + Windows 8.3 short-name forms to canonical long paths; graceful fallback to path.resolve() for non-existent paths — prevents entity ID mismatch across paths to same file",
+      "counter_case": "Cortex runs on the developer's machine only; symlink aliasing is less common in single-user local environments — but macOS /var→/private/var and Windows runner short names affect CI.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 10, "bucket": "C", "score": 45,
+      "name": "Adaptive concurrency reduction on LLM 429",
+      "source": "gitnexus/src/core/wiki/generator.ts:1061-1113",
+      "phase_placement": "Phase 2 (LLM Synthesis)",
+      "severity": 3, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "When LLM returns 429, reduce activeConcurrency by 1 and re-queue the failed item with 5s backoff — automatically rights the concurrency without requiring manual tuning",
+      "counter_case": "Cortex doesn't run concurrent LLM calls today (single synthesis path); only relevant once Phase 2 bulk synthesis or wiki generation ships.",
+      "has_tests": false, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 11, "bucket": "C", "score": 40,
+      "name": "Dual-framing MCP transport + 10 MB buffer cap",
+      "source": "gitnexus/src/mcp/compatible-stdio-transport.ts:9-101",
+      "phase_placement": "Phase 4 / Phase 0.17",
+      "severity": 4, "fit": 5, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Auto-detects Content-Length vs newline-delimited JSON framing on first byte; 10 MB buffer cap discards oversized input before allocating; iterative loop (not recursive) prevents stack overflow on malformed input",
+      "counter_case": "Cortex's MCP is stdio-only and the SDK handles framing — this pattern is redundant if using @modelcontextprotocol/sdk's default transport. Only needed for a custom transport layer.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 12, "bucket": "C", "score": 36,
+      "name": "IPv6 rate limiting normalization to /56 subnet",
+      "source": "gitnexus/src/server/validation.ts:102-150",
+      "phase_placement": "Phase 22",
+      "severity": 3, "fit": 4, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "ipKeyGenerator normalizes IPv6 addresses to /56 subnet prefix before rate-limit keying — prevents per-address IPv6 bypass with 2^72 addresses per /56 network",
+      "counter_case": "Only relevant when Phase 22 Central Knowledge Server ships; premature for local-only Cortex.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 13, "bucket": "C", "score": 36,
+      "name": "Noisy contract filter (health-check and param-only paths)",
+      "source": "gitnexus/src/core/group/matching.ts:32-52",
+      "phase_placement": "Phase 11.5",
+      "severity": 3, "fit": 4, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Configurable exclude_links_paths (/health, /ready) + exclude_links_param_only_paths removes N×M false cross-repo dependencies from infrastructure health-check routes",
+      "counter_case": "Phase 11.5 contract registry is future; may not need this filter if Cortex only indexes higher-level semantic contracts rather than HTTP routes.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 14, "bucket": "C", "score": 36,
+      "name": "Retry with full-jitter exponential backoff + Retry-After honor",
+      "source": "gitnexus-shared/src/integrations/retry.ts:52-105",
+      "phase_placement": "Phase 2 / Phase 0.14",
+      "severity": 3, "fit": 4, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "delay = random() × min(cap, base × 2^attempt); if server sends Retry-After header, uses min(afterMs, capDelayMs) — honors server throttle signals without blindly trusting them",
+      "counter_case": "Cortex's LLM calls use Claude's SDK which may already handle retries; would need to verify SDK behavior before adding a second layer.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 15, "bucket": "C", "score": 32,
+      "name": "Deadline-driven fanout with AbortController racing",
+      "source": "gitnexus/src/core/group/cross-impact.ts:262-298",
+      "phase_placement": "Phase 11.5 / Phase 11.6",
+      "severity": 4, "fit": 4, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Cross-repo impact fans out to N neighbors each raced against remainingMs = deadline - Date.now(); timed-out neighbors appended to truncatedRepos list rather than hanging the response",
+      "counter_case": "Phase 11.5 groups are future; also, Cortex's local-first constraint limits cross-repo fanout to local repos (no network hops), making hung calls less likely.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 16, "bucket": "C", "score": 30,
+      "name": "Smart section preservation (<!-- gitnexus:keep -->)",
+      "source": "gitnexus/src/cli/ai-context.ts:235-278",
+      "phase_placement": "Phase 10.4",
+      "severity": 2, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "When <!-- gitnexus:keep --> marker is present, analyze only updates the stats line (symbol counts) — allows teams to maintain a custom AGENTS.md/CLAUDE.md layout that survives re-indexing",
+      "counter_case": "Cortex's managed CLAUDE.md (Phase 10.4) is future; this pattern shines in teams with divergent CLAUDE.md customizations — single-dev Cortex installs rarely need it.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 17, "bucket": "C", "score": 30,
+      "name": "MCP Tool Annotations (readOnlyHint, destructiveHint, idempotentHint)",
+      "source": "gitnexus/src/mcp/tools.ts:33-52",
+      "phase_placement": "Phase 4",
+      "severity": 2, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "ToolAnnotations on every MCP tool signals to clients which tools are read-only vs destructive vs idempotent — clients auto-partition and avoid unnecessary confirmation prompts for read-only calls",
+      "counter_case": "MCP SDK may or may not surface annotations to agents; benefit depends on client capability — Cursor and Claude Code may not act on these hints yet.",
+      "has_tests": false, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 18, "bucket": "C", "score": 30,
+      "name": "Embedding metadata text header (label + path + export + description)",
+      "source": "gitnexus/src/core/embeddings/text-generator.ts:63-97",
+      "phase_placement": "Phase 0.14",
+      "severity": 2, "fit": 5, "effort": 1, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Prepend structured header (Label: Name / Repo: / Path: / Export: / Description: truncated) before code body — structural context improves embedding discriminability across same-named symbols in different files",
+      "counter_case": "Token overhead of header reduces body context in fixed-size embedding windows; may hurt small models on large symbols.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 19, "bucket": "C", "score": 24,
+      "name": "MCP stray-stdout sentinel (AsyncLocalStorage tagging)",
+      "source": "gitnexus/src/mcp/stdio-context.ts:1-80",
+      "phase_placement": "Phase 4",
+      "severity": 3, "fit": 4, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "AsyncLocalStorage tags legitimate MCP writes; stray writes (from logs, deps) redirected to stderr with [mcp:stdout-redirect] prefix, truncated to 200 bytes, rate-limited to 10 per process — prevents hung handshakes",
+      "counter_case": "Only needed if Cortex uses dependencies that write to stdout; the MCP SDK itself is clean — this adds complexity for a hypothetical problem.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 20, "bucket": "C", "score": 24,
+      "name": "Three-tier contract lookup index for O(1) resolution",
+      "source": "gitnexus/src/core/group/bridge-db.ts:60-162",
+      "phase_placement": "Phase 11.5",
+      "severity": 3, "fit": 4, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "Built-once in-memory index: tier-1 repo+role+symbolUid, tier-2 repo+role+filePath+symbolName, tier-3 repo+role+filePath → eliminates N+1 DB round-trips per cross-link resolution",
+      "counter_case": "Cortex's cross-repo is Phase 11.5 future; this optimization is premature until there are enough contract rows to matter.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 21, "bucket": "C", "score": 24,
+      "name": "Sibling-clone staleness detection",
+      "source": "gitnexus/src/core/git-staleness.ts:116-187",
+      "phase_placement": "Phase 5 / Phase 5.6",
+      "severity": 3, "fit": 4, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "checkCwdMatch() finds registered repos with same remoteUrl at different on-disk path; warns that sibling clone's HEAD differs from indexed commit — prevents silent stale answers when switching worktrees",
+      "counter_case": "Cortex tracks projectRoot explicitly; users working in a second clone should re-run cortex analyze — the warning is helpful but not critical for single-developer local use.",
+      "has_tests": false, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 22, "bucket": "C", "score": 18,
+      "name": "Circuit breaker with half-open probe + recordNeutral()",
+      "source": "gitnexus-shared/src/integrations/circuit-breaker.ts:1-80",
+      "phase_placement": "Phase 2 / Phase 0.14",
+      "severity": 3, "fit": 3, "effort": 2, "recency": 1.0,
+      "confidence": "high",
+      "summary": "recordNeutral() releases half-open probe permit without counting as success or failure — prevents TimeoutError from permanently parking the breaker in half-open; thundering-herd prevention via single probe in-flight",
+      "counter_case": "Cortex's LLM calls are sequential (not concurrent) and short-lived — a circuit breaker adds complexity for a scenario (flapping LLM backend) that Cortex's local-first principle avoids.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 23, "bucket": "A", "score": 0,
+      "name": "Lazy CLI module loading",
+      "source": "gitnexus/src/cli/lazy-action.ts:11-23",
+      "phase_placement": "Phase 5 Refinement — Lazy CLI Module Loading (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed into Cortex Phase 5 Refinement",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 24, "bucket": "A", "score": 0,
+      "name": "Git staleness tracking",
+      "source": "gitnexus/src/core/git-staleness.ts:23-45",
+      "phase_placement": "Phase 5 Refinement — Git Staleness Tracking (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed into Cortex Phase 5 Refinement",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 25, "bucket": "A", "score": 0,
+      "name": "Structured confidence reasons",
+      "source": "gitnexus/src/core/ingestion/call-processor.ts (edge reasons)",
+      "phase_placement": "Phase 0.3 Refinement — Structured Confidence Reasons (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 26, "bucket": "A", "score": 0,
+      "name": "Auto-detection wizard for IDE config",
+      "source": "gitnexus/src/cli/setup.ts",
+      "phase_placement": "Phase 0.15 Refinement — Auto-Detection Wizard (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 27, "bucket": "A", "score": 0,
+      "name": "Shadow candidate resolution on file rename",
+      "source": "gitnexus/src/core/ingestion/import-processor.ts",
+      "phase_placement": "Phase 33.5 Refinement — Shadow Candidate Resolution (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 28, "bucket": "A", "score": 0,
+      "name": "Cross-repo RRF query merging",
+      "source": "gitnexus/src/core/group/cross-impact.ts",
+      "phase_placement": "Phase 11.6 Cross-Repo RRF Query Merging",
+      "confidence": "high",
+      "summary": "Already planned in Cortex Phase 11.6",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 29, "bucket": "A", "score": 0,
+      "name": "Contract richness scoring and deduplication",
+      "source": "gitnexus/src/core/group/normalization.ts:37-67",
+      "phase_placement": "Phase 11.5 Refinement — Contract Richness Scoring (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 30, "bucket": "A", "score": 0,
+      "name": "Language-specific protocol pattern matching",
+      "source": "gitnexus/src/core/group/extractors/grpc-extractor.ts",
+      "phase_placement": "Phase 11.5 Refinement — Language-Specific Protocol Pattern Matching (GitNexus)",
+      "confidence": "high",
+      "summary": "Already absorbed",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 31, "bucket": "A", "score": 0,
+      "name": "Skill file generation per Leiden community",
+      "source": "gitnexus/src/cli/skill-gen.ts",
+      "phase_placement": "Phase 10.10",
+      "confidence": "high",
+      "summary": "Phase 10.10 covers community skill generation; GitNexus is the reference implementation",
+      "has_tests": false, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 32, "bucket": "A", "score": 0,
+      "name": "Leiden community detection + modularity metric",
+      "source": "gitnexus/src/core/ingestion/pipeline-phases/communities.ts",
+      "phase_placement": "Phase 14.1",
+      "confidence": "high",
+      "summary": "Already in Cortex Phase 14.1",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 33, "bucket": "B", "score": 0,
+      "name": "LadybugDB persistent graph DB (vs knowledge-as-derived-data)",
+      "source": "gitnexus/src/core/lbug/lbug-adapter.ts",
+      "phase_placement": "Phase 3",
+      "confidence": "high",
+      "summary": "GitNexus's DB-backed graph enables native FTS, vector indexes, and Cypher queries — Cortex's JSON-file approach is simpler and portable but lacks these capabilities",
+      "steel_man": "DB-backed storage with native FTS and vector indexes removes the need to implement BM25 and ANN search from scratch; at scale (>50k nodes) it's clearly superior to JSON scanning.",
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 34, "bucket": "B", "score": 0,
+      "name": "Web UI for graph exploration (vs local-first)",
+      "source": "gitnexus-web/",
+      "phase_placement": "Phase 8",
+      "confidence": "high",
+      "summary": "GitNexus's browser UI enables non-developer graph exploration without any local setup — Cortex's .knowledge/ wiki + Obsidian is simpler for developer workflows",
+      "steel_man": "Browser-based viewer (HTML with embedded JSON) has zero install friction and works for non-technical stakeholders; Cortex's Phase 8 visual graph is entirely local.",
+      "has_tests": false, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 35, "bucket": "D", "score": 0,
+      "name": "LadybugDB WAL checkpoint threshold control",
+      "source": "gitnexus/src/core/lbug/lbug-config.ts:58-67",
+      "principle_violated": "knowledge-as-derived-data / local-first — Cortex uses JSON, not a WAL DB",
+      "confidence": "high",
+      "summary": "64 MiB default WAL threshold reduces checkpoint churn under heavy writes — inapplicable until Cortex adopts a WAL-capable DB backend (Phase 3.1+)"
+    },
+    {
+      "id": 36, "bucket": "D", "score": 0,
+      "name": "COBOL support via regex (no tree-sitter)",
+      "source": "gitnexus/src/core/ingestion/pipeline-phases/cobol.ts",
+      "principle_violated": "niche — not in Cortex's target languages list",
+      "confidence": "high",
+      "summary": "COBOL pipeline phase uses regex extractors (no tree-sitter grammar available) — interesting approach but COBOL is not in Cortex's Phase 0.13 language priorities"
+    },
+    {
+      "id": 37, "bucket": "D", "score": 0,
+      "name": "LLM-driven wiki generation (4-phase pipeline)",
+      "source": "gitnexus/src/core/wiki/generator.ts",
+      "principle_violated": "LLM-cost-conscious — 4-phase LLM wiki generation is expensive",
+      "confidence": "high",
+      "summary": "GitNexus generates module wikis via LLM (1 grouping call + N module calls + 1 overview call) — Cortex wiki (Phase 8.2) should generate from graph structure without LLM calls"
+    },
+    {
+      "id": 38, "bucket": "D", "score": 0,
+      "name": "CI parity workflow (dual-path simultaneous execution)",
+      "source": "gitnexus/.github/workflows/ci-scope-parity.yml",
+      "principle_violated": "niche — specific to GitNexus's two-resolution-path migration",
+      "confidence": "high",
+      "summary": "Runs both legacy Call-Resolution DAG and new Scope-Resolution pipeline on every PR — migration-specific pattern for a codebase that can't break existing language support mid-migration"
+    },
+    {
+      "id": 39, "bucket": "D", "score": 0,
+      "name": "Scarf analytics in npm package",
+      "source": "gitnexus/package.json: @scarf/scarf",
+      "principle_violated": "local-first / no third-party API for core",
+      "confidence": "high",
+      "summary": "Scarf telemetry fires on npm install — Cortex should not include silent analytics in its package distribution"
+    },
+    {
+      "id": 40, "bucket": "D", "score": 0,
+      "name": "ONNX runtime for local embeddings",
+      "source": "gitnexus/package.json: onnxruntime-node",
+      "principle_violated": "already planned — Phase 0.14 covers this",
+      "confidence": "high",
+      "summary": "Snowflake arctic-embed-xs via onnxruntime-node for 384D local embeddings — Cortex Phase 0.14 already plans multi-backend LLM with local-model support"
+    },
+    {
+      "id": 41, "bucket": "F", "score": 0,
+      "name": "FTS query string interpolation risk",
+      "source": "gitnexus/CHANGELOG.md:66 — v1.3.11 fix; gitnexus/src/core/search/bm25-index.ts:36-41",
+      "pattern": "CALL QUERY_FTS_INDEX template-interpolates table/index names (trusted) but queries user input via $query parameter — the original version interpolated the query string directly, causing FTS injection (backslash escape exploit)",
+      "why_target_chose_it": "FTS5 table and index names are compile-time constants, so the dev initially treated the entire query as a format string; user input was added later without re-evaluating the injection surface.",
+      "cortex_lesson": "Any FTS or Cypher query builder in Cortex (Phase 0.9) must separate compile-time schema identifiers (safe to interpolate) from runtime user input (must be parameterized). Never interpolate search terms.",
+      "has_tests": true, "last_modified": "2026-03-08T00:00:00Z"
+    },
+    {
+      "id": 42, "bucket": "F", "score": 0,
+      "name": "MCP buffer memory allocation before Content-Length validation",
+      "source": "gitnexus/CHANGELOG.md:88-90 — v1.3.10 fix; now fixed in compatible-stdio-transport.ts:64-68",
+      "pattern": "The original transport allocated the read buffer to Content-Length size BEFORE checking if it exceeded MAX_BUFFER_SIZE — a malicious client could trigger OOM by sending Content-Length: 99999999999",
+      "why_target_chose_it": "Transport code was ported from the MCP SDK reference implementation which didn't have the adversarial-input assumption.",
+      "cortex_lesson": "Any Cortex MCP or HTTP transport that reads a Content-Length header MUST validate the value against a cap BEFORE allocating any buffer. Check first, allocate second.",
+      "has_tests": true, "last_modified": "2026-03-07T00:00:00Z"
+    },
+    {
+      "id": 43, "bucket": "G", "score": 0,
+      "name": "Should Cortex adopt a DB connection pool when Phase 3.x ships?",
+      "source": "gitnexus/src/core/lbug/pool-adapter.ts",
+      "question": "When Cortex moves to a graph DB backend (Phase 3.1), should it adopt GitNexus's LRU connection pool pattern (MAX_POOL_SIZE=5, IDLE_TIMEOUT_MS=5min, pool-close listeners for cache invalidation)?",
+      "alternatives": [
+        "A: Single shared connection per process (simple, sufficient for local-only single-writer)",
+        "B: Per-request connection with open/close overhead (safe but slow for MCP server under load)",
+        "C: LRU pool as GitNexus does (best throughput, needed only if MCP concurrency is observed)"
+      ],
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    },
+    {
+      "id": 44, "bucket": "G", "score": 0,
+      "name": "Should Cortex run shadow-mode parity tests during Phase 33.5 pipeline migration?",
+      "source": "gitnexus/.github/workflows/ci-scope-parity.yml",
+      "question": "Phase 33.5 introduces a two-stage ingestion pipeline replacing the existing single-pass. Should Cortex run both pipelines simultaneously in CI (as GitNexus does for its legacy DAG → scope-resolver migration) and fail on divergence?",
+      "alternatives": [
+        "A: Shadow CI parity (expensive but catches regressions; GitNexus approach)",
+        "B: Snapshot-based regression tests (compare output on a fixed fixture corpus)",
+        "C: Feature flag per language with manual validation (lower safety, faster migration)"
+      ],
+      "has_tests": true, "last_modified": "2026-05-24T00:00:00Z"
+    }
+  ]
+}

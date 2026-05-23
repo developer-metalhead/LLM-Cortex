@@ -17562,3 +17562,1298 @@ Enables user-edited community label files to persist across rebuilds without dri
 
 **Source**: graphify `__main__.py:71` — `_platform_skill_destination(project=True)`
 
+---
+
+## 🔄 GITNEXUS AUDIT — Phase Refinements (2026-05-24)
+
+### Phase 0.1 Refinement — `assertSafePath` Path Traversal Defense — closes Flaw #51 + #74 (score: 75)
+
+**What**: Add `assertSafePath(root: string, rawPath: string): string` to `src/security.ts`. Used by `source`, `read_entity`, and any future tool that accepts a user-supplied file path.
+
+```typescript
+function assertSafePath(root: string, rawPath: string): string {
+  if (!rawPath || rawPath.includes('\0')) throw new SecurityError('Invalid path');
+  const resolvedRoot = path.resolve(root);
+  const fullPath = path.resolve(resolvedRoot, rawPath);
+  if (fullPath !== resolvedRoot && !fullPath.startsWith(resolvedRoot + path.sep)) {
+    throw new SecurityError('Path traversal denied');
+  }
+  return fullPath;
+}
+```
+
+**Where**: Called in `source` (before any `fs.readFile`), `read_entity` (before loading entity file), and `save_concept`/`save_synthesis` (before writing). Replaces ad-hoc path joins. Note: threading `root` into all tools requires refactoring the MCP tool dispatch layer — not a copy-paste drop-in.
+
+**Source**: gitnexus `src/server/validation.ts:77-90` — `assertSafePath()`
+**Closes**: Flaw #51 (CRITICAL — unsandboxed source), Flaw #74 (read_entity path injection)
+
+---
+
+### Phase 0.1 Refinement — `assertString` Type-Confusion Prevention — closes Flaw #74 (score: 60)
+
+**What**: Add `assertString(value: unknown, paramName: string): string` guard applied at every MCP tool entry point that accepts a string parameter.
+
+```typescript
+function assertString(value: unknown, paramName: string): string {
+  if (Array.isArray(value)) {
+    throw new ValidationError(`${paramName}: expected string, got array (duplicate parameter?)`);
+  }
+  if (typeof value !== 'string') {
+    throw new ValidationError(`${paramName}: expected string, got ${typeof value}`);
+  }
+  return value;
+}
+```
+
+**Where**: Applied to `entity_name`, `file_path`, `query`, `scope` parameters in all MCP tool handlers before any string operation (`.length`, `.includes`, regex, etc.).
+
+**Source**: gitnexus `src/server/validation.ts:57-65` — `assertString()`
+**Closes**: Flaw #74 (read_entity accepts path-traversal names — partially; Flaw #51 also partially)
+
+---
+
+### Phase 0.14 Refinement — SHA1 Embedding Version Hash for Incremental Preservation (score: 45)
+
+**What**: For each embeddable entity, compute `sha1(EMBEDDING_TEXT_VERSION + '\n' + embeddingText)` and store alongside the vector. On incremental embedding runs, skip entities whose hash matches the stored value.
+
+```typescript
+const EMBEDDING_TEXT_VERSION = 'v1';  // bump to invalidate all embeddings on template change
+
+function contentHashForEntity(entity: EmbeddableEntity): string {
+  const text = generateEmbeddingText(entity);
+  return createHash('sha1')
+    .update(EMBEDDING_TEXT_VERSION + '\n')
+    .update(text)
+    .digest('hex');
+}
+```
+
+Version bump on template change → all embeddings invalidated and regenerated. No hash change → vector preserved from prior run.
+
+**Source**: gitnexus `src/core/embeddings/embedding-pipeline.ts:66-88` — `EMBEDDING_TEXT_VERSION`, `contentHashForNode()`
+
+---
+
+### Phase 0.1 Refinement — Cross-Platform Path Canonicalization (score: 45)
+
+**What**: Wrap all incoming file paths in `canonicalizePath()` before storing in state or using as entity IDs.
+
+```typescript
+function canonicalizePath(p: string): string {
+  try {
+    return fs.realpathSync.native(p);  // resolves symlinks, Windows 8.3 short names, macOS /var→/private/var
+  } catch {
+    return path.resolve(p);  // graceful fallback for paths that don't exist yet
+  }
+}
+```
+
+Apply at: project root resolution, entity source_file storage, registry lookup (compare canonicalized forms). Fixes entity ID mismatch when the same file is reached via a symlink or a Windows 8.3 path.
+
+**Source**: gitnexus `src/storage/repo-manager.ts:46-53` — `canonicalizePath()`
+
+---
+
+### Phase 3.3 Refinement — Schema Version Guard for Incremental State — closes Flaw #63 (score: 45)
+
+**What**: Add `INCREMENTAL_SCHEMA_VERSION = 1` constant to `src/state.ts`. On every cortex analyze/ingest, compare stored `state.json.version` against the constant. If mismatch → log warning + force full rebuild.
+
+```typescript
+const INCREMENTAL_SCHEMA_VERSION = 1;  // bump when incremental invariants change
+
+function checkSchemaVersion(stored: number | undefined): boolean {
+  if (stored === undefined || stored !== INCREMENTAL_SCHEMA_VERSION) {
+    logger.warn(`Schema version mismatch (stored=${stored}, expected=${INCREMENTAL_SCHEMA_VERSION}). Forcing full rebuild.`);
+    return false;  // caller should run full ingest
+  }
+  return true;
+}
+```
+
+**Source**: gitnexus `src/storage/repo-manager.ts:75-81` — `INCREMENTAL_SCHEMA_VERSION`, `schemaVersion` field
+**Closes**: Flaw #63 (state.json version field exists but is never checked)
+
+---
+
+### Phase 0.7 Refinement — Doctor Capabilities Fingerprint — closes Flaw #98 (score: 45)
+
+**What**: Extend `cortex doctor` beyond version info to include runtime capability probing:
+
+```
+Cortex Doctor
+
+Runtime
+  OS:         win32/x64
+  Node:       v22.3.0
+  Cortex:     0.9.1
+
+Capabilities
+  Knowledge store:     json-files
+  Full-text search:    idf-bfs
+  Vector index:        not-available
+  Embedding backend:   none (Phase 0.14)
+
+Graph
+  Entities: 247
+  Concepts: 14
+  Last ingest: 2026-05-24T12:00:00Z (0 commits behind HEAD)
+```
+
+**Where**: `src/cli/doctor.ts` — extend the existing planned command with capability probing via `getRuntimeCapabilities()`.
+
+**Source**: gitnexus `src/cli/doctor.ts:1-32` — `getRuntimeFingerprint()`, `getRuntimeCapabilities()`
+**Closes**: Flaw #98 (no cortex doctor / health check)
+
+---
+
+### Phase 2 Refinement — Adaptive Concurrency Reduction on LLM 429 (score: 45)
+
+**What**: When running concurrent LLM synthesis calls (batch entity synthesis, wiki generation), wrap the concurrency pool to detect 429 responses and back off automatically.
+
+```typescript
+let activeConcurrency = maxConcurrency;
+
+async function withAdaptiveConcurrency<T>(
+  items: T[],
+  worker: (item: T) => Promise<void>,
+  maxC = 5
+): Promise<void> {
+  let c = maxC;
+  const queue = [...items];
+  while (queue.length > 0) {
+    const batch = queue.splice(0, c);
+    const results = await Promise.allSettled(batch.map(worker));
+    for (const r of results) {
+      if (r.status === 'rejected' && isRateLimitError(r.reason)) {
+        c = Math.max(1, c - 1);  // reduce concurrency
+        await sleep(5000);        // backoff
+        queue.unshift(/* failed item */);  // re-queue
+      }
+    }
+  }
+}
+```
+
+**Source**: gitnexus `src/core/wiki/generator.ts:1061-1113` — adaptive rate limiting, `activeConcurrency` reduction
+
+---
+
+### Phase 22 Refinement — IPv6 Rate Limiting Normalization (/56 subnet) (score: 36)
+
+**What**: When implementing per-IP rate limiting for `cortex serve` (Phase 22), normalize IPv6 addresses to their /56 subnet prefix before keying the rate limiter — prevents trivial bypass via per-address rotation across the 2^72 addresses in a /56 network.
+
+```typescript
+function ipKeyGenerator(req: Request): string {
+  const ip = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+  // Normalize IPv6 to /56 subnet (first 7 bytes)
+  if (ip.includes(':')) {
+    const parsed = new Address6(ip);
+    return parsed.isValid() ? parsed.getBitsBase2().slice(0, 56) : ip;
+  }
+  return ip;
+}
+```
+
+**Source**: gitnexus `src/server/validation.ts:102-150` — `ipKeyGenerator`, `createRouteLimiter()`
+
+---
+
+### Phase 11.5 Refinement — Noisy Contract Filter for Health-Check Routes (score: 36)
+
+**What**: Add a configurable exclusion list to the contract matcher to suppress infrastructure-level routes that produce N×M false cross-repo dependencies.
+
+**Two filter categories**:
+1. **Exact path exclusions**: `/health`, `/ready`, `/liveness`, `/metrics` — every service has these, and cross-linking them is meaningless.
+2. **Param-only paths**: paths that collapse to `/{param}` or `/{param}/{param}` after normalization — they match any route in any service after normalization.
+
+**Config**: `.cortex/groups.yaml`
+```yaml
+matching:
+  exclude_links_paths: ['/health', '/ready', '/liveness', '/metrics']
+  exclude_links_param_only_paths: true
+```
+
+**Source**: gitnexus `src/core/group/matching.ts:32-52` — `isNoisyContract()`
+
+---
+
+### Phase 2 Refinement — Retry with Full-Jitter Exponential Backoff + Retry-After Honor (score: 36)
+
+**What**: Use full-jitter backoff for all LLM API retries. Honor `Retry-After` header from 429 responses but cap it at `MAX_RETRY_DELAY`.
+
+```typescript
+function computeRetryDelay(attempt: number, retryAfterMs?: number): number {
+  const BASE = 1000, CAP = 30_000;
+  const jittered = Math.random() * Math.min(CAP, BASE * Math.pow(2, attempt));
+  if (retryAfterMs !== undefined) {
+    return Math.min(retryAfterMs, CAP);  // honor server hint but cap it
+  }
+  return jittered;
+}
+```
+
+**Source**: gitnexus `gitnexus-shared/src/integrations/retry.ts:52-105` — `retry()`, full-jitter pattern
+
+---
+
+### Phase 11.5 Refinement — Deadline-Driven Fanout with AbortController Racing (score: 32)
+
+**What**: When `impact_analysis` fans out across multiple repos in a group (Phase 11.5), race each neighbor call against a per-call timeout derived from the global deadline.
+
+```typescript
+const deadline = Date.now() + timeoutMs;
+
+for (const neighbor of neighbors) {
+  const remainingMs = deadline - Date.now();
+  if (remainingMs <= 0) { truncatedRepos.push(neighbor.repo); continue; }
+
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), remainingMs);
+  const { result, timedOut } = await Promise.race([
+    neighborImpact(neighbor, ac.signal).then(r => ({ result: r, timedOut: false })),
+    new Promise<{ result: null; timedOut: true }>(res =>
+      ac.signal.addEventListener('abort', () => res({ result: null, timedOut: true }))
+    ),
+  ]).finally(() => clearTimeout(timer));
+
+  if (timedOut) truncatedRepos.push(neighbor.repo);
+  else results.push(result);
+}
+```
+
+**Source**: gitnexus `src/core/group/cross-impact.ts:262-298` — `safeNeighborImpact()`, deadline pattern
+
+---
+
+### Phase 0.9 Refinement — RRF K=60 Hybrid Search + BM25 Top-3 Aggregation — closes Flaw #26 (score: 32)
+
+**What**: Replace substring-presence ranking in `cortex_find` with Reciprocal Rank Fusion merging of IDF-scored keyword results and (when available) semantic vector results.
+
+```typescript
+const RRF_K = 60;
+
+function mergeWithRRF(
+  keywordResults: Array<{ entityId: string; score: number }>,
+  semanticResults: Array<{ entityId: string; distance: number }>,
+  limit = 10
+): RRFResult[] {
+  const merged = new Map<string, RRFResult>();
+
+  for (let i = 0; i < (keywordResults ?? []).length; i++) {
+    const r = keywordResults[i];
+    const rrfScore = 1 / (RRF_K + i + 1);
+    merged.set(r.entityId, { entityId: r.entityId, score: rrfScore, sources: ['keyword'] });
+  }
+  for (let i = 0; i < (semanticResults ?? []).length; i++) {
+    const r = semanticResults[i];
+    const rrfScore = 1 / (RRF_K + i + 1);
+    const existing = merged.get(r.entityId);
+    if (existing) { existing.score += rrfScore; existing.sources.push('semantic'); }
+    else merged.set(r.entityId, { entityId: r.entityId, score: rrfScore, sources: ['semantic'] });
+  }
+  return [...merged.values()].sort((a, b) => b.score - a.score).slice(0, limit);
+}
+```
+
+Also: **BM25 top-3 aggregation**: when multiple entities come from the same file, sum only the top-3 highest-scoring entities per file — prevents test files with many weak matches from outranking focused hits.
+
+**Source**: gitnexus `src/core/search/hybrid-search.ts:18, 46-119`; `src/core/search/bm25-index.ts:120-131`
+**Closes**: Flaw #26 (cortex_find ranks by substring presence, not relevance)
+
+---
+
+### Phase 33.6 Refinement — Crash-Recovery Dirty Flag for Incremental Ingest — closes Flaw #120 (score: 30)
+
+**What**: Add `incrementalInProgress: boolean` to `.cortex/state.json` (or meta file). Written to disk BEFORE any destructive mutation; cleared only on successful commit. On next run, if flag is set, force full rebuild rather than incremental.
+
+```typescript
+async function safeIncrementalIngest(options: IngestOptions): Promise<void> {
+  await setIncrementalFlag(true);     // write to disk FIRST
+  try {
+    await runIncrementalIngest(options);
+    await setIncrementalFlag(false);  // clear ONLY on success
+  } catch (err) {
+    // flag stays set → next run forces full rebuild
+    throw err;
+  }
+}
+```
+
+**Source**: gitnexus `src/storage/repo-manager.ts:96-101` — `incrementalInProgress` dirty flag pattern
+**Closes**: Flaw #120 (partial manifest overwrite on incremental run re-extracts entire corpus)
+
+---
+
+### Phase 10.4 Refinement — Smart Section Preservation (`<!-- cortex:keep -->`) (score: 30)
+
+**What**: Add a `<!-- cortex:keep -->` marker to `CLAUDE.md` / `AGENTS.md` auto-generated sections. When the marker is present on its own line, `cortex onboard` only updates the stats line (entity counts, last indexed date) rather than re-generating the entire section — preserves team-customized CLAUDE.md layouts across re-indexing.
+
+**Line detection** (strict — reject inline prose references):
+```typescript
+function hasKeepMarker(content: string): boolean {
+  return content.split('\n').some(line => {
+    const trimmed = line.replace(/\r$/, '');
+    return trimmed === '<!-- cortex:keep -->';
+  });
+}
+```
+
+If marker present → update only `<!-- cortex:stats -->` stats line. Otherwise → full regeneration.
+
+**Source**: gitnexus `src/cli/ai-context.ts:235-278` — `<!-- gitnexus:keep -->` pattern
+
+---
+
+### Phase 4 Refinement — MCP Tool Annotations (readOnlyHint, destructiveHint, idempotentHint) (score: 30)
+
+**What**: Add `annotations` field to every MCP tool registration to signal client capabilities.
+
+```typescript
+const TOOL_ANNOTATIONS = {
+  read_only: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  mutating:  { readOnlyHint: false, destructiveHint: true,  idempotentHint: false, openWorldHint: false },
+  search:    { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+} as const;
+
+// Tool registration:
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    { name: 'cortex_find', description: '...', annotations: TOOL_ANNOTATIONS.search, inputSchema: ... },
+    { name: 'source',      description: '...', annotations: TOOL_ANNOTATIONS.read_only, inputSchema: ... },
+    { name: 'save_concept', description: '...', annotations: TOOL_ANNOTATIONS.mutating, inputSchema: ... },
+  ]
+}));
+```
+
+**Source**: gitnexus `src/mcp/tools.ts:33-52` — `ToolAnnotations`, `QUERY_TOOL_ANNOTATIONS`
+
+---
+
+### Phase 0.14 Refinement — Embedding Metadata Text Header (score: 30)
+
+**What**: Prepend a structured metadata header to each entity's embedding text for improved discriminability across same-named symbols in different files.
+
+```typescript
+function generateEmbeddingText(entity: EmbeddableEntity): string {
+  const lines = [
+    `${entity.label}: ${entity.name}`,
+    `Path: ${entity.source_file}`,
+    entity.isExported !== undefined ? `Export: ${entity.isExported}` : null,
+    entity.description ? truncateAtWordBoundary(entity.description, 200) : null,
+  ].filter(Boolean);
+  return lines.join('\n') + '\n\n' + cleanCode(entity.content ?? '');
+}
+```
+
+**Source**: gitnexus `src/core/embeddings/text-generator.ts:63-97` — `generateEmbeddingText()`
+
+---
+
+## 🔄 GITNEXUS AUDIT — Remaining Phase Refinements
+
+### Phase 33.6 Refinement — Content-Addressed Incremental Reindex via `fileHashes` Map (score: 48)
+
+**What**: Maintain `fileHashes: Record<string, string>` (repo-relative path → SHA-256 content hash) in `.cortex/state.json`. On incremental ingest, diff the current hashes against stored; only re-extract rows for files whose hash changed.
+
+```typescript
+interface IncrementalState {
+  version: number;
+  incrementalInProgress: boolean;
+  fileHashes: Record<string, string>;  // path → sha256
+  entityCache: Record<string, CachedEntity>;
+}
+
+async function computeChangedFiles(
+  projectRoot: string,
+  stored: Record<string, string>
+): Promise<{ changed: string[]; deleted: string[] }> {
+  const current: Record<string, string> = {};
+  for (const file of await glob('**/*', { cwd: projectRoot, nodir: true })) {
+    current[file] = await sha256File(path.join(projectRoot, file));
+  }
+  const changed = Object.keys(current).filter(f => current[f] !== stored[f]);
+  const deleted = Object.keys(stored).filter(f => !(f in current));
+  return { changed, deleted };
+}
+```
+
+**Note**: Content hash answers "did the source change", not "did the LLM synthesis change". Needs a separate knowledge hash (see SHA1 embedding hash refinement) to avoid re-synthesizing when only the synthesis template changed.
+
+**Source**: gitnexus `src/storage/repo-manager.ts:84-88` — `fileHashes` field
+
+---
+
+### Phase 4 Refinement — Dual-Framing MCP Transport Detection (score: 40)
+
+**What**: When building a custom MCP transport (or auditing the SDK's transport), probe framing on the first byte rather than assuming a fixed protocol — auto-detects Content-Length vs newline-delimited JSON framing. Use an iterative loop (not recursive) to prevent stack overflow on malformed/split input.
+
+```typescript
+const MAX_BUFFER_SIZE = 10 * 1024 * 1024;  // 10 MB hard cap
+
+type FramingMode = 'content-length' | 'newline';
+
+function detectFraming(firstChunk: Buffer): FramingMode {
+  // 0x7b = '{', 0x5b = '[' → JSON starts immediately → newline-delimited
+  if (firstChunk[0] === 0x7b || firstChunk[0] === 0x5b) return 'newline';
+  // "Content-Length:" header → HTTP-like framing
+  if (firstChunk.slice(0, 14).toString('ascii').startsWith('Content-Length')) return 'content-length';
+  return 'newline';  // safe default
+}
+
+// Validate BEFORE allocating — prevents OOM pre-allocation DoS
+function safeAllocate(contentLength: number): Buffer {
+  if (contentLength > MAX_BUFFER_SIZE) throw new ProtocolError(`Content-Length ${contentLength} exceeds cap`);
+  return Buffer.allocUnsafe(contentLength);
+}
+```
+
+**Where**: Any custom transport layer. If using `@modelcontextprotocol/sdk`'s default transport this is a defensive reference; add it if Cortex ever wraps or replaces the SDK transport.
+
+**Source**: gitnexus `src/mcp/compatible-stdio-transport.ts:9-101` — `detectFraming()`, `MAX_BUFFER_SIZE`
+
+---
+
+### Phase 4 Refinement — MCP Stray-Stdout Sentinel via AsyncLocalStorage (score: 24)
+
+**What**: Tag all legitimate MCP stdout writes with `AsyncLocalStorage`; any write that lands outside that context (from a dependency's `console.log`, a debug statement, etc.) is redirected to stderr with a `[mcp:stdout-redirect]` prefix — prevents a stray log line from corrupting the JSON-RPC stream and hanging the handshake.
+
+```typescript
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+const mcpWriteContext = new AsyncLocalStorage<boolean>();
+
+// Rate-limit redirected writes to avoid log spam
+let strayCount = 0;
+const MAX_STRAY_PER_PROCESS = 10;
+
+const originalWrite = process.stdout.write.bind(process.stdout);
+process.stdout.write = function (chunk: any, ...args: any[]): boolean {
+  if (mcpWriteContext.getStore()) return originalWrite(chunk, ...args);
+  if (strayCount++ < MAX_STRAY_PER_PROCESS) {
+    const truncated = String(chunk).slice(0, 200);
+    process.stderr.write(`[mcp:stdout-redirect] ${truncated}\n`);
+  }
+  return true;
+};
+
+// Wrap all MCP response writes:
+export function mcpWrite(data: string): void {
+  mcpWriteContext.run(true, () => process.stdout.write(data));
+}
+```
+
+**Source**: gitnexus `src/mcp/stdio-context.ts:1-80`
+
+---
+
+### Phase 5.6 Refinement — Sibling-Clone Staleness Detection (score: 24)
+
+**What**: When Cortex is invoked, check whether a repo with the same `remoteUrl` is registered at a *different* on-disk path (sibling clone or worktree). If the sibling's HEAD differs from the indexed commit, emit a warning — prevents silent stale answers when a developer switches between two local clones.
+
+```typescript
+function checkSiblingClones(
+  registry: RepoRegistry,
+  currentRoot: string,
+  currentRemoteUrl: string,
+  indexedCommit: string
+): void {
+  for (const [registeredPath, meta] of registry.entries()) {
+    if (registeredPath === currentRoot) continue;
+    if (meta.remoteUrl !== currentRemoteUrl) continue;
+    const siblingHead = execSync(`git -C "${registeredPath}" rev-parse HEAD`).toString().trim();
+    if (siblingHead !== indexedCommit) {
+      logger.warn(
+        `Cortex index was built from a sibling clone at ${registeredPath} ` +
+        `(indexed: ${indexedCommit.slice(0,7)}, sibling HEAD: ${siblingHead.slice(0,7)}). ` +
+        `Run cortex analyze to re-index from this directory.`
+      );
+    }
+  }
+}
+```
+
+**Source**: gitnexus `src/core/git-staleness.ts:116-187` — `checkCwdMatch()`
+
+---
+
+## 🔄 GRAPHIFY AUDIT — Remaining Phase Refinements
+
+### Phase 0.10 Refinement — Background Git Hook with Rebase/Merge/Cherry-pick Skip (score: 36)
+
+**What**: Install a post-commit hook that launches `cortex analyze` as a background process (`nohup` + disown) so `git commit` returns immediately. Skip hook execution during rebase/merge/cherry-pick to avoid interfering with in-progress operations.
+
+**Implementation details**:
+- **Skip conditions**: check `.git/rebase-merge`, `.git/rebase-apply`, `.git/MERGE_HEAD`, `.git/CHERRY_PICK_HEAD` before invoking
+- **Hooks path safety**: read `git config core.hooksPath`; validate resolved path stays within repo root (prevent hooks-path redirect attacks)
+- **Linked worktrees**: use `git rev-parse --git-path hooks` (not `--path-format=absolute` — fails on git < 2.31) to find the hooks dir for the current worktree
+- **Timeout**: `CORTEX_REBUILD_TIMEOUT` env var (default 600 s) enforced via `SIGALRM`
+- **Marker-based append/remove**: wrap hook content between `# cortex-hook-begin` / `# cortex-hook-end` markers; `cortex uninstall` removes only the marked block, preserving any existing hook content
+
+```bash
+#!/bin/sh
+# cortex-hook-begin
+for skip_dir in rebase-merge rebase-apply; do
+  [ -d "$(git rev-parse --git-dir)/$skip_dir" ] && exit 0
+done
+for skip_file in MERGE_HEAD CHERRY_PICK_HEAD; do
+  [ -f "$(git rev-parse --git-dir)/$skip_file" ] && exit 0
+done
+nohup cortex analyze --background >/dev/null 2>&1 &
+disown
+# cortex-hook-end
+```
+
+**Source**: graphify `hooks.py:46` — `_HOOK_SCRIPT`, `_install_hook()`
+
+---
+
+### Phase 2 Refinement — Code-Only Skip for LLM Semantic Pass (score: 36)
+
+**What**: Before invoking LLM synthesis on a batch of files, check whether all files are code (`.ts`, `.js`, `.py`, `.go`, `.rs`, etc.). If yes, skip the LLM pass entirely — AST extraction via tree-sitter produces the full structural graph for free. Reserve LLM calls for docs (`.md`, `.txt`, `.pdf`), architecture diagrams, and README files where AST gives nothing.
+
+```typescript
+const CODE_EXTENSIONS = new Set(['.ts', '.js', '.tsx', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.cs']);
+const DOC_EXTENSIONS  = new Set(['.md', '.txt', '.pdf', '.rst', '.adoc']);
+
+function batchNeedsLLM(files: string[]): boolean {
+  return files.some(f => {
+    const ext = path.extname(f).toLowerCase();
+    return DOC_EXTENSIONS.has(ext) || (!CODE_EXTENSIONS.has(ext));
+  });
+}
+
+async function synthesizeBatch(files: string[], options: SynthesisOptions): Promise<void> {
+  // Run AST extraction for all files unconditionally (free)
+  await runASTExtraction(files, options);
+
+  // LLM pass only if docs/unknown-type files present
+  if (batchNeedsLLM(files)) {
+    await runLLMSemantic(files, options);
+  }
+}
+```
+
+**Source**: graphify `docs/how-it-works.md:11` — three-pass pipeline (AST free / LLM for docs only)
+
+---
+
+### Phase 14.1 Refinement — Hub-Exclusion Before Leiden + Majority-Vote Reattachment (score: 36)
+
+**What**: Before running Leiden community detection, exclude nodes whose degree exceeds a configurable percentile from the partitioning. After Leiden assigns communities to the non-hub nodes, reattach each hub by majority vote across its neighbours.
+
+```typescript
+function clusterWithHubExclusion(
+  graph: Graph,
+  excludeHubsPercentile = 95
+): Map<string, number> {
+  // Identify hubs by degree percentile
+  const degrees = [...graph.nodes()].map(n => graph.degree(n)).sort((a, b) => a - b);
+  const threshold = percentile(degrees, excludeHubsPercentile);
+  const hubs = new Set([...graph.nodes()].filter(n => graph.degree(n) > threshold));
+
+  // Leiden on non-hub subgraph
+  const subgraph = graph.subgraph([...graph.nodes()].filter(n => !hubs.has(n)));
+  const communities = leiden(subgraph);
+
+  // Majority-vote reattachment for each hub
+  for (const hub of hubs) {
+    const votes = new Map<number, number>();
+    for (const neighbor of graph.neighbors(hub)) {
+      const c = communities.get(neighbor);
+      if (c !== undefined) votes.set(c, (votes.get(c) ?? 0) + 1);
+    }
+    // Pick highest-vote community; use min(c) as tiebreak for determinism
+    const best = [...votes.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+    communities.set(hub, best ? best[0] : 0);
+  }
+  return communities;
+}
+```
+
+**Source**: graphify `cluster.py:114` — `cluster(G, exclude_hubs_percentile=None)`, majority-vote reattachment
+
+---
+
+### Phase 14.1 Refinement — Cohesion-Based Second-Pass Community Re-split (score: 36)
+
+**What**: After the initial Leiden + size-based first-pass split, run a second pass on any community ≥50 nodes whose cohesion score falls below 0.05. Cohesion = actual intra-community edges ÷ maximum possible edges. Low-cohesion large communities signal a doc-hub bridge (e.g. a CLAUDE.md node connected to every other node) pulling unrelated subsystems together.
+
+```typescript
+function cohesionScore(graph: Graph, communityNodes: string[]): number {
+  const nodeSet = new Set(communityNodes);
+  const n = communityNodes.length;
+  if (n < 2) return 1.0;
+  let intraEdges = 0;
+  for (const node of communityNodes) {
+    for (const neighbor of graph.neighbors(node)) {
+      if (nodeSet.has(neighbor)) intraEdges++;
+    }
+  }
+  intraEdges /= 2;  // undirected: each edge counted twice
+  const maxPossible = (n * (n - 1)) / 2;
+  return intraEdges / maxPossible;
+}
+
+const COHESION_SPLIT_THRESHOLD = 0.05;
+const COHESION_SPLIT_MIN_SIZE  = 50;
+
+function secondPassReSplit(graph: Graph, communities: Map<string, number>): Map<string, number> {
+  for (const [communityId, members] of groupByValue(communities)) {
+    if (members.length < COHESION_SPLIT_MIN_SIZE) continue;
+    if (cohesionScore(graph, members) >= COHESION_SPLIT_THRESHOLD) continue;
+    // Re-run Leiden on this community's subgraph
+    const sub = graph.subgraph(members);
+    const subCommunities = leiden(sub);
+    for (const [node, subC] of subCommunities) {
+      communities.set(node, freshCommunityId(communityId, subC));
+    }
+  }
+  return communities;
+}
+```
+
+**Source**: graphify `cluster.py:170` — `cohesion_score()`, `_COHESION_SPLIT_THRESHOLD=0.05`
+
+---
+
+### Phase 0.2 Refinement — Semantic Fragment Validation with Hard Size Caps (score: 32)
+
+**What**: Before inserting any LLM-returned JSON fragment into the knowledge graph, validate structure and size. Rejection happens BEFORE path sanitization — malformed agent output never touches the graph.
+
+```typescript
+const MAX_FRAGMENT_BYTES  = 25 * 1024 * 1024;  // 25 MB
+const MAX_FRAGMENT_NODES  = 10_000;
+const MAX_FRAGMENT_EDGES  = 100_000;
+const MAX_HYPEREDGE_MEMBERS = 256;
+const NODE_ID_PATTERN     = /^[A-Za-z0-9._:-]{1,256}$/;
+const VALID_FILE_TYPES    = new Set(['ts', 'js', 'py', 'go', 'rs', 'java', 'md', 'txt']);
+
+function validateSemanticFragment(raw: unknown): string[] {
+  const errors: string[] = [];
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return ['fragment must be a JSON object'];
+  }
+  const bytes = Buffer.byteLength(JSON.stringify(raw));
+  if (bytes > MAX_FRAGMENT_BYTES)  errors.push(`payload ${bytes} bytes exceeds ${MAX_FRAGMENT_BYTES}`);
+
+  const f = raw as any;
+  if (f.nodes?.length  > MAX_FRAGMENT_NODES)  errors.push(`${f.nodes.length} nodes exceeds ${MAX_FRAGMENT_NODES}`);
+  if (f.edges?.length  > MAX_FRAGMENT_EDGES)  errors.push(`${f.edges.length} edges exceeds ${MAX_FRAGMENT_EDGES}`);
+
+  for (const node of f.nodes ?? []) {
+    if (!NODE_ID_PATTERN.test(node.id)) errors.push(`invalid node id: ${node.id}`);
+    if (node.file_type && !VALID_FILE_TYPES.has(node.file_type)) errors.push(`unknown file_type: ${node.file_type}`);
+  }
+  for (const he of f.hyperedges ?? []) {
+    if (he.members?.length > MAX_HYPEREDGE_MEMBERS) errors.push(`hyperedge has ${he.members.length} members`);
+  }
+  return errors;  // empty = valid
+}
+```
+
+**Where**: Called in `src/core/ingestion/pipeline.ts` before `sanitizePaths()` — so path-traversal via crafted node IDs is caught before any filesystem access.
+
+**Source**: graphify `semantic_cleanup.py:35` — `validate_semantic_fragment()`
+
+---
+
+### Phase 0.13 Refinement — Import-Guided Cross-File Symbol Resolution (score: 32)
+
+**What**: When the knowledge graph has multiple nodes with the same label (e.g. `UserService` exists in `auth/` and `payments/`), use import statements at the call site to disambiguate — resolving to the correct node rather than returning ambiguous results or picking arbitrarily.
+
+```typescript
+interface SymbolIndex {
+  byLabel: Map<string, string[]>;              // label → [nodeId, ...]
+  byModuleAndSymbol: Map<string, string[]>;    // `${moduleStem}::${symbol}` → [nodeId, ...]
+}
+
+function buildSymbolIndex(entities: Entity[]): SymbolIndex {
+  const byLabel = new Map<string, string[]>();
+  const byModuleAndSymbol = new Map<string, string[]>();
+  for (const e of entities) {
+    const existing = byLabel.get(e.name) ?? [];
+    byLabel.set(e.name, [...existing, e.id]);
+    const stem = path.basename(e.source_file, path.extname(e.source_file));
+    const key = `${stem}::${e.name}`;
+    byModuleAndSymbol.set(key, [...(byModuleAndSymbol.get(key) ?? []), e.id]);
+  }
+  return { byLabel, byModuleAndSymbol };
+}
+
+function findUniqueSymbol(
+  index: SymbolIndex,
+  importedFrom: string,   // module stem from import statement
+  symbolName: string
+): string | null {
+  const candidates = index.byModuleAndSymbol.get(`${importedFrom}::${symbolName}`) ?? [];
+  return candidates.length === 1 ? candidates[0] : null;  // conservative: null if ambiguous
+}
+```
+
+Also: `existingEdgePairs()` returns `(source, target, relation)` triples so a `contains` edge doesn't suppress a distinct `calls` edge between the same pair.
+
+**Source**: graphify `symbol_resolution.py:121` — `build_python_symbol_index()`, `find_unique_python_symbol()`
+
+---
+
+### Phase 0.3 Refinement — INFERRED Confidence Rubric (6-Level Discrete Score) (score: 30)
+
+**What**: Extend Cortex's binary `EXTRACTED`/`INFERRED` confidence to a discrete 6-level numeric rubric for `INFERRED` edges, enabling structured ranking and filtering of inferred relationships.
+
+| Score | Condition |
+|-------|-----------|
+| `1.0` | `EXTRACTED` — deterministic AST/parser evidence |
+| `0.95` | Explicit cross-file reference with exactly one plausible target |
+| `0.85` | Naming + contextual signals align |
+| `0.75` | Contextual but not explicit (co-location, pattern similarity) |
+| `0.65` | Naming similarity only, no contextual corroboration |
+| `0.55` | Speculative — flag for `AMBIGUOUS` human review queue |
+
+```typescript
+type ConfidenceScore = 1.0 | 0.95 | 0.85 | 0.75 | 0.65 | 0.55;
+
+interface Edge {
+  source: string;
+  target: string;
+  relation: string;
+  confidence: ConfidenceScore;
+  extracted: boolean;  // true → confidence always 1.0
+}
+```
+
+LLM synthesis prompts must explicitly output a `confidence` field using these values. `cortex_find` and `impact_analysis` can filter by `confidence >= threshold`.
+
+**Source**: graphify `docs/how-it-works.md:44` — confidence_score rubric
+
+---
+
+### Phase 0.4 Refinement — `CORTEX_OUT` Env Var for Configurable Output Directory (score: 30)
+
+**What**: Accept `CORTEX_OUT` env var (relative name or absolute path) to control where Cortex writes `.knowledge/`. Enables worktree isolation (each branch gets its own knowledge dir) and shared-output setups.
+
+```typescript
+function resolveOutputDir(projectRoot: string): string {
+  const envVal = process.env.CORTEX_OUT ?? '.knowledge';
+  const p = path.parse(envVal);
+  // Absolute path → use as-is. Relative → resolve from project root.
+  return path.isAbsolute(envVal) ? envVal : path.join(projectRoot, envVal);
+}
+```
+
+**Usage**:
+```bash
+# Per-branch isolation in worktrees:
+CORTEX_OUT=.knowledge-feature-auth cortex analyze
+CORTEX_OUT=.knowledge-main cortex analyze
+
+# Shared output for CI:
+CORTEX_OUT=/shared/cortex-knowledge cortex analyze
+```
+
+**Note**: An env var is a footgun if forgotten in a second shell. Consider also exposing `--out <dir>` CLI flag as a more discoverable alternative.
+
+**Source**: graphify `cache.py:14` — `_GRAPHIFY_OUT` env var pattern
+
+---
+
+### Phase 7.5 Refinement — Edge Confidence Breakdown per Community — partially closes Flaw #43 (score: 27)
+
+**What**: Add an `## Audit Trail` section to each community wiki article and to `audit_quality` output, breaking down edge confidence by tier.
+
+```typescript
+interface ConfidenceBreakdown {
+  extracted: { count: number; pct: number };
+  inferred:  { count: number; pct: number };
+  ambiguous: { count: number; pct: number };
+}
+
+function computeConfidenceBreakdown(edges: Edge[]): ConfidenceBreakdown {
+  const counts = { extracted: 0, inferred: 0, ambiguous: 0 };
+  for (const e of edges) {
+    if (e.extracted)          counts.extracted++;
+    else if (e.confidence >= 0.75) counts.inferred++;
+    else                           counts.ambiguous++;
+  }
+  const total = edges.length || 1;
+  return {
+    extracted: { count: counts.extracted, pct: Math.round(counts.extracted / total * 100) },
+    inferred:  { count: counts.inferred,  pct: Math.round(counts.inferred  / total * 100) },
+    ambiguous: { count: counts.ambiguous, pct: Math.round(counts.ambiguous / total * 100) },
+  };
+}
+```
+
+Wiki output:
+```markdown
+## Audit Trail
+EXTRACTED: 142 (71%) | INFERRED: 52 (26%) | AMBIGUOUS: 6 (3%)
+```
+
+**Source**: graphify `wiki.py:95` — `conf_counts` per community article
+**Partially closes**: Flaw #43 (no coverage transparency — this addresses graph quality transparency)
+
+---
+
+### Phase 0.7 Refinement — `diagnose_extraction()` Edge-Collapse Diagnostics — partially closes Flaw #98 (score: 18)
+
+**What**: Add structured diagnostics to `cortex doctor` that classify knowledge graph edges by defect type, exposing extraction quality issues before they silently degrade query results.
+
+**Edge defect categories**:
+```typescript
+interface ExtractionDiagnostics {
+  nonObject: number;              // edges where source/target is not a node object
+  missingEndpoint: number;        // source or target field absent
+  danglingEndpoint: number;       // endpoint node ID not in graph
+  selfLoop: number;               // source === target
+  exactDuplicate: number;         // identical (src, tgt, relation) tuple
+  directedSameEndpointCollapsed: number;  // pre- vs post-build edge count loss
+  relationVariantGroups: Map<string, string[]>;  // 'calls' vs 'call' vs 'CALLS' variants
+}
+
+function diagnoseExtraction(entities: Entity[], edges: Edge[]): ExtractionDiagnostics;
+function formatDiagnosticReport(d: ExtractionDiagnostics): string;   // human-readable
+function formatDiagnosticJSON(d: ExtractionDiagnostics): object;     // machine-readable
+```
+
+**Where**: Surface in `cortex doctor --verbose` output. Non-zero `danglingEndpoint` or `relationVariantGroups` entries indicate extraction prompt drift or normalization gaps.
+
+**Source**: graphify `diagnostics.py:156` — `diagnose_extraction()`, `format_diagnostic_report()`
+**Partially closes**: Flaw #98 (no cortex doctor / health check)
+
+---
+
+## 🔍 GITNEXUS AUDIT — Open Questions (G Bucket)
+
+### G#43 — DB Connection Pool Strategy for Phase 3.x
+
+When Cortex moves to a graph DB backend (Phase 3.1+), which connection strategy should it adopt?
+
+- **A — Single shared connection per process**: Simple, sufficient for local-only single-writer. No pool overhead.
+- **B — Per-request open/close**: Safe but slow under MCP server load (each tool call pays open/close latency).
+- **C — LRU pool (GitNexus pattern)**: `MAX_POOL_SIZE=5`, `IDLE_TIMEOUT_MS=5min`, pool-close listeners for cache invalidation. Best throughput; only needed if MCP concurrency is observed.
+
+**Source**: gitnexus `src/core/lbug/pool-adapter.ts` — LRU connection pool
+
+---
+
+### G#44 — Shadow-Mode Parity CI for Phase 33.5 Pipeline Migration
+
+Phase 33.5 introduces a two-stage ingestion pipeline replacing the existing single-pass. Which validation strategy for the migration?
+
+- **A — Shadow CI parity (GitNexus approach)**: Run both old and new pipelines on every PR; fail on divergence. Catches regressions automatically; expensive (2× CI time per language).
+- **B — Snapshot-based regression tests**: Compare output on a fixed fixture corpus. Lower cost; blind to inputs not in the fixture.
+- **C — Feature flag per language with manual validation**: Fastest migration, lowest safety net.
+
+**Source**: gitnexus `.github/workflows/ci-scope-parity.yml` — dual-path CI workflow
+
+---
+
+## 🔄 GITNEXUS GROUP SUBSYSTEM — Phase Refinements (group/ deep scan)
+
+### Phase 9 Refinement — Fail-Closed on Impact Error (score: 40)
+
+**What**: When `impact_analysis` receives `{ error }` from the local impact phase, return the error at the top level — do NOT wrap it in a zero-hit success payload. A blast-radius tool that reports "no impact" on a failure path is a false negative on a safety-critical signal.
+
+```typescript
+const localObj = local as Record<string, unknown> | null;
+if (localObj?.error && typeof localObj.error === 'string') {
+  // Fail closed — do NOT return { cross: [], risk: 'LOW' }
+  return { error: `Local impact failed for ${entityName}: ${localObj.error}` };
+}
+```
+
+Callers branch on top-level `error`; returning zero-hit success on the failure path makes "entity not found" and "graph-load failure" indistinguishable from "genuinely safe to refactor."
+
+**Source**: gitnexus `src/core/group/cross-impact.ts:466-474`
+
+---
+
+### Phase 0.4 Refinement — `retryRename()` for Windows EBUSY/EPERM/EACCES (score: 36)
+
+**What**: Wrap `fs.rename()` in a bounded retry loop for Windows. When an AV scanner or a concurrent reader holds a file open, `rename` throws `EBUSY`, `EPERM`, or `EACCES` — not permanent failures. Three attempts with exponential backoff (100ms, 200ms) recovers these races silently.
+
+```typescript
+const RETRY_RENAME_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
+
+async function retryRename(src: string, dst: string, attempts = 3): Promise<void> {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await fs.promises.rename(src, dst);
+      return;
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (!code || !RETRY_RENAME_CODES.has(code) || i === attempts) throw err;
+      await new Promise(r => setTimeout(r, 100 * Math.pow(2, i - 1)));
+    }
+  }
+}
+```
+
+Apply to every write-to-tmp-then-rename pattern in Cortex (knowledge files, state.json, entity pages). Silently recovers the Windows race without affecting non-Windows paths.
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:263-274` — `retryRename()`
+
+---
+
+### Phase 0.4 Refinement — Secure Tempfile Pattern (`randomBytes` + `'wx'` + `0o600`) (score: 36)
+
+**What**: When writing any file atomically (tmp → rename), create the temp file with both a cryptographically random suffix AND explicit security flags to close the symlink/pre-create attack window and CodeQL's `js/insecure-temporary-file` taint path.
+
+```typescript
+import { randomBytes } from 'node:crypto';
+
+async function atomicWriteJSON(target: string, data: unknown): Promise<void> {
+  const tmp = `${target}.tmp.${randomBytes(8).toString('hex')}`;
+  // 'wx' = O_CREAT | O_EXCL (fails if file exists → closes symlink-race)
+  // 0o600 = user-only read/write (closes CodeQL insecure-temporary-file: checks mode bits)
+  const handle = await fs.promises.open(tmp, 'wx', 0o600);
+  try {
+    await handle.writeFile(JSON.stringify(data, null, 2), 'utf-8');
+  } finally {
+    await handle.close();
+  }
+  await retryRename(tmp, target);
+}
+```
+
+Both are required: `'wx'` closes the runtime symlink race; `0o600` is what CodeQL's `isSecureMode()` predicate checks (low 6 bits must be zero = no group/world bits). Missing either still fails one of the two checks.
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:280-304` — `writeBridgeMeta()`
+
+---
+
+### Phase 11.5 Refinement — `clampTimeout()` at Validate Boundary (score: 36)
+
+**What**: When a tool accepts `timeoutMs` from MCP params, clamp it to a sane range in the validation layer — before it's used anywhere. Previous code with an outer cap and inner cap that differed (1hr outer / 5min inner) created a window where the outer deadline budgeted farther than the inner safeguard.
+
+```typescript
+export const IMPACT_TIMEOUT_MIN_MS = 100;          // preserves tight test-suite scenarios
+export const IMPACT_TIMEOUT_MAX_MS = 5 * 60_000;   // 5 min upper bound
+
+export function clampTimeout(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return IMPACT_TIMEOUT_MIN_MS;
+  return Math.min(IMPACT_TIMEOUT_MAX_MS, Math.max(IMPACT_TIMEOUT_MIN_MS, Math.trunc(raw)));
+}
+
+// In validate:
+const timeoutMs = clampTimeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+// Then pass timeoutMs to both deadline computation AND inner AbortController.
+// Never re-read params.timeoutMs after validation — use the clamped value throughout.
+```
+
+**Source**: gitnexus `src/core/group/cross-impact.ts:105-111` — `clampTimeout()`; CodeQL #184 `js/resource-exhaustion`
+
+---
+
+### Phase 3 Refinement — Non-Fatal Secondary Write Isolation (score: 32)
+
+**What**: When a pipeline writes two artifacts (a canonical source of truth + a secondary optimized index), failure of the secondary write must never mask or abort the primary write. Surface it as a warning so operators can re-run; do not propagate.
+
+```typescript
+// Primary write — canonical, must succeed
+await writeContractRegistry(groupDir, registry);
+
+// Secondary write — optimized index, non-fatal
+try {
+  await writeBridgeDb(groupDir, registry);
+} catch (err) {
+  logger.warn(
+    { err: err instanceof Error ? err.message : String(err), groupDir },
+    '⚠️ Secondary index write failed; primary registry is intact. Re-run sync to retry.'
+  );
+  // do NOT rethrow — caller gets the full result from the primary
+}
+```
+
+Apply wherever Cortex writes a canonical file (e.g. `index.md`, `state.json`) plus a derived cache (e.g. BM25 index, embeddings cache). Stale cache degrades performance; stale canonical data is data loss.
+
+**Source**: gitnexus `src/core/group/sync.ts:292-308` — writeBridge error isolation
+
+---
+
+### Phase 11.5 Refinement — `mergeRisk()` Cross-Repo Risk Escalation (score: 32)
+
+**What**: When aggregating local and cross-repo impact results into a single risk tier, apply escalation rules that prevent local LOW from masking significant cross-repo blast radius.
+
+```typescript
+type RiskTier = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+
+function mergeRisk(localRisk: RiskTier, cross: CrossRepoImpact[]): RiskTier {
+  const highConf = cross.some(c => c.contract.confidence >= 0.85);
+  if (localRisk === 'CRITICAL') return 'CRITICAL';       // never demote CRITICAL
+  if (cross.length >= 3)        return 'CRITICAL';       // 3+ affected repos = critical blast radius
+  if (highConf)                 return 'HIGH';           // high-confidence cross-repo link
+  if (cross.length > 0 && (localRisk === 'LOW' || localRisk === 'UNKNOWN')) return 'MEDIUM';
+  return localRisk;
+}
+```
+
+**Source**: gitnexus `src/core/group/cross-impact.ts:338-345` — `mergeRisk()`
+
+---
+
+### Phase 3.1 Refinement — Index After Successful DB Insert Only (score: 30)
+
+**What**: When building an in-memory lookup index alongside DB inserts (e.g. for cross-linking), only add an item to the index AFTER the insert succeeds. Failed rows that are never in the DB must never appear in the index — otherwise cross-link resolution produces dangling references.
+
+```typescript
+const lookupIndex = new Map<string, string>();
+
+for (const item of items) {
+  const id = computeId(item);
+  try {
+    await db.insert(item, id);
+    lookupIndex.set(itemKey(item), id);   // ← index ONLY on success
+  } catch (err) {
+    report.failed++;
+    recordError(id, err);
+    // do NOT update lookupIndex
+  }
+}
+
+// Cross-link phase uses lookupIndex — zero DB round-trips, no dangling refs
+for (const link of crossLinks) {
+  const fromId = lookupIndex.get(linkFromKey(link));
+  const toId   = lookupIndex.get(linkToKey(link));
+  if (!fromId || !toId) { report.droppedMissingNode++; continue; }
+  await db.insertLink(fromId, toId, link);
+}
+```
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:106-125, 424-466` — `indexContract()`, build-then-resolve pattern
+
+---
+
+### Phase 11.5 Refinement — `contractRichness()` Scoring for Dedup Conflict Resolution (score: 30)
+
+**What**: When two contracts collide on the same key (same repo + contractId + role + filePath), prefer the "richer" one using a weighted score rather than last-write-wins. Merge fields from both rather than dropping the loser.
+
+```typescript
+function contractRichness(c: StoredContract): number {
+  let score = 0;
+  if (c.symbolUid)                                           score += 3; // tier-1 lookup anchor
+  if (c.symbolRef.filePath)                                  score += 2; // tier-2 lookup
+  if (c.symbolRef.name && c.symbolRef.name !== c.contractId) score += 2; // specific name
+  if (c.symbolName && c.symbolName !== c.contractId)         score += 2;
+  if (c.service)                                             score += 1; // monorepo attribution
+  if (c.meta.source !== 'manifest')                          score += 1; // grounded in real source
+  return score;
+}
+
+function mergeContracts(existing: StoredContract, incoming: StoredContract): StoredContract {
+  const [primary, secondary] = contractRichness(incoming) > contractRichness(existing)
+    ? [incoming, existing] : [existing, incoming];
+  return {
+    ...secondary, ...primary,
+    symbolUid: primary.symbolUid || secondary.symbolUid,   // OR-merge: take whichever has it
+    confidence: Math.max(existing.confidence, incoming.confidence),
+    service: primary.service ?? secondary.service,
+    meta: { ...secondary.meta, ...primary.meta },
+  };
+}
+```
+
+**Source**: gitnexus `src/core/group/normalization.ts:37-67` — `contractRichness()`, `mergeContracts()`
+
+---
+
+### Phase 3.3 Refinement — Schema Version Gate on Read Path (Graceful Degradation) (score: 30)
+
+**What**: When opening a secondary index (e.g. BM25 index, bridge DB) for reading, check the stored schema version against the current expected version BEFORE allocating any resources. On mismatch, return `null` (fall back to the canonical source of truth) rather than crashing or serving stale data.
+
+```typescript
+const BRIDGE_SCHEMA_VERSION = 2;  // bump when schema changes
+
+async function openIndexReadOnly(indexDir: string): Promise<IndexHandle | null> {
+  const meta = await readMeta(indexDir);
+  if (meta.version > 0 && meta.version !== BRIDGE_SCHEMA_VERSION) {
+    // Graceful degradation — caller falls back to full scan / canonical file
+    return null;
+  }
+  // ... open index
+}
+```
+
+Distinguishes "index never built" (version 0 → allow) from "index built with incompatible schema" (wrong version → reject). Prevents silent stale reads after schema migrations.
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:697-701` — `openBridgeDbReadOnly()` version gate
+
+---
+
+### Phase 3 Refinement — `.bak` Recovery for Interrupted Atomic Swap (score: 30)
+
+**What**: In an atomic swap (main ← .bak ← tmp), if a crash happens after the old file was moved to `.bak` but before the new tmp was moved to main, the next reader finds no main file. Automatically recover by renaming `.bak` back to main.
+
+```typescript
+async function ensureFileAvailable(filePath: string): Promise<boolean> {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch {
+    const bakPath = `${filePath}.bak`;
+    try {
+      await fs.promises.access(bakPath);
+      await retryRename(bakPath, filePath);   // recover interrupted writer
+      return true;
+    } catch {
+      return false;   // neither main nor bak exists — truly absent
+    }
+  }
+}
+```
+
+Apply to any Cortex write that uses a tmp→rename pattern for state.json, index files, or entity caches. Keeps the system self-healing across crashes without requiring manual intervention.
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:663-691` — `ensureBridgeDbFileAvailable()`
+
+---
+
+### Phase 11.5 Refinement — `normalizeHttpPath()` + `normalizeConsumerPath()` (score: 30)
+
+**What**: HTTP contract IDs must normalize paths to a canonical form before matching provider ↔ consumer. Two normalization functions — provider-side and consumer-side (more aggressive).
+
+```typescript
+// Provider-side: normalize route definitions
+export function normalizeHttpPath(p: string): string {
+  let s = p.trim().split('?')[0].toLowerCase().replace(/\/+$/, '');
+  s = s.replace(/:\w+/g, '{param}');       // Express :id
+  s = s.replace(/\{[^}]+\}/g, '{param}'); // FastAPI {id}
+  s = s.replace(/\[[^\]]+\]/g, '{param}'); // Next.js [id]
+  return s === '' ? '/' : s;               // preserve root "/"
+}
+
+// Consumer-side: normalize call sites (more aggressive)
+function normalizeConsumerPath(url: string): string {
+  const templated = url.replace(/\$\{[^}]+\}/g, '{param}');  // template literals
+  let pathOnly = templated;
+  if (/^https?:\/\//i.test(templated)) {
+    try { pathOnly = new URL(templated).pathname; }
+    catch { pathOnly = templated.replace(/^https?:\/\/[^/]+/i, ''); }
+  }
+  const normalized = normalizeHttpPath(pathOnly || '/');
+  const segments = normalized.split('/').filter(Boolean)
+    .map(seg => /^\d+$/.test(seg) ? '{param}' : seg);  // numeric segments
+  return `/${segments.join('/')}`.replace(/\/+$/, '') || '/';
+}
+```
+
+**Source**: gitnexus `src/core/group/extractors/http-route-extractor.ts:65-98`
+
+---
+
+### Phase 11.5 Refinement — Ambiguous Multi-Candidate Refusal (score: 24)
+
+**What**: When resolving a symbol from multiple candidates that share the same normalized path, refuse to guess if the disambiguation signal (e.g. HTTP method) is unknown AND there are multiple candidates. Leave the match undefined and use a safe fallback (file basename) rather than silently picking the first candidate, which mis-attributes the contract to the wrong handler.
+
+```typescript
+const candidates = providerDetections.filter(
+  d => normalizeHttpPath(d.path) === normalizedRoute
+);
+let match: typeof candidates[number] | undefined;
+
+if (method) {
+  match = candidates.find(d => d.method === method);     // exact match when method known
+} else if (candidates.length === 1) {
+  match = candidates[0];                                 // unambiguous — safe to use
+}
+// else: multiple candidates + unknown discriminator → leave match undefined
+// Callers check `if (match)` before using symbol enrichment
+```
+
+Applies anywhere Cortex resolves an entity from multiple candidates (e.g. `cortex_find` with ambiguous label, symbol resolution across duplicate filenames).
+
+**Source**: gitnexus `src/core/group/extractors/http-route-extractor.ts:264-289`
+
+---
+
+### Phase 0.16 Refinement — CRLF Strip Before Structured Logging (score: 24)
+
+**What**: Strip `\r` and `\n` from any user-controlled string before writing it to a structured log. Defense-in-depth: structured loggers (Pino, Winston) JSON-escape values, but stripping the characters before they reach the logger breaks CodeQL's `js/log-injection` taint flow explicitly, which many static analysis tools require to close the finding.
+
+```typescript
+function safeForLog(value: unknown): string {
+  return String(value ?? '').replace(/[\r\n]/g, ' ');
+}
+
+// Usage:
+logger.warn(
+  { groupDir: safeForLog(groupDir), error: safeForLog(err?.message) },
+  'Operation failed'
+);
+```
+
+Apply to: file paths from user input, entity names, search queries, repo paths in log statements.
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:726-733` — CRLF sanitization before Pino logging; CodeQL `js/log-injection`
+
+---
+
+### Phase 11.5 Refinement — `stableRepoPoolId()` for Same-Name Repos (score: 24)
+
+**What**: When two registered repos share the same name (possible in large monorepo setups), append a 6-char base64url hash of the repo path to produce a unique, stable pool ID. Without this, two repos named `backend` in different org namespaces collide and share a single DB connection pool.
+
+```typescript
+function stableRepoPoolId(entry: RegistryEntry, allEntries: RegistryEntry[]): string {
+  const base = entry.name.toLowerCase();
+  const resolved = path.resolve(entry.path);
+  for (const other of allEntries) {
+    if (other.name.toLowerCase() === base && path.resolve(other.path) !== resolved) {
+      const hash = Buffer.from(entry.path).toString('base64url').slice(0, 6);
+      return `${base}-${hash}`;  // e.g. "backend-aGVsbG"
+    }
+  }
+  return base;  // no collision — use plain name
+}
+```
+
+**Source**: gitnexus `src/core/group/sync.ts:43-53` — `stableRepoPoolId()`
+
+---
+
+### Phase 11.5 Refinement — `outOfScope` Collection for Subgroup-Scoped Impact (score: 24)
+
+**What**: When cross-repo impact is scoped to a subgroup (a subset of the repos in a group), links that cross the subgroup boundary should be collected into an `outOfScope` list rather than silently dropped. This lets callers display "N cross-boundary links exist but were not followed" rather than giving the impression there are none.
+
+```typescript
+interface OutOfScopeLink {
+  from: string;       // repo path
+  to: string;
+  contractId: string;
+  confidence: number;
+}
+
+// In impact fanout loop:
+if (!repoInSubgroup(neighbor.repo, subgroup)) {
+  outOfScope.push({
+    from: direction === 'upstream' ? neighbor.repo : localRepo,
+    to:   direction === 'upstream' ? localRepo : neighbor.repo,
+    contractId: neighbor.contractId,
+    confidence: neighbor.confidence,
+  });
+  continue;  // don't follow — but don't silently discard either
+}
+```
+
+**Source**: gitnexus `src/core/group/cross-impact.ts:547-557`
+
+---
+
+### Phase 3.1 Refinement — WAL CHECKPOINT Before DB Close (score: 24)
+
+**What**: When closing a WAL-capable database (SQLite, LadybugDB), explicitly run CHECKPOINT before closing to flush WAL/shadow pages into the main file. Without this, a non-blocking checkpoint thread can outlive the `close()` call and leave sidecar pages pending — subsequent readers either race with WAL replay or trip a database-ID check.
+
+```typescript
+async function closeDb(conn: DbConnection): Promise<void> {
+  try {
+    await conn.query('CHECKPOINT');  // flush WAL; no-op if nothing pending
+  } catch {
+    // ignore — older DB versions or schemaless DBs may not accept it
+  }
+  await conn.close();
+}
+```
+
+Apply when Cortex adopts SQLite (Phase 3.1) as the backing store for its entity graph or FTS index.
+
+**Source**: gitnexus `src/core/group/bridge-db.ts:240-244` — CHECKPOINT before close; LadybugDB 0.16.0 non-blocking checkpoint thread
+

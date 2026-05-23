@@ -1342,3 +1342,19 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: If incremental ingest writes the manifest/state file with only the changed-file subset (not the full merged result), the next incremental run sees all unchanged files as "new" and re-extracts everything. The symptom looks like cache invalidation failure — every incremental run is as slow as a full run.
 **Relevance to Cortex**: Always follow the load-merge-write pattern for any state file updated incrementally: `existing = load_manifest(); existing.update(changed_subset); write_manifest(existing)`. Never write a subset-only result. Applies to the ingest state file, the entity cache, and any future incremental index.
 **Severity**: low
+
+---
+
+## 🔒 GITNEXUS AUDIT — Lessons
+
+### 121. FTS query string interpolation enables search injection
+**Source-of-lesson**: gitnexus `CHANGELOG.md:66` — v1.3.11 "Fix FTS Cypher injection by escaping backslashes in search queries"; fixed pattern: `src/core/search/bm25-index.ts:36-41`
+**Pattern**: Any FTS or Cypher query builder that interpolates user input as a format string (rather than a bound parameter) is vulnerable to search injection. GitNexus initially embedded the user search term as a raw string literal inside `CALL QUERY_FTS_INDEX(...)`. An attacker could escape the FTS query and execute arbitrary Cypher.
+**Relevance to Cortex**: Separate compile-time schema identifiers (table names, index names — safe to template-interpolate) from runtime user input (must be passed as a bound `$query` parameter). Never interpolate search terms into query strings.
+**Severity**: medium
+
+### 122. MCP transport allocates buffer before validating Content-Length cap
+**Source-of-lesson**: gitnexus `CHANGELOG.md:88-90` — v1.3.10 "MCP transport buffer cap: Added 10 MB MAX_BUFFER_SIZE limit to prevent out-of-memory attacks via oversized Content-Length headers"; fixed in `src/mcp/compatible-stdio-transport.ts:46`
+**Pattern**: A transport that reads `Content-Length: N` and allocates an N-byte buffer BEFORE checking whether N exceeds the max buffer size allows a malicious client to trigger an OOM crash by sending `Content-Length: 99999999999`. This is a pre-allocation DoS vector.
+**Relevance to Cortex**: Validate Content-Length against `MAX_BUFFER_SIZE` (recommend 10 MB) BEFORE allocating any buffer. If the value exceeds the cap, close the connection with a protocol error. Check first, allocate second.
+**Severity**: high (OOM security)
