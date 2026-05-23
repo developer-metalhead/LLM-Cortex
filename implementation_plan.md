@@ -5195,6 +5195,35 @@ The separation keeps the graph-update path responsive even when a long synthesis
 
 **Source**: nexus-os `api/main.py:170` — `ghost_bridge_socket()` vs `websocket_endpoint()`
 
+#### Phase 8.1 Refinement — Hash-Diff Skip on WebSocket Broadcast
+
+Add a content-hash check before broadcasting graph diff events to connected clients. Skip the broadcast when nothing has actually changed (e.g., file watcher fires on a no-op save):
+
+```typescript
+import { createHash } from 'crypto';
+
+let lastGraphHash = '';
+
+function shouldBroadcast(event: GraphDiffEvent): boolean {
+  const hash = createHash('sha256')
+    .update(JSON.stringify(event))
+    .digest('hex')
+    .slice(0, 16);
+  if (hash === lastGraphHash) return false;
+  lastGraphHash = hash;
+  return true;
+}
+
+// In polling loop:
+if (shouldBroadcast(diffEvent)) {
+  connectionManager.broadcast(diffEvent);
+}
+```
+
+Use SHA-256 (truncated to 16 hex chars) — not a weak djb2 hash. Prevents unnecessary re-renders on idle clients and reduces WebSocket noise on high-frequency file watchers.
+
+**Source**: antigravity_phone_chat `server.js:1614` — polling loop hash-diff check
+
 ---
 
 ## 💾 Phase 8.2: Karpathy-Style Obsidian Wiki Compliance & Presets — ⏳ Planned
@@ -11083,6 +11112,88 @@ Extend the Phase 21 registry into a full **Central Knowledge Server** — a self
 - ✅ **Pros**: Makes Cortex visible to leadership, not just developers. A CTO dashboard with mean quality score per team is a governance artifact, not a debug tool. MCP-over-HTTP means any AI in the org gets org-wide architectural context without needing a local Cortex install — the knowledge travels with the URL.
 - ❌ **Cons**: Significant operational surface (server to run, tokens to manage, dashboard to maintain). Mitigated by Docker Compose and SQLite defaults — "zero to running" should be under 10 minutes. The unified graph is only as good as teams' publishing discipline — if a repo doesn't publish, it's invisible.
 
+### Phase 22 Refinement — LAN Trust Bypass with Proxy-Header-First Auth
+
+When implementing Phase 22's auth middleware, adopt the `isLocalRequest()` pattern. The critical detail: check proxy/tunnel headers BEFORE checking the remote IP.
+
+```typescript
+function isLocalRequest(req: Request): boolean {
+  // Tunnel headers (ngrok, Cloudflare, Tailscale) mean the request is external
+  // even if the tunnel endpoint happens to be on a LAN IP. Check this FIRST.
+  if (req.headers['x-forwarded-for'] || req.headers['x-forwarded-host'] || req.headers['x-real-ip']) {
+    return false;
+  }
+  const ip = req.ip || req.socket.remoteAddress || '';
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' ||
+         ip.startsWith('192.168.') || ip.startsWith('10.') ||
+         ip.startsWith('172.16.') || ip.startsWith('172.17.') ||
+         ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
+         ip.startsWith('172.2') || ip.startsWith('172.3') ||
+         ip.startsWith('::ffff:192.168.') || ip.startsWith('::ffff:10.');
+}
+```
+
+LAN devices skip auth for the Phase 22 dashboard (local dev convenience). External devices (including tunnel traffic) go through full JWT verification. Make LAN bypass opt-out via `CORTEX_LAN_BYPASS=false` for containerized/Kubernetes deployments where `192.168.x.x` is pod-network space.
+
+**Note**: This is for the Phase 22 browser dashboard specifically. The MCP-over-HTTP REST API should always require Bearer JWT regardless of source IP (dashboard is human-facing; API is machine-facing).
+
+**Source**: antigravity_phone_chat `server.js:1548` — `isLocalRequest()`
+
+### Phase 22 Refinement — Startup Warning for Insecure Defaults (closes Flaw #117)
+
+When `cortex server start` launches, check that security-sensitive env vars are properly configured. Emit loud ANSI-colored warnings in dev mode; refuse to start in production mode:
+
+```typescript
+const SESSION_SECRET = process.env.CORTEX_SESSION_SECRET;
+const KNOWN_INSECURE_DEFAULTS = ['cortex_default', 'change_me', 'secret', ''];
+
+if (!SESSION_SECRET || KNOWN_INSECURE_DEFAULTS.includes(SESSION_SECRET)) {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.CORTEX_PROD;
+  const msg = '⚠️  SECURITY: CORTEX_SESSION_SECRET is missing or insecure. Run: cortex server init';
+  if (isProduction) {
+    console.error('\x1b[31m' + msg + '\x1b[0m');
+    process.exit(1); // Hard fail in production
+  } else {
+    console.warn('\x1b[33m' + msg + '\x1b[0m'); // Soft warn in dev
+  }
+}
+// Same pattern for CORTEX_API_TOKEN_SALT and CORTEX_ADMIN_PASSWORD
+```
+
+`cortex server init` generates and writes all required secrets to `.env` with `openssl rand -hex 32`.
+
+**Source**: antigravity_phone_chat `server.js:27-30` + `server.js:1693-1696` — startup credential checks
+
+### Phase 22 Refinement — LAN-First IP Priority Sort for URL Display
+
+When `cortex server start` or `cortex remote enable` prints the dashboard URL, sort network interfaces to display the real home/office IP rather than a WSL2/Docker virtual adapter:
+
+```typescript
+import { networkInterfaces } from 'os';
+
+function getDisplayIP(): string {
+  const candidates: { address: string; priority: number }[] = [];
+  for (const ifaces of Object.values(networkInterfaces())) {
+    for (const iface of ifaces ?? []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        candidates.push({
+          address: iface.address,
+          priority: iface.address.startsWith('192.168.') ? 1 :
+                    iface.address.startsWith('10.')       ? 2 :
+                    iface.address.startsWith('172.')      ? 3 : 4
+        });
+      }
+    }
+  }
+  candidates.sort((a, b) => a.priority - b.priority);
+  return candidates[0]?.address ?? 'localhost';
+}
+```
+
+Skip the heuristic when `process.env.DOCKER_HOST` or `process.env.KUBERNETES_SERVICE_HOST` is set — in those environments trust the bound address directly.
+
+**Source**: antigravity_phone_chat `server.js:81-103` — `getLocalIP()`
+
 ---
 
 ## 🔔 Phase 22.1: Webhook Ingestion (Push-Based Sync via GitHub/GitLab) — ⏳ Planned
@@ -14057,6 +14168,29 @@ The Cortex PWA is **operation-status focused**, not full mission control. A Cort
 
 - ✅ **Pros**: **Eliminates the babysit-your-terminal problem** for long Cortex operations — the single largest UX pain on huge codebases. Mobile PWA delivers Cortex's value to the user wherever they are, not just where their laptop is. Push notifications mean budget breaches and quality regressions are caught in minutes, not at end-of-day. Cloudflare Tunnel + Tailscale options cover the spectrum from personal-developer to enterprise-network deployment. Generalized `op` API isn't just for bootstrap — it makes every long-running Cortex operation observable and controllable through a consistent surface, simplifying the user mental model. PWA scope is intentionally narrower than Nexus's mission control, so customers running both bundle products see clear, non-overlapping value.
 - ❌ **Cons**: Tunnels add real security surface — opt-in default and Phase 25 SSO mandatory mitigate. PWA introduces a frontend codebase to maintain (modest — a React SPA + service worker is well-understood territory). Notification channels are permanent integration surfaces (6 of them); mitigated by treating each as a thin adapter and by being able to deprecate niche ones if usage stays low. Biometric re-auth UX varies across mobile platforms (iOS Touch/Face ID vs Android biometric APIs vs WebAuthn) — testing matrix is non-trivial but bounded.
+
+### Phase 33.2 Refinement — QR Code Terminal Print for Remote Enable
+
+When `cortex remote enable` starts the tunnel and prints the public URL, also print a scannable QR code in the terminal. Developer scans with phone instead of typing a long URL:
+
+```typescript
+// npm install qrcode (already available as a lightweight dep)
+import QRCode from 'qrcode';
+
+async function printQR(url: string): Promise<void> {
+  const qr = await QRCode.toString(url, { type: 'terminal', small: true });
+  console.log(qr);
+  console.log(`\nScan to connect, or visit: ${url}\n`);
+}
+```
+
+Make it opt-in via `--qr` flag (block-character QR codes require adequate terminal contrast and monospace rendering; CI/SSH environments may garble them):
+
+```
+cortex remote enable --provider cloudflare --qr
+```
+
+**Source**: antigravity_phone_chat `launcher.py:84-93` — `print_qr()`
 
 ---
 

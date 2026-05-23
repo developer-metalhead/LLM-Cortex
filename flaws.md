@@ -4,7 +4,7 @@ Hands-on audit. Every flaw below was reproduced live against this repo by exerci
 
 **Repo state at time of audit:** branch `phase13.8`, `lastSyncCommit=7d23277133db9e58c15d200743a1ecef3e148f8f`, 15 active entities, 7 concepts.
 
-**Total flaws catalogued: 116** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
+**Total flaws catalogued: 117** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
 **Total phases in implementation_plan.md: 189** — far more than any team can ship coherently.
 
 ---
@@ -1308,3 +1308,9 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Relevance to Cortex**: Cortex's Phase 22 central server (`cortex serve --multi-tenant`) must use an explicit origin allowlist (`allow_origins=["http://localhost:*", "https://your-domain.com"]`), not `["*"]`. Even the local single-user `cortex serve` should restrict to `localhost` origins only.
 **Severity**: medium (low risk while local-only; high risk the moment Phase 22 ships without fixing this)
 **Fix**: Phase 22 implementation must include explicit `CORTEX_ALLOWED_ORIGINS` env var (comma-separated). Default: `["http://localhost:*"]`. No wildcard in any non-dev build.
+
+### 117. Phase 22 must refuse to start with missing or default `SESSION_SECRET`
+**Source-of-lesson**: antigravity_phone_chat `server.js:23` — `APP_PASSWORD='antigravity'`, `AUTH_SALT='antigravity_default_salt_99'`, `SESSION_SECRET='antigravity_secret_key_1337'`
+**Pattern**: Hardcoded fallback credentials that are discoverable from a public GitHub repo remain active if users ignore console warnings. Even with `console.warn` at startup, a developer who skips terminal output is silently exposed.
+**Relevance to Cortex**: When Phase 22 (`cortex server start`) ships, it MUST: (1) check that `CORTEX_SESSION_SECRET`, `CORTEX_API_TOKEN_SALT`, and any signing salt are set via env; (2) in production mode (`NODE_ENV=production` or `--prod` flag) refuse to start with an actionable error: `"CORTEX_SESSION_SECRET not set. Run: cortex server init to generate secrets."`. Soft warning acceptable for local-dev mode only.
+**Severity**: high (Phase 22 is a network-accessible server; predictable session secrets = auth bypass for any user who clones the repo)
