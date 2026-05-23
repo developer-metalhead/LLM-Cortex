@@ -18857,3 +18857,219 @@ Apply when Cortex adopts SQLite (Phase 3.1) as the backing store for its entity 
 
 **Source**: gitnexus `src/core/group/bridge-db.ts:240-244` — CHECKPOINT before close; LadybugDB 0.16.0 non-blocking checkpoint thread
 
+---
+
+## 🔄 GITNEXUS + GRAPHIFY — Final Remaining Refinements (deep scan)
+
+### Phase 4 Refinement — Per-Tool Next-Step Hints in MCP Responses (score: 45)
+
+**What**: Append a short actionable next-step instruction to every MCP tool response. Agents often stop after one tool call; a hint at the end of the response guides them to the logical continuation without requiring client-side hooks or prompt engineering.
+
+```typescript
+function getNextStepHint(toolName: string, args: Record<string, unknown> | undefined): string {
+  const repo = String(args?.repo ?? '');
+  switch (toolName) {
+    case 'cortex_find':
+      return `\n\n---\n**Next:** Use \`read_entity\` on any result above to get full interface, behavior, and wiring detail.`;
+    case 'read_entity':
+      return `\n\n---\n**Next:** If planning changes, use \`impact_analysis({target: "${args?.name ?? '<name>'}"})\` to check blast radius before editing.`;
+    case 'impact_analysis':
+      return `\n\n---\n**Next:** Review depth=1 items first (direct callers WILL break). Use \`before_change\` to snapshot the current state before editing.`;
+    case 'source':
+      return `\n\n---\n**Next:** To understand how this symbol is used across the codebase, use \`cortex_find({query: "${args?.entity_name ?? '<name>'}"})\`.`;
+    case 'save_concept':
+      return `\n\n---\n**Next:** Run \`audit_quality\` to verify the concept integrates cleanly with the existing knowledge graph.`;
+    default:
+      return '';
+  }
+}
+
+// Append in tool response handler:
+const hint = getNextStepHint(toolName, args);
+return { content: [{ type: 'text', text: result + hint }] };
+```
+
+**Design**: Each hint is a short, actionable instruction (not a suggestion). It references the specific next tool/resource. Hints create a self-guiding workflow without requiring client hooks or special agent prompting.
+
+**Source**: gitnexus `src/mcp/server.ts:40-78` — `getNextStepHint()`
+
+---
+
+### Phase 0.14 Refinement — AST-Aware Three-Tier Chunking for Embeddings (score: 48)
+
+**What**: When splitting entity content for embedding, dispatch by entity label to the best chunking strategy rather than applying a single character-window approach universally.
+
+**Three tiers**:
+
+1. **No-split** — if `content.length ≤ chunkSize` (default 1200 chars), return the content as a single chunk. Avoids unnecessary splits for short entities.
+
+2. **AST-aware chunking** — for `Function` / `Method` labels:
+   - Parse with tree-sitter, find the function body node
+   - Extract individual statement boundaries from `body.namedChildren`
+   - Pack statements greedily into chunks (stop when next statement would exceed `chunkSize`)
+   - Overlap is statement-aligned (walk backward from chunk end to find how many statements fit within `overlap` budget — not a raw character slice)
+   - First chunk includes function signature (`includeContainerPrefix`); last includes closing brace (`includeContainerSuffix`)
+   - Oversized single statement → character-sliding fallback for just that unit
+
+3. **Declaration-aware chunking** — for `Class` / `Interface` labels:
+   - Find declaration body node (`class_body`, `object_type`, `interface_body`, etc.)
+   - Group consecutive field-like members (`field_definition`, `property_signature`, `variable_declarator`, etc.) into a single unit before splitting — keeps related fields together
+   - Pack grouped units into chunks; overflow → character fallback per unit
+
+4. **Character-sliding window fallback** — for all other labels or when AST parse fails: fixed `chunkSize` / `overlap` sliding window.
+
+```typescript
+const CHUNKING_RULES: Record<string, ChunkingRule> = {
+  Function: { mode: 'ast_function',     includePrefix: true,  includeSuffix: true,  groupFields: false },
+  Method:   { mode: 'ast_function',     includePrefix: true,  includeSuffix: true,  groupFields: false },
+  Class:    { mode: 'ast_declaration',  includePrefix: true,  includeSuffix: true,  groupFields: true  },
+  Interface:{ mode: 'ast_declaration',  includePrefix: true,  includeSuffix: true,  groupFields: true  },
+};
+
+export async function chunkNode(
+  label: string, content: string, filePath: string,
+  startLine: number, endLine: number,
+  chunkSize = 1200, overlap = 120
+): Promise<Chunk[]> {
+  if (content.length <= chunkSize) return [{ text: content, chunkIndex: 0, startOffset: 0, endOffset: content.length, startLine, endLine }];
+  const rule = CHUNKING_RULES[label];
+  if (!rule) return characterChunk(content, startLine, endLine, chunkSize, overlap);
+  try {
+    if (rule.mode === 'ast_function')     return await astFunctionChunk(content, filePath, startLine, endLine, chunkSize, overlap, rule);
+    if (rule.mode === 'ast_declaration')  return await astDeclarationChunk(content, filePath, startLine, endLine, chunkSize, overlap, rule);
+  } catch { /* AST parse failed */ }
+  return characterChunk(content, startLine, endLine, chunkSize, overlap);
+}
+```
+
+**Why better than naive character chunking**: A character window mid-statement produces a chunk that starts inside an expression — the embedding model receives syntactically broken input. Statement-boundary chunks are always syntactically valid and semantically self-contained.
+
+**Source**: gitnexus `src/core/embeddings/chunker.ts` — `chunkNode()`, `chunkByUnits()`, `findOverlapStartIndex()`, `collectDeclarationUnits()`
+
+---
+
+### Phase 33.6 Refinement — Content-Addressed Parse Cache for Incremental Ingestion (score: 40)
+
+**What**: Before dispatching file content to tree-sitter parse workers, check a content-addressed cache keyed by chunk SHA-256 hash. On cache hit, replay the stored `ParseWorkerResult[]` without spawning a worker. On miss, run the worker and store the result. Cache survives `--force` reruns because keys are content-addressed (not mtime-based).
+
+```typescript
+interface ParseCacheEntry {
+  hash: string;          // sha256 of chunk content
+  results: ParseWorkerResult[];
+}
+
+interface ParseCache {
+  entries: Map<string, ParseCacheEntry>;
+}
+
+async function dispatchChunk(
+  chunk: FileChunk,
+  cache: ParseCache | undefined,
+  pool: WorkerPool,
+): Promise<ParseWorkerResult[]> {
+  const hash = sha256(chunk.content);
+  if (cache) {
+    const hit = cache.entries.get(hash);
+    if (hit) return hit.results;   // cache hit — no worker dispatch
+  }
+  const results = await pool.dispatch(chunk);
+  if (cache) {
+    cache.entries.set(hash, { hash, results });  // store for next run
+  }
+  return results;
+}
+```
+
+**Caller pattern**: Load cache from disk before pipeline runs, pass to `runPipelineFromRepo`, persist to disk after. Cache entries are content-addressed, so a file that is edited and then reverted produces a cache hit (content is identical even though mtime changed).
+
+**Worker pool threshold gating**: Only activate the worker pool when the batch exceeds **15 files OR 512 KB total bytes**. Smaller batches run sequentially — avoids worker-spawn overhead for trivial incremental runs.
+
+**Chunk prefetching**: `parseChunkConcurrency: 2` — read chunk N+1's file content from disk while workers process chunk N. Overlaps I/O latency with compute; measurable on repos large enough to require chunking.
+
+**Source**: gitnexus `src/core/ingestion/pipeline.ts:69-120` — `parseCache`, `parseChunkConcurrency`, `chunkByteBudget`, worker pool threshold
+
+---
+
+### Phase 0.4 Refinement — YAML Frontmatter Strip Before Hash (score: 45)
+
+**What**: When hashing `.knowledge/` entity files (or any Markdown file with YAML frontmatter), strip the `--- ... ---` header block before computing the content hash. Prevents metadata-only edits — a timestamp update, tag change, or `updated_at` field increment — from invalidating the body content cache and triggering unnecessary re-extraction.
+
+```typescript
+const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---\r?\n/;
+
+function bodyContent(content: string): string {
+  return content.replace(FRONTMATTER_RE, '');
+}
+
+async function entityHash(filePath: string): Promise<string> {
+  const raw = await fs.promises.readFile(filePath, 'utf-8');
+  const body = bodyContent(raw);           // strip frontmatter first
+  return sha256(body);                     // hash body only
+}
+```
+
+**When to apply**: Entity page hashing in `cortex analyze --incremental`. The YAML frontmatter of `.knowledge/` pages carries `updated_at`, `entity_id`, `phase` — all of which update on every write cycle. Hashing the full file would invalidate every entity on every run.
+
+**Counter-case**: If frontmatter carries semantically meaningful changes (entity type change, status: deprecated), stripping it means those changes don't trigger re-extraction. Apply a secondary check for structural frontmatter changes if needed.
+
+**Source**: graphify `cache.py:17` — `_body_content()`, item #6 in graphify inventory (score 45, previously missed)
+
+---
+
+### Phase 9 Refinement — `affected_nodes()` BFS with DEFAULT_AFFECTED_RELATIONS (score: 36)
+
+**What**: Implement impact BFS over INCOMING edges, filtering to the relations that represent real code dependencies. The key insight is the explicit allowlist of 11 relation types — not all graph edges represent code impact, so a generic BFS over all edges produces false positives.
+
+```typescript
+const DEFAULT_AFFECTED_RELATIONS = new Set([
+  'calls',
+  'references',
+  'imports',
+  'imports_from',
+  're_exports',
+  'inherits',
+  'extends',
+  'implements',
+  'uses',
+  'mixes_in',
+  'embeds',
+]);
+
+interface AffectedHit {
+  nodeId: string;
+  depth: number;
+  viaRelation: string;
+}
+
+function affectedNodes(
+  graph: KnowledgeGraph,
+  seedId: string,
+  options: {
+    relations?: Set<string>;
+    depth?: number;
+  } = {}
+): AffectedHit[] {
+  const { relations = DEFAULT_AFFECTED_RELATIONS, depth: maxDepth = 2 } = options;
+  const visited = new Map<string, AffectedHit>();
+  const queue: Array<{ id: string; depth: number; via: string }> = [{ id: seedId, depth: 0, via: '' }];
+
+  while (queue.length > 0) {
+    const { id, depth, via } = queue.shift()!;
+    if (visited.has(id) || depth > maxDepth) continue;
+    if (depth > 0) visited.set(id, { nodeId: id, depth, viaRelation: via });
+
+    // Walk INCOMING edges — nodes that depend on the seed
+    for (const edge of graph.incomingEdges(id)) {
+      if (!relations.has(edge.relation)) continue;
+      queue.push({ id: edge.source, depth: depth + 1, via: edge.relation });
+    }
+  }
+
+  return [...visited.values()].sort((a, b) => a.depth - b.depth || a.nodeId.localeCompare(b.nodeId));
+}
+```
+
+**Why INCOMING, not outgoing**: If you change entity X, the nodes that CALL or IMPORT X are the ones that break — their incoming edges to X represent the dependency. Outgoing edges (what X calls) are not affected by X's signature change.
+
+**Source**: graphify `affected.py:46` — `affected_nodes()`, `AffectedHit`, `DEFAULT_AFFECTED_RELATIONS` (item #8, score 36, BFS half was previously missed)
+
