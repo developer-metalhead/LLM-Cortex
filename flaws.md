@@ -386,15 +386,17 @@ The implementation plan **partially** anticipates the small-codebase pain:
 | #8 `build_context_pack` ignoring invalid `scope` | ✅ **Phase 0.2** — `validateEntityExists(scope, state)` throws with fuzzy suggestions (gap 4) |
 | #10 "58 source files" frozen baseline | ✅ **Phase 0.4** — `indexedFiles[]` diffed on every sync; additions/removals/renames tracked (gap 3) |
 | #12 tools write files without consent | ✅ **Phase 0.2** — `dryRun: boolean` parameter on all write tools (gap 2) |
-| #13 zero-variance quality scoring | ⚠️ not covered — needs quality formula fix in `audit_quality` |
+| #13 zero-variance quality scoring | ⚠️ partially addressed — temporal decay scoring (openclaw pattern, Phase 0.9 refinement) adds age-signal to quality; structural variance still needs dedicated `audit_quality` formula fix |
 | #14 architectural log never written | ⚠️ not covered — needs `log.jsonl` writer fix |
 | #16 dangling `lastSyncCommit` | ⚠️ not covered — needs reachability check in `get_cortex_status` |
 | #17 onboarding template rationales | ⚠️ not covered — needs per-entity rationale generation |
-| #18 `cortex_find` no fuzzy suggestions | ✅ **Phase 0.9** — `fuse.js` fuzzy layer returns `"fuzzy": true` matches (gap 1) |
+| #18 `cortex_find` no fuzzy suggestions | ✅ **Phase 0.9** — `fuse.js` fuzzy layer returns `"fuzzy": true` matches (gap 1). Phase 0.9 refinement notes SQLite FTS5+BM25 as the scale-up path (Phase 33.5). |
 | #19 cold-start dirty flag | ⚠️ not covered — needs dirty-flag initialization fix |
 | #20 brevity footer only in non-default mode | ⚠️ not covered — needs server to emit minimal footer always |
 
-**Summary**: 8 of the 17 uncovered flaws are now addressed by Phase 0 graphify-pattern work. 9 remain uncovered and need dedicated fixes outside the Phase 0 pattern work.
+| #26 `cortex_find` ranks by substring, not relevance | ✅ **Phase 13.6.1** — MMR diversity re-ranking closes false-positive ranking (openclaw pattern, 2026-05-23). Also benefits from #18's FTS5/BM25 fix. |
+
+**Summary**: 8 of the 17 uncovered flaws are now addressed by Phase 0 graphify-pattern work. Flaw #26 closed by Phase 13.6.1 (MMR). Flaw #18 extended with FTS5 scale-up path. 8 remain uncovered and need dedicated fixes outside the Phase 0 pattern work.
 
 The plan addresses **cost** on small codebases. The hands-on audit shows the bigger small-codebase killer is **correctness** — Cortex confidently surfaces phantom knowledge, silently corrupts on diff overflow, and reports green on quality while harboring cycles and orphans.
 
@@ -1313,4 +1315,14 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Source-of-lesson**: antigravity_phone_chat `server.js:23` — `APP_PASSWORD='antigravity'`, `AUTH_SALT='antigravity_default_salt_99'`, `SESSION_SECRET='antigravity_secret_key_1337'`
 **Pattern**: Hardcoded fallback credentials that are discoverable from a public GitHub repo remain active if users ignore console warnings. Even with `console.warn` at startup, a developer who skips terminal output is silently exposed.
 **Relevance to Cortex**: When Phase 22 (`cortex server start`) ships, it MUST: (1) check that `CORTEX_SESSION_SECRET`, `CORTEX_API_TOKEN_SALT`, and any signing salt are set via env; (2) in production mode (`NODE_ENV=production` or `--prod` flag) refuse to start with an actionable error: `"CORTEX_SESSION_SECRET not set. Run: cortex server init to generate secrets."`. Soft warning acceptable for local-dev mode only.
+
+---
+
+## 🔒 OPENCLAW AUDIT — Security Lesson
+
+### 118. `dangerous*` config flags lower security posture with no runtime signal
+**Source-of-lesson**: openclaw `SECURITY.md:297` — `dangerouslyDisableDeviceAuth`, `allowUnsafeExternalContent` flags documented only in static docs; no in-process warning when active.
+**Pattern**: A flag that intentionally weakens security (skips auth, allows unsafe content, disables validation) that surfaces zero runtime indication when active. An operator who enabled the flag during a debugging session and forgot about it carries degraded security posture silently across every subsequent restart.
+**Relevance to Cortex**: If Cortex ever ships config flags prefixed `dangerous*` or equivalent (e.g., `CORTEX_DISABLE_AUTH`, `CORTEX_SKIP_PATH_VALIDATION`), activating them MUST emit a one-time startup `console.warn` visible at server launch — include the flag name and a docs link. In production mode (`NODE_ENV=production`), escalate to `console.error` and require an explicit `--i-understand-the-risk` acknowledgment CLI flag to start.
+**Severity**: medium (low until such flags exist in Cortex; preventive pattern to encode before they're needed)
 **Severity**: high (Phase 22 is a network-accessible server; predictable session secrets = auth bypass for any user who clones the repo)

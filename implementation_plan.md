@@ -1230,6 +1230,8 @@ export function installStdoutSentinel(): void {
 **Gap 1 addition — fuzzy entity matching via `fuse.js` (fixes flaw #18)**
 Graphify uses `rapidfuzz` so `cortex_find("AuthSrv")` returns `AuthService`. The IDF scoring above handles exact/prefix/substring matches but not typos or abbreviations. This is a separate layer.
 
+> **Refinement (from openclaw audit, 2026-05-23)**: For the initial ship (`fuse.js`, in-memory) this is fine for KBs <200 entities. At scale (>1000 entities, Phase 33.5+), prefer **SQLite FTS5 with BM25 ranking** over fuse.js: FTS5 is already in Cortex's SQLite dependency, scales to 10K+ entities, and BM25 ranking is superior to Levenshtein for keyword search. Migration path: `CREATE VIRTUAL TABLE entities_fts USING fts5(name, description, source_file, content=entities)` + synchronized writes in `saveSynthesis`. The `bm25RankToScore` normalizer: `1 / (1 + Math.abs(rank))` maps FTS5's native negative rank to [0,1]. Start with fuse.js; promote to FTS5 in Phase 33.5 Unified Ingest Pipeline. Source: openclaw `extensions/memory-core/src/memory/hybrid.ts:54` `mergeHybridResults`.
+
 - Add `fuse.js` to `dependencies` (TypeScript port of `rapidfuzz`-style fuzzy search, widely used in Node ecosystem).
 - `cortex_find` pipeline: (1) exact/prefix/substring IDF scoring (existing); (2) if no results score above threshold, run `fuse.js` Jaro-Winkler fuzzy match against all entity labels and source file paths; (3) return fuzzy matches ranked by similarity score, annotated with `"fuzzy": true` flag.
 - **Hub-aware BFS/DFS with dynamic P99 threshold** (from graphify's `_bfs`/`_dfs`): compute the P99 degree of all nodes; when traversing from seeds, skip expanding any hub node above the P99 threshold unless it IS the seed. Prevents traversal getting stuck in highly connected "god nodes" (e.g., a config singleton referenced everywhere). Hub nodes are still returned as results, just not expanded.
@@ -7338,6 +7340,42 @@ Upgrade query scoring and preview extraction in `src/knowledge/find.ts`:
 **Pros & Cons**
 - ✅ **Pros**: High readability for search results; aligns MCP returns with standard search engine behaviors.
 - ❌ **Cons**: Slightly more complex string parsing logic. Mitigated by keeping matching algorithms pure and performant.
+
+---
+
+### Phase 13.6.1 Refinement — MMR Diversity Re-ranking for `cortex_find` (closes Flaw #26)
+
+**Source**: openclaw `extensions/memory-core/src/memory/mmr.ts:152` — `mmrRerank<T>(items, config?): T[]`
+**Score**: 45 | **Effort**: ~120 lines, zero new deps
+
+**Problem** (Flaw #26): `cortex_find` ranks by RRF score but a high-RRF query can return 3 sections of the same entity at ranks #1–#3, crowding out distinct results. The agent sees one entity from three angles and misses two other relevant entities entirely.
+
+**What MMR does**: After RRF produces a ranked list, MMR re-selects results iteratively using:
+```
+score = lambda × relevance − (1 − lambda) × maxSimilarityToSelected
+```
+where `lambda = 0.7` (relevance-favoring; set to 0.5 for pure diversity). Similarity is Jaccard on pre-tokenized token sets. CJK-aware tokenizer: unigrams + adjacent bigrams for CJK sequences, whitespace split otherwise. All items are pre-tokenized once before the loop (O(n²) Jaccard, but bounded by result set size, typically <50 items).
+
+**Implementation**:
+- New file `src/search/mmr.ts` (~120 lines, pure TS, zero deps):
+  ```typescript
+  export interface MMRConfig { enabled: boolean; lambda: number; }
+  export const DEFAULT_MMR_CONFIG: MMRConfig = { enabled: false, lambda: 0.7 };
+  export function tokenize(text: string): Set<string>  // CJK-aware
+  export function jaccardSimilarity(a: Set<string>, b: Set<string>): number
+  export function mmrRerank<T extends { name: string; description?: string; score: number }>(
+    items: T[], config?: Partial<MMRConfig>
+  ): T[]
+  ```
+- Wire into `cortex_find` as a post-RRF pass: `if (config.search?.mmr?.enabled) results = mmrRerank(results, config.search.mmr)`.
+- Expose `lambda` in `configure_brevity` (or a future `configure_search` tool). Default `enabled: false` so existing behavior is unchanged until opted in.
+- Cap MMR input at top-50 items to bound O(n²) cost.
+
+**DoD**:
+- `cortex_find("authentication")` on a codebase with 5 auth-related entities returns distinct entities, not 3 sections of `AuthService`.
+- MMR disabled by default; `configure_search({mmr: {enabled: true, lambda: 0.7}})` enables it.
+- Unit tests: Jaccard similarity, tokenizer (ASCII + CJK), MMR selection order with known lambda.
+- Flaw #26 coverage entry updated to `✅ Phase 13.6.1 — MMR re-ranking closes false-positive ranking`.
 
 ---
 
@@ -17270,4 +17308,80 @@ Every `saveSynthesis()` call bumps a graph semver stored in `state.json`. Major 
 Parse Jest/Mocha/Vitest `coverage-summary.json` and attach `testCoverage: number` to each entity. `cortex lint` flags entities where: `testCoverage < 0.5` AND `inDegree > 3` (low-tested high-dependency entities). `build_context_pack` can sort by coverage to surface riskiest entities first.
 
 **29. Hallucination cross-check (new synthesis)**
-After each LLM synthesis, run a fast deterministic check: does the synthesis claim entity X calls entity Y? If yes, verify that edge exists in the Stage 1 graph. Flag divergences as potential hallucinations with a `hallucination_risk: boolean` field. Zero extra LLM calls — just comparing LLM output against the source-of-truth AST graph.\n
+After each LLM synthesis, run a fast deterministic check: does the synthesis claim entity X calls entity Y? If yes, verify that edge exists in the Stage 1 graph. Flag divergences as potential hallucinations with a `hallucination_risk: boolean` field. Zero extra LLM calls — just comparing LLM output against the source-of-truth AST graph.
+
+---
+
+## 🔄 OPENCLAW AUDIT — Phase Refinements (2026-05-23)
+
+### Phase 5.7 Refinement — Standing Order Template for Scheduled Skills
+
+**Source**: openclaw `docs/automation/standing-orders.md:1` | **Score**: 36
+
+Every skill in `.claude/skills/` that is invoked on a schedule (cron, git hook, or Phase 5.7 job) MUST include a `## Standing Order` section with five mandatory sub-sections:
+
+```markdown
+## Standing Order
+
+### Scope
+What programs and resources this authority covers. What it explicitly does NOT cover.
+
+### Triggers
+Events or schedules that activate execution (cron expression, hook event, manual invocation).
+
+### Approval Gates
+Actions that require human sign-off before proceeding. List each decision point explicitly.
+
+### Escalation
+After 3 consecutive failures: stop, emit a structured error to the operator, and wait for human intervention. Never retry indefinitely.
+
+### Execute-Verify-Report Discipline
+After every execution: (1) Execute the action, (2) Verify the outcome against the expected state, (3) Report the result with evidence — not just "done."
+```
+
+**Why**: Without explicit scope + escalation contracts, scheduled agents either over-act (running destructive consolidations autonomously) or under-report (silently failing after retries). The Execute-Verify-Report requirement is the key — agents must surface outcome evidence, not just a completion signal.
+
+**Apply to**: Phase 5.7 cron skills (ingest, synthesis), Phase 7.9 garbage collection, Phase 20.17 sleep consolidation, all future SKILL.md templates.
+
+---
+
+### Phase 5.7 Refinement — Staggered Top-of-Hour Cron Scheduling
+
+**Source**: openclaw `docs/automation/cron-jobs.md:75` | **Score**: 30
+
+Top-of-hour cron expressions (e.g., `0 * * * *`) auto-stagger by `Math.floor(Math.random() * 600) - 300` seconds (±5 minutes) on first fire. Prevents synchronized IO + LLM-cost spikes when multiple Cortex-monitored repos or multiple Phase 5.7 jobs all share the same default schedule.
+
+**Implementation** (≤30 lines in `src/scheduler/cron.ts`):
+```typescript
+function maybeJitterCronTime(expr: string, jitterMs: number = 300_000): number {
+  // Only jitter top-of-hour (minute field = 0)
+  const parts = expr.trim().split(' ');
+  if (parts[0] !== '0') return 0;
+  return Math.floor(Math.random() * jitterMs * 2) - jitterMs;
+}
+```
+
+**Config**: `cortex.config.json: { scheduler: { cronJitter: 300 } }`. `--exact` CLI flag opts out. Default jitter active for all top-of-hour schedules. Future-proofs Phase 22 (Central Knowledge Server) where multiple tenants share the same schedule slots.
+
+---
+
+### Phase 13 Refinement — Prompt-Cache Ordering Discipline
+
+**Source**: openclaw `AGENTS.md:41` | **Score**: 45 | **Effort**: audit pass + CLAUDE.md rule (see CLAUDE.md ⚡ section)
+
+All code paths that assemble LLM payloads must serialize collections in deterministic order:
+
+| Call site | Required ordering |
+|-----------|------------------|
+| `build_context_pack` entity list | Sort by `entity_id` ascending |
+| `cortex_find` results | Sort by `score DESC`, then `name ASC` as tie-break |
+| Plugin/extension registry serialized to prompts | Sort by `pluginId` ascending |
+| File list in context pack | Sort by `sourceFile` path ascending |
+
+**Audit checklist** — grep these patterns and verify sort is applied before serialization:
+- `Object.entries(state.entities)` — must sort before map
+- `Array.from(pluginRegistry.values())` — must sort before JSON.stringify
+- `results.map(...)` in find.ts — must have `.sort()` before `.map()`
+
+Non-deterministic iteration order (JS `Map`/`Set`, object key insertion) silently invalidates the Anthropic prompt cache on every call even when context is logically identical. The rule is also encoded in `CLAUDE.md` under `## ⚡ Token Economics`.
+

@@ -1,0 +1,24 @@
+{
+  "audited_iso": "2026-05-23T00:00:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\connect4private\\nexus-os",
+  "files": {
+    "api/autonomous_agent.py": "2026-05",
+    "api/bus.py": "2026-05",
+    "api/nexus_ai_engine.py": "2026-05",
+    "api/schemas.py": "2026-05",
+    "api/main.py": "2026-05",
+    "api/requirements.txt": "2026-05",
+    "api/.agents/bus/inbound.jsonl": "2026-05",
+    "api/.agents/bus/outbound.jsonl": "2026-05",
+    "src/main.jsx": "2026-05",
+    "src/NexusStream.jsx": "2026-05",
+    "src/OrbitalCommandDeck.jsx": "2026-05",
+    "src/SuperNexusGrid.jsx": "2026-05",
+    "src/TacticalVitals.jsx": "2026-05",
+    "src/HolographicMatrix.jsx": "2026-05",
+    "nexus-launcher.js": "2026-05",
+    "vite.config.js": "2026-05",
+    "scratch/usage-limit-reducer/scripts/usage-report.py": "2026-05",
+    "scratch/usage-limit-reducer/scripts/test_usage_report.py": "2026-05"
+  }
+}
