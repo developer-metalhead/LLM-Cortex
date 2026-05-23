@@ -1326,3 +1326,19 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Relevance to Cortex**: If Cortex ever ships config flags prefixed `dangerous*` or equivalent (e.g., `CORTEX_DISABLE_AUTH`, `CORTEX_SKIP_PATH_VALIDATION`), activating them MUST emit a one-time startup `console.warn` visible at server launch — include the flag name and a docs link. In production mode (`NODE_ENV=production`), escalate to `console.error` and require an explicit `--i-understand-the-risk` acknowledgment CLI flag to start.
 **Severity**: medium (low until such flags exist in Cortex; preventive pattern to encode before they're needed)
 **Severity**: high (Phase 22 is a network-accessible server; predictable session secrets = auth bypass for any user who clones the repo)
+
+---
+
+## 🔒 GRAPHIFY AUDIT — Lessons
+
+### 119. Bare filename stem used as entity/node ID prefix causes silent collisions
+**Source-of-lesson**: graphify `CHANGELOG.md:26` — v0.8.13 fix for SQL extractor and Python import resolver
+**Pattern**: Entity IDs that use only the filename stem as their prefix (e.g. `models_UserService`) cause silent node-merge collisions when two files have the same name in different directories (e.g. `auth/models.py` and `payments/models.py`). The second entity overwrites the first silently — no error, no duplicate detection.
+**Relevance to Cortex**: Entity IDs must be qualified with at least the parent directory: `{relative_dir}_{stem}_{entity_name}`. Top-level files use `{stem}_{entity_name}`. Add a post-ingest uniqueness check that emits a warning listing all duplicate IDs before writing `.knowledge/`.
+**Severity**: medium
+
+### 120. Partial manifest overwrite on incremental run re-extracts entire corpus
+**Source-of-lesson**: graphify `CHANGELOG.md:147` — v0.8.10 fix (incremental data loss in save_manifest)
+**Pattern**: If incremental ingest writes the manifest/state file with only the changed-file subset (not the full merged result), the next incremental run sees all unchanged files as "new" and re-extracts everything. The symptom looks like cache invalidation failure — every incremental run is as slow as a full run.
+**Relevance to Cortex**: Always follow the load-merge-write pattern for any state file updated incrementally: `existing = load_manifest(); existing.update(changed_subset); write_manifest(existing)`. Never write a subset-only result. Applies to the ingest state file, the entity cache, and any future incremental index.
+**Severity**: low
