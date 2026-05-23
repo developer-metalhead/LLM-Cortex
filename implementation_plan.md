@@ -370,6 +370,27 @@ Before adding any feature, seal the holes. Graphify (a comparable Python knowled
 - `sanitize_label(s)`: strip HTML tags, truncate to 500 chars.
 - `sanitize_metadata(obj)`: recurse into dicts/lists, sanitize all string values. Prevents metadata injection when entity descriptions or concept bodies contain injected HTML/script.
 
+**Phase 0.1 Refinement — YAML Frontmatter Injection Prevention (Graphify)**
+
+`sanitize_metadata` above guards against HTML/script injection. A separate class of injection targets YAML frontmatter in knowledge files: entity names that contain U+2028/U+2029 (Unicode line-separator / paragraph-separator — treated as newlines in YAML 1.1), null bytes, or ASCII control characters can break YAML frontmatter parsing and silently corrupt `.knowledge/` files. Graphify's `ingest.py` guards against this with a separate YAML-aware escaper.
+
+```typescript
+// src/security.ts — extend with yamlSafeString()
+const YAML_CONTROL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
+const YAML_LINE_SEP_RE = /[  ]/g;
+
+export function yamlSafeString(s: string): string {
+  if (typeof s !== "string") return String(s);
+  return s
+    .replace(YAML_CONTROL_RE, "")          // strip ASCII control chars
+    .replace(YAML_LINE_SEP_RE, " ")        // replace Unicode line separators with space
+    .replace(/\x00/g, "")                  // strip null bytes explicitly
+    .slice(0, 500);                         // length cap (same as sanitize_label)
+}
+```
+
+**Where to apply**: call `yamlSafeString()` on every string value written to YAML frontmatter in `src/knowledge/writer.ts` — specifically entity `name`, `id`, `sourceFile`, `description` header, and any concept `title` field. Synthesis output goes through `sanitize_metadata` (HTML) then `yamlSafeString` (YAML) before disk write.
+
 **Implementation**
 - Create `src/security.ts` as the single module all file and network paths must pass through.
 - `validateSafePath(root: string, userPath: string): string` — `path.resolve`, assert `resolved.startsWith(root + sep)`, throw on failure.
@@ -563,6 +584,35 @@ to:
 > `CALLS AuthService → TokenStore: weight 0.75 (interface-dispatch — verify implementing classes)`
 
 **Implementation**: Add `reason` field to `Relationship` in `src/knowledge/schema.ts`. Populate in `LanguageProvider.extract()` — tree-sitter `import` statements → `"import-resolved"`, same-file calls → `"local-call"`, dynamic dispatch patterns → `"interface-dispatch"`, SCIP-sourced (Phase 0.19) → `"lsp-resolved"`. `cortex lint` renders reason text alongside weight.
+
+### Phase 0.3 Refinement — Cross-Language Edge Gating (Graphify)
+
+Phase 0.3 adds `reason` to edges. A complementary guard prevents CALLS edges from being created between a code entity and a non-code entity (markdown heading, YAML key, config value) that happens to share the same name — a false relationship class that inflates the graph with phantom calls.
+
+**Problem**: Without file-type gating, a Python function named `render` and a Markdown heading `## render` can both be present as entities. A naive symbol resolver emits a CALLS edge between them. Graphify's `symbol_resolution.py` gates all call-edge resolution on `file_type == "code"` for both endpoints.
+
+```typescript
+// src/core/symbol-resolver.ts
+const CODE_EXTENSIONS = new Set([
+  ".ts", ".js", ".mjs", ".tsx", ".jsx",
+  ".py", ".go", ".rs", ".java", ".c", ".cpp", ".cs", ".rb", ".swift", ".kt",
+]);
+
+function isCodeFile(filePath: string): boolean {
+  return CODE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+}
+
+function canEmitCallEdge(sourceFile: string | undefined, targetFile: string | undefined): boolean {
+  if (!sourceFile || !targetFile) return false;
+  return isCodeFile(sourceFile) && isCodeFile(targetFile);
+}
+```
+
+**Behavior**: CALLS and IMPORTS edges are only emitted when `canEmitCallEdge()` returns true. Non-code entities can still receive `REFERENCES`, `DOCUMENTS`, and `RELATED_TO` edges. Zero performance cost — extension check is O(1).
+
+**Implementation**: Add `canEmitCallEdge()` guard in `src/core/symbol-resolver.ts`, called before emitting any CALLS/IMPORTS edge in Stage 1. Add `"code" | "doc" | "config" | "unknown"` as optional `fileKind` field on `EntityRecord` (set from extension at extraction time). `cortex lint` can then flag any CALLS edge where either endpoint has `fileKind !== "code"` as a `CROSS_KIND_CALL` warning.
+
+**DoD**: No CALLS edge between a code entity and a non-code entity. Tests: same function name in `.ts` and `.md` → no CALLS edge between them; CALLS edge between two `.ts` entities → emitted correctly.
 
 ---
 
@@ -897,6 +947,36 @@ async function deduplicateEntity(candidate: EntityRecord, existing: EntityRecord
 ```
 
 Replaces the pure MinHash approach with this 3-pass chain. MinHash is still used for corpus-level pre-filtering (block candidates before individual comparisons).
+
+**Phase 0.6 Refinement — MinHash Activation Threshold + Variant-Detection Blocker (Graphify)**
+
+Two implementation details from Graphify's `dedup.py` that prevent the 3-pass chain from misfiring:
+
+**1. MinHash activation threshold**: Pre-filtering with MinHash is only worthwhile when the candidate pool is large enough that O(n²) Jaro-Winkler becomes expensive. Below ~500 entities, skip MinHash and go directly to Pass 2. Above 500, build the MinHash index first.
+
+```typescript
+const MINHASH_THRESHOLD = 500;
+
+async function deduplicateBatch(candidates: EntityRecord[], existing: EntityRecord[]): Promise<DedupeResult[]> {
+  const useMinHash = existing.length > MINHASH_THRESHOLD;
+  const pool = useMinHash ? filterByMinHash(candidates, existing) : existing;
+  return Promise.all(candidates.map(c => deduplicateEntity(c, pool)));
+}
+```
+
+**2. Variant-detection blocker**: Jaro-Winkler scores version-suffixed names (e.g. `AuthServiceV2` vs `AuthServiceV1`, `M1Pro` vs `M1`) as high-similarity duplicates even though they are distinct entities. Before passing to Pass 2, check for version/variant patterns and short-circuit to `duplicate: false`.
+
+```typescript
+const VERSION_SUFFIX_RE = /[Vv]\d+$|Pro$|Max$|Plus$|Lite$|Legacy$|\d+\.\d+$/;
+
+function isVariantPair(a: string, b: string): boolean {
+  const base = (s: string) => s.replace(VERSION_SUFFIX_RE, "").toLowerCase();
+  // Same base name, different suffixes → never merge
+  return base(a) === base(b) && a.toLowerCase() !== b.toLowerCase();
+}
+```
+
+Call `isVariantPair(candidate.name, existing.name)` before Jaro-Winkler in Pass 2; if true, return `{ duplicate: false, method: "variant-blocked" }` immediately.
 
 ---
 
@@ -3736,6 +3816,46 @@ When `MemoryBudgetExceededError` is thrown:
 
 **Environment variables**: `CORTEX_MAX_RSS_MB` (default: 512), `CORTEX_MEMORY_RETRY_DELAY_MS` (default: 30000).
 
+### Phase 5 Refinement — Git Staleness Tracking in `cortex status` (GitNexus)
+
+Phase 33.5 Stage 0 already detects *whether* the index is stale (binary: `up-to-date` / `changes-detected`). What it doesn't surface is *how stale* — how many commits have landed since the last index. GitNexus's `git-staleness.ts` computes this with a single git command and surfaces it in status output.
+
+**Problem**: `cortex status` today shows `Last sync: 3 days ago` with no indication of whether that's 1 commit or 200 commits behind. A developer who committed once 3 days ago has very different re-sync urgency than one whose team has pushed 80 commits.
+
+```typescript
+// src/cli/status.ts
+async function getCommitsBehind(projectRoot: string, lastIndexedCommit: string): Promise<number> {
+  if (!lastIndexedCommit) return -1;  // never indexed
+  try {
+    const out = await execa("git", [
+      "rev-list", "--count", `${lastIndexedCommit}..HEAD`
+    ], { cwd: projectRoot });
+    return parseInt(out.stdout.trim(), 10);
+  } catch {
+    return -1;  // not a git repo or commit not found
+  }
+}
+```
+
+**`cortex status` output change**:
+```
+Knowledge index:  47 commits behind HEAD  ⚠ (run: cortex sync)
+                  (last indexed: abc1234, 2026-05-10)
+```
+vs current clean state:
+```
+Knowledge index:  up to date  ✓ (last sync: 2026-05-23 14:30)
+```
+
+**Thresholds for `cortex doctor`**:
+- 0 commits behind → ✓ green
+- 1–10 commits → ⚠ yellow warning
+- 11+ commits → ✗ red, recommend `cortex sync`
+
+**Implementation**: add `getCommitsBehind()` in `src/cli/status.ts`. Called once on `cortex status` invocation. Also exposed in `get_cortex_status` MCP tool response as `commitsBehind: number` field. Cost: one `git rev-list --count` subprocess per `cortex status` call (~5ms).
+
+**DoD**: `cortex status` shows commit-behind count when index is stale. `get_cortex_status` MCP tool returns `commitsBehind`. `cortex doctor` flags stale index with commit count in warning message.
+
 ---
 
 ## ⏰ Phase 5.7: Scheduled Operations & Cron Engine — ⏳ Planned (production reliability)
@@ -4352,6 +4472,64 @@ Add a structured query layer over `log.md` + `state.json`. The log already conta
 
 - ✅ **Pros**: Turns the architectural log from a reading artifact into a debugging tool. "When did this drift first appear?" becomes one command. Evidence anchoring (with optional content snapshots) closes the gap between _"Cortex claims X"_ and _"the code at synthesis time looked like Y, and now looks like Z"_ — drift becomes a literal string diff, not a guess. Quoted snippets also make `cortex find` answer _"have we written this pattern before?"_ across the entire architectural history without falling back to `git log -G`. Silo detection catches the slow-growing problem of disconnected knowledge clusters before they fragment the graph. Closes the loop with Phase 6 — once you flag drift, you also need to find it later.
 - ❌ **Cons**: Adds a parallel storage format. JSONL and `log.md` must stay in sync; divergence would be confusing. Mitigated by writing both from the same code path. Evidence anchoring puts more burden on the Librarian prompt (it must pick line ranges + decide whether to quote content); mitigated by treating every evidence subfield except `sourceFile` as optional and by the _"quote only when it clarifies"_ prompt rule. Quoted snippets risk concentrating secrets if a developer commits an API key inline; mitigated by the redaction pass and the warning emission.
+
+### Phase 7 Refinement — Graph Audit Report (`GRAPH_REPORT.md`) (Graphify)
+
+Phase 7 writes `log.jsonl` and surfaces per-entity quality via `cortex audit`. What's missing is an aggregate, human-readable **extraction confidence report** — a single `GRAPH_REPORT.md` showing the health of the whole graph at a glance. Graphify's `report.py` generates this after every analysis run. Non-developers (tech leads, architects) can read it without running CLI commands.
+
+**Design**:
+
+```typescript
+interface GraphAuditReport {
+  generatedAt: string;
+  entityCount: number;
+  confidenceBreakdown: {
+    extracted: number;     // edges with reason "import-resolved" | "local-call" | "lsp-resolved"
+    inferred: number;      // edges with reason "inferred" | "interface-dispatch"
+    ambiguous: number;     // edges with reason "unknown" or no reason
+  };
+  pctExtracted: number;    // extracted / total * 100
+  pctInferred: number;
+  pctAmbiguous: number;
+  godNodes: string[];      // entity IDs above god-node threshold (Phase 7.21)
+  ambiguousOnlyEntities: string[];  // entities where ALL edges are AMBIGUOUS
+  lowQualityEntities: string[];     // quality < 0.4 (Phase 7.5)
+  surpriseConnections: Array<{ from: string; to: string; reason: string }>;  // cross-community edges
+}
+
+async function generateGraphReport(state: CortexState, graph: GraphReport): Promise<string> {
+  // Compute breakdown from edge reasons
+  // Identify ambiguous-only entities (cortex lint already flags these — include in report)
+  // Identify surprise connections: cross-community edges with weight > 0.7
+  // Write GRAPH_REPORT.md to .knowledge/GRAPH_REPORT.md
+}
+```
+
+**Generated `GRAPH_REPORT.md` structure**:
+```markdown
+# Cortex Graph Report — 2026-05-23
+
+**Entities**: 214  |  **Edges**: 891
+
+## Extraction Confidence
+| Confidence | Count | % |
+|---|---|---|
+| EXTRACTED (import-resolved, local-call, lsp-resolved) | 612 | 68.7% |
+| INFERRED (interface-dispatch, inferred) | 198 | 22.2% |
+| AMBIGUOUS (unknown / no reason) | 81 | 9.1% |
+
+## ⚠ Attention Required
+- **God nodes** (3): `AuthService`, `DatabaseManager`, `EventBus`
+- **Ambiguous-only entities** (2): `LegacyAdapter`, `UnknownHelper`
+- **Low-quality entities** (<0.4): 5 entities — run `cortex audit stale`
+
+## Surprise Connections (cross-community, high-confidence)
+- `PaymentService` → `AuthService` (weight: 0.82, reason: import-resolved)
+```
+
+**Implementation**: `src/analysis/graph-report.ts`. Called at end of Phase 33.5 Stage 3 (alongside skill file generation). `cortex report` CLI verb for manual regeneration. Output at `.knowledge/GRAPH_REPORT.md` — committed to repo so teammates can read it without running Cortex.
+
+**DoD**: `GRAPH_REPORT.md` generated after bootstrap and after each `cortex sync`. Contains correct confidence breakdown, god node list, ambiguous-only entities. `cortex report` triggers manual regeneration. Tests: 10-entity graph → correct EXTRACTED/INFERRED/AMBIGUOUS counts.
 
 ---
 
@@ -6094,6 +6272,86 @@ cortex group query platform-team "AuthService"   # scoped cross-repo search
 **Implementation**: `src/groups/group-manager.ts`, `src/groups/contract-extractor.ts`. Group registry at `~/.cortex/groups/registry.json`.
 
 **DoD**: `cortex group create` + `sync` working. Cross-repo contracts extracted. `cortex impact` traverses contract edges. Tests: auth-service exports entity consumed by api-gateway → contract detected. Impact analysis crosses repo boundary.
+
+### Phase 11.5 Refinement — Language-Specific Protocol Pattern Matching (GitNexus)
+
+Phase 11.5 describes contract extraction at the interface level but doesn't specify *how* to detect HTTP/gRPC/message-queue contracts in source code. GitNexus ships separate per-language pattern sets for each protocol. Without this, `group sync` can only detect contracts declared in `.cortex/contracts.json` — it can't auto-extract them from code.
+
+**Design**: one pattern file per `(language, protocol)` pair. Each pattern is a regex applied to source lines, with a named capture group for the route/method/topic.
+
+```typescript
+interface ContractPattern {
+  language: string;       // "typescript" | "go" | "python" | "java"
+  protocol: "http" | "grpc" | "message-topic";
+  pattern: RegExp;
+  roleCapture: "provider" | "consumer";
+  extract(match: RegExpMatchArray): { method?: string; path?: string; topic?: string };
+}
+
+// Examples of language-specific HTTP patterns:
+const HTTP_PATTERNS: ContractPattern[] = [
+  // TypeScript / Express
+  { language: "typescript", protocol: "http", roleCapture: "provider",
+    pattern: /app\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/,
+    extract: m => ({ method: m[1].toUpperCase(), path: m[2] }) },
+  // TypeScript / NestJS
+  { language: "typescript", protocol: "http", roleCapture: "provider",
+    pattern: /@(Get|Post|Put|Delete|Patch)\s*\(\s*['"`]([^'"`]*)['"`]/,
+    extract: m => ({ method: m[1].toUpperCase(), path: m[2] }) },
+  // Go
+  { language: "go", protocol: "http", roleCapture: "provider",
+    pattern: /mux\.HandleFunc\s*\(\s*"([^"]+)"/,
+    extract: m => ({ path: m[1] }) },
+  // Python / FastAPI
+  { language: "python", protocol: "http", roleCapture: "provider",
+    pattern: /@app\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/,
+    extract: m => ({ method: m[1].toUpperCase(), path: m[2] }) },
+  // Java / Spring
+  { language: "java", protocol: "http", roleCapture: "provider",
+    pattern: /@(GetMapping|PostMapping|PutMapping|DeleteMapping|RequestMapping)\s*\(\s*["']([^"']*)["']/,
+    extract: m => ({ method: m[1].replace("Mapping","").toUpperCase(), path: m[2] }) },
+];
+```
+
+**Implementation**: `src/groups/extractors/http-patterns.ts`, `grpc-patterns.ts`, `topic-patterns.ts`. Language detected from file extension (reuses `isCodeFile()` + extension map from Phase 0.3 cross-language gating). `contract-extractor.ts` iterates patterns per-file and emits `Contract` records. Patterns are compiled once at startup.
+
+**DoD**: `cortex group sync` auto-extracts HTTP routes from TypeScript (Express, NestJS), Go, Python (FastAPI), and Java (Spring). Tests: each language pattern matches known route declaration, non-matching lines produce no contract.
+
+### Phase 11.5 Refinement — Contract Richness Scoring for Deduplication (GitNexus)
+
+During `group sync`, the same contract can be detected multiple times: once from auto-pattern-matching, once from a manually-declared `.cortex/contracts.json` entry, and once from a SCIP-resolved symbol reference. When duplicates collide on `(provider, consumer, importPath)`, Cortex needs to pick the highest-quality record rather than first-wins or last-wins.
+
+**Design**:
+
+```typescript
+function contractRichness(c: Contract): number {
+  let score = 0;
+  if (c.symbolUid)    score += 3;   // SCIP/LSP-resolved symbol — most precise
+  if (c.importPath)   score += 2;   // file-level import path — good
+  if (c.serviceTag)   score += 1;   // service-level tag — weaker
+  if (c.fromManifest) score += 0;   // manifest-declared only — weakest auto-source
+  return score;
+}
+
+function deduplicateContracts(contracts: Contract[]): Contract[] {
+  const key = (c: Contract) => `${c.provider}||${c.consumer}||${c.importPath}`;
+  const best = new Map<string, Contract>();
+  for (const c of contracts) {
+    const k = key(c);
+    const existing = best.get(k);
+    if (!existing || contractRichness(c) > contractRichness(existing)) {
+      best.set(k, c);
+    }
+  }
+  return [...best.values()];
+}
+```
+
+**Behavior**: When SCIP-resolved and manifest-declared contracts collide, keep SCIP-resolved (`score: 3`) over manifest-declared (`score: 0`). When two auto-extracted contracts collide (both `score: 2`), keep first-seen (stable sort). `deduplicateContracts()` is called after all extractors run, before writing `~/.cortex/groups/<name>.json`.
+
+**Implementation**: `src/groups/normalization.ts` (new file, ~40 lines). Called from `group-manager.ts` after extraction pass.
+
+**DoD**: duplicate contracts resolved to highest-richness record. Tests: SCIP contract + manifest contract for same pair → SCIP wins. Two manifest contracts for same pair → first-seen wins.
 
 ---
 
@@ -8662,6 +8920,34 @@ Embeddings are **not** used as retrieval-instead-of-reading. Cortex's index-firs
 
 - ✅ **Pros**: First-class research contribution — typed-graph + text fusion embeddings for code architecture is a genuinely understudied area. Provides the substrate for Phase 19 distillation. Local-first, no third-party dependency. Useful even standalone: `cortex similar` is a real product feature for refactoring scoping and pattern-consistency checks.
 - ❌ **Cons**: Adds a serious new dependency surface — a local encoder model (~30MB minimum) plus a training step. Mitigated by making it opt-in via `CORTEX_EMBED`. Trained fusion is per-user (embedding space differs across knowledge bases), so embeddings are not portable across Cortex installs — accepted because they are derived data and `modelHash` makes the boundary explicit.
+
+### Phase 18 Refinement — `EMBEDDING_TEXT_VERSION` for Template-Change Invalidation (GitNexus)
+
+Phase 18 already tracks `modelHash` per vector so mixed-projection vectors are detectable. A complementary gap: when the *embedding text template* changes (e.g., we add entity `fileKind` to the text fed to the encoder), all existing vectors are stale — but there's no mechanism to detect this. GitNexus stamps a `EMBEDDING_TEXT_VERSION` string on each vector so a template change auto-invalidates.
+
+```typescript
+// src/embeddings/encoder.ts
+const EMBEDDING_TEXT_VERSION = "v2";  // bump manually when generateEmbeddingText() changes
+
+interface EmbeddingRecord {
+  vector: number[];
+  dim: number;
+  modelHash: string;
+  textVersion: string;   // new field — e.g. "v2"
+  updatedAt: string;
+}
+
+function isEmbeddingStale(record: EmbeddingRecord): boolean {
+  return record.modelHash !== currentModelHash() ||
+         record.textVersion !== EMBEDDING_TEXT_VERSION;
+}
+```
+
+**Behavior**: `cortex embed` checks `isEmbeddingStale()` per entity before deciding whether to re-encode. If `textVersion` mismatches, the entity is re-encoded even if its content hasn't changed. `cortex embed --rebuild` bypasses the check entirely and re-encodes all.
+
+**Implementation**: Add `textVersion` to `EmbeddingRecord` in `src/embeddings/encoder.ts`. Add `EMBEDDING_TEXT_VERSION` constant — bump the string when `generateEmbeddingText()` is modified. One-line addition to `isEmbeddingStale()`.
+
+**DoD**: Changing `EMBEDDING_TEXT_VERSION` from `"v1"` to `"v2"` causes all entities with `textVersion: "v1"` to re-encode on next `cortex embed`. Entities already on `"v2"` are skipped. Tests: version mismatch → stale; version match + model match → not stale.
 
 ---
 
@@ -16434,6 +16720,101 @@ This pipeline is **strictly additive**. The existing components it touches:
 | `.knowledge/state.json` | **read + additive write** | `meta.lastCommit` field added, no existing fields removed |
 
 No existing code paths are deleted. The pipeline can be feature-flagged with `CORTEX_TWO_STAGE=1` during rollout so the old single-call path remains the default until Phase D is validated in CI.
+
+### Phase 33.5 Refinement — Shadow Candidate Resolution on File Rename (GitNexus)
+
+Phase 3.3 handles entity ID stability when an entity is *renamed* (emits a `RENAME` evolution edge). Phase 33.5 Stage 0 detects which files changed via git. Neither handles import *resolution path* staleness when a file is renamed.
+
+**Problem**: When `src/auth.js` is renamed to `src/auth.ts`, existing CALLS edges from other files that imported `"./auth"` still reference the old entity ID (`auth.js`). The import `"./auth"` now resolves to `auth.ts` — but the Stage 1 incremental pass doesn't know to invalidate edges that came from files *not* in the changed-file list. The stale edges persist silently.
+
+```typescript
+// src/core/shadow-candidates.ts
+
+// File extensions that Node/TypeScript resolution considers for "./auth" with no extension
+const SHADOW_EXTS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", "/index.ts", "/index.js"];
+
+function shadowCandidatesFor(addedFile: string): string[] {
+  const base = addedFile.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, "");
+  return SHADOW_EXTS
+    .map(ext => base + ext)
+    .filter(candidate => candidate !== addedFile);
+}
+
+async function invalidateShadowEdges(
+  addedFiles: string[],
+  state: CortexState
+): Promise<string[]> {
+  const invalidatedEntityIds: string[] = [];
+  for (const added of addedFiles) {
+    const shadows = shadowCandidatesFor(added);
+    for (const shadow of shadows) {
+      // Find entities whose sourceFile matches a shadow candidate
+      const staleEntities = Object.values(state.entities)
+        .filter(e => e.sourceFile && path.normalize(e.sourceFile) === path.normalize(shadow));
+      for (const entity of staleEntities) {
+        // Mark all CALLS/IMPORTS edges pointing TO this entity as needing re-resolution
+        invalidatedEntityIds.push(entity.id);
+      }
+    }
+  }
+  return invalidatedEntityIds;
+}
+```
+
+**Integration**: Called at the start of Stage 1 for files in the `added` set (git status `A`). Entities returned by `invalidateShadowEdges()` are added to the Stage 1 work queue even if their own source file hasn't changed, forcing re-resolution of their inbound import edges.
+
+**Implementation**: `src/core/shadow-candidates.ts` (~60 lines). Called from Stage 1 worker setup in `src/core/extractor.ts`. Windows paths handled via `path.normalize` before comparison.
+
+**DoD**: Rename `auth.js` → `auth.ts` → all entities that imported `"./auth"` have their CALLS edges re-resolved to the new entity. No stale edges remain pointing to the deleted entity ID. Tests: add `auth.ts` → shadow candidates for `auth.js` and `auth/index.js` are returned; existing importer entities added to Stage 1 queue.
+
+### Phase 33.5 Refinement — Semantic Fragment Validation with Hard Limits (Graphify)
+
+Phase 33.5 Stage 3 validates entities against constraint checks but has no hard limits on fragment size. A runaway LLM synthesis that produces 50,000 nodes or 200,000 edges would pass validation and flood `state.json`, causing memory exhaustion on next load.
+
+**Design**:
+
+```typescript
+// src/core/fragment-validator.ts
+const FRAGMENT_LIMITS = {
+  MAX_NODES_PER_SYNTHESIS:  10_000,
+  MAX_EDGES_PER_SYNTHESIS: 100_000,
+  MAX_ID_LENGTH:              256,
+  MAX_DESCRIPTION_LENGTH:   5_000,
+  MAX_ENTITY_NAME_LENGTH:     200,
+};
+
+interface FragmentValidationResult {
+  valid: boolean;
+  violations: string[];
+}
+
+function validateSynthesisFragment(entities: EntityRecord[], edges: GraphEdge[]): FragmentValidationResult {
+  const violations: string[] = [];
+
+  if (entities.length > FRAGMENT_LIMITS.MAX_NODES_PER_SYNTHESIS)
+    violations.push(`Entity count ${entities.length} exceeds MAX_NODES_PER_SYNTHESIS=${FRAGMENT_LIMITS.MAX_NODES_PER_SYNTHESIS}`);
+
+  if (edges.length > FRAGMENT_LIMITS.MAX_EDGES_PER_SYNTHESIS)
+    violations.push(`Edge count ${edges.length} exceeds MAX_EDGES_PER_SYNTHESIS=${FRAGMENT_LIMITS.MAX_EDGES_PER_SYNTHESIS}`);
+
+  for (const entity of entities) {
+    if (entity.id.length > FRAGMENT_LIMITS.MAX_ID_LENGTH)
+      violations.push(`Entity ID too long: "${entity.id.slice(0, 60)}..." (${entity.id.length} chars)`);
+    if (entity.name && entity.name.length > FRAGMENT_LIMITS.MAX_ENTITY_NAME_LENGTH)
+      violations.push(`Entity name too long: "${entity.name.slice(0, 60)}..."`);
+  }
+
+  return { valid: violations.length === 0, violations };
+}
+```
+
+**Integration**: Called in Stage 3 *before* `KnowledgeManager.saveSynthesis()`. If `valid === false`, the synthesis is rejected, violations are logged to `log.jsonl` as a `SYNTHESIS_REJECTED` event, and the synthesis chunk is skipped (not written). Does not abort the whole pipeline — other chunks continue.
+
+**Limits are configurable** via `.cortex/config.json` overrides for teams with legitimately large graphs. Defaults are designed to catch runaway LLM output, not typical synthesis.
+
+**Implementation**: `src/core/fragment-validator.ts` (~50 lines). Called from Stage 3 loop in `src/core/pipeline.ts`.
+
+**DoD**: Synthesis producing >10k entities rejected with `SYNTHESIS_REJECTED` log event. Normal synthesis (<500 entities) passes. Limits configurable via `.cortex/config.json`. Tests: fragment at limit → valid; fragment over limit → rejected with violation message.
 
 ---
 
