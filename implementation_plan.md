@@ -1389,6 +1389,36 @@ They **admit when their tool doesn't help** (6 files → ~1× reduction). Each b
 - `worked/` folder is committed to the Cortex repo.
 - `worked/small-project/delta.md` shows "Cortex adds ~800 tokens overhead on a 5-file project."
 
+#### Phase 0.11 Refinement — Real Usage Analytics via Claude Code Session Logs (closes flaws #6 and #7)
+
+The `worked/` corpus provides honest *static* benchmarks, but doesn't tell the user their *actual* spend. A more direct approach: read Claude Code's actual session logs from `~/.claude/projects/*/*.jsonl` to get real per-model, per-project, per-day token usage and cache hit rates.
+
+Implement as a `cortex usage` CLI command (Phase 29 FinOps building block):
+
+```typescript
+// reads ~/.claude/projects/*/*.jsonl (actual Claude Code session logs)
+const projectsDir = path.join(os.homedir(), ".claude", "projects");
+const files = glob.sync("*/*.jsonl", { cwd: projectsDir, absolute: true });
+for (const file of files) {
+  for (const line of readJsonlLines(file)) {
+    const usage = line.message?.usage;      // real token counts
+    const model = line.message?.model;
+    const cwd   = line.cwd;                // per-project breakdown
+  }
+}
+```
+
+Key output:
+- Total input/output tokens by model
+- Cache hit % (healthy = >60%; below this is a sign of poor prompt-caching setup)
+- Estimated API cost at list prices (note in output: subscription is flat — this is API-equivalent cost)
+- Per-project breakdown
+- Per-day trend
+
+**Note**: `~/.claude/projects/` JSONL schema is undocumented and may change across Claude Code versions. Pin to a schema-version check and emit a warning if fields are absent rather than crashing.
+
+**Source**: nexus-os `scratch/usage-limit-reducer/scripts/usage-report.py:82` — `collect()`
+
 ---
 
 ### Phase 0.12 — `cortex repair`: Backup / Restore & Git-Friendly Output
@@ -5133,6 +5163,37 @@ Implement a lightweight read-only WebSocket endpoint at `ws://127.0.0.1:<port>/w
 **Pros & Cons**
 - ✅ **Pros**: High-fidelity, real-time feedback for developers during coding sessions. Wow factor for local graph demo.
 - ❌ **Cons**: Running a WebSocket loop uses slight CPU/memory overhead in the daemon background.
+
+#### Phase 8.1 Refinement — Safe WebSocket ConnectionManager with Stale-Connection Pruning
+
+When implementing the WebSocket broadcast pool, use the list-copy + stale-prune pattern to prevent `RuntimeError` on list mutation during async iteration:
+
+```typescript
+async broadcast(message: GraphEvent): Promise<void> {
+  for (const ws of [...this.activeConnections]) {  // iterate a COPY
+    try {
+      ws.send(JSON.stringify(message));
+    } catch {
+      this.activeConnections.delete(ws);  // prune stale on send failure
+    }
+  }
+}
+```
+
+This prevents crashes when a client disconnects mid-broadcast. The `[...set]` copy is critical — mutating `activeConnections` while iterating it causes dropped events or runtime errors.
+
+**Source**: nexus-os `api/main.py:32` — `ConnectionManager.broadcast()`
+
+#### Phase 8.1 Refinement — Dual-Endpoint WebSocket Design (Fast Lane + Event Stream)
+
+Consider two separate WebSocket endpoints to prevent high-frequency synthesis streaming from starving graph-update events:
+
+- `/ws/graph` — event-stream for graph state changes (`node_added`, `node_updated`, `edge_deleted`, etc.). Low frequency, goes through the full ingestion pipeline. This is the primary Phase 8.1 endpoint.
+- `/ws/stream` — fast lane for high-frequency streaming synthesis output (live token streaming from LLM calls). Bypasses graph-event bus overhead, direct broadcast to connected clients.
+
+The separation keeps the graph-update path responsive even when a long synthesis is in progress. Only implement `/ws/stream` if Phase 13.14's server-side synthesis ships and adds a live-output UI.
+
+**Source**: nexus-os `api/main.py:170` — `ghost_bridge_socket()` vs `websocket_endpoint()`
 
 ---
 
@@ -14891,6 +14952,52 @@ This routes to the Phase 23 review queue, surfaces in Phase 33.2 mobile PWA noti
 
 - ✅ **Pros**: **Solves a real coordination gap** in the multi-agent architecture — agents can now have explicit architectural conversations, not just write into shared memory and hope. **Memory-mediated, not ephemeral**: every conversation about why-X-was-decided becomes permanent project memory, queryable forever — the highest-value architectural artifact possible. Entity reference bidirectionality means architectural decisions are linked from both directions (`[[AuthFacade]]` entity ↔ "9 messages discussing this"). Reuses existing substrate infrastructure (partitions, audit, federation grants) — no new persistence layer. Complements rather than competes with Nexus's bus: the two products serve different coordination needs and bundle customers get both.
 - ❌ **Cons**: Messaging volume could explode on chatty agent meshes; mitigated by rate limiting, archival, and Phase 29 FinOps tracking. Threading + reference indexing add query surface that needs careful indexing for performance at scale; mitigated by treating discussions index as a derived projection (rebuildable, not load-bearing). Cross-tenant messaging has the same security concerns as Phase 25.1 federation generally — same mitigation (bilateral grants, audit, mTLS).
+
+#### Phase 43.1 Refinement — Correlation ID Threading for Tool Call Audit Trail (closes flaw #47)
+
+When implementing the messaging substrate, adopt `correlation_id` as the primary mechanism for audit trail on mutating tool calls. Every `save_concept`, `configure_brevity`, `compress`, and `send_agent_message` call should carry a `correlation_id` derived from the originating MCP request's `_meta.requestId`.
+
+Extend the `experience.jsonl` audit entry schema (Stage 4 fix) to:
+
+```typescript
+interface AuditEntry {
+  event_id: string;          // UUID, unique per event
+  correlation_id?: string;   // links response back to originating MCP request
+  source: string;            // "@Human" | "@Claude" | "@Cortex"
+  target?: string;           // target agent if routed
+  tool: string;              // e.g. "save_concept"
+  args: Record<string, unknown>;
+  caller: string;            // MCP session ID or CLI invocation context
+  timestamp: string;
+}
+```
+
+This closes flaw #47 (mutating tools have no audit trail) by making every write traceable back to the originating request across async hops.
+
+**Counter-case**: Cortex's sync MCP call model has no inherent async chains to correlate — the overhead may exceed the benefit until multi-agent Phase 43 lands. Implement as an optional field first.
+
+**Source**: nexus-os `api/schemas.py:21` — `EventEnvelope.correlation_id`
+
+#### Phase 43.1 Refinement — Session-Scoped JSONL Event Sourcing (closes flaw #14)
+
+`log_query` is broken because `log.jsonl` entries use a schema the reader doesn't match (flaw #14). Fix: adopt session-scoped log files with typed event schemas so the reader is always written for the exact schema the writer produces.
+
+Replace the single `log.jsonl` with per-session files:
+
+```typescript
+// src/knowledge/eventLog.ts
+function persistEvent(event: AuditEntry): void {
+  const filename = `events_${event.correlation_id ?? event.event_id.slice(0, 8)}.jsonl`;
+  const filepath = path.join(persistenceDir, filename);
+  fs.appendFileSync(filepath, JSON.stringify(event) + "\n", "utf-8");
+}
+```
+
+Benefits: no schema mismatch possible (reader and writer share a type), session isolation means a corrupt entry in one session doesn't break queries for another, replay and audit of individual sessions is trivial.
+
+**Counter-case**: Cortex already has `experience.jsonl` and `log.jsonl` — adding session-scoped files increases storage fragmentation (flaw #55). Mitigate by making session-scoped files the *replacement* for `log.jsonl`, not an addition.
+
+**Source**: nexus-os `api/bus.py:52` — `_persist_event()`
 
 ---
 

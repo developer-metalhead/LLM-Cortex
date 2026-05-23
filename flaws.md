@@ -4,7 +4,7 @@ Hands-on audit. Every flaw below was reproduced live against this repo by exerci
 
 **Repo state at time of audit:** branch `phase13.8`, `lastSyncCommit=7d23277133db9e58c15d200743a1ecef3e148f8f`, 15 active entities, 7 concepts.
 
-**Total flaws catalogued: 115** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
+**Total flaws catalogued: 116** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
 **Total phases in implementation_plan.md: 189** — far more than any team can ship coherently.
 
 ---
@@ -1297,3 +1297,14 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 | Dev hygiene: `npm audit` CI gate, `socket.dev` supply-chain, `eslint-plugin-security`, `semgrep`, `fast-check` property tests, `husky` pre-commit, `bun --compile` standalone binaries | `bandit` + `pip-audit` + `hypothesis` + `Nuitka` | developer-trust gap | 0.17 |
 
 **Implementation target**: Phase 0 in `implementation_plan.md` — ships before any paying customer touches production.
+
+---
+
+## 🔒 NEXUS-OS AUDIT — Security Lesson
+
+### 116. CORS wildcard `allow_origins=["*"]` in any HTTP server that processes code context
+**Source-of-lesson**: nexus-os `api/main.py:25` — `app.add_middleware(CORSMiddleware, allow_origins=["*"])`
+**Pattern**: Development convenience that becomes a SSRF/data-exfiltration enabler — any origin can make cross-site requests against the local API, potentially reading code context from a malicious page open in the same browser.
+**Relevance to Cortex**: Cortex's Phase 22 central server (`cortex serve --multi-tenant`) must use an explicit origin allowlist (`allow_origins=["http://localhost:*", "https://your-domain.com"]`), not `["*"]`. Even the local single-user `cortex serve` should restrict to `localhost` origins only.
+**Severity**: medium (low risk while local-only; high risk the moment Phase 22 ships without fixing this)
+**Fix**: Phase 22 implementation must include explicit `CORTEX_ALLOWED_ORIGINS` env var (comma-separated). Default: `["http://localhost:*"]`. No wildcard in any non-dev build.
