@@ -153,6 +153,10 @@ Trying to fix all 80 flaws in one PR would be unreviewable and would break the 2
 **Decisions required:**
 - Savings footer: delete entirely vs. rewrite with honest math?
 - Phantom entities: auto-delete on detection vs. flag-only?
+### 🧬 CodeGraph Plan
+- **Security & Path Validation**: We retain the plan's `security.ts` implementation for strict MCP path boundaries (CodeGraph lacks this).
+- **Referential Integrity**: Implement the "Grounding Gate" — `validate.ts` enforces that Cortex's LLM cannot save an entity to `.knowledge/` unless CodeGraph's SQLite DB confirms the source file physically exists.
+
 **Outcome:** Cortex flips from "actively harmful + unsafe" to "narrowly useful but limited."
 
 ---
@@ -190,6 +194,10 @@ Trying to fix all 80 flaws in one PR would be unreviewable and would break the 2
 - Add `coverage_report()` returning `{filesSynthesized, filesUnsynthesized, lastSyncDiff}` so every "not found" can be qualified
 - `impact_analysis` distinguishes "entity exists, no dependents" from "entity not in KB"
 - `build_context_pack` errors on invalid `scope` instead of silently dumping everything
+
+### 🧬 CodeGraph Plan
+- **AST Skeleton Extractor**: Adopt **CodeGraph's Tree-sitter** engine (@colbymchenry/codegraph). It inherently solves the TS broken skeleton flaw deterministically.
+- **Search & Fuzzy Matching**: Adopt **CodeGraph's SQLite FTS5** search instead of the proposed `fuse.js` in-memory matching. It is infinitely more scalable for `cortex_find`.
 
 **Outcome:** Cortex stops being a friction tax on cold paths. Round-trip math becomes competitive with native Read+Grep even on freshly-changed code.
 
