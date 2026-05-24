@@ -263,6 +263,24 @@ Write `steal-integration-<target>-<YYYY-MM-DD>.md` to cwd. Contains **copy-paste
 
 This artifact bridges the gap between "found this" and "added this." User can review, edit, then paste.
 
+### Step 7.6 — Annotate flaws.md with "Addressed by" lines (mandatory)
+
+For **every E item** and **every C item whose `closes_flaw` field is set**, append a ready-to-apply `**Addressed by**:` line directly into that flaw's entry in `flaws.md`:
+
+```
+**Addressed by**: Phase X.Y Refinement — <name> (<target> audit, score: N)
+```
+
+Rules for this step:
+1. Locate the flaw in `flaws.md` by Grep-ing for `### <num>.` (e.g. `### 83.`).
+2. Read surrounding context to confirm the flaw number matches.
+3. Append the `**Addressed by**:` line immediately before the flaw's closing `---` separator (or at the end of the flaw block if no separator exists).
+4. If the flaw already has an `**Addressed by**:` line, append to it: `+ Phase X.Y Refinement — <name>` (do not duplicate if the same phase is already cited).
+5. For partial closures (e.g., "partially closes Flaw #X"), use `**Partially addressed by**:` instead.
+6. Also include these same lines in the integration scratch under a new `## To update in flaws.md` section — so there is always a record of what was written even if the file write fails.
+
+This step makes the flaw→implementation link bidirectional: `implementation_plan.md` says "closes Flaw #X" AND `flaws.md` says "Addressed by Phase Y".
+
 ### Step 8 — Audit the auditor (`--quick` skips)
 
 Before publishing, ask:
@@ -285,7 +303,7 @@ Either fix the report, or add an **Audit limitations** section listing what you 
 6. No hallucinated features.
 7. Theme analysis (Step 5) is mandatory unless `--quick`.
 8. Re-classify aggressively; bucket assignment is provisional until verified.
-9. Never modify `implementation_plan.md` or `flaws.md` from inside this skill — emit Step 7.5's scratch file instead.
+9. Never modify `implementation_plan.md` from inside this skill — emit Step 7.5's scratch file instead. **Exception**: Step 7.6 MUST directly annotate `flaws.md` with `**Addressed by**:` lines; also include those same lines in the scratch file as a backup record.
 10. Cortex principles are a hard filter — violators go to D, not C.
 11. Bucket E is the gold; verify most rigorously.
 12. Mark low-confidence items with `⚠ low-confidence`.
@@ -304,6 +322,7 @@ Either fix the report, or add an **Audit limitations** section listing what you 
 25. Use plain Read/Grep/Glob/Agent only — no Cortex MCP on external targets (scope mismatch).
 26. Step 7.5's integration scratch is the bridge from finding to action — emit it every audit.
 27. Cross-audit ledger boost applies only when feature *name* matches in 3+ audits — not file path. Avoids treating the same library imported in three repos as three independent findings.
+28. Step 7.6 is mandatory for every E item and every C item with `closes_flaw` set — the flaw→implementation link must be bidirectional. Missing an "Addressed by" annotation is treated the same as missing a spot-check.
 
 ---
 
@@ -311,7 +330,7 @@ Either fix the report, or add an **Audit limitations** section listing what you 
 
 - **Final report** is the only mandatory chat deliverable.
 - **Three inventory artifacts** written to cwd: `steal-inventory-<target>-<date>.md`, `steal-inventory-<target>-<date>.json`, `steal-inventory-<target>-files.json` (mtime cache).
-- **Integration scratch** written to cwd: `steal-integration-<target>-<date>.md`.
+- **Integration scratch** written to cwd: `steal-integration-<target>-<date>.md` — includes `## To update in flaws.md` section with all `**Addressed by**:` lines (backup record of Step 7.6 writes).
 - **Checkpoint** maintained at `steal-checkpoint-<target>.json` for `--resume` support.
 - **Cross-audit ledger** updated at `~/.cortex/steal-ledger.json`.
 - **Progress streaming** during long Step 2c scans.

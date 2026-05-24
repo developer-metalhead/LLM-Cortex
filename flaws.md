@@ -254,6 +254,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 **Repro:** `impact_analysis({entity: "NonExistent"})`.
 **Result:** `"No dependents found for "NonExistent". Safe to refactor freely."`
 **Impact:** a typo in the entity name produces a misleading green light. Should respond `entity not found in knowledge base — this is a coverage gap, not an empty blast radius`.
+**Addressed by**: Phase 9 Refinement — `resolve_seed()` Fuzzy Node Lookup (gitnexus audit, score: 30)
 
 ### 3. Phantom entities pollute the index with no detection mechanism
 **Repro:** `cortex_find("cortex")` lists `AuthService` and concept `JWTStrategy` (referencing `[[Middleware]]`). `Grep "AuthService|JWTStrategy" src/` → **no matches**.
@@ -263,6 +264,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 ### 4. `save_concept` has zero validation; no deletion API
 **Repro:** `save_concept({concept: {name: "FLAW_TEST_CONCEPT", description: "Inserting a junk concept"}})` → `"Concept 'FLAW_TEST_CONCEPT' saved to knowledge base."` Subsequent `cortex_find("FLAW_TEST_CONCEPT")` confirms it persisted.
 **Impact:** any agent (or prompt-injected text in a diff) can pollute the KB indefinitely. There is no `delete_concept` / `delete_entity` MCP tool — I had to surgically edit `state.json` to undo my test. Concept names aren't validated against a regex, source file existence isn't required, no provenance is recorded.
+**Addressed by**: Phase 0.2 — `validate.ts` Schema Gating & Referential Integrity
 
 ### 5. `lint` reports cycles as ERROR; `audit_quality` ignores them
 **Repro:** `lint` returned 3 `ERROR cycle` findings (`CortexDaemon → CortexWatcher → CortexDaemon` etc.). `audit_quality` ran immediately after and reported all 15 entities at quality `0.94`, `✅ All entities meet the quality gate (0.50)`.
@@ -276,15 +278,18 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 **Repro:** every `read_entity` / `read_concept` call returns a footer claiming `~147.9k tokens` saved vs `scanning 58 source files`.
 **Reality check:** `get_savings` ledger total is **11,503 tokens** for the entire workspace lifetime — the real measurement, not the per-call boast.
 **Impact:** the per-call number assumes a strawman baseline (reading all 58 files). Nobody does that. The mismatch (~13× exaggeration) erodes trust in the actual ledger.
+**Addressed by**: Phase 0.11 — Honest Benchmarks (`worked/` Corpus) + Phase 0.11 Refinement — Real Usage Analytics via Claude Code Session Logs
 
 ### 7. Savings ledger contradicts itself on USD value
 **Repro:** `get_savings` shows `AST Skeleton Cache: 4 entries, 6,943 tokens, $0.0000`.
 **Impact:** either tokens are wrong or USD is wrong. The pricing logic doesn't apply the per-provider rate to AST-cache savings, even though those tokens were billed.
+**Addressed by**: Phase 0.11 Refinement — Real Usage Analytics via Claude Code Session Logs
 
 ### 8. `build_context_pack` silently ignores invalid `scope`
 **Repro:** `build_context_pack({scope: "SoulEngine", budget: 2000})`. SoulEngine doesn't exist in the index.
 **Result:** the tool returned the **entire knowledge base** (1738 tokens, 4 entities elided), not an error.
 **Impact:** a scope typo produces a full dump masquerading as a focused slice. Should error or fall back to fuzzy match with a warning.
+**Addressed by**: Phase 0.2 — `validate.ts` `validateEntityExists()` with fuzzy suggestions on unknown scope
 
 ### 9. `compress` produces 0% reduction on knowledge files
 **Repro:** `compress({path: ".knowledge/entities/CortexMCPServer.md"})` → `Saved 0 tokens (0.0% reduction)`.
@@ -293,6 +298,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 ### 10. The "58 source files" baseline is frozen at last ingest
 **Repro:** read any entity. Footer cites `58 source files`. `Glob "src/**/*.ts"` shows the repo has substantially more files than 58 now (phase 13.8 added several).
 **Impact:** the savings math is anchored to a stale file count. Every claim downstream of it (the 147.9k figure) inherits the staleness.
+**Addressed by**: Phase 0.4 — Graph-as-Cache: `state.json:indexedFiles` updated on every `cortex ingest` + `[ORPHAN]` detection for deleted files
 
 ---
 
@@ -319,6 +325,7 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 14. `evolution_entity` and `log_query` return empty for tracked entities
 **Repro:** `evolution_entity({entity: "CortexMCPServer"})` → `[]`. `log_query()` (no filters) → `[]`. `log_query({entity: "CortexMCPServer"})` → `[]`.
 **Impact:** the architectural log either doesn't exist or is never written. Tools are wired into the MCP surface but their data source is silently absent.
+**Addressed by**: Phase 43.1 Refinement — Session-Scoped JSONL Event Sourcing
 
 ### 15. `refresh_stale_entities` collapses "not found" and "not stale"
 **Repro:** `refresh_stale_entities({names: ["NonExistentEntity", "AnotherFake"]})` → `"⚠️ Skipped 2 (not stale or not found): NonExistentEntity, AnotherFake"`.
@@ -335,10 +342,12 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 18. `cortex_find` returns "No matches" instead of fuzzy suggestions
 **Repro:** `cortex_find("SoulEngine")` → `"No matches found."` — but `before_change("SoulEngine")` correctly responds with `Available entities: [list]`.
 **Impact:** the fuzzy/Levenshtein/RRF ranker promised by Phase 13.5 either isn't wired into `find` or is too strict. The "closest match suggestion" UX exists in one tool, missing in the obvious entry point.
+**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 0.9 Refinement — RRF K=60 Hybrid Search (score: 32)
 
 ### 19. `cortex_soul_status` shows `"Soul Dirty: Yes"` immediately on cold start
 **Repro:** `cortex_soul_status` on a fresh server → `Memory Nodes: 0, Memory Edges: 0, Ledger Entries: 0, Profile Loaded: No, Soul Dirty: Yes`.
 **Impact:** the dirty flag is true without an actual mutation. Combined with the audit finding that nothing flushes on SIGINT/SIGTERM, this means the dirty bit lies in both directions.
+**Addressed by**: Phase 0.5 — OS-Native File Locking (`fcntl` / Named Mutex)
 
 ### 20. Brevity stats footer only appears when brevity ≠ `off`
 **Repro:** default brevity → no `📉 Cortex Brevity Stats` footer ever appears in any tool response. `configure_brevity({level: "ultra"})` → footer appears on next call.
@@ -415,6 +424,7 @@ These flaws weren't found by exercising every tool — they were found by trying
 **Repro:** `cortex_find("experience ledger")` on Task A.
 **Result:** the only match was `Native IDE Workflows` because its description happens to contain the word "experience." The actual `ExperienceManager` class was not surfaced (it's not ingested). No fuzzy/semantic ranking — the obvious-but-irrelevant string match wins.
 **Impact:** false positives crowd out true negatives. An agent following the match would dig into the wrong entity.
+**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 13.6.1 Refinement — MMR Diversity Re-ranking + Phase 0.9 Refinement — RRF K=60 Hybrid Search
 
 ### 27. `source` skeleton mode strips the public API while keeping irrelevant locals
 **Repro:** `source({filePath: "src/knowledge/soul.ts"})` (cached, second read) on Task B.
@@ -428,10 +438,12 @@ const stat = await fs.stat(lockPath);  ← random local from inside acquireLock(
 const envLens = process.env.CORTEX_LENS;  ← random local from inside detectActiveLens()
 ```
 **Impact:** the skeleton extractor leaks **method body locals** while hiding **class method signatures** and **type members**. This is the inverse of what's useful. For the most common re-read use case ("show me the public API again"), skeleton mode is worse than useless — it forces a second `mode='full'` round-trip (cost: ~12k tokens for soul.ts).
+**Addressed by**: Phase 0.13 Refinement — Container Node Structural Outline (codegraph audit)
 
 ### 28. CLAUDE.md forbids grep, but Cortex offers no content-search replacement
 **Repro:** I knew the experience ledger code lived *somewhere* in `src/`. `cortex_find` couldn't find it (not indexed). CLAUDE.md prohibits `grep`. The only escape was `Glob` (filename match), which only worked because the file was helpfully named `experience.ts`.
 **Impact:** if a symbol's filename doesn't telegraph its purpose (e.g. `manager.ts`, `core.ts`), the agent is stuck. There's no content-search MCP tool — no `cortex_search_source(pattern, glob)`. The grep ban only works if Cortex offers a real substitute; it doesn't.
+**Addressed by**: Phase 0.9 — IDF-Weighted Content Search (Replace Grep Ban)
 
 ### 29. `before_change` on a newly-added entity gives no source fallback
 **Repro:** `before_change({entity: "SoulEngine"})` on Task B.
@@ -459,6 +471,7 @@ const envLens = process.env.CORTEX_LENS;  ← random local from inside detectAct
 ### 34. `cortex_find` can't filter by file path or directory
 **Repro:** "find anything in `src/mcp/*`" → no way to express this. The `type` filter only segments entity/concept/parent.
 **Impact:** when triaging a directory ("what does Cortex know about the MCP module?"), the only path is `cortex_find` on guessed keywords + reading the full index.
+**Addressed by**: Phase 13 Refinement — Adaptive Output Budgeting by Project Size (codegraph audit, path filtering)
 
 ### 35. No reverse lookup from file path → entity
 **Repro:** I'm editing `src/cli/soul.ts`. Question: is this file tracked as an entity? There's no MCP tool to ask. I have to read the entire knowledge index and visually scan source-citation lines for `src/cli/soul.ts`.
@@ -476,6 +489,7 @@ const envLens = process.env.CORTEX_LENS;  ← random local from inside detectAct
 4. `source` full — finally usable (1 round trip needed)
 
 Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~equal token cost. Cortex cost me **4x the latency** on a phase-13.8 entity because the index doesn't know about it, the skeleton extractor is broken, and the fallback chain has no escape valve.
+**Addressed by**: Phase 0.11 Refinement — Token Budget Pre-Flight Warning (aider audit, score: 36)
 
 ---
 
@@ -496,14 +510,17 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 41. Tool descriptions are written to "MUST" agents into behavior, inflating context
 **Repro:** `cortex_find` tool description: *"Use this INSTEAD of grep or read_knowledge_index when..."*. `read_entity` description: 200 tokens of pedagogy. `ingest` description embeds workflow instructions.
 **Impact:** the descriptions are LLM-targeted prose, not API documentation. Across the surface area they probably add ~5k tokens of context pressure to every session before the agent has done any work. Tool descriptions should describe behavior, not lobby for it.
+**Addressed by**: Phase 13 Refinement — tool description coercion fix
 
 ### 42. Phantom-entity index inversion: KB more confident about hallucinations than reality
 **Repro:** `AuthService` (phantom) gets quality `0.94` with `evidence 1.00`. `SoulEngine` (real, unindexed) returns `not found`.
 **Impact:** an agent following Cortex's confidence signals would prioritize the phantom over the real entity. Quality scoring rewards presence-in-state-json, not presence-in-codebase.
+**Addressed by**: Phase 0.2 — `validate.ts` phantom-entity detection
 
 ### 43. No coverage transparency
 **Repro:** at no point did any tool tell me "synthesis covers N of M source files." `get_cortex_status` returned `lastSyncCommit` but no file-coverage diff.
 **Impact:** I couldn't tell whether a "not found" was a coverage gap or a true negative until I manually `git diff`-ed against `lastSyncCommit`. The tool that *should* surface this (`audit`) reports `staleCount: 0` even when 15 new files are unsynthesized.
+**Partially addressed by**: Phase 7.5 Refinement — Edge Confidence Breakdown per Community (score: 27)
 
 ### 44. `compress` modifies files in place with no dry-run
 **Repro:** `compress({path: ".knowledge"})` would in-place edit every entity/concept markdown file. No `--dry-run`, no preview, no backup.
@@ -520,6 +537,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 47. Mutating tools have no audit trail
 **Repro:** `save_concept`, `configure_brevity`, `configure_safeguards`, `compress` all mutate state. None record who called them, when, or what changed.
 **Impact:** I polluted the KB with `FLAW_TEST_CONCEPT` and only know I did so because *I* remember. An agent making the same mistake mid-session has no way to discover it. Should append every mutation to `experience.jsonl` (which already exists for exactly this purpose).
+**Addressed by**: Phase 43.1 Refinement — Correlation ID Threading for Tool Call Audit Trail (closes flaw #47)
 
 ### 48. `set_project_root` can silently swap state mid-session
 **Repro:** the MCP server accepts a `set_project_root` call that re-points the entire knowledge manager to a different directory. Per the earlier server.ts audit, this replaces `this.soul` without flushing pending mutations.
@@ -550,6 +568,7 @@ source({filePath: "/tmp/test-cortex-secret.env"} via Windows abs path) → retur
 **Attack surface:** combined with prompt injection in a code diff, an attacker can exfiltrate `~/.ssh/id_rsa`, `~/.aws/credentials`, `~/.npmrc`, password manager exports, browser cookie databases, anything readable by the user running the MCP server. The agent will obediently `source` whatever the injected prompt names.
 **Required fix:** validate `path.resolve(filePath)` is within `path.resolve(projectRoot)` (and not a symlink escape); reject otherwise. Same fix needed for `cortex_soul_import` / `cortex_soul_export` (already flagged in server.ts audit).
 **Severity:** this is the single most serious flaw in the entire inventory. Everything else is performance or correctness. This is **data exfiltration**.
+**Addressed by**: Phase 0.1 Refinement — `assertSafePath` Path Traversal Defense (closes Flaw #51 + #74, score: 75)
 
 ### 52. `log_query()` returns `[]` while `log.jsonl` contains 12 real entries
 **Repro:**
@@ -621,10 +640,12 @@ This entry was written when I called `source` on `soul.ts` and got the broken sk
 ### 63. State.json `version` field exists but is never checked
 **Repro:** `state.json` has top-level `version` key. No tool reports it; no migration path appears to depend on it visibly. Old log entries have `migrated: true` flags suggesting a one-time migration happened.
 **Impact:** schema versioning is silent. If a future version of Cortex changes the schema and old `state.json` files don't get migrated, breakage will be silent (entities just vanish).
+**Addressed by**: Phase 3.3 Refinement — Schema Version Guard for Incremental State (closes Flaw #63, score: 45)
 
 ### 64. `compress` accepts absolute paths and would mutate them too
 **Repro (not actually executed for safety):** `compress` description: `path: "The repo-relative path to the file or directory"`. Same loose validation as `source` based on the description pattern. An absolute path probably gets honored and modifies the file **in place**.
 **Impact:** combined with prompt injection, `compress({path: "C:/Users/me/Documents/important.md"})` could corrupt files outside the project. I deliberately didn't run this — but the pattern across all Cortex tools (no path validation) suggests it's reachable.
+**Addressed by**: Phase 0.1 — `validatePathWithinRoot(filePath, projectRoot)` (closes #51 structurally) + `writeSessionMarkerSafe()` (symlink-safe writes)
 
 ### 65. Tool error messages don't say which projectRoot was used
 **Repro:** `source({filePath: ".env"})` returned nothing (1-byte file). `source({filePath: "nonexistent.ts"})` would say `"file not found"`. Neither includes which projectRoot was active.
@@ -704,6 +725,7 @@ Where the per-file estimate is hardcoded at **1,200 tokens**.
 ### 74. `read_entity` accepts path-traversal-style names without sanitization
 **Repro:** `read_entity({name: "../../../etc/passwd"})` → `"No entity named "../../../etc/passwd" found."` (not found, but no rejection).
 **Impact:** if `read_entity` ever uses the name to construct a filesystem path (e.g. `entities/${name}.md`), this could be a traversal vector. The current implementation appears to look up via state.json keys, so it's safe today — but the *acceptance* of such names is a foot-gun waiting for a future refactor.
+**Addressed by**: Phase 0.1 Refinement — `assertString` Type-Confusion Prevention (closes Flaw #74, score: 60) + `assertSafePath` Path Traversal Defense (closes Flaw #51 + #74, score: 75)
 
 ### 75. The brevity engine and the savings footer were probably already running invisibly
 **Repro:** the Stop hook `cortex-savings-footer.js` appends a savings line at the end of every session. The agent (me) never saw this in this session — meaning either the hook didn't fire, or it fired but was hidden from my context.
@@ -762,6 +784,7 @@ def _call_api(self, path, payload):
 ```
 **Skeleton kept all 3 method signatures.** Same probe on `soul.ts` (TypeScript) returned `export class SoulEngine` with **zero methods**.
 **Impact:** the broken skeleton is a **language-specific bug** in the TypeScript AST visitor, not a fundamental design flaw. This is reassuring — it's a fixable code bug, not an architectural defect. But it also means a Python-heavy codebase would experience Cortex very differently than a TS-heavy one, with no documentation acknowledging the asymmetry.
+**Addressed by**: Phase 0.13 Refinement — Use web-tree-sitter (WASM) over node-tree-sitter — cross-platform, bundled grammars, Node 23 stable (repomix audit, score: 60)
 
 ### 84. `estimate_cost` ignores its `budget` parameter
 **Repro:** `estimate_cost({budget: 0.001})` returned `"No pending changes since last sync. Estimated cost: $0.00."` — same as `estimate_cost()` with no args. The tool description says the budget parameter triggers a "flags whether the estimate exceeds it" response. That branch isn't reached when there's no pending sync.
@@ -843,6 +866,7 @@ The entry persists even though the file is gone. There's no garbage-collection p
 ### 98. No `cortex doctor` / health check
 **Repro:** `cortex status` returns initialization state. There's no command that runs all readers, validates schema, detects phantom entities, checks log.jsonl readability, validates state.json structure, or reports gaps.
 **Impact:** when something goes wrong (and given the 95+ flaws, things will go wrong), there's no first-line diagnostic. Today the only way to triage is to read JSONL files manually and compare against state.json. A `cortex doctor` that surfaces all current flaws as failed/warned checks would shortcut hours of debugging.
+**Addressed by**: Phase 0.7 Refinement — Doctor Capabilities Fingerprint (closes Flaw #98, score: 45) + Phase 0.7 Refinement — `diagnose_extraction()` Edge-Collapse Diagnostics (partially closes Flaw #98, score: 18)
 
 ### 99. Unverified: provider failure handling
 **Status:** could not test without triggering a real LLM call. The codebase has retry logic in some places (visible via earlier source reads of synthesis pipeline) but I have no evidence about:
@@ -1315,6 +1339,7 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Source-of-lesson**: antigravity_phone_chat `server.js:23` — `APP_PASSWORD='antigravity'`, `AUTH_SALT='antigravity_default_salt_99'`, `SESSION_SECRET='antigravity_secret_key_1337'`
 **Pattern**: Hardcoded fallback credentials that are discoverable from a public GitHub repo remain active if users ignore console warnings. Even with `console.warn` at startup, a developer who skips terminal output is silently exposed.
 **Relevance to Cortex**: When Phase 22 (`cortex server start`) ships, it MUST: (1) check that `CORTEX_SESSION_SECRET`, `CORTEX_API_TOKEN_SALT`, and any signing salt are set via env; (2) in production mode (`NODE_ENV=production` or `--prod` flag) refuse to start with an actionable error: `"CORTEX_SESSION_SECRET not set. Run: cortex server init to generate secrets."`. Soft warning acceptable for local-dev mode only.
+**Addressed by**: Phase 22 Refinement — Startup Warning for Insecure Defaults (closes Flaw #117)
 
 ---
 
@@ -1342,6 +1367,7 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: If incremental ingest writes the manifest/state file with only the changed-file subset (not the full merged result), the next incremental run sees all unchanged files as "new" and re-extracts everything. The symptom looks like cache invalidation failure — every incremental run is as slow as a full run.
 **Relevance to Cortex**: Always follow the load-merge-write pattern for any state file updated incrementally: `existing = load_manifest(); existing.update(changed_subset); write_manifest(existing)`. Never write a subset-only result. Applies to the ingest state file, the entity cache, and any future incremental index.
 **Severity**: low
+**Addressed by**: Phase 33.6 Refinement — Crash-Recovery Dirty Flag for Incremental Ingest (closes Flaw #120, score: 30)
 
 ---
 
@@ -1378,3 +1404,13 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: `inject-knowledge.js` uses `execSync` to call `cortex read` before every Read/Grep tool call. This blocks the event loop for 100-500ms on each native tool call and makes the IDE feel sluggish. The hook already uses a session-marker guard (fires only once per ppid), so the async version still injects knowledge on the first call; subsequent calls are no-ops — the guard prevents redundant work regardless of sync vs async.
 **Relevance to Cortex**: PreToolUse hooks must never use `execSync` for any subprocess call. The correct pattern is async background: `( cortex read >/dev/null 2>&1 & ) >/dev/null 2>&1`. This is a general rule: hooks should never block the event loop; async background is always preferred for fire-and-forget operations in hook context.
 **Severity**: 3 (HIGH) — blocks every Read/Grep tool call for 100-500ms; degrades IDE responsiveness across the entire Claude Code session
+
+---
+
+## 🔒 REPOMIX AUDIT — Lessons
+
+### 125. secretlint profiler accumulates O(n²) per-mark entries in worker threads
+**Source-of-lesson**: repomix `src/core/security/workers/securityCheckWorker.ts:14-60`
+**Pattern**: `@secretlint/profiler` installs a global `PerformanceObserver` that appends every `profiler.mark()` call to an unbounded `entries[]` array, then runs an `O(n)` `entries.find()` scan on each append. Across a worker processing ~1000 files this accumulates to O(n²) overhead (~1.2s pure profiler bookkeeping per worker, zero functional benefit). The profiler may be nested under `@secretlint/core/node_modules/@secretlint/profiler`, making direct singleton patching unreliable. The fix: no-op `performance.mark` via `Object.defineProperty` inside worker threads only (`isMainThread` guard). This neutralizes all profiler copies simultaneously since all call the single Node.js built-in `performance.mark`. The `try/catch` protects against future Node.js versions making the property non-configurable.
+**Relevance to Cortex**: When Phase 7.10 (Sensitive Data Sanitization Guardrail) uses secretlint in a worker thread, apply this fix. Any worker that runs secretlint on ~hundreds of files will accumulate the same O(n²) overhead without it.
+**Severity**: 3 (HIGH — silent 1.2s overhead per security-check worker on 1000-file repos; degrades Phase 7.10 performance invisibly)

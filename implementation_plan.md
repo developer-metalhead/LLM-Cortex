@@ -7418,6 +7418,50 @@ The function should check both mid-path (`/tests/`) and start-of-path (`tests/`)
 
 ---
 
+### Phase 12.17 Refinement — `isImportantRootFile` Allowlist for Always-Include Prioritization (aider)
+
+The inverse of `isTestFile`: a static allowlist of root-level config/manifest filenames that should **always** receive a scoring boost in `cortex_find` and context packs, even if they have low entity rank (because they're rarely referenced by other code, but are critical for understanding the project).
+
+```typescript
+const IMPORTANT_ROOT_FILES = new Set([
+  // Version control
+  '.gitignore', '.gitattributes', 'CODEOWNERS',
+  // Documentation
+  'README.md', 'README.rst', 'README.txt', 'CONTRIBUTING.md', 'CHANGELOG.md', 'SECURITY.md',
+  // Package manifests
+  'package.json', 'pyproject.toml', 'Cargo.toml', 'go.mod', 'pom.xml',
+  'build.gradle', 'build.gradle.kts', 'Gemfile', 'composer.json',
+  // TypeScript / JS config
+  'tsconfig.json', 'jsconfig.json', '.eslintrc', '.prettierrc', '.babelrc',
+  // Python tooling
+  'setup.py', 'setup.cfg', 'requirements.txt', 'mypy.ini', '.flake8', 'tox.ini',
+  // Build / CI
+  'Dockerfile', 'docker-compose.yml', 'Makefile', 'Justfile', 'Taskfile.yml',
+  '.travis.yml', '.gitlab-ci.yml', 'Jenkinsfile',
+  // Environment / secrets template
+  '.env.example',
+  // Cortex-specific
+  'CLAUDE.md', 'AGENTS.md', '.cortexignore',
+]);
+
+function isImportantRootFile(relPath: string): boolean {
+  const basename = relPath.split('/').at(-1) ?? relPath;
+  // Only root-level files (no directory separator in the first segment)
+  const isRoot = !relPath.includes('/') || relPath.split('/').length === 2;
+  return isRoot && IMPORTANT_ROOT_FILES.has(basename);
+}
+```
+
+**Apply in**:
+- `cortex_find` result scoring: `+0.5` score multiplier on any entity whose `sourceFile` matches `isImportantRootFile`
+- `build_context_pack` greedy fill: always include important-root-file entities before lower-ranked ones, regardless of PageRank order
+- Ingest pipeline: never skip or deprioritize these files during extraction, even if they appear "small" or "low-complexity"
+
+**Source**: aider `aider/special.py:1-160` — `ROOT_IMPORTANT_FILES` + `filter_important_files()`  
+**Score**: 24 (severity=2, fit=4, effort=1)
+
+---
+
 ## 💸 Phase 13: Token Economics & Context Packs — ✅ Completed
 
 **Layman's Terms**
@@ -19617,4 +19661,403 @@ function affectedNodes(
 **Why INCOMING, not outgoing**: If you change entity X, the nodes that CALL or IMPORT X are the ones that break — their incoming edges to X represent the dependency. Outgoing edges (what X calls) are not affected by X's signature change.
 
 **Source**: graphify `affected.py:46` — `affected_nodes()`, `AffectedHit`, `DEFAULT_AFFECTED_RELATIONS` (item #8, score 36, BFS half was previously missed)
+
+---
+
+## 🔒 REPOMIX AUDIT — Refinements (2026-05-24)
+
+---
+
+### Phase 0.13 Refinement — Use web-tree-sitter (WASM) over node-tree-sitter (native bindings) (score: 60, closes Flaw #83)
+
+**Source**: repomix `src/core/treeSitter/parseFile.ts:1-19`
+
+When Phase 0.13 (Multi-Language Tree-sitter Extractors) ships, use `web-tree-sitter` (WASM) instead of `node-tree-sitter` (native C++ bindings). Repomix production experience confirms:
+
+1. **Cross-platform**: WASM works identically on all platforms. Native bindings require Python, C++ compiler, and node-gyp — all fail silently on Alpine Linux and in some CI environments.
+2. **Easy install**: A single bundled WASM package (`@repomix/tree-sitter-wasms`) covers all language grammars. No per-language native packages.
+3. **Node version stability**: Node.js v23 has known issues with native node-tree-sitter. WASM has no such breakage.
+4. **Performance**: WASM overhead (~10-20ms cold-start) is acceptable for batch extraction; amortized to near-zero for a long-running MCP server.
+
+```typescript
+import Parser from 'web-tree-sitter';
+
+// Init WASM runtime once before parsing any file
+await Parser.init();
+
+// Lazy singleton — init on first use, share across files, dispose on shutdown
+let languageParserSingleton: LanguageParser | null = null;
+
+export const parseFile = async (fileContent: string, filePath: string) => {
+  const languageParser = languageParserSingleton ?? (languageParserSingleton = await initLanguageParser());
+  // ...
+};
+
+export const cleanupLanguageParser = async (): Promise<void> => {
+  if (languageParserSingleton) {
+    await languageParserSingleton.dispose();
+    languageParserSingleton = null;
+  }
+};
+```
+
+**Score**: 60 (severity=4, fit=5, effort=1, recency=1.0)
+
+---
+
+### Phase 0.13 Refinement — Chunk separator `⋮----` + duplicate/adjacent chunk consolidation (score: 30)
+
+**Source**: repomix `src/core/treeSitter/parseFile.ts:35, 130-186`
+
+When Phase 0.13 emits skeleton output for compressed source files, apply two cleanup passes and use the `⋮----` separator between non-adjacent chunks:
+
+```typescript
+export const CHUNK_SEPARATOR = '⋮----';
+
+// Pass 1: when multiple AST captures start at the same line, keep the one with the most content
+function filterDuplicatedChunks(chunks: CapturedChunk[]): CapturedChunk[] {
+  const byStartRow = new Map<number, CapturedChunk[]>();
+  for (const chunk of chunks) {
+    const arr = byStartRow.get(chunk.startRow) ?? [];
+    arr.push(chunk);
+    byStartRow.set(chunk.startRow, arr);
+  }
+  const result: CapturedChunk[] = [];
+  for (const rowChunks of byStartRow.values()) {
+    rowChunks.sort((a, b) => b.content.length - a.content.length);
+    result.push(rowChunks[0]);
+  }
+  return result.sort((a, b) => a.startRow - b.startRow);
+}
+
+// Pass 2: merge chunks whose line ranges are adjacent (endRow+1 == next.startRow)
+// Use array accumulation (parts.push + join) not string += to avoid O(k²) copy cost
+function mergeAdjacentChunks(chunks: CapturedChunk[]): CapturedChunk[] {
+  const merged: CapturedChunk[] = [];
+  let parts: string[] = [chunks[0].content];
+  let start = chunks[0].startRow, end = chunks[0].endRow;
+  for (let i = 1; i < chunks.length; i++) {
+    if (end + 1 === chunks[i].startRow) {
+      parts.push(chunks[i].content);
+      end = chunks[i].endRow;
+    } else {
+      merged.push({ content: parts.join('\n'), startRow: start, endRow: end });
+      parts = [chunks[i].content];
+      start = chunks[i].startRow; end = chunks[i].endRow;
+    }
+  }
+  merged.push({ content: parts.join('\n'), startRow: start, endRow: end });
+  return merged;
+}
+
+// Final output — join with gap marker between non-adjacent sections
+return mergeAdjacentChunks(filterDuplicatedChunks(captures))
+  .map(c => c.content)
+  .join(`\n${CHUNK_SEPARATOR}\n`)
+  .trim();
+```
+
+**Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
+
+---
+
+### Phase 7.10 Refinement — Extend secretlint scan to git diff + git log content (score: 48)
+
+**Source**: repomix `src/core/security/securityCheck.ts:43-77`, `workers/securityCheckWorker.ts:54-60`
+
+Phase 7.10 (Sensitive Data Sanitization Guardrail) must scan four content streams, not just file contents. A secret can appear in a staged diff, a working-tree diff, or git log history even if the committed file content looks clean:
+
+```typescript
+const allItems: SecurityCheckItem[] = [
+  ...rawFiles.map(f => ({ filePath: f.path, content: f.content, type: 'file' as const })),
+  ...(gitDiffResult?.workTreeDiffContent ? [{
+    filePath: 'Working tree changes', content: gitDiffResult.workTreeDiffContent, type: 'gitDiff' as const,
+  }] : []),
+  ...(gitDiffResult?.stagedDiffContent ? [{
+    filePath: 'Staged changes', content: gitDiffResult.stagedDiffContent, type: 'gitDiff' as const,
+  }] : []),
+  ...(gitLogResult?.logContent ? [{
+    filePath: 'Git log history', content: gitLogResult.logContent, type: 'gitLog' as const,
+  }] : []),
+];
+```
+
+**Also apply the secretlint O(n²) profiler fix** (Flaw #125) in any worker thread that runs secretlint:
+```typescript
+// At worker thread module load time — before any lintSource calls
+if (!isMainThread) {
+  try {
+    Object.defineProperty(perf_hooks.performance, 'mark', {
+      value: () => undefined, writable: true, configurable: true,
+    });
+  } catch { /* Non-configurable in future Node.js — optimization silently skipped */ }
+}
+```
+
+**Score**: 48 (severity=4, fit=4, effort=1, recency=1.0)
+
+---
+
+### Phase 13 Refinement — tokenCountTree: per-directory token budget visualization (score: 45)
+
+**Source**: repomix `src/cli/reporters/tokenCountTreeReporter.ts:11-102`
+
+After `build_context_pack` runs, optionally emit a hierarchical tree of token counts per directory and file. Agents can read this to understand where the token budget is going and which directories to drop:
+
+```typescript
+function buildTokenCountTree(fileTokenCounts: Record<string, number>): TreeNode {
+  const root: TreeNode = { _files: [], _tokenSum: 0 };
+  for (const [filePath, tokens] of Object.entries(fileTokenCounts)) {
+    const parts = filePath.split('/');
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      node[parts[i]] ??= { _files: [], _tokenSum: 0 };
+      (node[parts[i]] as TreeNode)._tokenSum += tokens;
+      node = node[parts[i]] as TreeNode;
+    }
+    node._files!.push({ name: parts[parts.length - 1], tokens });
+    root._tokenSum += tokens;
+  }
+  return root;
+}
+
+// Output in build_context_pack result:
+// {
+//   tokenTree: "├── src/ (12,450 tokens)\n│   ├── core/ (8,200 tokens)\n...",
+//   minTokenThreshold: 500,  // only entries >= 500 tokens shown
+// }
+```
+
+Optional `minTokens` threshold hides small files — useful when a 200-file repo has 190 trivial files that clutter the display.
+
+**Score**: 45 (severity=3, fit=5, effort=1, recency=1.0)
+
+---
+
+### Phase 13 Refinement — Content-addressed token count cache with FIFO eviction and atomic save (score: 32)
+
+**Source**: repomix `src/core/metrics/tokenCountCache.ts:206-353`
+
+For context packs over large repos, cache token counts by content hash across runs to avoid re-tokenizing unchanged files:
+
+```typescript
+// Key: encoding:byteLength:md5_16chars — byte length guards against MD5 collisions on same-size inputs
+export const contentCacheKey = (encoding: string, content: string): string => {
+  const byteLength = Buffer.byteLength(content);
+  const digest = createHash('md5').update(content).digest('hex').slice(0, 16);
+  return `${encoding}:${byteLength}:${digest}`;
+};
+
+// FIFO eviction via Map insertion order — no sorted structure needed
+const MAX_CACHE_ENTRIES = 100_000;  // ~3 MB on disk, ~10 MB in memory
+export const setCached = (key: string, count: number): void => {
+  if (!cache.has(key) && cache.size >= MAX_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, count);
+};
+
+// Atomic persistence — prevents torn JSON on crash or concurrent writes
+// pid+random suffix: concurrent pack() calls in MCP server don't collide on tmp path
+const tmpFile = `${cacheFile}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`;
+await fs.writeFile(tmpFile, JSON.stringify(data), { mode: 0o600 });
+await fs.rename(tmpFile, cacheFile);  // atomic on POSIX; near-atomic on Windows NTFS
+
+// Use for...in not Object.entries to load large JSON — avoids materializing 100k-entry tuple array
+for (const key in data.entries) {
+  if (typeof data.entries[key] === 'number') cache.set(key, data.entries[key]);
+}
+```
+
+**Score**: 32 (severity=4, fit=4, effort=2, recency=1.0)
+
+---
+
+### Phase 13 Refinement — git sortByChanges: order context pack files by churn frequency (score: 36)
+
+**Source**: repomix `src/core/output/outputSort.ts:94-131`, `packager.ts:91-93`
+
+When assembling a context pack, optionally sort files by git commit frequency so the most-frequently-changed files appear last (recency bias: LLM attends more to the end of context):
+
+```typescript
+async function sortByGitChurn(
+  filePaths: string[],
+  cwd: string,
+  maxCommits = 100,
+): Promise<string[]> {
+  const counts = await getFileChangeCount(cwd, maxCommits);
+  // Most-churned files go LAST — highest attention position for recency-biased LLMs
+  return [...filePaths].sort((a, b) => (counts[a] ?? 0) - (counts[b] ?? 0));
+}
+
+// Pre-fetch in background at pack() start — overlaps with file collection so no critical path cost
+const sortDataPromise = prefetchSortData(config).catch(() => {});
+// later...
+await sortDataPromise;  // already resolved by the time sort runs
+const sortedFiles = await sortByGitChurn(filePaths, cwd);
+```
+
+Gate behind `contextPack.sortByChanges: true` in `cortex.json` (default: false). `maxCommits` configurable to control git log depth.
+
+**Score**: 36 (severity=3, fit=4, effort=1, recency=1.0)
+
+---
+
+### Phase 13 Refinement — Markdown backtick delimiter auto-calculation (score: 30)
+
+**Source**: repomix `src/core/output/outputGenerate.ts:54-59`
+
+When Cortex generates markdown output (context packs, synthesis reports), compute the minimum code fence delimiter to avoid conflicts with file content that contains triple backticks:
+
+```typescript
+function calculateMarkdownDelimiter(files: ProcessedFile[]): string {
+  const maxBackticks = files
+    .flatMap(f => f.content.match(/`+/g) ?? [])
+    .reduce((max, m) => Math.max(max, m.length), 0);
+  return '`'.repeat(Math.max(3, maxBackticks + 1));
+}
+
+// Template usage:
+// ${delimiter}typescript
+// ${fileContent}
+// ${delimiter}
+// If file contains ``` → delimiter becomes ````; if ```` → delimiter becomes `````
+```
+
+**Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
+
+---
+
+### Phase 22 Refinement — Remote config trust gate for cortex.json (score: 36)
+
+**Source**: repomix `src/config/configLoad.ts:100-108`
+
+When Phase 22 (`cortex server start`) processes a remote repository, skip the `cortex.json` found inside that repo by default. A malicious repo could include a config that disables security checks or sets paths outside the repo root:
+
+```typescript
+async function loadProjectConfig(
+  rootDir: string,
+  options: { remoteMode?: boolean; trustRemoteConfig?: boolean } = {},
+): Promise<CortexConfig> {
+  const localConfig = path.join(rootDir, 'cortex.json');
+
+  if (options.remoteMode && !options.trustRemoteConfig) {
+    if (await fileExists(localConfig)) {
+      logger.warn(
+        `Skipping cortex.json found in remote repository: ${rootDir}\n` +
+        'Use --remote-trust-config to load it.',
+      );
+    }
+    return defaultConfig();
+  }
+
+  return loadAndValidateConfig(localConfig);
+}
+```
+
+**Score**: 36 (severity=3, fit=4, effort=1, recency=1.0)
+
+---
+
+### Phase 5 Refinement — JSON5 support for cortex.json config file (score: 30)
+
+**Source**: repomix `src/config/configLoad.ts:5, 21-29`
+
+Support `cortex.json5` alongside `cortex.json` for project config. JSON5 allows `//` comments and trailing commas — makes configs self-documenting without schema viewers:
+
+```typescript
+// Config file search priority (local → global → defaults)
+const CONFIG_PATHS = [
+  'cortex.json5',   // comments + trailing commas
+  'cortex.jsonc',   // comments only (VSCode-friendly)
+  'cortex.json',    // strict JSON
+];
+```
+
+Parse with the `json5` npm package (zero transitive dependencies). The search priority: local `cortex.json5` > local `cortex.json` > global `~/.cortex/cortex.json5` > global `~/.cortex/cortex.json` > defaults.
+
+**Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
+
+---
+
+### Phase 4 Refinement — `grep_context_pack` MCP tool for un-synthesized source search (score: 45)
+
+**Source**: repomix `src/mcp/tools/grepRepomixOutputTool.ts:80`
+
+Add a `grep_context_pack` tool to Cortex's MCP server. Fills the gap when `cortex_find` returns nothing (un-indexed entities) and CLAUDE.md bans native grep: agents can search the built context pack with grep-like semantics.
+
+```typescript
+mcpServer.registerTool('grep_context_pack', {
+  title: 'Grep Context Pack',
+  description:
+    'Search the built context pack with grep-like semantics. Returns matching lines with surrounding context. ' +
+    'Use when cortex_find returns no results for un-synthesized source — this searches raw file content directly.',
+  inputSchema: z.object({
+    pattern:      z.string().describe('Search pattern (regex supported)'),
+    contextLines: z.number().default(0).describe('Lines of context around each match (before + after)'),
+    beforeLines:  z.number().optional().describe('Lines before each match (overrides contextLines)'),
+    afterLines:   z.number().optional().describe('Lines after each match (overrides contextLines)'),
+    ignoreCase:   z.boolean().default(false),
+  }),
+  outputSchema: z.object({
+    matches: z.array(z.object({
+      lineNumber: z.number(),
+      line:       z.string(),
+      before:     z.array(z.string()).optional(),
+      after:      z.array(z.string()).optional(),
+    })),
+    totalMatches: z.number(),
+    packId:       z.string().describe('ID of the context pack that was searched'),
+  }),
+  annotations: { readOnlyHint: true, idempotentHint: true },
+});
+```
+
+**Why non-redundant**: `cortex_find` searches the knowledge graph (indexed entities only). `grep_context_pack` searches the raw text of a context pack built by `build_context_pack` — covering files not yet synthesized into the graph. These are complementary, not overlapping.
+
+**Counter-case**: Only useful after `build_context_pack` has run; agents must call that first. For already-indexed entities, `cortex_find` + `source` are the right path.
+
+**Score**: 45 (severity=3, fit=5, effort=1, recency=1.0)
+
+---
+
+### Phase 4 Refinement — MCP tool metadata: typed outputSchema + behavioral annotations (score: 30)
+
+**Source**: repomix `src/mcp/tools/packCodebaseTool.ts`, `src/mcp/tools/readRepomixOutputTool.ts`
+
+Two additive improvements to every `mcpServer.registerTool()` call, requiring zero logic changes:
+
+**1. Typed Zod `outputSchema`**: Declare the response shape alongside the input schema. MCP clients can parse responses structurally instead of guessing field names:
+
+```typescript
+mcpServer.registerTool('build_context_pack', {
+  inputSchema:  buildContextPackInputSchema,
+  outputSchema: z.object({
+    packId:             z.string(),
+    totalFiles:         z.number(),
+    totalTokens:        z.number(),
+    directoryStructure: z.string(),
+    // ...
+  }),
+  // ...
+});
+```
+
+**2. MCP behavioral annotations**: Declare read-only, idempotent, destructive, and open-world hints so clients can make better UI and safety decisions:
+
+```typescript
+annotations: {
+  readOnlyHint:    true,   // tool does not mutate state
+  idempotentHint:  true,   // safe to retry; same input → same output
+  destructiveHint: false,  // does not delete/overwrite data
+  openWorldHint:   false,  // operates only within the known project root
+}
+```
+
+Apply to all read-class tools (`read_entity`, `cortex_find`, `source`, `build_context_pack`, `graph`) and set `destructiveHint: true` for write-class tools (`save_synthesis`, `ingest`, `compress`).
+
+**Counter-case**: `outputSchema` validation adds a small overhead on every tool response. For Cortex's current response sizes this is negligible, but worth profiling if tool responses grow large.
+
+**Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
 
