@@ -20273,3 +20273,137 @@ function findReferencedEntities(
 Use in `cortex_find` as a fallback: when exact entity name match returns zero results, call `findReferencedEntities(callerCode, entityIndex)` and return weighted candidates. Also use in `before_change` to map an open file's path to its entity without requiring the user to know the entity name.
 
 **Counter-case**: Text frequency is a noisy signal — common names like `get`, `set`, `node` will produce false matches. The `shortName.length < 3` guard mitigates this but doesn't eliminate it. Treat results as ranked suggestions, not authoritative matches.
+
+---
+
+### Phase 3 Refinement — Check-then-Load Preprocessing Cache for Entity Graphs (RepoHyper audit, C4, score: 19)
+
+**Source-of-lesson**: RepoHyper `train_gnn.py:53-60` — `if not os.path.exists(cache_path): compute_and_save() else: load()`
+
+When re-ingesting a project where most files haven't changed, skip re-extracting entity graphs for unchanged files by caching preprocessed output keyed by source mtime:
+
+```typescript
+async function loadOrBuildEntityGraph(
+  entityId: string,
+  cacheDir: string,
+  sourceMtime: number,
+  buildFn: () => Promise<EntityGraph>
+): Promise<EntityGraph> {
+  const cachePath = path.join(cacheDir, `${entityId}.graph.json`);
+
+  try {
+    const stat = await fs.stat(cachePath);
+    if (stat.mtimeMs >= sourceMtime) {
+      return JSON.parse(await fs.readFile(cachePath, 'utf8')) as EntityGraph;
+    }
+  } catch {
+    // cache miss — fall through
+  }
+
+  const graph = await buildFn();
+  await fs.mkdir(cacheDir, { recursive: true });
+  await fs.writeFile(cachePath, JSON.stringify(graph), 'utf8');
+  return graph;
+}
+```
+
+Wire into the ingest pipeline: before calling the LLM extractor for an entity, call `loadOrBuildEntityGraph`. Cache directory: `.knowledge/.cache/graphs/`. Key: `entityId` (stable across runs). Invalidation: source file mtime ≥ cache mtime triggers rebuild.
+
+**Counter-case**: Cortex already tracks stale entities via mtime in `state.json`. This adds a second cache layer that must be kept in sync — if state.json marks an entity stale but the graph cache is fresh, callers must decide which wins. Make the rule explicit: state.json staleness always evicts the graph cache.
+
+**Score**: 19 (severity=2, fit=4, effort=1, recency=0.8)
+
+---
+
+### Phase 7 Refinement — dependency-cruiser for TypeScript Call Graph Extraction (RepoHyper audit, G1)
+
+**Triggered by**: RepoHyper `scripts/data/generate_call_graphs.py:37-65` — PyCG static call graph; open question is what the TypeScript equivalent should be
+
+RepoHyper uses PyCG for Python call graphs. For Cortex's TypeScript target, **dependency-cruiser** (`depcruise`) produces typed JSON import/call graphs without requiring custom tree-sitter post-processing. It runs as a CLI subprocess and emits structured JSON with source/resolved paths, dependency types, and cycle detection built in.
+
+```typescript
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+const execFileAsync = promisify(execFile);
+
+interface DepEdge {
+  source: string;
+  resolved: string;
+  dependencyTypes: Array<'import' | 'require' | 'dynamic-import' | 're-export'>;
+  circular: boolean;
+}
+
+async function extractTypeScriptDependencyGraph(
+  projectRoot: string,
+  includePattern = '^src'
+): Promise<DepEdge[]> {
+  const { stdout } = await execFileAsync(
+    'npx', ['depcruise', '--output-type', 'json', '--include-only', includePattern, 'src'],
+    { cwd: projectRoot, maxBuffer: 10 * 1024 * 1024 }
+  );
+  const result = JSON.parse(stdout) as { modules: Array<{ source: string; dependencies: Array<{ resolved: string; dependencyTypes: string[]; circular: boolean }> }> };
+  return result.modules.flatMap(mod =>
+    mod.dependencies.map(dep => ({
+      source: mod.source,
+      resolved: dep.resolved,
+      dependencyTypes: dep.dependencyTypes as DepEdge['dependencyTypes'],
+      circular: dep.circular,
+    }))
+  );
+}
+```
+
+Use in Phase 7 graph builder: call `extractTypeScriptDependencyGraph` once per project, then convert the flat edge list into typed graph edges (`import`, `re-export`, `dynamic-import`). Typed edges let `impact_analysis` distinguish "this entity is re-exported here" (high blast radius) from "this entity is dynamically imported" (conditional blast radius).
+
+**Alternatives considered**:
+- A) dependency-cruiser (recommended) — JSON output, maintained, handles monorepos, no custom parser
+- B) tree-sitter + regex call-site detection — already used in Phase 0.13; sufficient for function-call edges but misses re-exports and barrel files
+- C) Skip call graphs — entity-level graph captures most dependencies without call-site granularity
+
+**Counter-case**: dependency-cruiser requires `npx` / a dev-only install. Gate it behind a `CORTEX_CALL_GRAPH=1` env var so it's opt-in and the core path has no new hard dep.
+
+---
+
+### Phase 7 Refinement — PPR-Ranked `impact_analysis` Output (RepoHyper audit, G2)
+
+**Triggered by**: RepoHyper `src/repo_graph/search_policy/subgraph_extractors.py` — `ppr_topk()` used to rank subgraph nodes by relevance to a source set
+
+`impact_analysis` currently returns all transitively affected entities as a flat BFS list. This is correct for completeness but unhelpful for triage — a change to a core module returns 40 entities with no signal about which ones are the real blast-radius concerns.
+
+Wire the `personalizedPageRank` function (already defined in the Phase 26 Refinement above) into `impact_analysis` as an opt-in ranking pass:
+
+```typescript
+async function rankedImpactAnalysis(
+  changedEntityId: string,
+  graph: KnowledgeGraph,
+  opts: { topK?: number; alpha?: number } = {}
+): Promise<Array<{ entityId: string; pprScore: number; bfsDepth: number }>> {
+  // Step 1: BFS to get the complete affected set with depths
+  const bfsResults = new Map<string, number>(); // entityId → depth
+  const queue: Array<{ id: string; depth: number }> = [{ id: changedEntityId, depth: 0 }];
+  while (queue.length) {
+    const { id, depth } = queue.shift()!;
+    if (bfsResults.has(id)) continue;
+    bfsResults.set(id, depth);
+    for (const neighbor of graph.neighbors(id)) {
+      if (!bfsResults.has(neighbor)) queue.push({ id: neighbor, depth: depth + 1 });
+    }
+  }
+
+  // Step 2: PPR over the full graph, personalized to the changed node
+  const ranked = personalizedPageRank(graph, [changedEntityId], opts.alpha ?? 0.15, 20, opts.topK ?? 20);
+
+  // Step 3: Intersect — only return entities that are both affected (BFS) and ranked (PPR)
+  return ranked
+    .filter(({ node }) => bfsResults.has(node))
+    .map(({ node, score }) => ({
+      entityId: node,
+      pprScore: score,
+      bfsDepth: bfsResults.get(node)!,
+    }));
+}
+```
+
+The intersection of BFS (completeness) and PPR (relevance) gives a ranked blast-radius list where high-centrality dependents surface first. A developer changing `CortexDaemon` sees `MCPServer` and `IngestPipeline` at the top, not `HealthCheck` which happens to transitively depend on it via 4 hops.
+
+**Counter-case**: PPR convergence over the full knowledge graph (potentially 500+ entities) adds ~5-10ms per `impact_analysis` call. For an interactive tool call this is acceptable; for batch pre-computation it may need memoization. Add `--no-rank` flag to skip PPR and return raw BFS order for scripted use.
