@@ -1,0 +1,14 @@
+{
+  "step_completed": "8",
+  "target": "codegraph",
+  "commit_sha": "4e34ba8",
+  "inventory_id_max": 32,
+  "audit_date": "2026-05-24",
+  "mode": "full",
+  "artifacts": [
+    "steal-inventory-codegraph-2026-05-24.md",
+    "steal-inventory-codegraph-2026-05-24.json",
+    "steal-inventory-codegraph-files.json",
+    "steal-integration-codegraph-2026-05-24.md"
+  ]
+}

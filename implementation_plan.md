@@ -445,6 +445,43 @@ export function hasSensitiveContent(text: string): boolean { /* content pattern 
 
 ---
 
+### Phase 0.1 Refinement — validatePathWithinRoot + O_NOFOLLOW Session Marker (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/mcp/tools.ts:197, codegraph/src/utils.ts
+
+Closes flaws #51, #64. When Phase 0.1 (Security Foundation) ships, add two security utilities to `src/security.ts`:
+
+**`validatePathWithinRoot(filePath, projectRoot)`** (closes #51 — path traversal outside root):
+```typescript
+export function validatePathWithinRoot(filePath: string, projectRoot: string): void {
+  const resolved = path.resolve(filePath);
+  const root = path.resolve(projectRoot);
+  if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+    throw new Error(
+      `Path traversal rejected: "${filePath}" resolves outside projectRoot "${root}"`
+    );
+  }
+}
+```
+Call with `path.resolve()` on both args before passing. Throws on path traversal, symlink escape, or drive change (Windows).
+
+**`writeSessionMarkerSafe(markerPath, content)`** (closes #64 — symlink attack on world-writable tmpdir):
+```typescript
+export function writeSessionMarkerSafe(markerPath: string, content: string): void {
+  try {
+    const fd = openSync(markerPath, O_WRONLY | O_CREAT | O_TRUNC | (O_NOFOLLOW ?? 0));
+    writeSync(fd, content);
+    closeSync(fd);
+  } catch {
+    // O_NOFOLLOW not available (Windows) — fall through
+    import('fs').then(fs => fs.writeFileSync(markerPath, content));
+  }
+}
+```
+`O_NOFOLLOW` prevents a race where an attacker replaces the marker path with a symlink between `exists()` and `open()`. Graceful fallback on Windows where `O_NOFOLLOW` is unavailable (`constants.O_NOFOLLOW ?? 0`).
+
+---
+
 ### Phase 0.2 — `validate.ts`: Schema Gating & Referential Integrity
 
 **Flaws closed**: #4 (any string accepted as entity name), #72 (`save_concept` accepts empty string), phantom-entity class (#42, #53, #56)
@@ -801,6 +838,34 @@ fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 - `cortex status` on a locked repo shows `Lock held by PID 12345`.
 - Process kill mid-write: lock releases automatically, next `ingest` succeeds without stale-lock error.
 - `Soul Dirty: Yes` only appears when there are actual uncommitted mutations.
+
+---
+
+### Phase 0.5 Refinement — SQLite WAL + Bounded Busy-Timeout + Stale-PID Lock (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/__tests__/concurrent-locking.test.ts:41-55
+
+When Phase 0.5 (OS-Native File Locking) ships, use the following battle-tested configuration:
+
+- **WAL mode** (`PRAGMA journal_mode=WAL`): lets readers proceed during a writer — eliminates "database is locked" on concurrent MCP tool calls.
+- **Bounded busy_timeout** (`PRAGMA busy_timeout=N` where N ≤ 30,000ms): fail fast rather than hanging for the old default 120s. Surface a clear error to the user.
+- **Stale-PID FileLock**: lock file stores PID. On `acquire()`, check `process.kill(pid, 0)` (no-op signal). If `ESRCH` → PID is dead → auto-remove stale lock and proceed. This handles the case where a prior process crashed without releasing.
+- **Test coverage**: assert `busy_timeout ≤ 30000` and `journal_mode = 'wal'` in unit tests (not just in prod).
+
+---
+
+### Phase 0.5 Refinement — Schema Migration System with schema_versions Table (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/db/migrations.ts:12-68
+
+Closes flaws #63, #86. When Phase 0.5 ships (or when Cortex transitions to SQLite-backed storage), implement a proper migration gate:
+
+- `schema_versions` table: `(version INTEGER PRIMARY KEY, description TEXT, applied_at TEXT)`. Tracks which migrations have run.
+- On startup, read `MAX(version)` from `schema_versions`. Run all missing migrations in order, each in its own transaction, stopping on first failure.
+- Each migration is a named, described object: `{ version: 4, description: "Add source_hash column to nodes", up: (db) => db.exec(...) }`. Never anonymous SQL strings.
+- **Forward-only gate**: if the DB version > `CURRENT_SCHEMA_VERSION` (opened by an older binary), fail loudly — never silently corrupt a newer-format store.
+
+For Cortex's current `state.json` path: the same principle applies — replace the decorative `version` field (#63) with a checked gate that runs a `migrations[]` array in order on load, refusing to open a state file whose version is ahead of the running binary.
 
 ---
 
@@ -1198,6 +1263,22 @@ export function installStdoutSentinel(): void {
 
 ---
 
+### Phase 0.8/5.6 Refinement — WSL2 /mnt Drive Watch Policy (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/sync/watch-policy.ts:1-98
+
+When implementing the file watcher (Phase 0.8 Hot-Reload / Phase 5.6 Daemon Watchdog), centralize the on/off decision in a `watchDisabledReason(projectRoot, probe)` function:
+
+1. `CORTEX_NO_WATCH=1` → always off (explicit opt-out wins).
+2. `CORTEX_FORCE_WATCH=1` → always on (overrides detection).
+3. WSL2 + `/mnt/<single-letter>/` path → off (recursive `fs.watch` on NTFS-over-9p is pathologically slow; stalls event loop past host handshake timeouts).
+
+Returns a human-readable reason string or `null` (watch is OK). Use a `WatchProbe` interface (`{ env, isWsl }`) so tests can override detection without touching real env vars or `/proc/version`.
+
+**Fallback for WSL2**: when watcher is disabled, offer git hooks (Phase 0.10) as the sync mechanism.
+
+---
+
 ### Phase 0.9 — IDF-Weighted Content Search (Replace Grep Ban)
 
 **Flaws closed**: #28 (no content-search substitute for `grep` ban)
@@ -1358,6 +1439,22 @@ Both processes run in the background (`&`) so the commit doesn't block. If `stat
 
 ---
 
+### Phase 0.10 Refinement — Marker-Delimited Async Git Hook Sync (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/sync/git-hooks.ts:19-80
+
+When Phase 0.10 (Defensive Git Hook Rewrite) ships:
+
+1. **Marker-delimited injection**: wrap the injected snippet in `# >>> cortex sync hook >>>` / `# <<< cortex sync hook <<<`. Future runs compare against markers, not full file content — idempotent regardless of user edits outside the block.
+2. **Async background only**: `( cortex sync >/dev/null 2>&1 & ) >/dev/null 2>&1`. Never block `git commit`.
+3. **Guard with `command -v cortex`**: if CLI not on PATH (e.g. after uninstall), hook is a no-op.
+4. **Honor `core.hooksPath`**: resolve hooks dir via `git rev-parse --git-path hooks` (handles git worktrees + custom hook dirs).
+5. **Install**: post-commit, post-merge, post-checkout — the three operations that change files on disk.
+6. **Uninstall**: remove only the marker block; preserve any user-authored content in the same hook file.
+7. **WSL2 fallback**: when live file watcher is disabled (WSL2 /mnt drives, slow recursive fs.watch), git hooks become the primary sync mechanism.
+
+---
+
 ### Phase 0.11 — Honest Benchmarks (`worked/` Corpus)
 
 **Flaws closed**: #6 (dishonest savings claims), #68–#70 (inflated brevity stats)
@@ -1420,6 +1517,21 @@ Key output:
 **Note**: `~/.claude/projects/` JSONL schema is undocumented and may change across Claude Code versions. Pin to a schema-version check and emit a warning if fields are absent rather than crashing.
 
 **Source**: nexus-os `scratch/usage-limit-reducer/scripts/usage-report.py:82` — `collect()`
+
+---
+
+### Phase 0.11 Refinement — Agent Evaluation Framework with Recall/MRR (CodeGraph)
+
+**Source-of-lesson**: codegraph/__tests__/evaluation/scoring.ts, test-cases.ts, corpus.json
+
+When Phase 0.11 (Honest Benchmarks) ships, complement token-cost benchmarks with a **search quality evaluation harness**:
+
+- **Metrics**: recall = found/expected, MRR = 1/firstRank. `PASS_THRESHOLD = 0.5`.
+- **Corpus**: map language + repo size (Small/Medium/Large) + architectural question. Seed with real open-source repos.
+- **Test cases**: `EvalTestCase` with `{ id, query, api, expectedSymbols, options }`. Covers `cortex_find` (symbol lookup precision) and `build_context_pack` (exploration quality: recall + edge density).
+- **Runner**: build → index → run API calls → score → print pass/fail per case with found/missed symbols.
+
+This produces objective signal on whether a search algorithm change actually improves recall, not just "feels better." Without it, search quality is evaluated qualitatively — the same class of dishonesty as the fabricated savings ratio.
 
 ---
 
@@ -1653,6 +1765,39 @@ export function getProvider(filePath: string): LanguageProvider | null {
 - All 10 v1 language adapters implement `LanguageProvider` — TypeScript `implements` keyword enforced.
 - `pipeline.ts` contains zero `if (lang === ...)` conditionals.
 - Adding a mock 11th language (`MockProvider`) to the registry: fixture test passes, no other file changes required.
+
+---
+
+### Phase 0.13 Refinement — V8 Turboshaft WASM Zone OOM Fix (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/extraction/wasm-runtime-flags.ts:1-96
+
+When Phase 0.13 (Multi-Language Tree-sitter Extractors) ships, tree-sitter grammar compilation crashes on Node 22/24 with `Fatal process out of memory: Zone` (V8 turboshaft WASM arena OOM). Fix:
+
+1. Define `WASM_RUNTIME_FLAGS = ['--liftoff-only']` as a single source of truth.
+2. On startup, check `process.execArgv.includes('--liftoff-only')`. If missing:
+   - Set a guard env var (`CORTEX_WASM_RELAUNCHED=1`).
+   - `spawnSync(process.execPath, ['--liftoff-only', ...process.execArgv.filter(...), scriptPath, ...process.argv.slice(2)], { stdio: 'inherit', env: { ...process.env, CORTEX_WASM_RELAUNCHED: '1' } })`.
+   - `process.exit(result.status ?? 0)`.
+3. The guard env var prevents infinite loops if re-exec fails.
+4. Write a test that asserts `WASM_RUNTIME_FLAGS.every(f => process.execArgv.includes(f))` — a rename can't silently regress the fix.
+
+---
+
+### Phase 0.13 Refinement — Container Node Structural Outline (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/mcp/tools.ts:40-42 (`CONTAINER_NODE_KINDS`)
+
+Closes flaw #27 (`source` skeleton mode strips the public API while keeping irrelevant body locals). When Phase 0.13 (Multi-Language Tree-sitter Extractors) ships, define a `CONTAINER_NODE_KINDS` set per language:
+
+```typescript
+const CONTAINER_NODE_KINDS = new Set([
+  'class_declaration', 'interface_declaration',
+  'struct_item', 'impl_item', 'enum_declaration',
+]);
+```
+
+For nodes whose kind is in `CONTAINER_NODE_KINDS`, the skeleton extractor emits **member signatures only** (method name, parameter types, return type) — not the body. For leaf nodes (functions, standalone methods), emit the full body up to a configurable line cap. This is the correct inversion of what the current TS extractor does (keeps body locals, drops signatures).
 
 ---
 
@@ -2548,6 +2693,27 @@ Today LLM backend, brevity level, soul opts, and project root are scattered acro
 - `build-skills` pipeline: `npm run build-skills` compiles `skill.md.tmpl` + each `frontmatter/*.yaml` → 19 platform-specific skill files; the compiled files are what `cortex install` ships. Any change to playbook content requires only editing `skill.md.tmpl`.
 - Test suite: `tests/install/mcpWriter.test.ts` covers (a) empty config, (b) pre-existing other server, (c) re-install over existing cortex entry, (d) backup restore on uninstall, (e) JSONC parse for VS Code, (f) nested key write for Continue, (g) XML write for JetBrains, (h) global-install PATH resolution beats npx, (i) WSL environment detection.
 - Integration test: spawn `cortex serve --stdio` as a child process, send an MCP `tools/list` request over stdio, assert tool list matches Layer-1's verb list exactly (no drift).
+
+---
+
+### Phase 0.15 Refinement — One-File-Per-Agent Installer Architecture (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/installer/targets/registry.ts, types.ts
+
+When Phase 0.15 (Dual-Track Distribution) extends to more agents (Cursor, Codex, OpenCode, Hermes, Windsurf, Zed, Continue), define an `AgentTarget` interface:
+
+```typescript
+interface AgentTarget {
+  id: TargetId;
+  detect(loc: Location): { installed: boolean; configPath?: string };
+  write(loc: Location, serverPath: string): void;
+  remove(loc: Location): void;
+}
+```
+
+Adding a new agent = 1 file in `targets/<id>.ts` + 1 line in `registry.ts`. All other logic (multiselect prompt, `--target=all`, `--target=auto` detection) works automatically.
+
+`resolveTargetFlag('auto')`: runs `detect()` for all targets, returns those with `installed=true`. Falls back to `['claude']` if none detected — safe default for first-time installs.
 
 ---
 
@@ -4690,6 +4856,23 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 **Pros & Cons**:
 - ✅ **Pros**: Unblocks fully autonomous agent pipelines. Removes the last human-gated bottleneck from quality governance. Deterministic — based on test pass/fail, not LLM sentiment.
 - ❌ **Cons**: Requires test suites to exist and be linked in entity pages. An entity with no tests stays quality-capped until a human reviews it (correct behavior — no tests means genuinely lower confidence).
+
+---
+
+### Phase 7.5.1 Refinement — Prove-First Gate for Agentic Code Changes (OpenClaw)
+
+**Source-of-lesson**: openclaw `.agents/skills/openclaw-small-bugfix-sweep/SKILL.md:1` | **Score**: 30
+
+When Phase 7.5.1 (Agentic Verification Loop) ships, enforce a **two-phase prove-first requirement** for any agent skill that proposes code changes to Cortex's own source or `.knowledge/`:
+
+1. **Prove phase**: reproduce the failing case → write a failing regression test → produce a dirty diff showing proof. Agent must not proceed without a concrete, focused proof.
+2. **Review phase**: human reviews the dirty diff → approves → agent commits exactly one fix per accepted item with a corresponding changelog entry.
+
+**Skip criteria** (agent MUST NOT proceed): not-a-bug determination, uncertain repro, guessed dependency behavior, no focused proof feasible.
+
+**Why this matters for Cortex specifically**: Cortex modifies its own `.knowledge/` and source files via MCP tools. Without a prove-first gate, agentic "repairs" can introduce regressions that are harder to detect because the system that would catch them (Cortex itself) may be in a degraded state. A broken index silently validating a broken fix is worse than no fix at all.
+
+**DoD**: `cortex doctor` reports when an in-progress agentic repair session has no associated failing test. Skill templates for repair workflows include a `## Prove-First Checklist` section.
 
 ---
 
@@ -7128,6 +7311,22 @@ cortex coverage --report                                     # table of entities
 
 ---
 
+### Phase 12.17 Refinement — Comprehensive isTestFile Detection (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/search/query-utils.ts:208-247
+
+When Phase 12.17 (Test Coverage as Entity Metadata) ships, use a comprehensive multi-language `isTestFile()` function that covers:
+
+- Python: `test_foo.py`, `foo_test.py`
+- Go: `foo_test.go`
+- Java/Kotlin/Swift/Scala: CamelCase suffix `FooTest.kt`, `BarSpec.scala` (capital-led, so `latest.kt` is NOT matched)
+- Directory patterns: `__tests__/`, `/test/`, `/spec/`, `jvmTest/`, `commonTest/`, `androidTest/`
+- Non-production dirs: `integration/`, `sample/`, `examples/`, `fixture/`, `benchmark/`, `demo/`
+
+The function should check both mid-path (`/tests/`) and start-of-path (`tests/`) since relative paths lack a leading slash. CamelCase suffix matching requires a capital letter before the suffix (`Test`, `Spec`, `Suite`) to avoid false positives on common suffixes in production code.
+
+---
+
 ## 💸 Phase 13: Token Economics & Context Packs — ✅ Completed
 
 **Layman's Terms**
@@ -7292,6 +7491,25 @@ Implement a session-based usage tracker and gatekeeper:
 
 ---
 
+### Phase 13 Refinement — Adaptive Output Budgeting by Project Size (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/mcp/tools.ts:55-158
+
+Add project-size-tier controls to `build_context_pack` and context output tools. Four tiers based on indexed file count:
+
+| Tier | Files | maxOutputChars | defaultMaxFiles | maxCharsPerFile | Meta-text |
+|------|-------|----------------|-----------------|-----------------|-----------|
+| Tiny | <500 | 18,000 | 5 | 3,800 | Off |
+| Small | <5,000 | 13,000 | 6 | 2,500 | On |
+| Medium | <15,000 | 35,000 | 12 | 7,000 | On |
+| Large | ≥15,000 | 38,000 | 14 | 7,000 | On |
+
+Meta-text (relationships map, "additional relevant files", completeness signal, budget note) is suppressed for Tiny projects where one rich call is the whole story.
+
+**Key insight**: Smaller codebases need a tighter cap, not just fewer files. An 18k-char cap on a 100-entity project prevents dumping the entire KB on a focused query.
+
+---
+
 ## 💸 Phase 13.5: Fuzzy Levenshtein & RRF Search Ranker — ✅ Done
 
 **Layman's Terms**
@@ -7316,6 +7534,55 @@ Implement a dual-strategy search ranker in `src/knowledge/find.ts` without datab
 **Pros & Cons**
 - ✅ **Pros**: Greatly improves developer search experience under MCP; makes agent retrieval tolerant of minor typos in queries.
 - ❌ **Cons**: Slight CPU cost for calculating Levenshtein edit distance on large node trees. Mitigated by filtering candidate lists by length and character prefixes first.
+
+---
+
+### Phase 13.5 Refinement — Field-Qualified Search Query Parser (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/search/query-parser.ts:34-147
+
+Extend `cortex_find` to accept field qualifiers that compose with free text:
+
+```
+kind:entity path:src/mcp name:auth synthesize
+```
+
+Recognized fields: `kind:` (entity/concept/parent), `path:` (substring of sourceFile), `name:` (substring of entity name). Unknown prefixes pass through to FTS as plain text (no parse error on `TODO:` queries). Quoted values for spaces: `path:"src/some dir"`.
+
+This directly closes flaw #34 (can't filter by file path or directory).
+
+---
+
+### Phase 13.5 Refinement — CamelCase/snake_case Compound Identifier Tokenizer (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/search/query-utils.ts:110-169, 271-309
+
+Replace simple substring matching in `cortex_find` with multi-signal scoring:
+
+1. **Compound identifier tokenizer**: `extractSearchTerms("getUserName")` yields `["getusername", "get", "user", "name"]`. Preserves full compound alongside parts — FTS can match either.
+2. **Stem expansion**: `getStemVariants("caching")` yields `["cach", "cache"]`. Enables FTS prefix query `cache*` to find `CacheBuilder`. Use base terms only for path scoring (stems inflate path scores).
+3. **nameMatchBonus**: exact=80, single-token=60, prefix=10+30×(queryLen/nameLen), all-terms=15, substring=10. Length-ratio scaling prevents `"Pod"→"PodGCControllerOptions"` from scoring as high as `"PodGCControllerOptions"→"PodGCControllerOptions"`.
+4. **kindBonus**: function/method=10, interface/route/protocol=9, class/component=8 … parameter=0.
+5. **pathRelevance**: fileName match +10, dir match +5, path match +3; test files -15 unless query contains "test"/"spec".
+
+This directly closes flaws #18 (no fuzzy/compound search), #26 (ranks by substring not relevance).
+
+---
+
+### Phase 13.5 Refinement — SERVER_INSTRUCTIONS in MCP Initialize (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/mcp/server-instructions.ts:18-67
+
+The MCP `initialize` response's `instructions` field should contain a tight, agent-ready playbook — not lobby prose. Move per-tool workflow coaching OUT of tool descriptions and INTO a single `SERVER_INSTRUCTIONS` const returned once at session start.
+
+Tool descriptions should describe parameters and return values only. Coaching text in tool descriptions re-sends on every tool call (inflating per-call context); in `SERVER_INSTRUCTIONS` it sends exactly once.
+
+Template structure for Cortex:
+- `## Tool selection by intent` — one-liner per tool matching the "what are you trying to do?" framing
+- `## Common chains` — 3-5 multi-tool workflows (onboarding, before-edit, after-sync)
+- `## Limitations` — honest caveats (index lag, heuristic cross-file resolution)
+
+This closes flaw #41 (tool descriptions coerce agent behavior, inflating context).
 
 ---
 
@@ -7376,6 +7643,16 @@ where `lambda = 0.7` (relevance-favoring; set to 0.5 for pure diversity). Simila
 - MMR disabled by default; `configure_search({mmr: {enabled: true, lambda: 0.7}})` enables it.
 - Unit tests: Jaccard similarity, tokenizer (ASCII + CJK), MMR selection order with known lambda.
 - Flaw #26 coverage entry updated to `✅ Phase 13.6.1 — MMR re-ranking closes false-positive ranking`.
+
+---
+
+### Phase 13.6.2 Refinement — Line Numbers in Context Pack Source Slices (CodeGraph)
+
+**Source-of-lesson**: codegraph/src/mcp/tools.ts:162-191
+
+Prefix every source line returned by `build_context_pack` with its 1-based line number in `cat -n` format (`<linenum>\t<code>`). This matches the convention of the native `Read` tool, so agents can cite `file:line` directly from the context pack without re-reading the file.
+
+Add `CORTEX_CONTEXT_LINENUMS=0` env var to disable (useful for A/B token-cost measurement: line numbers add ~5-10% overhead but eliminate a round-trip re-read on precise-tracing questions).
 
 ---
 
@@ -17362,6 +17639,30 @@ function maybeJitterCronTime(expr: string, jitterMs: number = 300_000): number {
 ```
 
 **Config**: `cortex.config.json: { scheduler: { cronJitter: 300 } }`. `--exact` CLI flag opts out. Default jitter active for all top-of-hour schedules. Future-proofs Phase 22 (Central Knowledge Server) where multiple tenants share the same schedule slots.
+
+---
+
+### Phase 5.7 Refinement — Hook Lifecycle Events for Cortex MCP Server (CodeGraph/OpenClaw)
+
+**Source**: openclaw `docs/automation/hooks.md:36` | **Score**: 32
+
+When Phase 5.7 (Scheduled Operations) ships, define a **typed event bus** for Cortex server lifecycle events rather than ad-hoc callbacks. Initial event set:
+
+```typescript
+type CortexHookEvent =
+  | { type: 'server:start' }
+  | { type: 'server:stop' }
+  | { type: 'ingest:before'; files: string[] }
+  | { type: 'ingest:after'; entitiesAdded: number; durationMs: number }
+  | { type: 'entity:evicted'; entityId: string }
+  | { type: 'knowledge:stale'; entityId: string; sourceFile: string };
+```
+
+**Hook discovery order**: bundled hooks → `.cortex/hooks/` workspace dir. A hook file exports `default async function(event: CortexHookEvent): Promise<void>`. Unknown event types are passed through without error (forward-compatibility).
+
+**Why**: Phase 13.7 already uses hooks for cache invalidation but the events are ad-hoc strings. A typed union prevents typos and enables IDE autocomplete on hook authors' side. The discovery pattern lets users add post-ingest notifications, OTEL tracing, or Slack alerts without forking core code.
+
+**First bundled hook**: `session-memory` — flushes pending soul writes on `server:stop` so no data is lost if the server is killed ungracefully.
 
 ---
 

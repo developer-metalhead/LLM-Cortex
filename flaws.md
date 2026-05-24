@@ -1358,3 +1358,13 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: A transport that reads `Content-Length: N` and allocates an N-byte buffer BEFORE checking whether N exceeds the max buffer size allows a malicious client to trigger an OOM crash by sending `Content-Length: 99999999999`. This is a pre-allocation DoS vector.
 **Relevance to Cortex**: Validate Content-Length against `MAX_BUFFER_SIZE` (recommend 10 MB) BEFORE allocating any buffer. If the value exceeds the cap, close the connection with a protocol error. Check first, allocate second.
 **Severity**: high (OOM security)
+
+---
+
+## 🔒 CODEGRAPH AUDIT — Lessons
+
+### 123. Synchronous shell-out in PreToolUse hooks blocks the event loop
+**Source-of-lesson**: codegraph `src/sync/git-hooks.ts:73-80` — shows the correct async background pattern: `( cortex read >/dev/null 2>&1 & ) >/dev/null 2>&1`
+**Pattern**: `inject-knowledge.js` uses `execSync` to call `cortex read` before every Read/Grep tool call. This blocks the event loop for 100-500ms on each native tool call and makes the IDE feel sluggish. The hook already uses a session-marker guard (fires only once per ppid), so the async version still injects knowledge on the first call; subsequent calls are no-ops — the guard prevents redundant work regardless of sync vs async.
+**Relevance to Cortex**: PreToolUse hooks must never use `execSync` for any subprocess call. The correct pattern is async background: `( cortex read >/dev/null 2>&1 & ) >/dev/null 2>&1`. This is a general rule: hooks should never block the event loop; async background is always preferred for fire-and-forget operations in hook context.
+**Severity**: 3 (HIGH) — blocks every Read/Grep tool call for 100-500ms; degrades IDE responsiveness across the entire Claude Code session
