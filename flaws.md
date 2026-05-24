@@ -269,6 +269,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 ### 5. `lint` reports cycles as ERROR; `audit_quality` ignores them
 **Repro:** `lint` returned 3 `ERROR cycle` findings (`CortexDaemon → CortexWatcher → CortexDaemon` etc.). `audit_quality` ran immediately after and reported all 15 entities at quality `0.94`, `✅ All entities meet the quality gate (0.50)`.
 **Impact:** lint findings are decorative. Quality scoring ignores structural integrity. Cycles also suggest the synthesis got relationships wrong (logger doesn't actually depend on daemon) — but no audit surfaces this.
+**Addressed by**: Phase 0.13 Refinement — Cycle Detection via Visited + RecursionStack DFS (codegraph cross-domain audit, score: 20) — detects cycles at graph-build time and writes `CIRCULAR_DEPENDENCY` edges; `audit_quality` can then query for these edges and penalise quality scores instead of relying on `lint`.
 
 ---
 
@@ -283,7 +284,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 ### 7. Savings ledger contradicts itself on USD value
 **Repro:** `get_savings` shows `AST Skeleton Cache: 4 entries, 6,943 tokens, $0.0000`.
 **Impact:** either tokens are wrong or USD is wrong. The pricing logic doesn't apply the per-provider rate to AST-cache savings, even though those tokens were billed.
-**Addressed by**: Phase 0.11 Refinement — Real Usage Analytics via Claude Code Session Logs
+**Addressed by**: Phase 0.11 Refinement — Real Usage Analytics via Claude Code Session Logs + Phase 7 Refinement — JSONL Token Accounting with Call Granularity (nexus-os cross-domain audit, score: 32) — per-call token records with model + input/output breakdown + estimated USD, sourced from actual API responses rather than heuristic estimates.
 
 ### 8. `build_context_pack` silently ignores invalid `scope`
 **Repro:** `build_context_pack({scope: "SoulEngine", budget: 2000})`. SoulEngine doesn't exist in the index.
@@ -321,11 +322,12 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 13. `audit_quality` produces identical scores across all entities
 **Repro:** all 15 entities scored `0.94` with breakdown `evidence 1.00 / contradiction 1.00 / staleness 1.00 / age 1.00 / human-review 0.70`.
 **Impact:** zero variance — the scoring function can't differentiate. The `0.50` gate is unreachable. The 5-dimension breakdown is theatre when all five dimensions return their default value for every entity.
+**Partially addressed by**: Phase 13 Refinement — Temporal Decay Scoring for `audit_quality` (openclaw audit, score: 24) — adds a freshness dimension (`Math.exp(-ln2/halfLife * ageInDays)`) that produces real variance for dated entity pages while leaving evergreen concept pages at 1.0.
 
 ### 14. `evolution_entity` and `log_query` return empty for tracked entities
 **Repro:** `evolution_entity({entity: "CortexMCPServer"})` → `[]`. `log_query()` (no filters) → `[]`. `log_query({entity: "CortexMCPServer"})` → `[]`.
 **Impact:** the architectural log either doesn't exist or is never written. Tools are wired into the MCP surface but their data source is silently absent.
-**Addressed by**: Phase 43.1 Refinement — Session-Scoped JSONL Event Sourcing
+**Addressed by**: Phase 43.1 Refinement — Session-Scoped JSONL Event Sourcing + Phase 7 Refinement — JSONL Event Sourcing with Session Isolation (nexus-os cross-domain audit, score: 40) — per-session append-only ledger at `.knowledge/logs/<session-id>.jsonl`; `log_query` reads these files rather than a single shared `log.jsonl` that was silently broken.
 
 ### 15. `refresh_stale_entities` collapses "not found" and "not stale"
 **Repro:** `refresh_stale_entities({names: ["NonExistentEntity", "AnotherFake"]})` → `"⚠️ Skipped 2 (not stale or not found): NonExistentEntity, AnotherFake"`.
@@ -491,7 +493,7 @@ const envLens = process.env.CORTEX_LENS;  ← random local from inside detectAct
 4. `source` full — finally usable (1 round trip needed)
 
 Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~equal token cost. Cortex cost me **4x the latency** on a phase-13.8 entity because the index doesn't know about it, the skeleton extractor is broken, and the fallback chain has no escape valve.
-**Addressed by**: Phase 0.11 Refinement — Token Budget Pre-Flight Warning (aider audit, score: 36)
+**Addressed by**: Phase 0.11 Refinement — Token Budget Pre-Flight Warning (aider audit, score: 36) + Phase 7 Refinement — Context Assembly Pattern: Multi-Facet in One Call (codegraph cross-domain audit, score: 30) — `build_context_pack` assembles entity + callers + callees + siblings + git log in parallel, collapsing 4 sequential round-trips into 1.
 
 ---
 
@@ -531,6 +533,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 45. No batch reads
 **Repro:** to read 5 entities I need 5 sequential `read_entity` calls. The MCP protocol supports batching but Cortex doesn't expose `read_entities({names: [...]})` or `read_many`.
 **Impact:** linear round-trip cost for surveying multiple entities. Should add a batch variant.
+**Partially addressed by**: Phase 7 Refinement — Context Assembly Pattern: Multi-Facet in One Call (codegraph cross-domain audit, score: 30) — for the common "I need entity + its neighbours" case, a single `build_context_pack` call replaces N sequential reads. Dedicated `read_entities` batch tool still needed for arbitrary multi-entity surveys.
 
 ### 46. `source` calls aren't parallelizable in the same turn
 **Repro:** the `source` tool mutates cache state on every call. If I issue two `source` calls in parallel in one assistant turn, they race on the cache and may both return "full" (no compression) or both invalidate each other's skeletons.
@@ -539,7 +542,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 47. Mutating tools have no audit trail
 **Repro:** `save_concept`, `configure_brevity`, `configure_safeguards`, `compress` all mutate state. None record who called them, when, or what changed.
 **Impact:** I polluted the KB with `FLAW_TEST_CONCEPT` and only know I did so because *I* remember. An agent making the same mistake mid-session has no way to discover it. Should append every mutation to `experience.jsonl` (which already exists for exactly this purpose).
-**Addressed by**: Phase 43.1 Refinement — Correlation ID Threading for Tool Call Audit Trail (closes flaw #47)
+**Addressed by**: Phase 43.1 Refinement — Correlation ID Threading for Tool Call Audit Trail (closes flaw #47) + Phase 7 Refinement — JSONL Event Sourcing with Session Isolation (nexus-os cross-domain audit, score: 40) — append-only per-session JSONL with `tool`, `entityIds`, `params`, `resultSummary`, and `tokenCost` on every MCP tool invocation; session finalised with a `session_end` event.
 
 ### 48. `set_project_root` can silently swap state mid-session
 **Repro:** the MCP server accepts a `set_project_root` call that re-points the entire knowledge manager to a different directory. Per the earlier server.ts audit, this replaces `this.soul` without flushing pending mutations.
@@ -548,6 +551,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 49. Tool surface tells the agent to ignore other tools
 **Repro:** `cortex_find` description: *"Use this INSTEAD of grep or read_knowledge_index."* `cortex_onboard`: *"Use this INSTEAD of read_knowledge_index."* `build_context_pack`: *"Use this instead of read_knowledge_index."*
 **Impact:** four tools all claim to be the replacement for `read_knowledge_index`. Agents follow the most recent "INSTEAD of" rule and end up routing around the right tool. The taxonomy is unclear from the descriptions alone.
+**Addressed by**: Phase 7 Refinement — MCP Tool Registry with Composite Intent Callout (codegraph cross-domain audit, score: 36) — mark 1–2 tools as `[PRIMARY TOOL]` in their description; each tool registration carries `intent[]` (what goal it serves) and `seeAlso[]` (follow-up tools) so the taxonomy is explicit rather than emergent from "INSTEAD of" lobbying.
 
 ### 50. No way to query "what does Cortex *not* know?"
 **Repro:** there's no tool that returns the list of source files NOT yet ingested. `audit` says "no stale entities" (i.e., existing entities are fresh) but doesn't surface "files that should exist as entities but don't."

@@ -75,6 +75,8 @@ Short-circuit obviously low-value targets:
 - **README contains "ARCHIVED" / "DEPRECATED" / "no longer maintained"** → output "Target abandoned." Stop.
 - **Only HTML/CSS/static assets, no business logic** → "Domain mismatch with Cortex." Stop.
 
+**Cross-domain note (read before applying the domain-mismatch exit):** Domain mismatch applies to the *product*, not individual *patterns*. A Python ML training tool, a phone-chat app, or an OS scheduler may have zero product overlap with Cortex but contain algorithmic patterns — fuzzy matching tiers, bounded BFS, config layering, retry strategies, test harness design, progress reporting — that transfer directly. Only exit on domain mismatch if the target is *purely* static assets with no algorithmic logic whatsoever. For everything else, continue the audit and apply the cross-domain lens in Step 2c.
+
 ### Step 0.7 — Pre-flight skim (depth calibration)
 
 30-second triage BEFORE the deep scan, to right-size Step 2's effort:
@@ -135,6 +137,7 @@ Do NOT randomly sample. Coverage failures are the dominant failure mode.
   - **Apply patterns** from `reference/grep-patterns.md`.
   - **Cite file + line + symbol** — no location, no inclusion.
   - **Capture file metadata** for each finding: `last_modified` (mtime), `has_tests` (boolean — is there a `*.test.*` / `*_test.*` / `*_spec.*` for this file or its containing module?). These feed scoring in Step 6.
+  - **Cross-domain lens (mandatory):** For every file read, ask TWO questions, not one. (1) "Does this feature exist in Cortex?" — the standard question. (2) "Could this *technique* transfer to Cortex even if the domain doesn't match?" Techniques that transfer regardless of domain: retry/fallback chains, bounded graph traversal, tiered confidence scoring, config merge patterns, progress reporting, DI for testability, parallel I/O prefetch, fuzzy matching pipelines, error classification hierarchies. A fuzzy string matcher in a chat app is as applicable to `cortex_find` as one in a code search tool. Never dismiss a technique solely because the file's product domain differs from Cortex's.
 - **2d. Anti-miss checklist**: Confirm visits to `migrations/`, `plugins/`, `examples/`, `benchmarks/`, `scripts/`, `tools/`, `tests/e2e/`, `fixtures/`, `proto/`, `generated/`, `i18n/`, `Justfile`/`Makefile`/`Taskfile.yml`, `.github/workflows/`, `.gitlab-ci.yml`, `Dockerfile*`, `.env.example`, root `*.config.*`.
 
 - **2d.2 Always-read files (never skip, never partial-read — unconditionally high-value)**:

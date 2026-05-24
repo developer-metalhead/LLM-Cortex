@@ -4,329 +4,329 @@ This document serves as the definitive blueprint and systematic, phase-by-phase 
 
 > **Status legend:** ✅ Done · 🚧 In progress · ⏳ Planned
 
-| Phase | Title                                                  | Status                               |
-| ----- | ------------------------------------------------------ | ------------------------------------ |
-| 0     | Security & Validation Foundation (Graphify-Derived)    | ⏳ Planned (P0-Critical)             |
-| 0.1   | `security.ts` — Path Traversal, SSRF, XSS, Memory-Bomb | ⏳ Planned                          |
-| 0.2   | `validate.ts` — Schema Gating & Referential Integrity  | ⏳ Planned                           |
-| 0.3   | Confidence Labels (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) | ⏳ Planned                           |
-| 0.4   | Graph-as-Cache (Replace Skeleton Compression)          | ⏳ Planned                           |
-| 0.5   | OS-Native File Locking (`fcntl` / Named Mutex)         | ⏳ Planned                           |
-| 0.6   | MinHash/LSH Deduplication Pipeline                     | ⏳ Planned                           |
-| 0.7   | `cortex doctor` Self-Diagnostic CLI                    | ⏳ Planned                           |
-| 0.8   | MCP Hot-Reload with Double-Checked Locking             | ⏳ Planned                           |
-| 0.9   | IDF-Weighted Content Search (Replace Grep Ban)         | ⏳ Planned                           |
-| 0.10  | Defensive Git Hook Rewrite                             | ⏳ Planned                           |
-| 0.11  | Honest Benchmarks (`worked/` Corpus)                   | ⏳ Planned                           |
-| 0.12  | `cortex repair` — Backup/Restore & Git-Friendly Output | ⏳ Planned                           |
-| 0.13  | Multi-Language Tree-sitter Extractors (25 languages)   | ⏳ Planned                           |
-| 0.14  | Multi-Backend LLM Abstraction (8 backends)             | ⏳ Planned                           |
-| 0.15  | Dual-Track Distribution: MCP + Skill with Auto-Config Writer | ⏳ Planned                     |
-| 0.16  | Multi-Format File Ingestion (PDF, Images, Video, Office, Docs) | ⏳ Planned                   |
-| 0.17  | Dev Hygiene: Security CI Gate, Property Tests, Pre-Commit Hooks, Standalone Binary | ⏳ Planned |
-| 0.18  | Rationale Node Extraction (Comment & Docstring Graph Nodes) | ⏳ Planned                    |
-| 0.19  | SCIP Ingest (Language-Server Protocol Index Support)   | ⏳ Planned                           |
-| 1     | Ingestion & Monitoring Foundation                      | ✅ Done                              |
-| 2     | LLM Synthesis Engine                                   | ✅ Done                              |
-| 2.1   | LLM-Free Rule-Based Synthesis for Micro-Diffs          | ⏳ Planned                           |
-| 2.2   | Hallucination Cross-Check (AST vs Synthesis Divergence) | ⏳ Planned                          |
-| 3     | Knowledge Storage & Cost Control                       | ✅ Done                              |
-| 3.1   | LLM Caching Store                                      | ⏳ Planned                           |
-| 3.2   | Semantic Versioning of the Knowledge Graph             | ⏳ Planned                           |
-| 3.3   | Entity ID Stability Tags                               | ⏳ Planned                           |
-| 4     | MCP Server Integration                                 | ✅ Done                              |
-| 4.5   | Dual-Route IDE Integration                             | ✅ Done (added beyond original plan) |
-| 4.6   | Developer API & Client SDKs                            | ⏳ Planned                           |
-| 4.7   | OpenAI-Compatible REST Gateway                         | ⏳ Planned                           |
-| 4.8   | Persona-Specific MCP Prompts                           | ⏳ Planned                           |
-| 5     | CLI Polish & Daemonization                             | ✅ Done                              |
-| 5.6   | Daemon Watchdog & Self-Healing                         | ⏳ Planned (production reliability)  |
-| 5.7   | Scheduled Operations & Cron Engine                     | ⏳ Planned (production reliability)  |
-| 5.8   | ~~Multi-Operator Session Coordination~~ → see Phase 56 | ⏳ Planned (moved — agent coordination)    |
-| 5.9   | Shell Status Prompt Integration & Statusline Badge     | ⏳ Planned                           |
-| 6     | Active Guardrail — Constraints & Blast-Radius Analysis | ✅ Done                               |
-| 6.1   | Template Entities & Instantiated-From Relationships       | ⏳ Planned                           |
-| 6.2   | Arbitrary Predicate Relationships & Triple-Store Queries | ⏳ Planned                           |
-| 6.3   | Weak Measurements — Low-Certainty Hypothesis Tags      | ⏳ Planned                           |
-| 6.4   | Torsion Links — Context-Dependent Entity Meaning        | ⏳ Planned                           |
-| 6.5   | Plasma Filaments — Structural Edge Flag                 | ⏳ Planned                           |
-| 7     | Audit & Traceability Tools                             | ✅ Done                               |
-| 7.5   | Knowledge Quality & Enterprise Governance Foundation   | ✅ Done                               |
-| 7.5.1 | Agentic Verification Loop (CI-Driven Quality Boost)    | ⏳ Planned                           |
-| 7.5.2 | Mandatory Evidence Anchoring for High-Centrality Nodes | ⏳ Planned                           |
-| 7.6   | Global Architectural Lessons & Retrospective Log      | ⏳ Planned                           |
-| 7.7   | Automated Technical Debt Register                      | ⏳ Planned                           |
-| 7.8   | Graph-Driven Review Advisories & Untested Hub Analysis | ⏳ Planned                           |
-| 7.9   | Knowledge Garbage Collection & Archive Consolidation   | ⏳ Planned                           |
-| 7.10  | Sensitive Data & API Secret Sanitization Guardrail    | ⏳ Planned                           |
-| 7.11  | Epigenetic Memory Suppression                          | ⏳ Planned                           |
-| 7.12  | Astronomical Parallax — Perspective Shift Scoring       | ⏳ Planned                           |
-| 7.13  | Retrocausality — Backward Quality Propagation           | ⏳ Planned                           |
-| 7.14  | Intrinsic Redshift — Novelty-at-Creation Metric         | ⏳ Planned                           |
-| 7.15  | Verlinde Avoidance — Blind-Spot Detection               | ⏳ Planned                           |
-| 7.16  | Proteasome Atrophy — Targeted Knowledge Degradation      | ⏳ Planned                           |
-| 7.17  | Keystone Index — Entity Impact-to-Size Ratio             | ⏳ Planned                           |
-| 7.18  | Regulatory Suppression — Alert Correlation Dampening     | ⏳ Planned                           |
-| 7.19  | Synaptic Tagging — Retroactive Importance Boost           | ⏳ Planned                           |
-| 7.20  | Surprising Connections — Cross-Community & Cross-Language Edge Detection | ⏳ Planned         |
-| 7.21  | God Node Detection                                     | ⏳ Planned                           |
-| 8     | Visual & Browseable Knowledge Graph                    | ✅ Done                              |
-| 8.1   | Live Graph Stream (WebSocket)                          | ⏳ Planned                           |
-| 8.2   | Karpathy-Style Obsidian Wiki Compliance & Presets     | ⏳ Planned                           |
-| 8.3   | GPU-Accelerated Knowledge Graph Rendering               | ⏳ Planned                           |
-| 8.4   | Hyperbolic Graph Layout (Poincaré Disk)                 | ⏳ Planned                           |
-| 8.5   | Neo4j Cypher & GraphML Export                          | ⏳ Planned                           |
-| 9     | Refactoring Impact Preview                             | ✅ Done                              |
-| 9.1   | Dependency Path Querying                               | ⏳ Planned                           |
-| 9.2   | Torstone Inertia — Refactor Resistance Metric          | ⏳ Planned                           |
-| 9.3   | Hyrum's Law — Implicit Dependency Detection            | ⏳ Planned                           |
-| 9.4   | Execution Flow Tracing (Entry-Point Dynamic Topology)  | ⏳ Planned                           |
-| 9.5   | API Route Handler Analysis (`cortex api-impact`)       | ⏳ Planned                           |
-| 9.6   | Process-Grouped Search Results (Flow-Bucketed Ranking) | ⏳ Planned (requires Phase 9.4)      |
-| 10    | Onboarding & Guided Reading                            | ✅ Done                              |
-| 10.1  | Spherification — Data Encapsulation for Entity Clusters | ⏳ Planned                           |
-| 10.2  | Smart Rule File Patching & Marker-Fenced Injection     | ⏳ Planned                           |
-| 10.3  | Zero-Token Startup & AI Ignore Scaffolding             | ⏳ Planned                           |
-| 10.4  | Managed `CLAUDE.md` & AI Rules Orchestration           | ⏳ Planned                           |
-| 10.5  | Attention-Curve Rule Reordering & Position Optimization | ⏳ Planned                          |
-| 10.6  | Compaction-Safe Decision Anchoring & Continuity Breadcrumbs | ⏳ Planned                      |
-| 10.7  | Rules File Size Guardrail & Auto-Splitting             | ⏳ Planned                           |
-| 10.8  | `cortex explain <symbol>` — Focused Single-Symbol Explain | ⏳ Planned                        |
-| 10.9  | Suggested Questions per Corpus                         | ⏳ Planned                           |
-| 10.10 | Skill File Generation per Leiden Community             | ⏳ Planned                           |
-| 11    | Monorepo Federation                                    | ⏳ Planned                           |
-| 11.5  | Repository Groups with Contracts (Cross-Repo Bridge Graph) | ⏳ Planned                       |
-| 11.6  | Cross-Repo RRF Query Merging                           | ⏳ Planned                           |
-| 12    | Git & CI Integration                                   | ⏳ Planned                           |
-| 12.2  | Git Pre-Commit Guardrail Hooks                         | ⏳ Planned                           |
-| 12.3  | Architecturally Aware Commit Generation                | ⏳ Planned                           |
-| 12.4  | Diagnostic Run Buffer & Tee Recovery                   | ⏳ Planned                           |
-| 12.5  | Terminal Command Output Minifier                      | ⏳ Planned                           |
-| 12.6  | Local Command Interception Shims & Agent Rules         | ⏳ Planned                           |
-| 12.7  | Smart Code Outliner & Signature-Only Reader            | ⏳ Planned                           |
-| 12.8  | Log Deduplicator & Web Fetch Parser                    | ⏳ Planned                           |
-| 12.9  | Architectural Graph Diffing                            | ⏳ Planned                           |
-| 12.10 | Baseline-Driven Quality Gates                          | ⏳ Planned                           |
-| 12.11 | Architectural Changelog Generator                      | ⏳ Planned                           |
-| 12.12 | Automated MCP Compliance & Live Integration Suite      | ⏳ Planned                           |
-| 12.13 | Architecturally Aware Commit Scope Linting             | ⏳ Planned                           |
-| 12.14 | Agent Token-Use Discovery & Anti-Pattern Auditor       | ⏳ Planned                           |
-| 12.15 | External Dependency & Ecosystem Change Tracking        | ⏳ Planned                           |
-| 12.16 | PR Triage Dashboard — Graph-Aware Conflict Detection   | ⏳ Planned                           |
-| 12.17 | Test Coverage as Entity Metadata                       | ⏳ Planned                           |
-| 13    | Token Economics & Context Packs                        | ✅ Done                              |
-| 13.1  | Dense & Raw Token-Reduction Projections                | ✅ Done                              |
-| 13.2  | Cortex Brevity Engine & Telegraphic Memory Compression | ✅ Done                              |
-| 13.3  | Token & Cost Savings Ledger & Analytics                | ✅ Done                              |
-| 13.4  | API Budget Gating & Runaway Safeguards                | ✅ Done                              |
-| 13.5  | Fuzzy Levenshtein & RRF Search Ranker                  | ✅ Done                              |
-| 13.6  | Proximity Reranking & Smart Snippets                   | ✅ Done                              |
-| 13.7  | Hooks-Based Smart Read Cache & AST Skeleton Delta      | ✅ Done                              |
-| 13.7.2| Speculative Static Verification & Grounded Fallback    | ✅ Done                              |
-| 13.8  | Persistent Experience & Cognitive Mode-Adaptive Context | ⏳ Planned                           |
-| 13.8.8| Unified Edge Confidence (Synaptic Plasticity)         | ⏳ Planned                           |
-| 13.9   | Grapheme-Safe Token Compression (TokenJuice Rules)    | ⏳ Planned                           |
-| 13.10  | Information Bottleneck Scoring                          | ⏳ Planned                           |
-| 13.11  | Bidirectional Context Retrieval                        | ⏳ Planned                           |
-| 13.12  | Opportunity Cost Scoring — Packer Exclusion Tracking   | ⏳ Planned                           |
-| 14    | Large-Diff Clustering                                  | ⏳ Planned                           |
-| 14.2  | Topological Hierarchy & Zoomable Retrieval (RAPTOR)   | ⏳ Planned                           |
-| 15    | CI Feedback Signal Loop                                | ⏳ Planned (research-grade)          |
-| 16    | Contradiction-Aware Retrieval                          | ⏳ Planned (research-grade)          |
-| 17    | Active Disambiguation via Self-Consistency             | ⏳ Planned (research-grade)          |
-| 17.1  | Multi-Model Architectural Debate                       | ⏳ Planned                           |
-| 18    | Architectural Embeddings (Typed-Graph + Text Hybrid)   | ⏳ Planned (research-grade)          |
-| 19    | Librarian Distillation                                 | ⏳ Planned (research-grade)          |
-| 20    | Intelligent Architectural Advisor                      | ⏳ Planned                           |
-| 20.1  | Architecture Simulation & What-If Analysis             | ⏳ Planned                           |
-| 20.2  | Bug Hotspot Prediction                                 | ⏳ Planned (research-grade)          |
-| 20.2.1| Catastrophe Tipping-Point Detection                    | ⏳ Planned                           |
-| 20.3  | Design Pattern Suggestion                              | ⏳ Planned                           |
-| 20.4  | Evolutionary Architecture Fitness Functions            | ⏳ Planned                           |
-| 20.5  | Architecture Documentation Generation                  | ⏳ Planned                           |
-| 20.5.1| Automated ADR (Architectural Decision Records) Engine  | ⏳ Planned                           |
-| 20.6  | Hierarchical Memory Tiering (MemGPT-inspired)          | ⏳ Planned (research-grade)          |
-| 20.7  | Personalized Per-Developer Memory (Mem0-inspired)      | ⏳ Planned                           |
-| 20.7.1| ~~Cross-Agent Workspace State Sync~~ → see Phase 57    | ⏳ Planned (moved — agent coordination)    |
-| 20.7.2| Mem0-Style Memory Consolidation Pipeline               | ⏳ Planned                           |
-| 20.7.3| Prospective Memory & Belief Revision                   | ⏳ Planned                           |
-| 20.8  | Memory Stream Retrieval Scoring                        | ⏳ Planned (research-grade)          |
-| 20.9  | Community Synthesis (GraphRAG + RAPTOR)                | ⏳ Planned (research-grade)          |
-| 20.10 | Hippocampal Retrieval (HippoRAG-inspired)              | ⏳ Planned (research-grade)          |
-| 20.11 | Reflexion-Style Self-Correcting Synthesis              | ⏳ Planned (research-grade)          |
-| 20.12 | Temporal Knowledge Graph                               | ⏳ Planned (research-grade)          |
-| 20.13 | Pattern Skill Library (VOYAGER-inspired)               | ⏳ Planned                           |
-| 20.14 | Causal Impact Analysis (Pearl do-calculus)             | ⏳ Planned (research-grade)          |
-| 20.15 | Dual-Process Synthesis (System 1 / System 2)           | ⏳ Planned (research-grade)          |
-| 20.15.1| Protein Folding — Argument Prediction                 | ⏳ Planned                           |
-| 20.16 | ~~Multi-Agent Librarian Collaboration~~ → see Phase 58 | ⏳ Planned (moved — agent coordination)    |
-| 20.17 | Sleep Consolidation & Memory Reorganization            | ⏳ Planned (research-grade)          |
-| 20.17.1| Casimir Effect — Suppressed-Mode Creativity          | ⏳ Planned (research-grade)          |
-| 20.18 | Tree-of-Thoughts & Self-Ask Synthesis                  | ⏳ Planned (research-grade)          |
-| 20.19 | Surgical Knowledge Editing (ROME/MEMIT)                | ⏳ Planned                           |
-| 20.20 | Active Inference & Predictive Synthesis (Friston)      | ⏳ Planned (research-grade)          |
-| 20.21 | Episodic-Semantic Memory Consolidation (Tulving)       | ⏳ Planned (research-grade)          |
-| 20.22 | Spaced Repetition & Forgetting Curves (Ebbinghaus/SM-2)| ⏳ Planned                           |
-| 20.22.1| Entity Lifecycle Phases                               | ⏳ Planned                           |
-| 20.23 | Tool-Use Augmented Synthesis (Toolformer/ReAct)        | ⏳ Planned (research-grade)          |
-| 20.24 | Sequential Thinking & Persistent Reasoning Traces      | ⏳ Planned (research-grade)          |
-| 20.28 | Agentic Retrieval Loop                                 | ⏳ Planned                           |
-| 20.29 | Corrective RAG Module                                  | ⏳ Planned                           |
-| 20.30 | Iterative RAG Refinement                               | ⏳ Planned                           |
-| 21    | Polyrepo Federation                                    | ⏳ Planned                           |
-| 22    | Central Knowledge Server                               | ⏳ Planned                           |
-| 22.1  | Webhook Ingestion (Push-Based Sync via GitHub/GitLab)  | ⏳ Planned (requires Phase 22)       |
-| 23    | Human-in-the-Loop Review                               | ⏳ Planned                           |
-| 24    | Compliance Constraint Templates                        | ⏳ Planned                           |
-| 25    | Enterprise SSO, SCIM & Identity Federation             | ⏳ Planned (enterprise)              |
-| 25.1  | Federated Identity for Cross-Tenant Workflows          | ⏳ Planned (enterprise)              |
-| 26    | RBAC, ABAC & Immutable Audit Trail                     | ⏳ Planned (enterprise)              |
-| 26.1  | DLP & Knowledge-Layer PII Redaction                    | ⏳ Planned (enterprise)              |
-| 26.2  | Policy-as-Code (OPA/Cedar)                             | ⏳ Planned (enterprise)              |
-| 26.3  | OpenTelemetry Tracing & Observability Export           | ⏳ Planned (enterprise)              |
-| 26.4  | Cryptographic Event Signing & Non-Repudiation          | ⏳ Planned (enterprise)              |
-| 26.5  | Xuan Paper Layer — Permanent Provenance Overlay        | ⏳ Planned                           |
-| 27    | Air-Gapped, Sovereign & BYO-Key Deployment             | ⏳ Planned (enterprise)              |
-| 28    | Enterprise Workflow Integrations Hub                   | ⏳ Planned (enterprise)              |
-| 29    | FinOps — Cost Governance & Chargeback                  | ⏳ Planned (enterprise)              |
-| 29.1  | Approved Model Allowlists & Provider Governance        | ⏳ Planned (enterprise)              |
-| 29.2  | Tenant-Scoped Billing & Metering                       | ⏳ Planned (enterprise)              |
-| 30    | Knowledge Migration & Legacy Ingest                    | ⏳ Planned (enterprise)              |
-| 30.1  | External AI Conversation Import                        | ⏳ Planned (enterprise)              |
-| 30.2  | Knowledge Base Merge Engine                            | ⏳ Planned (enterprise)              |
-| 31    | Executive Analytics, ROI Dashboard & Architectural KPIs| ⏳ Planned (enterprise)              |
-| 32    | Vendor Risk, Procurement Pack & Certifications Path    | ⏳ Planned (enterprise)              |
-| 32.1  | Cloud Marketplace Listings (AWS/GCP/Azure)             | ⏳ Planned (enterprise distribution) |
-| 32.2  | Supply Chain Security: SBOM & SLSA Provenance          | ⏳ Planned (enterprise)              |
-| 33    | Deep Recursive Bootstrap Ingest                        | ⏳ Planned (P0 — fixes prod issue)   |
-| 33.1  | Model Provider Registry & Cost-Tier Routing            | ⏳ Planned (enterprise)              |
-| 33.2  | Remote Operations & Mobile Status PWA                  | ⏳ Planned (enterprise)              |
-| 33.5  | Unified Two-Stage Ingestion Pipeline                   | ⏳ Planned (P0 — bootstrap + watch)  |
-| 33.6  | AST-Only Incremental Update Mode                       | ⏳ Planned (P0 — zero-LLM watch)     |
-| 34    | Cognitive Engine Optimizations (Gaming/ML Inspired)    | ⏳ Planned (research-grade)          |
-| 34.1  | Virtualized Context Streaming (UE5 Nanite)             | ⏳ Planned (research-grade)          |
-| 34.2  | Speculative Architectural Decoding (ML)                | ⏳ Planned (research-grade)          |
-| 34.3  | Entity Visibility Partitioning (Doom BSP)              | ⏳ Planned (research-grade)          |
-| 34.4  | Cognitive Fog & Abstraction Masking (Silent Hill)      | ⏳ Planned (research-grade)          |
-| 34.5  | Data-Oriented Synthesis Pipeline (ECS)                 | ⏳ Planned (research-grade)          |
-| 34.6  | Heuristic Embedding Pruning (Quake 3 Hash)             | ⏳ Planned (research-grade)          |
-| 34.7  | Paged Context Allocation (PagedAttention)              | ⏳ Planned (research-grade)          |
-| 35    | Cross-Disciplinary Architecture Optimizations          | ⏳ Planned (research-grade)          |
-| 35.1  | Architectural PageRank & Virtual Graph DOM             | ⏳ Planned (research-grade)          |
-| 35.2  | CRDT-Based Multi-Agent Graph Mutations                 | ⏳ Planned (research-grade)          |
-| 35.3  | Categorical Isomorphism Detection                      | ⏳ Planned (research-grade)          |
-| 35.4  | Ring-0 IDE Telemetry Hooks (Anti-Hallucination Guard)  | ⏳ Planned (research-grade)          |
-| 35.5  | WebAssembly (WASM) Graph Vectorization                 | ⏳ Planned (research-grade)          |
-| 35.6  | Architectural Write-Ahead Logging (WAL)                | ⏳ Planned (research-grade)          |
-| 35.7  | Air-Gapped Autarky (Radical Decoupling)                | ⏳ Planned (research-grade)          |
-| 36    | Exotic Architecture Optimizations                      | ⏳ Planned (research-grade)          |
-| 36.1  | Event-Sourced Ephemeral Graphs (Kafka/Redux)           | ⏳ Planned (research-grade)          |
-| 36.2  | God's Algorithm for Refactoring                        | ⏳ Planned (research-grade)          |
-| 36.3  | Vector-Symbolic Emulsification (VSE)                   | ⏳ Planned (research-grade)          |
-| 36.4  | Mycorrhizal Telemetry Protocol                         | ⏳ Planned (research-grade)          |
-| 36.5  | Gödel-Aware Fallback Escapes                           | ⏳ Planned (research-grade)          |
-| 36.6  | Zeno-Effect Test Pinning (Quantum Zeno)                | ⏳ Planned (research-grade)          |
-| 36.7  | Background Knowledge Fermentation (Food Science)       | ⏳ Planned (research-grade)          |
-| 36.8  | Sonoluminescent Prompt Collapse (Physics)              | ⏳ Planned (research-grade)          |
-| 37    | Unified Architectural Field Theory (ToE)               | ⏳ Planned (research-grade)          |
-| 37.1  | Homotopic Graph Compiler (HoTT)                        | ⏳ Planned (research-grade)          |
-| 37.2  | String-Theoretic Tensor Embeddings                     | ⏳ Planned (research-grade)          |
-| 37.3  | API Boundary Holography (Holographic Principle)        | ⏳ Planned (research-grade)          |
-| 38    | The Reality Simulation Mechanics                       | ⏳ Planned (research-grade)          |
-| 38.1  | Octonion-Bound Knowledge Primitives                    | ⏳ Planned (research-grade)          |
-| 38.2  | Ring-0 Epistemological Anticheat                       | ⏳ Planned (research-grade)          |
-| 38.3  | Algorithmic Attention Fatigue                           | ⏳ Planned (research-grade)          |
-| 38.4  | Alcubierre Sub-Graph Warping                           | ⏳ Planned (research-grade)          |
-| 38.5  | Schrödinger’s Branching Contexts                       | ⏳ Planned (research-grade)          |
-| 38.6  | Procedural Node-Based Sculpting                        | ⏳ Planned (research-grade)          |
-| 38.7  | Syntactic Prion Propagation                            | ⏳ Planned (research-grade)          |
-| 38.8  | Terry Davis RNGod Heuristics                           | ⏳ Planned (research-grade)          |
-| 39    | Systemic Convergence                                   | ⏳ Planned (research-grade)          |
-| 39.1  | Cognitive Supervision Trees                            | ⏳ Planned (research-grade)          |
-| 39.2  | Tectonic Migration Solvers                             | ⏳ Planned (research-grade)          |
-| 39.3  | Stigmergic Heatmap Routing                             | ⏳ Planned (research-grade)          |
-| 39.4  | Asymmetric Dual-Processing Substrate                   | ⏳ Planned (research-grade)          |
-| 39.5  | Cognitive Branch Prediction                            | ⏳ Planned (research-grade)          |
-| 39.6  | Merkle-DAG Integrity Verification                       | ⏳ Planned (research-grade)          |
-| 39.7  | OODA Agent Runtime                                     | ⏳ Planned (research-grade)          |
-| 40    | The Reality Engine                                     | ⏳ Planned (research-grade)          |
-| 40.1  | Semantic LLVM Compilation (Semantic IR)                | ⏳ Planned (research-grade)          |
-| 40.2  | ECS Knowledge Architecture (Entity Component System)   | ⏳ Planned (research-grade)          |
-| 40.3  | Gödel Self-Optimizing Graph Rules                      | ⏳ Planned (research-grade)          |
-| 40.4  | SMT-Assisted Constraint Verification                   | ⏳ Planned (research-grade)          |
-| 40.5  | Knot-Theoretic Dependency Untangling                   | ⏳ Planned (research-grade)          |
-| 40.6  | Architectural Fossilization (Cold Storage)             | ⏳ Planned (research-grade)          |
-| 40.7  | Borges Exhaustive Design-Space Generation              | ⏳ Planned (research-grade)          |
-| 40.8  | Gödel Self-Improving Synthesis Loop                    | ⏳ Planned (research-grade)          |
-| 40.9  | JIT-Compiled Synthesis Fast-Path (0-Token Det.)        | ⏳ Planned (research-grade)          |
-| 41    | Cognitive Cache Invalidation Engine                    | ⏳ Planned (research-grade)          |
-| 42    | Fractal Memory Summarization (Multi-Level)             | ⏳ Planned (research-grade)          |
-| 43    | Information Thermodynamics & Entropy Scoring           | ⏳ Planned (research-grade)          |
-| 43.1  | CPT Asymmetry — Question/Answer Entropy Differential    | ⏳ Planned                           |
-| 44    | Semantic Authority Ranking                             | ⏳ Planned (research-grade)          |
-| 45    | Synthetic Immune System (Knowledge Quality)            | ⏳ Planned (research-grade)          |
-| 46    | Event-Sourced Cognition Replay                         | ⏳ Planned (research-grade)          |
-| 47    | Architectural Pattern Recurrence (Poincaré Recurrence) | ⏳ Planned (research-grade)          |
-| 48    | Dependency Entanglement Detection (ER=EPR)             | ⏳ Planned (research-grade)          |
-| 49    | Cross-Deployment Synthesis Learning (Morphic Resonance) | ⏳ Planned (research-grade)          |
-| 56    | Multi-Operator Session Coordination (was 5.8)          | ⏳ Planned (extended vision)         |
-| 57    | Cross-Agent Workspace State Synchronization (was 20.7.1)| ⏳ Planned (extended vision)        |
-| 58    | Multi-Agent Librarian Collaboration (was 20.16)        | ⏳ Planned (extended vision)         |
-| —     | **Cortex Pro Add-On Modules** (paid tier)              | ⏳ Planned (Pro)                     |
-| 50    | Distributed Cognitive Substrate (umbrella)             | ⏳ Planned (extended vision)         |
-| 51    | Per-Agent Memory Partitions (Private + Shared)         | ⏳ Planned (extended vision)         |
-| 52    | Unified Multi-Workspace Knowledge Graph                | ⏳ Planned (extended vision)         |
-| 53    | Agent Mesh Runtime Orchestration                       | ⏳ Planned (extended vision)         |
-| 53.1  | Persistent Agent Messaging Substrate                   | ⏳ Planned (extended vision)         |
-| 53.2  | Universal Librarian Definition Schema                  | ⏳ Planned (extended vision)         |
-| 53.3  | Agent Action Approval Gate (Runtime ACP)               | ⏳ Planned (extended vision)         |
-| 53.4  | Sub-Librarian Spawning with Context Inheritance        | ⏳ Planned (extended vision)         |
-| 53.5  | Agent Coordination Safety (Recursion + Deadlock)       | ⏳ Planned (extended vision)         |
-| 53.6  | Bidirectional Librarian↔IDE Native Format Sync         | ⏳ Planned (extended vision)         |
-| 54    | Cross-Agent Memory Federation Protocol                 | ⏳ Planned (extended vision)         |
-| 55    | Cognitive Substrate Observability                      | ⏳ Planned (extended vision)         |
-| 59    | Operational Ontology Layer (Palantir-Inspired)         | ⏳ Planned (add-on module)           |
-| 60    | Circlon Ring Primitives (Topological Composition)      | ⏳ Planned (add-on module)           |
-| 61    | Plasma Current Routing (Electromagnetic Propagation)    | ⏳ Planned (add-on module)           |
-| 62    | Inverted Reality Mode & Curved Abstraction Layers       | ⏳ Planned (add-on module)           |
-| 63    | Outsider Pattern Discovery & Contrarian Analysis       | ⏳ Planned (add-on module)           |
-| 64    | Biogenic Synthesis (Neuroscience & Immunology)         | ⏳ Planned (cross-domain)             |
-| 64.1  | Long-Term Potentiation — Frequency-Strengthened Paths | ⏳ Planned (cross-domain)             |
-| 64.2  | Neurogenesis — Adult-Born Entity Creation             | ⏳ Planned (cross-domain)             |
-| 64.3  | Lateral Inhibition — Competitive Neighbor Suppression  | ⏳ Planned (cross-domain)             |
-| 64.4  | Immunological Memory — Antigen-Specific Recognition   | ⏳ Planned (cross-domain)             |
-| 64.5  | Clonal Selection — Amplifying Successful Patterns     | ⏳ Planned (cross-domain)             |
-| 65    | Physical Metallurgy Synthesis                         | ⏳ Planned (cross-domain)             |
-| 65.1  | Alloy Strengthening — Compositional Hardening         | ⏳ Planned (cross-domain)             |
-| 65.2  | Annealing & Tempering — Controlled Stress Relief      | ⏳ Planned (cross-domain)             |
-| 65.3  | Fatigue Crack Propagation — Cyclical Stress Analysis  | ⏳ Planned (cross-domain)             |
-| 65.4  | Creep Deformation — Slow Structural Drift             | ⏳ Planned (cross-domain)             |
-| 66    | Mechanical & Structural Engineering Synthesis         | ⏳ Planned (cross-domain)             |
-| 66.1  | Truss Optimization — Triangulated Dependency Nets     | ⏳ Planned (cross-domain)             |
-| 66.2  | Buckling Analysis — Critical-Load Prediction          | ⏳ Planned (cross-domain)             |
-| 66.3  | Damping & Resonance — Oscillation Absorption          | ⏳ Planned (cross-domain)             |
-| 66.4  | Factor of Safety — Engineering Margin in Decisions    | ⏳ Planned (cross-domain)             |
-| 67    | Data Science & Statistical Learning Synthesis         | ⏳ Planned (cross-domain)             |
-| 67.1  | Dimensionality Reduction — Entity Space Compression   | ⏳ Planned (cross-domain)             |
-| 67.2  | Ensemble Methods — Multi-Signal Convergence           | ⏳ Planned (cross-domain)             |
-| 67.3  | Survival Analysis — Entity Lifetime Prediction        | ⏳ Planned (cross-domain)             |
-| 67.4  | Bayesian Updating — Prior-Driven Belief Revision      | ⏳ Planned (cross-domain)             |
-| 68    | Medical & Clinical Diagnostic Synthesis               | ⏳ Planned (cross-domain)             |
-| 68.1  | Cardiology — Architectural Pulse & Arrhythmia Detection | ⏳ Planned (cross-domain)           |
-| 68.2  | Psychiatry — Cognitive Distortion & Bias Patterns     | ⏳ Planned (cross-domain)             |
-| 68.3  | Epidemiology — Architectural Smell Contagion Modeling | ⏳ Planned (cross-domain)             |
-| 68.4  | Radiology — Cross-Sectional Architectural Tomography  | ⏳ Planned (cross-domain)             |
-| 68.5  | Neurology — Lesion Studies & Functional Deficit Maps  | ⏳ Planned (cross-domain)             |
-| 69    | Criminal Forensics & Investigative Synthesis          | ⏳ Planned (cross-domain)             |
-| 69.1  | Trace Evidence — Regression Provenance Chain          | ⏳ Planned (cross-domain)             |
-| 69.2  | Behavioral Profiling — Module Pattern-of-Life         | ⏳ Planned (cross-domain)             |
-| 69.3  | Crime Scene Reconstruction — Post-Mortem Failure Analysis | ⏳ Planned (cross-domain)         |
-| 69.4  | Recidivism Prediction — Recurrence Risk Scoring       | ⏳ Planned (cross-domain)             |
-| 70    | Jurisdictional & Legal System Synthesis               | ⏳ Planned (cross-domain)             |
-| 70.1  | Subject-Matter Jurisdiction — Component Authority Maps | ⏳ Planned (cross-domain)            |
-| 70.2  | Stare Decisis — Architectural Precedent Binding       | ⏳ Planned (cross-domain)             |
-| 70.3  | Due Process — Fair Notification Before Enforcement    | ⏳ Planned (cross-domain)             |
-| 70.4  | Habeas Corpus — Justification Requirement for Actions  | ⏳ Planned (cross-domain)            |
+| Phase   | Title                                                                              | Status                                  |
+| ------- | ---------------------------------------------------------------------------------- | --------------------------------------- |
+| 0       | Security & Validation Foundation (Graphify-Derived)                                | ⏳ Planned (P0-Critical)                |
+| 0.1     | `security.ts` — Path Traversal, SSRF, XSS, Memory-Bomb                             | ⏳ Planned                              |
+| 0.2     | `validate.ts` — Schema Gating & Referential Integrity                              | ⏳ Planned                              |
+| 0.3     | Confidence Labels (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`)                             | ⏳ Planned                              |
+| 0.4     | Graph-as-Cache (Replace Skeleton Compression)                                      | ⏳ Planned                              |
+| 0.5     | OS-Native File Locking (`fcntl` / Named Mutex)                                     | ⏳ Planned                              |
+| 0.6     | MinHash/LSH Deduplication Pipeline                                                 | ⏳ Planned                              |
+| 0.7     | `cortex doctor` Self-Diagnostic CLI                                                | ⏳ Planned                              |
+| 0.8     | MCP Hot-Reload with Double-Checked Locking                                         | ⏳ Planned                              |
+| 0.9     | IDF-Weighted Content Search (Replace Grep Ban)                                     | ⏳ Planned                              |
+| 0.10    | Defensive Git Hook Rewrite                                                         | ⏳ Planned                              |
+| 0.11    | Honest Benchmarks (`worked/` Corpus)                                               | ⏳ Planned                              |
+| 0.12    | `cortex repair` — Backup/Restore & Git-Friendly Output                             | ⏳ Planned                              |
+| 0.13    | Multi-Language Tree-sitter Extractors (25 languages)                               | ⏳ Planned                              |
+| 0.14    | Multi-Backend LLM Abstraction (8 backends)                                         | ⏳ Planned                              |
+| 0.15    | Dual-Track Distribution: MCP + Skill with Auto-Config Writer                       | ⏳ Planned                              |
+| 0.16    | Multi-Format File Ingestion (PDF, Images, Video, Office, Docs)                     | ⏳ Planned                              |
+| 0.17    | Dev Hygiene: Security CI Gate, Property Tests, Pre-Commit Hooks, Standalone Binary | ⏳ Planned                              |
+| 0.18    | Rationale Node Extraction (Comment & Docstring Graph Nodes)                        | ⏳ Planned                              |
+| 0.19    | SCIP Ingest (Language-Server Protocol Index Support)                               | ⏳ Planned                              |
+| 1       | Ingestion & Monitoring Foundation                                                  | ✅ Done                                 |
+| 2       | LLM Synthesis Engine                                                               | ✅ Done                                 |
+| 2.1     | LLM-Free Rule-Based Synthesis for Micro-Diffs                                      | ⏳ Planned                              |
+| 2.2     | Hallucination Cross-Check (AST vs Synthesis Divergence)                            | ⏳ Planned                              |
+| 3       | Knowledge Storage & Cost Control                                                   | ✅ Done                                 |
+| 3.1     | LLM Caching Store                                                                  | ⏳ Planned                              |
+| 3.2     | Semantic Versioning of the Knowledge Graph                                         | ⏳ Planned                              |
+| 3.3     | Entity ID Stability Tags                                                           | ⏳ Planned                              |
+| 4       | MCP Server Integration                                                             | ✅ Done                                 |
+| 4.5     | Dual-Route IDE Integration                                                         | ✅ Done (added beyond original plan)    |
+| 4.6     | Developer API & Client SDKs                                                        | ⏳ Planned                              |
+| 4.7     | OpenAI-Compatible REST Gateway                                                     | ⏳ Planned                              |
+| 4.8     | Persona-Specific MCP Prompts                                                       | ⏳ Planned                              |
+| 5       | CLI Polish & Daemonization                                                         | ✅ Done                                 |
+| 5.6     | Daemon Watchdog & Self-Healing                                                     | ⏳ Planned (production reliability)     |
+| 5.7     | Scheduled Operations & Cron Engine                                                 | ⏳ Planned (production reliability)     |
+| 5.8     | ~~Multi-Operator Session Coordination~~ → see Phase 56                             | ⏳ Planned (moved — agent coordination) |
+| 5.9     | Shell Status Prompt Integration & Statusline Badge                                 | ⏳ Planned                              |
+| 6       | Active Guardrail — Constraints & Blast-Radius Analysis                             | ✅ Done                                 |
+| 6.1     | Template Entities & Instantiated-From Relationships                                | ⏳ Planned                              |
+| 6.2     | Arbitrary Predicate Relationships & Triple-Store Queries                           | ⏳ Planned                              |
+| 6.3     | Weak Measurements — Low-Certainty Hypothesis Tags                                  | ⏳ Planned                              |
+| 6.4     | Torsion Links — Context-Dependent Entity Meaning                                   | ⏳ Planned                              |
+| 6.5     | Plasma Filaments — Structural Edge Flag                                            | ⏳ Planned                              |
+| 7       | Audit & Traceability Tools                                                         | ✅ Done                                 |
+| 7.5     | Knowledge Quality & Enterprise Governance Foundation                               | ✅ Done                                 |
+| 7.5.1   | Agentic Verification Loop (CI-Driven Quality Boost)                                | ⏳ Planned                              |
+| 7.5.2   | Mandatory Evidence Anchoring for High-Centrality Nodes                             | ⏳ Planned                              |
+| 7.6     | Global Architectural Lessons & Retrospective Log                                   | ⏳ Planned                              |
+| 7.7     | Automated Technical Debt Register                                                  | ⏳ Planned                              |
+| 7.8     | Graph-Driven Review Advisories & Untested Hub Analysis                             | ⏳ Planned                              |
+| 7.9     | Knowledge Garbage Collection & Archive Consolidation                               | ⏳ Planned                              |
+| 7.10    | Sensitive Data & API Secret Sanitization Guardrail                                 | ⏳ Planned                              |
+| 7.11    | Epigenetic Memory Suppression                                                      | ⏳ Planned                              |
+| 7.12    | Astronomical Parallax — Perspective Shift Scoring                                  | ⏳ Planned                              |
+| 7.13    | Retrocausality — Backward Quality Propagation                                      | ⏳ Planned                              |
+| 7.14    | Intrinsic Redshift — Novelty-at-Creation Metric                                    | ⏳ Planned                              |
+| 7.15    | Verlinde Avoidance — Blind-Spot Detection                                          | ⏳ Planned                              |
+| 7.16    | Proteasome Atrophy — Targeted Knowledge Degradation                                | ⏳ Planned                              |
+| 7.17    | Keystone Index — Entity Impact-to-Size Ratio                                       | ⏳ Planned                              |
+| 7.18    | Regulatory Suppression — Alert Correlation Dampening                               | ⏳ Planned                              |
+| 7.19    | Synaptic Tagging — Retroactive Importance Boost                                    | ⏳ Planned                              |
+| 7.20    | Surprising Connections — Cross-Community & Cross-Language Edge Detection           | ⏳ Planned                              |
+| 7.21    | God Node Detection                                                                 | ⏳ Planned                              |
+| 8       | Visual & Browseable Knowledge Graph                                                | ✅ Done                                 |
+| 8.1     | Live Graph Stream (WebSocket)                                                      | ⏳ Planned                              |
+| 8.2     | Karpathy-Style Obsidian Wiki Compliance & Presets                                  | ⏳ Planned                              |
+| 8.3     | GPU-Accelerated Knowledge Graph Rendering                                          | ⏳ Planned                              |
+| 8.4     | Hyperbolic Graph Layout (Poincaré Disk)                                            | ⏳ Planned                              |
+| 8.5     | Neo4j Cypher & GraphML Export                                                      | ⏳ Planned                              |
+| 9       | Refactoring Impact Preview                                                         | ✅ Done                                 |
+| 9.1     | Dependency Path Querying                                                           | ⏳ Planned                              |
+| 9.2     | Torstone Inertia — Refactor Resistance Metric                                      | ⏳ Planned                              |
+| 9.3     | Hyrum's Law — Implicit Dependency Detection                                        | ⏳ Planned                              |
+| 9.4     | Execution Flow Tracing (Entry-Point Dynamic Topology)                              | ⏳ Planned                              |
+| 9.5     | API Route Handler Analysis (`cortex api-impact`)                                   | ⏳ Planned                              |
+| 9.6     | Process-Grouped Search Results (Flow-Bucketed Ranking)                             | ⏳ Planned (requires Phase 9.4)         |
+| 10      | Onboarding & Guided Reading                                                        | ✅ Done                                 |
+| 10.1    | Spherification — Data Encapsulation for Entity Clusters                            | ⏳ Planned                              |
+| 10.2    | Smart Rule File Patching & Marker-Fenced Injection                                 | ⏳ Planned                              |
+| 10.3    | Zero-Token Startup & AI Ignore Scaffolding                                         | ⏳ Planned                              |
+| 10.4    | Managed `CLAUDE.md` & AI Rules Orchestration                                       | ⏳ Planned                              |
+| 10.5    | Attention-Curve Rule Reordering & Position Optimization                            | ⏳ Planned                              |
+| 10.6    | Compaction-Safe Decision Anchoring & Continuity Breadcrumbs                        | ⏳ Planned                              |
+| 10.7    | Rules File Size Guardrail & Auto-Splitting                                         | ⏳ Planned                              |
+| 10.8    | `cortex explain <symbol>` — Focused Single-Symbol Explain                          | ⏳ Planned                              |
+| 10.9    | Suggested Questions per Corpus                                                     | ⏳ Planned                              |
+| 10.10   | Skill File Generation per Leiden Community                                         | ⏳ Planned                              |
+| 11      | Monorepo Federation                                                                | ⏳ Planned                              |
+| 11.5    | Repository Groups with Contracts (Cross-Repo Bridge Graph)                         | ⏳ Planned                              |
+| 11.6    | Cross-Repo RRF Query Merging                                                       | ⏳ Planned                              |
+| 12      | Git & CI Integration                                                               | ⏳ Planned                              |
+| 12.2    | Git Pre-Commit Guardrail Hooks                                                     | ⏳ Planned                              |
+| 12.3    | Architecturally Aware Commit Generation                                            | ⏳ Planned                              |
+| 12.4    | Diagnostic Run Buffer & Tee Recovery                                               | ⏳ Planned                              |
+| 12.5    | Terminal Command Output Minifier                                                   | ⏳ Planned                              |
+| 12.6    | Local Command Interception Shims & Agent Rules                                     | ⏳ Planned                              |
+| 12.7    | Smart Code Outliner & Signature-Only Reader                                        | ⏳ Planned                              |
+| 12.8    | Log Deduplicator & Web Fetch Parser                                                | ⏳ Planned                              |
+| 12.9    | Architectural Graph Diffing                                                        | ⏳ Planned                              |
+| 12.10   | Baseline-Driven Quality Gates                                                      | ⏳ Planned                              |
+| 12.11   | Architectural Changelog Generator                                                  | ⏳ Planned                              |
+| 12.12   | Automated MCP Compliance & Live Integration Suite                                  | ⏳ Planned                              |
+| 12.13   | Architecturally Aware Commit Scope Linting                                         | ⏳ Planned                              |
+| 12.14   | Agent Token-Use Discovery & Anti-Pattern Auditor                                   | ⏳ Planned                              |
+| 12.15   | External Dependency & Ecosystem Change Tracking                                    | ⏳ Planned                              |
+| 12.16   | PR Triage Dashboard — Graph-Aware Conflict Detection                               | ⏳ Planned                              |
+| 12.17   | Test Coverage as Entity Metadata                                                   | ⏳ Planned                              |
+| 13      | Token Economics & Context Packs                                                    | ✅ Done                                 |
+| 13.1    | Dense & Raw Token-Reduction Projections                                            | ✅ Done                                 |
+| 13.2    | Cortex Brevity Engine & Telegraphic Memory Compression                             | ✅ Done                                 |
+| 13.3    | Token & Cost Savings Ledger & Analytics                                            | ✅ Done                                 |
+| 13.4    | API Budget Gating & Runaway Safeguards                                             | ✅ Done                                 |
+| 13.5    | Fuzzy Levenshtein & RRF Search Ranker                                              | ✅ Done                                 |
+| 13.6    | Proximity Reranking & Smart Snippets                                               | ✅ Done                                 |
+| 13.7    | Hooks-Based Smart Read Cache & AST Skeleton Delta                                  | ✅ Done                                 |
+| 13.7.2  | Speculative Static Verification & Grounded Fallback                                | ✅ Done                                 |
+| 13.8    | Persistent Experience & Cognitive Mode-Adaptive Context                            | ⏳ Planned                              |
+| 13.8.8  | Unified Edge Confidence (Synaptic Plasticity)                                      | ⏳ Planned                              |
+| 13.9    | Grapheme-Safe Token Compression (TokenJuice Rules)                                 | ⏳ Planned                              |
+| 13.10   | Information Bottleneck Scoring                                                     | ⏳ Planned                              |
+| 13.11   | Bidirectional Context Retrieval                                                    | ⏳ Planned                              |
+| 13.12   | Opportunity Cost Scoring — Packer Exclusion Tracking                               | ⏳ Planned                              |
+| 14      | Large-Diff Clustering                                                              | ⏳ Planned                              |
+| 14.2    | Topological Hierarchy & Zoomable Retrieval (RAPTOR)                                | ⏳ Planned                              |
+| 15      | CI Feedback Signal Loop                                                            | ⏳ Planned (research-grade)             |
+| 16      | Contradiction-Aware Retrieval                                                      | ⏳ Planned (research-grade)             |
+| 17      | Active Disambiguation via Self-Consistency                                         | ⏳ Planned (research-grade)             |
+| 17.1    | Multi-Model Architectural Debate                                                   | ⏳ Planned                              |
+| 18      | Architectural Embeddings (Typed-Graph + Text Hybrid)                               | ⏳ Planned (research-grade)             |
+| 19      | Librarian Distillation                                                             | ⏳ Planned (research-grade)             |
+| 20      | Intelligent Architectural Advisor                                                  | ⏳ Planned                              |
+| 20.1    | Architecture Simulation & What-If Analysis                                         | ⏳ Planned                              |
+| 20.2    | Bug Hotspot Prediction                                                             | ⏳ Planned (research-grade)             |
+| 20.2.1  | Catastrophe Tipping-Point Detection                                                | ⏳ Planned                              |
+| 20.3    | Design Pattern Suggestion                                                          | ⏳ Planned                              |
+| 20.4    | Evolutionary Architecture Fitness Functions                                        | ⏳ Planned                              |
+| 20.5    | Architecture Documentation Generation                                              | ⏳ Planned                              |
+| 20.5.1  | Automated ADR (Architectural Decision Records) Engine                              | ⏳ Planned                              |
+| 20.6    | Hierarchical Memory Tiering (MemGPT-inspired)                                      | ⏳ Planned (research-grade)             |
+| 20.7    | Personalized Per-Developer Memory (Mem0-inspired)                                  | ⏳ Planned                              |
+| 20.7.1  | ~~Cross-Agent Workspace State Sync~~ → see Phase 57                                | ⏳ Planned (moved — agent coordination) |
+| 20.7.2  | Mem0-Style Memory Consolidation Pipeline                                           | ⏳ Planned                              |
+| 20.7.3  | Prospective Memory & Belief Revision                                               | ⏳ Planned                              |
+| 20.8    | Memory Stream Retrieval Scoring                                                    | ⏳ Planned (research-grade)             |
+| 20.9    | Community Synthesis (GraphRAG + RAPTOR)                                            | ⏳ Planned (research-grade)             |
+| 20.10   | Hippocampal Retrieval (HippoRAG-inspired)                                          | ⏳ Planned (research-grade)             |
+| 20.11   | Reflexion-Style Self-Correcting Synthesis                                          | ⏳ Planned (research-grade)             |
+| 20.12   | Temporal Knowledge Graph                                                           | ⏳ Planned (research-grade)             |
+| 20.13   | Pattern Skill Library (VOYAGER-inspired)                                           | ⏳ Planned                              |
+| 20.14   | Causal Impact Analysis (Pearl do-calculus)                                         | ⏳ Planned (research-grade)             |
+| 20.15   | Dual-Process Synthesis (System 1 / System 2)                                       | ⏳ Planned (research-grade)             |
+| 20.15.1 | Protein Folding — Argument Prediction                                              | ⏳ Planned                              |
+| 20.16   | ~~Multi-Agent Librarian Collaboration~~ → see Phase 58                             | ⏳ Planned (moved — agent coordination) |
+| 20.17   | Sleep Consolidation & Memory Reorganization                                        | ⏳ Planned (research-grade)             |
+| 20.17.1 | Casimir Effect — Suppressed-Mode Creativity                                        | ⏳ Planned (research-grade)             |
+| 20.18   | Tree-of-Thoughts & Self-Ask Synthesis                                              | ⏳ Planned (research-grade)             |
+| 20.19   | Surgical Knowledge Editing (ROME/MEMIT)                                            | ⏳ Planned                              |
+| 20.20   | Active Inference & Predictive Synthesis (Friston)                                  | ⏳ Planned (research-grade)             |
+| 20.21   | Episodic-Semantic Memory Consolidation (Tulving)                                   | ⏳ Planned (research-grade)             |
+| 20.22   | Spaced Repetition & Forgetting Curves (Ebbinghaus/SM-2)                            | ⏳ Planned                              |
+| 20.22.1 | Entity Lifecycle Phases                                                            | ⏳ Planned                              |
+| 20.23   | Tool-Use Augmented Synthesis (Toolformer/ReAct)                                    | ⏳ Planned (research-grade)             |
+| 20.24   | Sequential Thinking & Persistent Reasoning Traces                                  | ⏳ Planned (research-grade)             |
+| 20.28   | Agentic Retrieval Loop                                                             | ⏳ Planned                              |
+| 20.29   | Corrective RAG Module                                                              | ⏳ Planned                              |
+| 20.30   | Iterative RAG Refinement                                                           | ⏳ Planned                              |
+| 21      | Polyrepo Federation                                                                | ⏳ Planned                              |
+| 22      | Central Knowledge Server                                                           | ⏳ Planned                              |
+| 22.1    | Webhook Ingestion (Push-Based Sync via GitHub/GitLab)                              | ⏳ Planned (requires Phase 22)          |
+| 23      | Human-in-the-Loop Review                                                           | ⏳ Planned                              |
+| 24      | Compliance Constraint Templates                                                    | ⏳ Planned                              |
+| 25      | Enterprise SSO, SCIM & Identity Federation                                         | ⏳ Planned (enterprise)                 |
+| 25.1    | Federated Identity for Cross-Tenant Workflows                                      | ⏳ Planned (enterprise)                 |
+| 26      | RBAC, ABAC & Immutable Audit Trail                                                 | ⏳ Planned (enterprise)                 |
+| 26.1    | DLP & Knowledge-Layer PII Redaction                                                | ⏳ Planned (enterprise)                 |
+| 26.2    | Policy-as-Code (OPA/Cedar)                                                         | ⏳ Planned (enterprise)                 |
+| 26.3    | OpenTelemetry Tracing & Observability Export                                       | ⏳ Planned (enterprise)                 |
+| 26.4    | Cryptographic Event Signing & Non-Repudiation                                      | ⏳ Planned (enterprise)                 |
+| 26.5    | Xuan Paper Layer — Permanent Provenance Overlay                                    | ⏳ Planned                              |
+| 27      | Air-Gapped, Sovereign & BYO-Key Deployment                                         | ⏳ Planned (enterprise)                 |
+| 28      | Enterprise Workflow Integrations Hub                                               | ⏳ Planned (enterprise)                 |
+| 29      | FinOps — Cost Governance & Chargeback                                              | ⏳ Planned (enterprise)                 |
+| 29.1    | Approved Model Allowlists & Provider Governance                                    | ⏳ Planned (enterprise)                 |
+| 29.2    | Tenant-Scoped Billing & Metering                                                   | ⏳ Planned (enterprise)                 |
+| 30      | Knowledge Migration & Legacy Ingest                                                | ⏳ Planned (enterprise)                 |
+| 30.1    | External AI Conversation Import                                                    | ⏳ Planned (enterprise)                 |
+| 30.2    | Knowledge Base Merge Engine                                                        | ⏳ Planned (enterprise)                 |
+| 31      | Executive Analytics, ROI Dashboard & Architectural KPIs                            | ⏳ Planned (enterprise)                 |
+| 32      | Vendor Risk, Procurement Pack & Certifications Path                                | ⏳ Planned (enterprise)                 |
+| 32.1    | Cloud Marketplace Listings (AWS/GCP/Azure)                                         | ⏳ Planned (enterprise distribution)    |
+| 32.2    | Supply Chain Security: SBOM & SLSA Provenance                                      | ⏳ Planned (enterprise)                 |
+| 33      | Deep Recursive Bootstrap Ingest                                                    | ⏳ Planned (P0 — fixes prod issue)      |
+| 33.1    | Model Provider Registry & Cost-Tier Routing                                        | ⏳ Planned (enterprise)                 |
+| 33.2    | Remote Operations & Mobile Status PWA                                              | ⏳ Planned (enterprise)                 |
+| 33.5    | Unified Two-Stage Ingestion Pipeline                                               | ⏳ Planned (P0 — bootstrap + watch)     |
+| 33.6    | AST-Only Incremental Update Mode                                                   | ⏳ Planned (P0 — zero-LLM watch)        |
+| 34      | Cognitive Engine Optimizations (Gaming/ML Inspired)                                | ⏳ Planned (research-grade)             |
+| 34.1    | Virtualized Context Streaming (UE5 Nanite)                                         | ⏳ Planned (research-grade)             |
+| 34.2    | Speculative Architectural Decoding (ML)                                            | ⏳ Planned (research-grade)             |
+| 34.3    | Entity Visibility Partitioning (Doom BSP)                                          | ⏳ Planned (research-grade)             |
+| 34.4    | Cognitive Fog & Abstraction Masking (Silent Hill)                                  | ⏳ Planned (research-grade)             |
+| 34.5    | Data-Oriented Synthesis Pipeline (ECS)                                             | ⏳ Planned (research-grade)             |
+| 34.6    | Heuristic Embedding Pruning (Quake 3 Hash)                                         | ⏳ Planned (research-grade)             |
+| 34.7    | Paged Context Allocation (PagedAttention)                                          | ⏳ Planned (research-grade)             |
+| 35      | Cross-Disciplinary Architecture Optimizations                                      | ⏳ Planned (research-grade)             |
+| 35.1    | Architectural PageRank & Virtual Graph DOM                                         | ⏳ Planned (research-grade)             |
+| 35.2    | CRDT-Based Multi-Agent Graph Mutations                                             | ⏳ Planned (research-grade)             |
+| 35.3    | Categorical Isomorphism Detection                                                  | ⏳ Planned (research-grade)             |
+| 35.4    | Ring-0 IDE Telemetry Hooks (Anti-Hallucination Guard)                              | ⏳ Planned (research-grade)             |
+| 35.5    | WebAssembly (WASM) Graph Vectorization                                             | ⏳ Planned (research-grade)             |
+| 35.6    | Architectural Write-Ahead Logging (WAL)                                            | ⏳ Planned (research-grade)             |
+| 35.7    | Air-Gapped Autarky (Radical Decoupling)                                            | ⏳ Planned (research-grade)             |
+| 36      | Exotic Architecture Optimizations                                                  | ⏳ Planned (research-grade)             |
+| 36.1    | Event-Sourced Ephemeral Graphs (Kafka/Redux)                                       | ⏳ Planned (research-grade)             |
+| 36.2    | God's Algorithm for Refactoring                                                    | ⏳ Planned (research-grade)             |
+| 36.3    | Vector-Symbolic Emulsification (VSE)                                               | ⏳ Planned (research-grade)             |
+| 36.4    | Mycorrhizal Telemetry Protocol                                                     | ⏳ Planned (research-grade)             |
+| 36.5    | Gödel-Aware Fallback Escapes                                                       | ⏳ Planned (research-grade)             |
+| 36.6    | Zeno-Effect Test Pinning (Quantum Zeno)                                            | ⏳ Planned (research-grade)             |
+| 36.7    | Background Knowledge Fermentation (Food Science)                                   | ⏳ Planned (research-grade)             |
+| 36.8    | Sonoluminescent Prompt Collapse (Physics)                                          | ⏳ Planned (research-grade)             |
+| 37      | Unified Architectural Field Theory (ToE)                                           | ⏳ Planned (research-grade)             |
+| 37.1    | Homotopic Graph Compiler (HoTT)                                                    | ⏳ Planned (research-grade)             |
+| 37.2    | String-Theoretic Tensor Embeddings                                                 | ⏳ Planned (research-grade)             |
+| 37.3    | API Boundary Holography (Holographic Principle)                                    | ⏳ Planned (research-grade)             |
+| 38      | The Reality Simulation Mechanics                                                   | ⏳ Planned (research-grade)             |
+| 38.1    | Octonion-Bound Knowledge Primitives                                                | ⏳ Planned (research-grade)             |
+| 38.2    | Ring-0 Epistemological Anticheat                                                   | ⏳ Planned (research-grade)             |
+| 38.3    | Algorithmic Attention Fatigue                                                      | ⏳ Planned (research-grade)             |
+| 38.4    | Alcubierre Sub-Graph Warping                                                       | ⏳ Planned (research-grade)             |
+| 38.5    | Schrödinger’s Branching Contexts                                                   | ⏳ Planned (research-grade)             |
+| 38.6    | Procedural Node-Based Sculpting                                                    | ⏳ Planned (research-grade)             |
+| 38.7    | Syntactic Prion Propagation                                                        | ⏳ Planned (research-grade)             |
+| 38.8    | Terry Davis RNGod Heuristics                                                       | ⏳ Planned (research-grade)             |
+| 39      | Systemic Convergence                                                               | ⏳ Planned (research-grade)             |
+| 39.1    | Cognitive Supervision Trees                                                        | ⏳ Planned (research-grade)             |
+| 39.2    | Tectonic Migration Solvers                                                         | ⏳ Planned (research-grade)             |
+| 39.3    | Stigmergic Heatmap Routing                                                         | ⏳ Planned (research-grade)             |
+| 39.4    | Asymmetric Dual-Processing Substrate                                               | ⏳ Planned (research-grade)             |
+| 39.5    | Cognitive Branch Prediction                                                        | ⏳ Planned (research-grade)             |
+| 39.6    | Merkle-DAG Integrity Verification                                                  | ⏳ Planned (research-grade)             |
+| 39.7    | OODA Agent Runtime                                                                 | ⏳ Planned (research-grade)             |
+| 40      | The Reality Engine                                                                 | ⏳ Planned (research-grade)             |
+| 40.1    | Semantic LLVM Compilation (Semantic IR)                                            | ⏳ Planned (research-grade)             |
+| 40.2    | ECS Knowledge Architecture (Entity Component System)                               | ⏳ Planned (research-grade)             |
+| 40.3    | Gödel Self-Optimizing Graph Rules                                                  | ⏳ Planned (research-grade)             |
+| 40.4    | SMT-Assisted Constraint Verification                                               | ⏳ Planned (research-grade)             |
+| 40.5    | Knot-Theoretic Dependency Untangling                                               | ⏳ Planned (research-grade)             |
+| 40.6    | Architectural Fossilization (Cold Storage)                                         | ⏳ Planned (research-grade)             |
+| 40.7    | Borges Exhaustive Design-Space Generation                                          | ⏳ Planned (research-grade)             |
+| 40.8    | Gödel Self-Improving Synthesis Loop                                                | ⏳ Planned (research-grade)             |
+| 40.9    | JIT-Compiled Synthesis Fast-Path (0-Token Det.)                                    | ⏳ Planned (research-grade)             |
+| 41      | Cognitive Cache Invalidation Engine                                                | ⏳ Planned (research-grade)             |
+| 42      | Fractal Memory Summarization (Multi-Level)                                         | ⏳ Planned (research-grade)             |
+| 43      | Information Thermodynamics & Entropy Scoring                                       | ⏳ Planned (research-grade)             |
+| 43.1    | CPT Asymmetry — Question/Answer Entropy Differential                               | ⏳ Planned                              |
+| 44      | Semantic Authority Ranking                                                         | ⏳ Planned (research-grade)             |
+| 45      | Synthetic Immune System (Knowledge Quality)                                        | ⏳ Planned (research-grade)             |
+| 46      | Event-Sourced Cognition Replay                                                     | ⏳ Planned (research-grade)             |
+| 47      | Architectural Pattern Recurrence (Poincaré Recurrence)                             | ⏳ Planned (research-grade)             |
+| 48      | Dependency Entanglement Detection (ER=EPR)                                         | ⏳ Planned (research-grade)             |
+| 49      | Cross-Deployment Synthesis Learning (Morphic Resonance)                            | ⏳ Planned (research-grade)             |
+| 56      | Multi-Operator Session Coordination (was 5.8)                                      | ⏳ Planned (extended vision)            |
+| 57      | Cross-Agent Workspace State Synchronization (was 20.7.1)                           | ⏳ Planned (extended vision)            |
+| 58      | Multi-Agent Librarian Collaboration (was 20.16)                                    | ⏳ Planned (extended vision)            |
+| —       | **Cortex Pro Add-On Modules** (paid tier)                                          | ⏳ Planned (Pro)                        |
+| 50      | Distributed Cognitive Substrate (umbrella)                                         | ⏳ Planned (extended vision)            |
+| 51      | Per-Agent Memory Partitions (Private + Shared)                                     | ⏳ Planned (extended vision)            |
+| 52      | Unified Multi-Workspace Knowledge Graph                                            | ⏳ Planned (extended vision)            |
+| 53      | Agent Mesh Runtime Orchestration                                                   | ⏳ Planned (extended vision)            |
+| 53.1    | Persistent Agent Messaging Substrate                                               | ⏳ Planned (extended vision)            |
+| 53.2    | Universal Librarian Definition Schema                                              | ⏳ Planned (extended vision)            |
+| 53.3    | Agent Action Approval Gate (Runtime ACP)                                           | ⏳ Planned (extended vision)            |
+| 53.4    | Sub-Librarian Spawning with Context Inheritance                                    | ⏳ Planned (extended vision)            |
+| 53.5    | Agent Coordination Safety (Recursion + Deadlock)                                   | ⏳ Planned (extended vision)            |
+| 53.6    | Bidirectional Librarian↔IDE Native Format Sync                                     | ⏳ Planned (extended vision)            |
+| 54      | Cross-Agent Memory Federation Protocol                                             | ⏳ Planned (extended vision)            |
+| 55      | Cognitive Substrate Observability                                                  | ⏳ Planned (extended vision)            |
+| 59      | Operational Ontology Layer (Palantir-Inspired)                                     | ⏳ Planned (add-on module)              |
+| 60      | Circlon Ring Primitives (Topological Composition)                                  | ⏳ Planned (add-on module)              |
+| 61      | Plasma Current Routing (Electromagnetic Propagation)                               | ⏳ Planned (add-on module)              |
+| 62      | Inverted Reality Mode & Curved Abstraction Layers                                  | ⏳ Planned (add-on module)              |
+| 63      | Outsider Pattern Discovery & Contrarian Analysis                                   | ⏳ Planned (add-on module)              |
+| 64      | Biogenic Synthesis (Neuroscience & Immunology)                                     | ⏳ Planned (cross-domain)               |
+| 64.1    | Long-Term Potentiation — Frequency-Strengthened Paths                              | ⏳ Planned (cross-domain)               |
+| 64.2    | Neurogenesis — Adult-Born Entity Creation                                          | ⏳ Planned (cross-domain)               |
+| 64.3    | Lateral Inhibition — Competitive Neighbor Suppression                              | ⏳ Planned (cross-domain)               |
+| 64.4    | Immunological Memory — Antigen-Specific Recognition                                | ⏳ Planned (cross-domain)               |
+| 64.5    | Clonal Selection — Amplifying Successful Patterns                                  | ⏳ Planned (cross-domain)               |
+| 65      | Physical Metallurgy Synthesis                                                      | ⏳ Planned (cross-domain)               |
+| 65.1    | Alloy Strengthening — Compositional Hardening                                      | ⏳ Planned (cross-domain)               |
+| 65.2    | Annealing & Tempering — Controlled Stress Relief                                   | ⏳ Planned (cross-domain)               |
+| 65.3    | Fatigue Crack Propagation — Cyclical Stress Analysis                               | ⏳ Planned (cross-domain)               |
+| 65.4    | Creep Deformation — Slow Structural Drift                                          | ⏳ Planned (cross-domain)               |
+| 66      | Mechanical & Structural Engineering Synthesis                                      | ⏳ Planned (cross-domain)               |
+| 66.1    | Truss Optimization — Triangulated Dependency Nets                                  | ⏳ Planned (cross-domain)               |
+| 66.2    | Buckling Analysis — Critical-Load Prediction                                       | ⏳ Planned (cross-domain)               |
+| 66.3    | Damping & Resonance — Oscillation Absorption                                       | ⏳ Planned (cross-domain)               |
+| 66.4    | Factor of Safety — Engineering Margin in Decisions                                 | ⏳ Planned (cross-domain)               |
+| 67      | Data Science & Statistical Learning Synthesis                                      | ⏳ Planned (cross-domain)               |
+| 67.1    | Dimensionality Reduction — Entity Space Compression                                | ⏳ Planned (cross-domain)               |
+| 67.2    | Ensemble Methods — Multi-Signal Convergence                                        | ⏳ Planned (cross-domain)               |
+| 67.3    | Survival Analysis — Entity Lifetime Prediction                                     | ⏳ Planned (cross-domain)               |
+| 67.4    | Bayesian Updating — Prior-Driven Belief Revision                                   | ⏳ Planned (cross-domain)               |
+| 68      | Medical & Clinical Diagnostic Synthesis                                            | ⏳ Planned (cross-domain)               |
+| 68.1    | Cardiology — Architectural Pulse & Arrhythmia Detection                            | ⏳ Planned (cross-domain)               |
+| 68.2    | Psychiatry — Cognitive Distortion & Bias Patterns                                  | ⏳ Planned (cross-domain)               |
+| 68.3    | Epidemiology — Architectural Smell Contagion Modeling                              | ⏳ Planned (cross-domain)               |
+| 68.4    | Radiology — Cross-Sectional Architectural Tomography                               | ⏳ Planned (cross-domain)               |
+| 68.5    | Neurology — Lesion Studies & Functional Deficit Maps                               | ⏳ Planned (cross-domain)               |
+| 69      | Criminal Forensics & Investigative Synthesis                                       | ⏳ Planned (cross-domain)               |
+| 69.1    | Trace Evidence — Regression Provenance Chain                                       | ⏳ Planned (cross-domain)               |
+| 69.2    | Behavioral Profiling — Module Pattern-of-Life                                      | ⏳ Planned (cross-domain)               |
+| 69.3    | Crime Scene Reconstruction — Post-Mortem Failure Analysis                          | ⏳ Planned (cross-domain)               |
+| 69.4    | Recidivism Prediction — Recurrence Risk Scoring                                    | ⏳ Planned (cross-domain)               |
+| 70      | Jurisdictional & Legal System Synthesis                                            | ⏳ Planned (cross-domain)               |
+| 70.1    | Subject-Matter Jurisdiction — Component Authority Maps                             | ⏳ Planned (cross-domain)               |
+| 70.2    | Stare Decisis — Architectural Precedent Binding                                    | ⏳ Planned (cross-domain)               |
+| 70.3    | Due Process — Fair Notification Before Enforcement                                 | ⏳ Planned (cross-domain)               |
+| 70.4    | Habeas Corpus — Justification Requirement for Actions                              | ⏳ Planned (cross-domain)               |
 
 ---
 
@@ -353,10 +353,12 @@ Before adding any feature, seal the holes. Graphify (a comparable Python knowled
 **What graphify does** (`security.py`, 336 lines):
 
 - `validate_graph_path(base, path)`:
+
   ```python
   resolved = Path(path).resolve()
   resolved.relative_to(base)   # raises ValueError on escape
   ```
+
   This is a **structural guarantee** — one choke point, every file open passes through it. Not per-call ad-hoc checks.
 
 - `validate_url(url)`: resolves hostname via `socket.getaddrinfo`, checks `ip_address(ip).is_private / is_reserved / is_loopback / is_link_local`, blocks AWS `169.254.169.254` and GCP `metadata.google.internal`, blocks CGN `100.64.0.0/10`, handles NAT64-wrapped IPv4 (`::ffff:192.168.x.x`).
@@ -392,6 +394,7 @@ export function yamlSafeString(s: string): string {
 **Where to apply**: call `yamlSafeString()` on every string value written to YAML frontmatter in `src/knowledge/writer.ts` — specifically entity `name`, `id`, `sourceFile`, `description` header, and any concept `title` field. Synthesis output goes through `sanitize_metadata` (HTML) then `yamlSafeString` (YAML) before disk write.
 
 **Implementation**
+
 - Create `src/security.ts` as the single module all file and network paths must pass through.
 - `validateSafePath(root: string, userPath: string): string` — `path.resolve`, assert `resolved.startsWith(root + sep)`, throw on failure.
 - `validateUrl(url: string): void` — DNS-resolve, check private ranges including NAT64, throw on private/loopback/metadata.
@@ -405,17 +408,32 @@ export function yamlSafeString(s: string): string {
 
 Graphify's `detect.py` blocks ingestion of sensitive directories and files before any LLM call touches them — preventing credentials from leaking into the knowledge graph.
 
-*What graphify does*:
+_What graphify does_:
+
 - 6 regex patterns matching credential content: `(?i)api[_-]?key\s*[:=]`, `(?i)secret\s*[:=]`, `(?i)password\s*[:=]`, `(?i)token\s*[:=]`, `(?i)private[_-]?key`, `BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY`.
 - Directory blocklist: `.ssh/`, `.gnupg/`, `.aws/`, `.config/gcloud/`, `.azure/`, `secrets/`, `credentials/`.
 - File blocklist: `.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `id_rsa`, `id_ed25519`, `credentials.json`.
 - If a match is found: logs `WARN: skipping <path> — matched sensitive pattern`, increments `sensitiveSkipCount`, never sends to LLM.
 - Reports total `sensitiveSkipCount` at end of sync: "Skipped 3 sensitive files."
 
-*Cortex implementation — add to `src/security.ts`*:
+_Cortex implementation — add to `src/security.ts`_:
+
 ```typescript
-const SENSITIVE_DIR_PATTERNS = [".ssh", ".gnupg", ".aws", ".config/gcloud", ".azure", "secrets", "credentials"];
-const SENSITIVE_FILE_PATTERNS = [/^\.env($|\.)/, /\.(pem|key|p12|pfx|jks)$/, /^id_(rsa|ed25519|ecdsa|dsa)$/, /^credentials\.json$/];
+const SENSITIVE_DIR_PATTERNS = [
+  ".ssh",
+  ".gnupg",
+  ".aws",
+  ".config/gcloud",
+  ".azure",
+  "secrets",
+  "credentials",
+];
+const SENSITIVE_FILE_PATTERNS = [
+  /^\.env($|\.)/,
+  /\.(pem|key|p12|pfx|jks)$/,
+  /^id_(rsa|ed25519|ecdsa|dsa)$/,
+  /^credentials\.json$/,
+];
 const SENSITIVE_CONTENT_PATTERNS = [
   /(?i)api[_-]?key\s*[:=]/i,
   /(?i)secret\s*[:=]/i,
@@ -424,14 +442,20 @@ const SENSITIVE_CONTENT_PATTERNS = [
   /BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY/,
 ];
 
-export function isSensitivePath(filePath: string): boolean { /* dir + filename checks */ }
-export function hasSensitiveContent(text: string): boolean { /* content pattern scan (first 4KB only) */ }
+export function isSensitivePath(filePath: string): boolean {
+  /* dir + filename checks */
+}
+export function hasSensitiveContent(text: string): boolean {
+  /* content pattern scan (first 4KB only) */
+}
 ```
+
 - `cortex sync` calls `isSensitivePath(filePath)` before opening any file. If true → skip, log WARN.
 - `cortex sync` calls `hasSensitiveContent(firstChunk)` on code files before sending to LLM. If true → skip, log WARN.
 - `cortex doctor` reports `sensitiveSkipCount` from last sync (stored in `state.json:meta.lastSyncStats`).
 
 **DoD**
+
 - Unit tests: path traversal `../../../etc/passwd` → throws; valid path → passes.
 - Unit tests: SSRF `http://169.254.169.254/latest/meta-data` → throws; public URL → passes.
 - Unit tests: NAT64 `::ffff:192.168.1.1` → throws.
@@ -452,32 +476,45 @@ export function hasSensitiveContent(text: string): boolean { /* content pattern 
 Closes flaws #51, #64. When Phase 0.1 (Security Foundation) ships, add two security utilities to `src/security.ts`:
 
 **`validatePathWithinRoot(filePath, projectRoot)`** (closes #51 — path traversal outside root):
+
 ```typescript
-export function validatePathWithinRoot(filePath: string, projectRoot: string): void {
+export function validatePathWithinRoot(
+  filePath: string,
+  projectRoot: string,
+): void {
   const resolved = path.resolve(filePath);
   const root = path.resolve(projectRoot);
   if (!resolved.startsWith(root + path.sep) && resolved !== root) {
     throw new Error(
-      `Path traversal rejected: "${filePath}" resolves outside projectRoot "${root}"`
+      `Path traversal rejected: "${filePath}" resolves outside projectRoot "${root}"`,
     );
   }
 }
 ```
+
 Call with `path.resolve()` on both args before passing. Throws on path traversal, symlink escape, or drive change (Windows).
 
 **`writeSessionMarkerSafe(markerPath, content)`** (closes #64 — symlink attack on world-writable tmpdir):
+
 ```typescript
-export function writeSessionMarkerSafe(markerPath: string, content: string): void {
+export function writeSessionMarkerSafe(
+  markerPath: string,
+  content: string,
+): void {
   try {
-    const fd = openSync(markerPath, O_WRONLY | O_CREAT | O_TRUNC | (O_NOFOLLOW ?? 0));
+    const fd = openSync(
+      markerPath,
+      O_WRONLY | O_CREAT | O_TRUNC | (O_NOFOLLOW ?? 0),
+    );
     writeSync(fd, content);
     closeSync(fd);
   } catch {
     // O_NOFOLLOW not available (Windows) — fall through
-    import('fs').then(fs => fs.writeFileSync(markerPath, content));
+    import("fs").then((fs) => fs.writeFileSync(markerPath, content));
   }
 }
 ```
+
 `O_NOFOLLOW` prevents a race where an attacker replaces the marker path with a symlink between `exists()` and `open()`. Graceful fallback on Windows where `O_NOFOLLOW` is unavailable (`constants.O_NOFOLLOW ?? 0`).
 
 ---
@@ -490,18 +527,21 @@ export function writeSessionMarkerSafe(markerPath: string, content: string): voi
 `save_concept({name: "FLAW_TEST_CONCEPT"})` accepted any string. `save_concept({name: ""})` accepted empty string. No referential integrity — edges can reference node IDs that don't exist.
 
 **What graphify does** (`validate.py`, 72 lines):
+
 ```python
 REQUIRED_NODE_FIELDS = {"id", "label", "file_type", "source_file"}
 REQUIRED_EDGE_FIELDS = {"source", "target", "relation", "confidence", "source_file"}
 VALID_FILE_TYPES     = {"code", "document", "paper", "image", "rationale", "concept"}
 VALID_CONFIDENCES    = {"EXTRACTED", "INFERRED", "AMBIGUOUS"}
 ```
+
 `validate_node(node, nodes_by_id)` — checks required fields, validates `file_type` against allowlist, non-empty `label`.
 `validate_edge(edge, nodes_by_id)` — checks required fields, validates `confidence` against allowlist, asserts `edge["source"]` and `edge["target"]` exist in `nodes_by_id`. **No dangling edges allowed.**
 
 This runs as a hard precondition before `build_graph()` consumes anything. Invalid input fails loudly, not silently.
 
 **Implementation**
+
 - Create `src/validate.ts` with:
   - `VALID_ENTITY_TYPES`, `VALID_CONFIDENCES`, `REQUIRED_ENTITY_FIELDS`, `REQUIRED_RELATION_FIELDS` as `const` sets.
   - `validateEntity(e: unknown, knownIds: Set<string>): asserts e is Entity` — throws `ValidationError` with field name + value.
@@ -511,18 +551,21 @@ This runs as a hard precondition before `build_graph()` consumes anything. Inval
 - Zod schemas (already present) are kept; `validate.ts` is the runtime gate that is always called, regardless of caller.
 
 **Gap 2 addition — `--dry-run` on all write tools (fixes flaw #12)**
+
 - Every MCP write tool (`save_concept`, `save_synthesis`, `ingest`, `save_entity`) gains an optional `dryRun: boolean` parameter.
 - When `dryRun: true`: run all validation, compute the would-be write diff, return `{preview: ..., wouldWrite: [...paths]}` without touching disk. No side effects.
 - `validate.ts` runs first (so dry-run still catches `ValidationError`). Only the final `fs.writeFile` is gated.
 - CLI mirror: `cortex concept save <name> --dry-run` prints the entity JSON without writing.
 
 **Gap 4 addition — scope validation in `build_context_pack` (fixes flaw #8)**
+
 - Add `validateEntityExists(scope: string, state: State): void` to `validate.ts`.
 - Called at the top of `build_context_pack` before any graph traversal.
 - Throws `ValidationError: scope entity '<name>' not found in graph` with a fuzzy-match suggestion: "Did you mean: AuthService, AuthMiddleware?"
 - Same guard applies to `impact_analysis` and `cortex_find` when passed an exact entity name as scope.
 
 **DoD**
+
 - `save_concept({name: ""})` → `ValidationError: name must be non-empty`.
 - `save_concept({name: "x", type: "not-a-valid-type"})` → `ValidationError: type 'not-a-valid-type' not in VALID_ENTITY_TYPES`.
 - Edge with `source: "non-existent-id"` → `ValidationError: source node 'non-existent-id' not found in graph`.
@@ -542,6 +585,7 @@ This runs as a hard precondition before `build_graph()` consumes anything. Inval
 
 **What graphify does**:
 Confidence is a required enum field on every edge:
+
 - `EXTRACTED` (confidence 1.0) — explicit source statement (import, function call, class declaration).
 - `INFERRED` (0.55–0.95) — reasoned inference; graphify provides a discrete rubric for how to assign the level.
 - `AMBIGUOUS` — flagged in `GRAPH_REPORT.md` for human review; excluded from production context packs by default.
@@ -549,6 +593,7 @@ Confidence is a required enum field on every edge:
 Combined with `source_file` being required on every node, a phantom entity is **structurally impossible**: every node must point to a real file, every edge must carry provenance. There is no `evidence: []` that means "we don't know."
 
 **Implementation**
+
 - Add `confidence: "EXTRACTED" | "INFERRED" | "AMBIGUOUS"` as a required field to the `Relation` type in `src/types.ts`.
 - Add `sourceFile: string` as required on `Entity` (most already have this; patch any that don't).
 - Update `validate.ts` (Phase 0.2) to enforce both.
@@ -557,6 +602,7 @@ Combined with `source_file` being required on every node, a phantom entity is **
 - `GRAPH_REPORT.md` output section lists all `AMBIGUOUS` edges for human review.
 
 **DoD**
+
 - Any entity write without `sourceFile` → `ValidationError`.
 - Any edge write without `confidence` → `ValidationError`.
 - `build_context_pack` with default options excludes `AMBIGUOUS` edges.
@@ -573,17 +619,17 @@ Add a parallel numeric `weight: number` field alongside the enum `confidence`:
 // Per-relation confidence floors — if an LLM-produced weight is below the floor,
 // it is clamped up (or the edge is demoted to AMBIGUOUS).
 const CONFIDENCE_FLOORS: Record<string, number> = {
-  CALLS:       0.90,   // explicit call expression in AST → very high certainty
-  IMPORTS:     0.90,   // import/require statement → structural certainty
-  HAS_METHOD:  0.95,   // class member declaration → near-certain
-  INHERITS:    0.95,   // extends/implements clause → near-certain
-  ACCESSES:    0.80,   // field/property access → slightly noisier
-  DEPENDS_ON:  0.75,   // inferred logical dependency → more uncertain
-  RELATED_TO:  0.60,   // concept-level association → explicitly uncertain
+  CALLS: 0.9, // explicit call expression in AST → very high certainty
+  IMPORTS: 0.9, // import/require statement → structural certainty
+  HAS_METHOD: 0.95, // class member declaration → near-certain
+  INHERITS: 0.95, // extends/implements clause → near-certain
+  ACCESSES: 0.8, // field/property access → slightly noisier
+  DEPENDS_ON: 0.75, // inferred logical dependency → more uncertain
+  RELATED_TO: 0.6, // concept-level association → explicitly uncertain
 };
 
 function applyConfidenceFloor(relationType: string, weight: number): number {
-  return Math.max(weight, CONFIDENCE_FLOORS[relationType] ?? 0.60);
+  return Math.max(weight, CONFIDENCE_FLOORS[relationType] ?? 0.6);
 }
 ```
 
@@ -593,6 +639,7 @@ function applyConfidenceFloor(relationType: string, weight: number): number {
 - **Migration**: existing enum-only edges get synthetic weights: `EXTRACTED → 0.95`, `INFERRED → 0.70`, `AMBIGUOUS → 0.40`.
 
 **DoD extension**
+
 - Every written edge must have `weight: number` in `[0, 1]` — validator rejects missing or out-of-range values.
 - `build_context_pack` with `minWeight: 0.8` returns only CALLS/IMPORTS/HAS_METHOD/INHERITS edges (the high-floor types).
 - `cortex doctor` flags an edge whose `weight < CONFIDENCE_FLOORS[relationType]` as `⚠ weight below floor for type`.
@@ -602,7 +649,7 @@ function applyConfidenceFloor(relationType: string, weight: number): number {
 
 ### Phase 0.3 Refinement — Structured Confidence Reasons (GitNexus)
 
-Edges in the current schema carry only `weight: number`. GitNexus additionally carries a `reason: string` field that explains *why* that confidence was assigned. This makes `cortex lint` output actionable rather than just numeric.
+Edges in the current schema carry only `weight: number`. GitNexus additionally carries a `reason: string` field that explains _why_ that confidence was assigned. This makes `cortex lint` output actionable rather than just numeric.
 
 ```typescript
 // Add to relationship schema (non-breaking — existing edges without reason default to "unknown")
@@ -610,14 +657,24 @@ interface Relationship {
   type: string;
   target: string;
   weight: number;
-  reason?: "import-resolved" | "local-call" | "interface-dispatch" | "global" | "write" | "lsp-resolved" | "inferred" | "unknown";
+  reason?:
+    | "import-resolved"
+    | "local-call"
+    | "interface-dispatch"
+    | "global"
+    | "write"
+    | "lsp-resolved"
+    | "inferred"
+    | "unknown";
 }
 ```
 
 `cortex lint` output changes from:
+
 > `CALLS AuthService → TokenStore: weight 0.75`
 
 to:
+
 > `CALLS AuthService → TokenStore: weight 0.75 (interface-dispatch — verify implementing classes)`
 
 **Implementation**: Add `reason` field to `Relationship` in `src/knowledge/schema.ts`. Populate in `LanguageProvider.extract()` — tree-sitter `import` statements → `"import-resolved"`, same-file calls → `"local-call"`, dynamic dispatch patterns → `"interface-dispatch"`, SCIP-sourced (Phase 0.19) → `"lsp-resolved"`. `cortex lint` renders reason text alongside weight.
@@ -631,15 +688,31 @@ Phase 0.3 adds `reason` to edges. A complementary guard prevents CALLS edges fro
 ```typescript
 // src/core/symbol-resolver.ts
 const CODE_EXTENSIONS = new Set([
-  ".ts", ".js", ".mjs", ".tsx", ".jsx",
-  ".py", ".go", ".rs", ".java", ".c", ".cpp", ".cs", ".rb", ".swift", ".kt",
+  ".ts",
+  ".js",
+  ".mjs",
+  ".tsx",
+  ".jsx",
+  ".py",
+  ".go",
+  ".rs",
+  ".java",
+  ".c",
+  ".cpp",
+  ".cs",
+  ".rb",
+  ".swift",
+  ".kt",
 ]);
 
 function isCodeFile(filePath: string): boolean {
   return CODE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
 }
 
-function canEmitCallEdge(sourceFile: string | undefined, targetFile: string | undefined): boolean {
+function canEmitCallEdge(
+  sourceFile: string | undefined,
+  targetFile: string | undefined,
+): boolean {
   if (!sourceFile || !targetFile) return false;
   return isCodeFile(sourceFile) && isCodeFile(targetFile);
 }
@@ -663,6 +736,7 @@ function canEmitCallEdge(sourceFile: string | undefined, targetFile: string | un
 **Root cause**: Cortex is solving the wrong problem. We compress source files to reduce tokens. Graphify doesn't have this problem because **the graph IS the compressed form**.
 
 **What graphify does** (`extract.py`, 7,810 lines + `cache.py`):
+
 - `extract.py` runs `tree-sitter` per language once per file and emits `{nodes: [...], edges: [...]}` — structured graph data (functions, classes, imports, calls), not "minified source."
 - Re-reads are answered from `graph.json`, not by re-compressing source at read time.
 - `cache.py` stores: SHA256 + stat fastpath (`size + mtime_ns`). If stat is unchanged, return cached SHA256 without re-hashing. If stat changed, re-hash and update cache.
@@ -672,6 +746,7 @@ function canEmitCallEdge(sourceFile: string | undefined, targetFile: string | un
 - Windows long-path: `\\?\` prefix + `os.path.normcase` applied before all path comparisons.
 
 **Implementation**
+
 - In `SmartReadCache` (Phase 13.7), replace the skeleton-compression step with an entity-body cache:
   - After AST extraction, store the structured skeleton (function names, class members, type aliases) inside the entity's `body` field in `state.json`. No separate cache file.
   - Cache key: `(filePath, mtime_ns, size)` — stat fastpath first, SHA256 on miss.
@@ -685,6 +760,7 @@ function canEmitCallEdge(sourceFile: string | undefined, targetFile: string | un
 **Refinement: Content-Addressed Synthesis Cache (from GitNexus)**
 
 Phase 0.4's `SmartReadCache` uses a stat fastpath `(filePath, mtime_ns, size)` as the cache key. This is fast but file-path-dependent — the same file at a different path is a cache miss even if the content is identical. GitNexus adds a content-addressed layer: synthesis artifacts are keyed by SHA256 of the file content, so:
+
 - Moving a file doesn't invalidate the cache.
 - Two workspaces with a shared library (e.g., a monorepo package) reuse each other's synthesis cache.
 - CI agents (which checkout to a fresh path each run) can reuse a warm cache from a prior run if content hasn't changed.
@@ -694,16 +770,19 @@ Phase 0.4's `SmartReadCache` uses a stat fastpath `(filePath, mtime_ns, size)` a
 
 // Two-level cache: stat fastpath → content-hash lookup → cache miss.
 interface CacheEntry {
-  contentHash: string;     // SHA256 of file content
-  entities: Entity[];      // synthesis result for this file
+  contentHash: string; // SHA256 of file content
+  entities: Entity[]; // synthesis result for this file
   relations: Relation[];
-  synthesizedAt: number;   // epoch ms — for TTL expiry
+  synthesizedAt: number; // epoch ms — for TTL expiry
 }
 
 // Global content-addressed store: keyed by SHA256, not file path.
 const contentStore = new Map<string, CacheEntry>();
 
-async function getOrSynthesize(filePath: string, statKey: string): Promise<CacheEntry> {
+async function getOrSynthesize(
+  filePath: string,
+  statKey: string,
+): Promise<CacheEntry> {
   // Fast path: if stat unchanged, return cached result directly (no hashing).
   const byPath = pathCache.get(filePath);
   if (byPath && byPath.statKey === statKey) return byPath.entry;
@@ -721,7 +800,11 @@ async function getOrSynthesize(filePath: string, statKey: string): Promise<Cache
 
   // Cache miss: synthesize.
   const result = await synthesize(content.toString(), filePath);
-  const entry: CacheEntry = { contentHash, ...result, synthesizedAt: Date.now() };
+  const entry: CacheEntry = {
+    contentHash,
+    ...result,
+    synthesizedAt: Date.now(),
+  };
   contentStore.set(contentHash, entry);
   pathCache.set(filePath, { statKey, entry });
   return entry;
@@ -735,6 +818,7 @@ async function getOrSynthesize(filePath: string, statKey: string): Promise<Cache
 - `CORTEX_CACHE_DIR` env var overrides the cache location (useful for CI cache path configuration).
 
 **DoD extension**
+
 - Moving `src/auth.ts` to `src/services/auth.ts` with identical content → cache HIT (no re-synthesis).
 - Two different file paths with identical content → second file uses first file's cache entry.
 - `~/.cortex/content-cache.json` exists after `cortex ingest`; re-running ingest with no file changes → zero LLM calls.
@@ -752,6 +836,7 @@ Graphify's `--update` mode diffs the current file list against the last-indexed 
 - `cortex audit` reports: `N files added, M files removed, K files renamed since last sync`.
 
 **DoD**
+
 - `source({filePath: "src/core/soul.ts"})` returns all class method signatures, all type aliases, no body locals.
 - Stat fastpath: second call to `source` on an unmodified file returns in <5ms without touching disk.
 - Atomic write: concurrent writes to cache do not produce partial reads (test with `Promise.all` of 10 parallel writes).
@@ -767,14 +852,22 @@ Currently any LLM call or file-write failure in Cortex propagates immediately as
 
 ```typescript
 interface RetryOpts {
-  maxAttempts?: number;   // default 3
-  baseDelayMs?: number;   // default 200
-  capDelayMs?: number;    // default 10_000
-  retryIf?: (err: unknown) => boolean;  // default: always retry (except AbortError)
+  maxAttempts?: number; // default 3
+  baseDelayMs?: number; // default 200
+  capDelayMs?: number; // default 10_000
+  retryIf?: (err: unknown) => boolean; // default: always retry (except AbortError)
 }
 
-async function withRetry<T>(fn: () => Promise<T>, opts: RetryOpts = {}): Promise<T> {
-  const { maxAttempts = 3, baseDelayMs = 200, capDelayMs = 10_000, retryIf } = opts;
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  opts: RetryOpts = {},
+): Promise<T> {
+  const {
+    maxAttempts = 3,
+    baseDelayMs = 200,
+    capDelayMs = 10_000,
+    retryIf,
+  } = opts;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await fn();
@@ -783,8 +876,9 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOpts = {}): Promise
       const shouldRetry = retryIf ? retryIf(err) : !(err instanceof AbortError);
       if (isLast || !shouldRetry) throw err;
       // Full-jitter: avoids correlated retry storms from parallel workers.
-      const delay = Math.random() * Math.min(capDelayMs, baseDelayMs * 2 ** attempt);
-      await new Promise(res => setTimeout(res, delay));
+      const delay =
+        Math.random() * Math.min(capDelayMs, baseDelayMs * 2 ** attempt);
+      await new Promise((res) => setTimeout(res, delay));
     }
   }
   throw new Error("unreachable");
@@ -798,6 +892,7 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOpts = {}): Promise
 - `CORTEX_MAX_RETRIES` env var overrides `maxAttempts` globally for debugging.
 
 **DoD extension**
+
 - `withRetry` unit tests: success on attempt 2 → 1 retry + correct result; always-failing fn → throws after `maxAttempts`; `retryIf: () => false` → throws on first error without retry.
 - Full-jitter: two parallel `withRetry` calls with same fn → delays differ by >10ms in >80% of simulation runs (statistical test).
 - LLM call on rate-limit (mock HTTP 429 twice, then 200) → succeeds on 3rd attempt.
@@ -813,10 +908,12 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOpts = {}): Promise
 SoulEngine's lockfile is a marker-file existence check with a 30-second stale detection. Two concurrent `ingest` calls write to the same `state.json` and corrupt it. "Soul Dirty: Yes" appears immediately on a fresh server with zero mutations.
 
 **What graphify does** (`watch.py`):
+
 ```python
 import fcntl
 fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 ```
+
 - `LOCK_NB` (non-blocking): if lock is already held, `IOError` is raised immediately — caller gets the PID of the holder from the lock file content and exits cleanly.
 - PID written to lockfile so external pollers can identify the holder.
 - Lock released by `fcntl.LOCK_UN` + `unlink` on the lockfile. Only the acquirer calls `unlink`.
@@ -824,6 +921,7 @@ fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 - Auto-release on process death: OS reclaims `fcntl` locks when the process exits — no stale lock cleanup needed.
 
 **Implementation**
+
 - Use `proper-lockfile` npm package (wraps OS-native advisory locking, POSIX + Windows) or implement directly via `node:fs` `O_EXCL` + `cross-process-lock`.
 - `acquireStateLock(stateFile: string): LockHandle` — writes PID to `state.lock`, returns handle with `release()`.
 - `release()` calls OS unlock + `fs.unlinkSync(lockFile)`.
@@ -834,6 +932,7 @@ fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 - Remove all existing marker-file / mtime-based lock logic from `SoulEngine`.
 
 **DoD**
+
 - Concurrent `ingest` × 10: final `state.json` is valid JSON with all entities present (no partial write).
 - `cortex status` on a locked repo shows `Lock held by PID 12345`.
 - Process kill mid-write: lock releases automatically, next `ingest` succeeds without stale-lock error.
@@ -843,7 +942,7 @@ fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 
 ### Phase 0.5 Refinement — SQLite WAL + Bounded Busy-Timeout + Stale-PID Lock (CodeGraph)
 
-**Source-of-lesson**: codegraph/src/__tests__/concurrent-locking.test.ts:41-55
+**Source-of-lesson**: codegraph/src/**tests**/concurrent-locking.test.ts:41-55
 
 When Phase 0.5 (OS-Native File Locking) ships, use the following battle-tested configuration:
 
@@ -878,6 +977,7 @@ For Cortex's current `state.json` path: the same principle applies — replace t
 
 **What graphify does** (`dedup.py`):
 5-stage pipeline run on every graph load:
+
 1. **Exact normalization** — NFKC + casefold + collapse non-alphanumeric to single space.
 2. **Shannon entropy gate** — discard labels below threshold (gibberish, single chars).
 3. **MinHash/LSH blocking** — build shingle hashes (`datasketch.MinHash`), insert into `datasketch.MinHashLSH`; query for candidate pairs in O(N), not O(N²).
@@ -886,6 +986,7 @@ For Cortex's current `state.json` path: the same principle applies — replace t
 6. **Union-find merge** — collapse duplicates into the canonical node (highest `pagerank` score wins, or largest `source_file` count).
 
 **Implementation**
+
 - Implement `src/dedup.ts` with a pipeline matching graphify's stages:
   - Stage 1: `normalize(label: string): string` — unicode NFKC, lowercase, collapse punctuation.
   - Stage 2: entropy gate using `shannonEntropy(s)` — skip strings below threshold 1.5 bits/char.
@@ -902,11 +1003,13 @@ For Cortex's current `state.json` path: the same principle applies — replace t
 **3-Layer Node Deduplication (graphify `build.py` pattern)**
 
 Graphify performs dedup at three distinct layers, preventing duplicates from ever accumulating:
+
 1. **Within-file AST dedup** — while extracting a single file's AST, identical node IDs are idempotently deduplicated before they're emitted. A class with two docstrings doesn't produce two nodes.
 2. **Between-file graph idempotent add** — `graph.add_node(id, **attrs)` is idempotent; re-adding an existing node updates attributes but does not duplicate. Graphify uses NetworkX's `add_node` semantics; Cortex's `StateManager.saveEntity` must mirror this by checking `if (state.entities[id]) { mergeAttrs(); return; }` instead of always pushing.
 3. **Semantic merge** — post-extraction, the 6-stage MinHash/LSH pipeline above handles entities that are semantically identical but have different IDs (e.g., extracted from two different call sites).
 
-*Cortex implementation*:
+_Cortex implementation_:
+
 - **Layer 1** (within-file): tree-sitter adapters track a `seenIds: Set<string>` per file extraction pass. If `id` already in set, skip emission.
 - **Layer 2** (between-file): `StateManager.upsertEntity(entity)` — if entity ID already exists, merge `aliases`, `evidence`, `relations` arrays; keep higher-confidence `body`. Never duplicate.
 - **Layer 3** (semantic): existing MinHash/LSH pipeline (stages 1-6 above).
@@ -915,22 +1018,27 @@ Graphify performs dedup at three distinct layers, preventing duplicates from eve
 
 Graphify uses LLM to resolve ambiguous dedup pairs the JW similarity score alone can't decide. Pairs with JW similarity between 0.75–0.92 are "ambiguous" — neither clearly the same nor clearly different.
 
-*What graphify does*: batch up to 30 ambiguous pairs into a single LLM prompt: "Are these the same concept? Answer YES or NO with one sentence of reasoning." YES pairs are merged; NO pairs are kept separate. Batch limit prevents cost runaway.
+_What graphify does_: batch up to 30 ambiguous pairs into a single LLM prompt: "Are these the same concept? Answer YES or NO with one sentence of reasoning." YES pairs are merged; NO pairs are kept separate. Batch limit prevents cost runaway.
 
-*Cortex implementation — add to `src/dedup.ts`*:
+_Cortex implementation — add to `src/dedup.ts`_:
+
 ```typescript
-async function llmTiebreak(ambiguousPairs: [Entity, Entity][], llmConfig: LlmConfig): Promise<MergeDecision[]> {
+async function llmTiebreak(
+  ambiguousPairs: [Entity, Entity][],
+  llmConfig: LlmConfig,
+): Promise<MergeDecision[]> {
   const BATCH_SIZE = 30;
   const batches = chunk(ambiguousPairs, BATCH_SIZE);
   const decisions: MergeDecision[] = [];
   for (const batch of batches) {
-    const prompt = buildTiebreakPrompt(batch);  // "Q1: Are 'UserService' and 'User Service' the same? ..."
+    const prompt = buildTiebreakPrompt(batch); // "Q1: Are 'UserService' and 'User Service' the same? ..."
     const response = await callLlm(prompt, llmConfig);
     decisions.push(...parseTiebreakResponse(response, batch));
   }
   return decisions;
 }
 ```
+
 - JW similarity ≥ 0.93 → auto-merge (no LLM call).
 - JW similarity 0.75–0.92 → add to `ambiguousPairs` batch for LLM tiebreak.
 - JW similarity < 0.75 → keep separate (no LLM call).
@@ -940,20 +1048,25 @@ async function llmTiebreak(ambiguousPairs: [Entity, Entity][], llmConfig: LlmCon
 
 Graphify detects nodes whose labels are too long or too wordy (rationale text accidentally extracted as a node name) and converts them to attributes on their neighbor entities instead.
 
-*What graphify does* (`semantic_cleanup.py`):
+_What graphify does_ (`semantic_cleanup.py`):
+
 - Node label > 80 characters OR ≥ 8 words → classified as a "rationale node" (LLM extracted a sentence, not a symbol).
 - Find the closest neighbor entity (by edge count or by semantic proximity).
 - Convert: delete the rationale node, add its text as an `attributes.rationale` field on the target entity.
 - Prevents graph pollution: "This service handles authentication for all downstream consumers" should be an attribute of `AuthService`, not a standalone node.
 
-*Cortex implementation — new `src/dedup/semanticCleanup.ts`*:
+_Cortex implementation — new `src/dedup/semanticCleanup.ts`_:
+
 ```typescript
 export function isRationaleNode(entity: Entity): boolean {
   const wordCount = entity.name.split(/\s+/).length;
   return entity.name.length > 80 || wordCount >= 8;
 }
 
-export function semanticCleanup(state: State): { removed: string[]; converted: number } {
+export function semanticCleanup(state: State): {
+  removed: string[];
+  converted: number;
+} {
   const rationaleNodes = state.entities.filter(isRationaleNode);
   for (const node of rationaleNodes) {
     const target = findClosestNeighbor(node, state);
@@ -966,11 +1079,13 @@ export function semanticCleanup(state: State): { removed: string[]; converted: n
   }
 }
 ```
+
 - Run `semanticCleanup()` after `dedup()` pass on every `cortex sync`.
 - `cortex doctor` reports count of potential rationale nodes (without removing them — doctor is read-only).
 - `cortex dedup --semantic` flag explicitly triggers semantic cleanup + standard dedup together.
 
 **DoD**
+
 - Ingest same codebase twice: entity count after dedup ≤ entity count before second ingest.
 - `Native IDE Workflows` entity + concept: after `cortex dedup`, only one survives with both descriptions merged.
 - `cortex dedup --dry-run` outputs a table: `"A" → merged into "B" (JW=0.94, same cluster)`.
@@ -987,27 +1102,53 @@ export function semanticCleanup(state: State): { removed: string[]; converted: n
 
 Phase 0.6 currently plans MinHash/LSH dedup. Graphify uses a more precise 3-pass approach that handles both small repos (where MinHash has poor precision) and large repos (where full LLM dedup is too expensive):
 
-| Pass | Method | Trigger condition | Cost |
-|---|---|---|---|
-| **Pass 1** | Exact filename + qualified name match | Always | Zero |
-| **Pass 2** | Jaro-Winkler fuzzy string distance | When Pass 1 has no match | < 1ms |
-| **Pass 3** | LLM tiebreaker | Only when Pass 2 score is 0.70–0.85 (ambiguous zone) | 1 LLM call |
+| Pass       | Method                                | Trigger condition                                    | Cost       |
+| ---------- | ------------------------------------- | ---------------------------------------------------- | ---------- |
+| **Pass 1** | Exact filename + qualified name match | Always                                               | Zero       |
+| **Pass 2** | Jaro-Winkler fuzzy string distance    | When Pass 1 has no match                             | < 1ms      |
+| **Pass 3** | LLM tiebreaker                        | Only when Pass 2 score is 0.70–0.85 (ambiguous zone) | 1 LLM call |
 
 ```typescript
-async function deduplicateEntity(candidate: EntityRecord, existing: EntityRecord[]): Promise<DedupeResult> {
+async function deduplicateEntity(
+  candidate: EntityRecord,
+  existing: EntityRecord[],
+): Promise<DedupeResult> {
   // Pass 1: exact match
-  const exactMatch = existing.find(e => e.id === candidate.id || e.name === candidate.name);
-  if (exactMatch) return { duplicate: true, matchId: exactMatch.id, method: "exact", score: 1.0 };
+  const exactMatch = existing.find(
+    (e) => e.id === candidate.id || e.name === candidate.name,
+  );
+  if (exactMatch)
+    return {
+      duplicate: true,
+      matchId: exactMatch.id,
+      method: "exact",
+      score: 1.0,
+    };
 
   // Pass 2: fuzzy string match on qualified name
-  const fuzzyScores = existing.map(e => ({ e, score: jaroWinkler(candidate.name, e.name) }));
+  const fuzzyScores = existing.map((e) => ({
+    e,
+    score: jaroWinkler(candidate.name, e.name),
+  }));
   const best = fuzzyScores.sort((a, b) => b.score - a.score)[0];
-  if (best.score > 0.85) return { duplicate: true, matchId: best.e.id, method: "fuzzy", score: best.score };
-  if (best.score < 0.70) return { duplicate: false, method: "fuzzy", score: best.score };
+  if (best.score > 0.85)
+    return {
+      duplicate: true,
+      matchId: best.e.id,
+      method: "fuzzy",
+      score: best.score,
+    };
+  if (best.score < 0.7)
+    return { duplicate: false, method: "fuzzy", score: best.score };
 
   // Pass 3: LLM tiebreaker (only for ambiguous 0.70–0.85 range)
   const llmDecision = await llmDeduplicatePair(candidate, best.e);
-  return { duplicate: llmDecision.areDuplicate, matchId: best.e.id, method: "llm-tiebreaker", score: best.score };
+  return {
+    duplicate: llmDecision.areDuplicate,
+    matchId: best.e.id,
+    method: "llm-tiebreaker",
+    score: best.score,
+  };
 }
 ```
 
@@ -1022,10 +1163,13 @@ Two implementation details from Graphify's `dedup.py` that prevent the 3-pass ch
 ```typescript
 const MINHASH_THRESHOLD = 500;
 
-async function deduplicateBatch(candidates: EntityRecord[], existing: EntityRecord[]): Promise<DedupeResult[]> {
+async function deduplicateBatch(
+  candidates: EntityRecord[],
+  existing: EntityRecord[],
+): Promise<DedupeResult[]> {
   const useMinHash = existing.length > MINHASH_THRESHOLD;
   const pool = useMinHash ? filterByMinHash(candidates, existing) : existing;
-  return Promise.all(candidates.map(c => deduplicateEntity(c, pool)));
+  return Promise.all(candidates.map((c) => deduplicateEntity(c, pool)));
 }
 ```
 
@@ -1054,6 +1198,7 @@ Silent corruption and stale index drift go undetected until an agent produces a 
 
 **What graphify does** (`diagnostics.py`, 390 lines):
 Structural readiness checks:
+
 - Edges referencing non-existent nodes.
 - File-type → suspect-relation pairs (e.g., a concept node receiving `calls` edges = symptom of LLM hallucination).
 - Exact-duplicate edge detection (`_exact_signature`).
@@ -1063,21 +1208,21 @@ Structural readiness checks:
 **Implementation**
 `cortex doctor` prints a structured health report. Checks (in order):
 
-| Check | Pass condition | Remediation on fail |
-|-------|---------------|---------------------|
-| `state.json` parseable | Valid JSON | `cortex repair` auto-restores last-good backup |
-| Schema version current | `schemaVersion` matches latest | Run migration script |
-| No orphan edges | All edge source/target IDs exist as entity IDs | `cortex dedup --fix-orphans` |
-| No empty-name entities | All entities have `name.length > 0` | List affected entities, offer `cortex gc` |
-| No empty critical fields | All edges have non-empty `source`, `target`, `relation`, `confidence`, `sourceFile` | List offenders, offer `cortex migrate --fill-empty` |
-| No zero-confidence relations | All relations have `confidence` field | Backfill with `INFERRED` via `cortex migrate` |
-| No suspect-relation pairs | No concept/rationale entity has an edge of type `calls`, `imports`, or `inherits` (file-type → relation allowlist) | Flag as likely LLM hallucination; list in `GRAPH_REPORT.md` for human review |
-| No duplicate edges | 0 edges with identical `(source, target, relation)` triple (`_exactSignature` check) | `cortex dedup --edges` deduplicate by keeping edge with higher `confidence` |
-| Lock not stale | No lock file OR lock PID is running | `cortex unlock` |
-| Index up to date | All `sourceFile` entries in entities have `mtime_ns` ≤ current | `cortex sync` needed |
-| No AMBIGUOUS-only entities | Entities with all edges `AMBIGUOUS` flagged for review | List in GRAPH_REPORT.md |
-| Duplicate entity count | 0 exact-duplicate entity names | `cortex dedup` |
-| Coverage gap | % of source files with no entity | Warn if <50% coverage |
+| Check                        | Pass condition                                                                                                     | Remediation on fail                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `state.json` parseable       | Valid JSON                                                                                                         | `cortex repair` auto-restores last-good backup                               |
+| Schema version current       | `schemaVersion` matches latest                                                                                     | Run migration script                                                         |
+| No orphan edges              | All edge source/target IDs exist as entity IDs                                                                     | `cortex dedup --fix-orphans`                                                 |
+| No empty-name entities       | All entities have `name.length > 0`                                                                                | List affected entities, offer `cortex gc`                                    |
+| No empty critical fields     | All edges have non-empty `source`, `target`, `relation`, `confidence`, `sourceFile`                                | List offenders, offer `cortex migrate --fill-empty`                          |
+| No zero-confidence relations | All relations have `confidence` field                                                                              | Backfill with `INFERRED` via `cortex migrate`                                |
+| No suspect-relation pairs    | No concept/rationale entity has an edge of type `calls`, `imports`, or `inherits` (file-type → relation allowlist) | Flag as likely LLM hallucination; list in `GRAPH_REPORT.md` for human review |
+| No duplicate edges           | 0 edges with identical `(source, target, relation)` triple (`_exactSignature` check)                               | `cortex dedup --edges` deduplicate by keeping edge with higher `confidence`  |
+| Lock not stale               | No lock file OR lock PID is running                                                                                | `cortex unlock`                                                              |
+| Index up to date             | All `sourceFile` entries in entities have `mtime_ns` ≤ current                                                     | `cortex sync` needed                                                         |
+| No AMBIGUOUS-only entities   | Entities with all edges `AMBIGUOUS` flagged for review                                                             | List in GRAPH_REPORT.md                                                      |
+| Duplicate entity count       | 0 exact-duplicate entity names                                                                                     | `cortex dedup`                                                               |
+| Coverage gap                 | % of source files with no entity                                                                                   | Warn if <50% coverage                                                        |
 
 Exit code 0 = all checks pass. Exit code 1 = at least one failure. CI can run `cortex doctor` as a step.
 
@@ -1085,7 +1230,8 @@ Exit code 0 = all checks pass. Exit code 1 = at least one failure. CI can run `c
 
 Graphify auto-generates a `GRAPH_REPORT.md` alongside every sync, giving human reviewers a plain-English audit of graph quality. Cortex's `KNOWLEDGE_REPORT.md` is a partial implementation; this expands it to match graphify's full spec.
 
-*What graphify does* (`report.py`):
+_What graphify does_ (`report.py`):
+
 1. **Confidence audit %** — `EXTRACTED: N (X%)`, `INFERRED: N (X%)`, `AMBIGUOUS: N (X%)` across all edges. If AMBIGUOUS > 20%, adds a warning block.
 2. **Isolated node list** — entities with 0 edges (no relationships). Listed by name. "3 isolated nodes — consider adding relationships or removing these."
 3. **Knowledge gaps** — source files with 0 entities extracted from them. Listed as file paths. "5 files produced no knowledge — may be config or generated files."
@@ -1094,7 +1240,8 @@ Graphify auto-generates a `GRAPH_REPORT.md` alongside every sync, giving human r
 6. **Sensitive file skip count** — "3 sensitive files were skipped during ingest."
 7. **Entity growth delta** — vs. previous sync: "+12 entities, -3 entities, 2 renamed."
 
-*Cortex implementation — expand `src/knowledge/report.ts`*:
+_Cortex implementation — expand `src/knowledge/report.ts`_:
+
 ```typescript
 export function generateKnowledgeReport(state: State, prevState?: State): string {
   const sections: string[] = [];
@@ -1113,6 +1260,7 @@ export function generateKnowledgeReport(state: State, prevState?: State): string
 | 71.5  | Genuinely New (Synthesized Expansions)                 | ⏳ Planned                           |\n\n');
 }
 ```
+
 - Written to `.knowledge/KNOWLEDGE_REPORT.md` after every `cortex sync` (already planned; this expands the content).
 - Also exposed as MCP tool `get_entity_quality` response body (already exists — expand its output fields).
 
@@ -1120,21 +1268,28 @@ export function generateKnowledgeReport(state: State, prevState?: State): string
 
 Graphify checks total word count of the corpus before ingesting and warns users when the graph is unnecessary (too small) or risky (too large for LLM token budget).
 
-*What graphify does* (`detect.py`):
+_What graphify does_ (`detect.py`):
+
 - `< 50,000 words total across all files`: emit `INFO: Small corpus detected — a knowledge graph may not provide significant benefit over full-file context. Consider using cortex only if the codebase grows.`
 - `> 500,000 words total across all files`: emit `WARN: Large corpus — LLM extraction will incur high token costs. Estimated: ~$X at current model pricing. Consider narrowing scope with .cortexignore or splitting into sub-projects.`
 
-*Cortex implementation — add to `src/ingest/pipeline.ts`*:
+_Cortex implementation — add to `src/ingest/pipeline.ts`_:
+
 ```typescript
 const totalWords = countCorpusWords(filePaths);
 if (totalWords < 50_000) {
-  logger.info("Small corpus detected — knowledge graph may not add significant benefit at this scale.");
+  logger.info(
+    "Small corpus detected — knowledge graph may not add significant benefit at this scale.",
+  );
 }
 if (totalWords > 500_000) {
   const estimatedCost = estimateLlmCost(totalWords, state.config.llmBackend);
-  logger.warn(`Large corpus — estimated extraction cost: $${estimatedCost.toFixed(2)}. Use .cortexignore to narrow scope.`);
+  logger.warn(
+    `Large corpus — estimated extraction cost: $${estimatedCost.toFixed(2)}. Use .cortexignore to narrow scope.`,
+  );
 }
 ```
+
 - Estimated cost uses `costPerToken` from `LlmBackendRegistry` (each backend has a configured $/1K token rate).
 - Warning surfaced in `cortex doctor` output and in `KNOWLEDGE_REPORT.md`.
 
@@ -1142,12 +1297,14 @@ if (totalWords > 500_000) {
 
 Graphify tracks how many edges were "collapsed" (suppressed) due to producer-side deduplication and reports a breakdown of directed vs. undirected collapses. This is a key graph quality signal — high collapse counts indicate noisy extraction.
 
-*What graphify does* (`diagnostics.py`):
+_What graphify does_ (`diagnostics.py`):
+
 - Scans each edge's `producer` metadata field to identify the suppression site (which extraction rule collapsed it).
 - Counts: `directed_collapses: N`, `undirected_collapses: N`, `total_suppressed: N`.
 - If `total_suppressed > 20%` of total edges emitted → warning: "High edge suppression rate — extraction quality may be low for these file types."
 
-*Cortex implementation — add to `src/knowledge/audit.ts`*:
+_Cortex implementation — add to `src/knowledge/audit.ts`_:
+
 ```typescript
 interface EdgeCollapseStats {
   directedCollapses: number;
@@ -1156,11 +1313,13 @@ interface EdgeCollapseStats {
 }
 export function auditEdgeCollapses(state: State): EdgeCollapseStats { ... }
 ```
+
 - Every emitted edge carries `meta.producer: string` (which extractor/rule produced it) — add this field to the `Relation` schema.
 - Collapsed/suppressed edges are logged to `state.json:meta.lastSyncStats.edgeCollapseStats`.
 - `cortex doctor` table gains a new row: `Edge suppression rate | < 20% | Run cortex sync --verbose to see suppressed edges`.
 
 **DoD**
+
 - `cortex doctor` on a healthy repo: all checks green, exit 0.
 - `cortex doctor` with injected orphan edge: prints `FAIL: orphan edge 'SomeService→NonExistent'`, exit 1.
 - `cortex doctor` with stale lock file: prints `WARN: stale lock (PID 9999 not running) — run 'cortex unlock'`.
@@ -1181,6 +1340,7 @@ export function auditEdgeCollapses(state: State): EdgeCollapseStats { ... }
 After every `cortex sync`, the MCP server must be manually restarted to see new entities. In a live coding session this means stopping and restarting after every sync cycle.
 
 **What graphify does** (`serve.py`):
+
 ```python
 def _maybe_reload() -> None:
     s = Path(graph_path).stat()
@@ -1194,12 +1354,14 @@ def _maybe_reload() -> None:
         _reload_state["mtime_ns"] = s.st_mtime_ns
         _reload_state["size"]     = s.st_size
 ```
+
 - Double-checked locking: first check is outside the lock (fast path), second check is inside (correctness).
 - Prevents thundering-herd: 10 parallel tool calls all hit `_maybe_reload` simultaneously — only one reload happens.
 - Stale-graph fallback: if reload fails transiently, keep serving the old graph (don't crash the MCP server).
 - IDF weights recomputed after reload and cached in-memory.
 
 **Implementation**
+
 - In `src/mcp/server.ts`, add a `StateWatcher` that polls `state.json` `mtime_ns` on every tool call (not on a timer).
 - Double-checked lock: `isReloading: boolean` flag + `AsyncMutex` from `async-mutex`.
 - On reload success: rebuild in-memory entity index, recompute IDF weights.
@@ -1207,6 +1369,7 @@ def _maybe_reload() -> None:
 - Remove the "restart MCP server" instruction from all documentation once this ships.
 
 **DoD**
+
 - `cortex sync` while MCP server is running: next tool call returns updated entities without server restart.
 - 10 concurrent tool calls during reload: exactly one reload executes, others wait and then use the new state.
 - Reload failure (corrupted `state.json`): tool calls return results from previous good state, not a crash.
@@ -1232,7 +1395,7 @@ export function withMcpWrite<T>(fn: () => T): T {
 // Must be the very first thing that runs, so no module can bypass it.
 export function installStdoutSentinel(): void {
   const realWrite = process.stdout.write.bind(process.stdout);
-  (process.stdout as any).write = function(chunk: any, ...rest: any[]) {
+  (process.stdout as any).write = function (chunk: any, ...rest: any[]) {
     if (mcpWriteContext.getStore() === true) {
       // Legitimate MCP frame — pass through to real stdout.
       return realWrite(chunk, ...rest);
@@ -1246,16 +1409,19 @@ export function installStdoutSentinel(): void {
 ```
 
 **Where to call it:**
+
 - `installStdoutSentinel()` must be the **very first line** of `src/cli/index.ts` (before any `import`), so it intercepts writes from any dynamically loaded module.
 - The MCP transport's `send()` / `write()` methods must be wrapped: `withMcpWrite(() => transport.send(frame))`.
 - `console.log` in `src/mcp/server.ts` and all tool handlers must be converted to `console.error` — they will now correctly appear in stderr even from stdio clients.
 
 **What this fixes:**
+
 - Eliminates the entire class of "MCP client disconnects randomly with parse error" bugs.
 - Makes debug logging safe inside an MCP session — write to `console.error` / `process.stderr` without protocol risk.
 - Removes the current requirement to suppress all logging during MCP mode.
 
 **DoD extension**
+
 - `installStdoutSentinel()` is the first call in the MCP entry point, before any import.
 - Stray `console.log("debug")` from any imported module during MCP session → redirected to stderr with `[mcp:stdout-redirect]` prefix; client does not disconnect.
 - Tool handler that calls `console.log` → also redirected; tool response JSON arrives intact.
@@ -1287,6 +1453,7 @@ Returns a human-readable reason string or `null` (watch is OK). Use a `WatchProb
 `CLAUDE.md` forbids `grep` but Cortex provides no content-search alternative. Agents can't find code patterns, usages, or cross-cutting concerns. The prohibition is unenforceable without a substitute.
 
 **What graphify does** (`serve.py:_score_nodes()`):
+
 - **IDF weighting** cached per graph load: `idf[term] = log(N / df[term])` where `N` = total nodes, `df` = node count containing term. Common terms (`error`, `service`) get low weight; rare identifiers (`FooBarPaymentGateway`) get high weight.
 - **Three-tier precedence scoring**: exact match → score × 1000 × IDF; prefix match → score × 100 × IDF; substring match → score × 1 × IDF.
 - **Unicode-aware**: `_strip_diacritics()` normalizes before comparison — handles international codebases.
@@ -1295,6 +1462,7 @@ Returns a human-readable reason string or `null` (watch is OK). Use a `WatchProb
 - `_SOURCE_MATCH_BONUS = 0.5`: entities whose `source_file` path contains the query term get a 50% score boost.
 
 **Implementation**
+
 - New MCP tool `cortex_search_source(pattern: string, glob?: string, depth?: number)`:
   - Runs `ripgrep` server-side (via `execa`) with the pattern and optional glob filter.
   - Returns hits with: `filePath`, `lineNumber`, `matchLine`, `surroundingContext` (3 lines before/after).
@@ -1320,6 +1488,7 @@ Graphify uses `rapidfuzz` so `cortex_find("AuthSrv")` returns `AuthService`. The
 - **Context filter inference from natural language**: if query contains keywords like "call", "import", "inherit", "use" — narrow BFS traversal to those relation types. `"what calls AuthService"` → traverse only `calls` edges from seed, not all edge types.
 
 **DoD**
+
 - `cortex_search_source("FooBarPaymentGateway")` returns the file and line where the identifier is used, plus related graph entities, ranked by IDF.
 - Common term `"error"` returns only entities with it in the name/body (IDF-filtered), not every entity mentioning error handling.
 - `cortex_find("payments")` returns entities in IDF order (rare names first).
@@ -1341,11 +1510,14 @@ type SearchMode = "bm25+semantic" | "semantic-only" | "entity-only";
 
 interface SearchResponse {
   results: SearchResult[];
-  searchMode: SearchMode;    // always present — agents can branch on this
-  warning?: string;          // set when degraded, e.g. "ripgrep unavailable, semantic-only"
+  searchMode: SearchMode; // always present — agents can branch on this
+  warning?: string; // set when degraded, e.g. "ripgrep unavailable, semantic-only"
 }
 
-async function cortexSearch(query: string, opts: SearchOpts): Promise<SearchResponse> {
+async function cortexSearch(
+  query: string,
+  opts: SearchOpts,
+): Promise<SearchResponse> {
   let ftsAvailable = true;
   let ftsResults: SearchResult[] = [];
   try {
@@ -1357,9 +1529,16 @@ async function cortexSearch(query: string, opts: SearchOpts): Promise<SearchResp
   const semanticResults = await idfEntitySearch(query, opts);
 
   if (!ftsAvailable) {
-    return { results: semanticResults, searchMode: "semantic-only", warning: "ripgrep unavailable — falling back to entity index search" };
+    return {
+      results: semanticResults,
+      searchMode: "semantic-only",
+      warning: "ripgrep unavailable — falling back to entity index search",
+    };
   }
-  return { results: mergeAndDedup(ftsResults, semanticResults), searchMode: "bm25+semantic" };
+  return {
+    results: mergeAndDedup(ftsResults, semanticResults),
+    searchMode: "bm25+semantic",
+  };
 }
 ```
 
@@ -1368,6 +1547,7 @@ async function cortexSearch(query: string, opts: SearchOpts): Promise<SearchResp
 - `CORTEX_DISABLE_FTS=1` env var forces `semantic-only` mode (useful in constrained CI environments).
 
 **DoD extension**
+
 - ripgrep not on PATH → search returns results with `searchMode: "semantic-only"` + warning; no throw.
 - `CORTEX_DISABLE_FTS=1` → `ftsAvailable` treated as false regardless of ripgrep presence.
 - `cortex doctor` reports ripgrep status as a dedicated check.
@@ -1383,6 +1563,7 @@ async function cortexSearch(query: string, opts: SearchOpts): Promise<SearchResp
 Hooks fire synchronously (blocking `git commit`), use `execSync` with no timeout, have a shell-metachar injection vector in the Python path, and don't skip during rebase/merge/cherry-pick.
 
 **What graphify does** (`hooks.py`):
+
 - `_HOOK_MARKER` / `_HOOK_MARKER_END` comments wrap the inserted block — clean uninstall by deleting lines between markers. Idempotent reinstall.
 - `_PYTHON_DETECT` shell function tries three paths (`graphify` shebang → `python3` → `python`); on Windows, falls back to WSL or PowerShell.
 - Allowlist regex on the Python path: `*[!a-zA-Z0-9/_.@-]*)` → `GRAPHIFY_PYTHON=""` — prevents shell-metachar injection if PATH contains adversarial entries.
@@ -1391,6 +1572,7 @@ Hooks fire synchronously (blocking `git commit`), use `execSync` with no timeout
 - On rebuild failure: writes error to log, does not pollute working tree.
 
 **Implementation**
+
 - Rewrite `src/hooks/install.ts`:
   - Use `_CORTEX_HOOK_START` / `_CORTEX_HOOK_END` markers for idempotent install/uninstall.
   - Allowlist-validate `process.execPath` before embedding in hook script.
@@ -1405,6 +1587,7 @@ Hooks fire synchronously (blocking `git commit`), use `execSync` with no timeout
 - Expose `cortex hooks status` showing: installed hooks (post-commit / post-checkout), marker presence, last run timestamp from log.
 
 **DoD**
+
 - `git commit` during a 10-second sync: returns in <100ms (non-blocking).
 - `git switch feature-branch`: `post-checkout` fires and enqueues a background sync for the new branch.
 - `git checkout -- file.ts` (file restore, not branch switch): `post-checkout` detects `$3 == 0` and exits 0 without triggering sync.
@@ -1444,19 +1627,23 @@ Both processes run in the background (`&`) so the commit doesn't block. If `stat
 For large knowledge files or source files being assembled into LLM payloads, use sampling-based token estimation instead of full tokenization when exact counts aren't needed:
 
 ```typescript
-function estimateTokens(text: string, tokenCount: (t: string) => number): number {
-  if (text.length < 200) return tokenCount(text);   // exact for short texts
+function estimateTokens(
+  text: string,
+  tokenCount: (t: string) => number,
+): number {
+  if (text.length < 200) return tokenCount(text); // exact for short texts
 
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const step = Math.max(Math.floor(lines.length / 100), 1);
-  const sample = lines.filter((_, i) => i % step === 0).join('\n');
+  const sample = lines.filter((_, i) => i % step === 0).join("\n");
   const sampleTokens = tokenCount(sample);
   // Extrapolate: sample_tokens / sample_length * full_length
-  return Math.round(sampleTokens / sample.length * text.length);
+  return Math.round((sampleTokens / sample.length) * text.length);
 }
 ```
 
 **Apply in**:
+
 - `build_context_pack` when estimating whether adding an entity will exceed budget
 - `compress` when computing pre/post sizes for reporting
 - Any bulk file scan where exact token count is unnecessary
@@ -1493,15 +1680,16 @@ Every entity read claims `~147.9k tokens saved` against a strawman baseline of "
 **What graphify does**:
 Ships a `worked/` folder with real benchmarks:
 
-| Corpus | Files | Reduction |
-|--------|-------|-----------|
-| Karpathy repos + papers + images | 52 | 71.5× |
-| graphify source + Transformer paper | 4 | 5.4× |
-| httpx (synthetic Python library) | 6 | ~1× |
+| Corpus                              | Files | Reduction |
+| ----------------------------------- | ----- | --------- |
+| Karpathy repos + papers + images    | 52    | 71.5×     |
+| graphify source + Transformer paper | 4     | 5.4×      |
+| httpx (synthetic Python library)    | 6     | ~1×       |
 
 They **admit when their tool doesn't help** (6 files → ~1× reduction). Each benchmark has: raw inputs, the exact prompt used, token counts for with/without, and a `review.md` with the agent's output quality comparison.
 
 **Implementation**
+
 - Create `worked/` directory with three real benchmarks:
   - `worked/cortex-self/` — Cortex ingested on its own source; actual token count of `cortex read` output vs `wc -c` of all source files.
   - `worked/small-project/` — a 5-file project; show honestly that Cortex adds overhead here.
@@ -1511,6 +1699,7 @@ They **admit when their tool doesn't help** (6 files → ~1× reduction). Each b
 - `cortex bench` CLI command runs the measurement and writes `benchmarks.json`.
 
 **DoD**
+
 - `inject-knowledge.js` savings display is blank on first run (no fabricated number).
 - After `cortex bench`, savings display shows a real measured number with `(measured)` suffix.
 - `worked/` folder is committed to the Cortex repo.
@@ -1518,7 +1707,7 @@ They **admit when their tool doesn't help** (6 files → ~1× reduction). Each b
 
 #### Phase 0.11 Refinement — Real Usage Analytics via Claude Code Session Logs (closes flaws #6 and #7)
 
-The `worked/` corpus provides honest *static* benchmarks, but doesn't tell the user their *actual* spend. A more direct approach: read Claude Code's actual session logs from `~/.claude/projects/*/*.jsonl` to get real per-model, per-project, per-day token usage and cache hit rates.
+The `worked/` corpus provides honest _static_ benchmarks, but doesn't tell the user their _actual_ spend. A more direct approach: read Claude Code's actual session logs from `~/.claude/projects/*/*.jsonl` to get real per-model, per-project, per-day token usage and cache hit rates.
 
 Implement as a `cortex usage` CLI command (Phase 29 FinOps building block):
 
@@ -1528,14 +1717,15 @@ const projectsDir = path.join(os.homedir(), ".claude", "projects");
 const files = glob.sync("*/*.jsonl", { cwd: projectsDir, absolute: true });
 for (const file of files) {
   for (const line of readJsonlLines(file)) {
-    const usage = line.message?.usage;      // real token counts
+    const usage = line.message?.usage; // real token counts
     const model = line.message?.model;
-    const cwd   = line.cwd;                // per-project breakdown
+    const cwd = line.cwd; // per-project breakdown
   }
 }
 ```
 
 Key output:
+
 - Total input/output tokens by model
 - Cache hit % (healthy = >60%; below this is a sign of poor prompt-caching setup)
 - Estimated API cost at list prices (note in output: subscription is flat — this is API-equivalent cost)
@@ -1550,7 +1740,7 @@ Key output:
 
 ### Phase 0.11 Refinement — Agent Evaluation Framework with Recall/MRR (CodeGraph)
 
-**Source-of-lesson**: codegraph/__tests__/evaluation/scoring.ts, test-cases.ts, corpus.json
+**Source-of-lesson**: codegraph/**tests**/evaluation/scoring.ts, test-cases.ts, corpus.json
 
 When Phase 0.11 (Honest Benchmarks) ships, complement token-cost benchmarks with a **search quality evaluation harness**:
 
@@ -1571,6 +1761,7 @@ This produces objective signal on whether a search algorithm change actually imp
 `.knowledge/` is gitignored by default. There is no backup/restore path. Losing `state.json` means re-running full ingest.
 
 **What graphify does**:
+
 - `graph.json` is the canonical store — **designed to be committed**. It's versionable, diffable, and mergeable via `graphify merge-graphs`.
 - `GRAPH_REPORT.md` is human-readable — reviewers can read it in GitHub PRs.
 - `cache/` is the only thing typically gitignored.
@@ -1578,6 +1769,7 @@ This produces objective signal on whether a search algorithm change actually imp
 - `graphify clone <github-url>` clones repos to `~/.graphify/repos/` for cross-repo work.
 
 **Implementation**
+
 - Make `.knowledge/state.json` commit-friendly:
   - Remove it from `.gitignore` by default (opt-in gitignore via `cortex init --private`).
   - Add `cortex export` command: produces `cortex-knowledge.json` (pretty-printed, git-diff-friendly, sorted keys).
@@ -1620,9 +1812,9 @@ function checkTokenBudget(messages: Message[], model: ModelInfo): BudgetCheck {
       inputTokens,
       maxInputTokens,
       remedies: [
-        'Run cortex compress to reduce entity sizes',
-        'Drop unused entities from the current context pack',
-        'Break large entity pages into smaller focused pages',
+        "Run cortex compress to reduce entity sizes",
+        "Drop unused entities from the current context pack",
+        "Break large entity pages into smaller focused pages",
       ],
     };
   }
@@ -1631,6 +1823,7 @@ function checkTokenBudget(messages: Message[], model: ModelInfo): BudgetCheck {
 ```
 
 **Output format** (emit as structured tool response, not silent failure):
+
 ```
 ⚠️  Context budget: 198,432 / 200,000 tokens (99.2%)
 Remedies: run compress, drop unused entities, or break large pages.
@@ -1658,11 +1851,13 @@ function deriveHistoryBudget(model: ModelInfo): number {
 
 **Source**: aider `models.py:357-358` — `Model.__init__`  
 **Score**: 30 (severity=2, fit=5, effort=1)
-  - `cortex_find` and `build_context_pack` accept `--repo <owner/repo>` flag to query a cross-repo knowledge base.
-  - Use case: "what does the auth service do?" without switching workspace.
+
+- `cortex_find` and `build_context_pack` accept `--repo <owner/repo>` flag to query a cross-repo knowledge base.
+- Use case: "what does the auth service do?" without switching workspace.
 - Document: "commit `.knowledge/` to your repo; only gitignore `.knowledge/cache/`."
 
 **DoD**
+
 - Corrupt `state.json`: `cortex repair` restores from backup without data loss.
 - `cortex export` + `cortex import`: round-trips with zero diff on entity count or names.
 - `cortex merge-knowledge repoA.json repoB.json`: output contains all entities from both, deduped, no duplicates.
@@ -1677,13 +1872,16 @@ function deriveHistoryBudget(model: ModelInfo): number {
 Phase 0.12's `cortex repair` adds backup/restore. Graphify additionally uses **dated backup snapshots** — triggered automatically before any synthesis that costs significant tokens (detected via diff size). This gives named, browsable restore points without relying on git.
 
 ```typescript
-const SNAPSHOT_DIFF_THRESHOLD = 50;   // lines changed — above this, auto-snapshot
+const SNAPSHOT_DIFF_THRESHOLD = 50; // lines changed — above this, auto-snapshot
 
-async function snapshotIfSignificant(diff: FileDiff[], km: KnowledgeManager): Promise<void> {
+async function snapshotIfSignificant(
+  diff: FileDiff[],
+  km: KnowledgeManager,
+): Promise<void> {
   const totalLines = diff.reduce((s, d) => s + d.additions + d.deletions, 0);
   if (totalLines < SNAPSHOT_DIFF_THRESHOLD) return;
 
-  const date = new Date().toISOString().slice(0, 10);   // "YYYY-MM-DD"
+  const date = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
   const snapshotDir = path.join(km.knowledgeDir, "snapshots", date);
   await fs.mkdir(snapshotDir, { recursive: true });
   await fs.copyFile(km.statePath, path.join(snapshotDir, "state.json"));
@@ -1694,6 +1892,7 @@ async function snapshotIfSignificant(diff: FileDiff[], km: KnowledgeManager): Pr
 Called from `performSync()` in `src/cli/watch.ts` before each synthesis that meets the threshold. Snapshots stored in `.knowledge/snapshots/YYYY-MM-DD/`.
 
 **CLI additions** to `cortex repair`:
+
 ```bash
 cortex repair --list-snapshots      # list all dated snapshots with file counts
 cortex repair --restore 2025-05-01  # restore state.json + index.md from snapshot
@@ -1712,6 +1911,7 @@ Integrates with Phase 3.2 (Semantic Versioning) — snapshot metadata includes t
 The TypeScript skeleton extractor strips class method signatures and keeps body locals. No other language extractor has parity tests. Contributors have no fixture-based workflow for adding or fixing a language.
 
 **What graphify does** (`extract.py`, 7,810 lines):
+
 - 25 `tree-sitter` language extractors registered in `extract.py:1020-1314`.
 - Each language has its own adapter handling that language's node-type quirks:
   - `tree_sitter_kotlin` — identifier-node quirks documented inline.
@@ -1721,6 +1921,7 @@ The TypeScript skeleton extractor strips class method signatures and keeps body 
 - Each language has a corresponding test fixture in `tests/fixtures/<lang>/` — a real source file + expected `{nodes, edges}` JSON output. Adding a new language = add one source fixture + one expected output + one test that diffs them.
 
 **Implementation**
+
 - Fix TypeScript tree-sitter adapter (`src/extract/typescript.ts`):
   - Walk `class_declaration` → enumerate `method_definition` children → emit each as a node with `type: "method"`.
   - Walk `type_alias_declaration` → emit as `type: "typeAlias"`.
@@ -1737,38 +1938,48 @@ The TypeScript skeleton extractor strips class method signatures and keeps body 
 
 Graphify resolves cross-file call edges deterministically rather than relying on the LLM to guess. When `fileA.ts` calls `AuthService.login()`, the extractor emits a symbolic reference `{callee: "AuthService.login"}` — the resolver then walks the full graph to find the definitive entity that owns that symbol and replaces the symbolic reference with a concrete edge.
 
-*What graphify does* (`symbol_resolution.py`):
+_What graphify does_ (`symbol_resolution.py`):
+
 - Maintains a `symbol_table: Dict[str, str]` — fully-qualified symbol → entity ID.
 - After all files are extracted, runs a post-processing pass: for every edge with `target_symbol` field, look up `symbol_table[target_symbol]`; if found, replace with the real entity ID.
 - Handles `tsconfig.json` path aliases: parses `compilerOptions.paths` to map `@auth/*` → `src/auth/*`, so `import { AuthService } from "@auth/service"` resolves correctly.
 - Handles `package.json` `exports` map for sub-path imports.
 - Fallback: if a symbol can't be resolved, edge is kept with `confidence: "AMBIGUOUS"` and `target_symbol` preserved for human review.
 
-*Cortex implementation — new `src/extract/symbolResolver.ts`*:
+_Cortex implementation — new `src/extract/symbolResolver.ts`_:
+
 ```typescript
-interface SymbolTable { [fullyQualifiedName: string]: string; }  // → entity ID
+interface SymbolTable {
+  [fullyQualifiedName: string]: string;
+} // → entity ID
 
 export class SymbolResolver {
   private table: SymbolTable = {};
-  private aliases: Record<string, string> = {};  // from tsconfig.paths + package.json exports
+  private aliases: Record<string, string> = {}; // from tsconfig.paths + package.json exports
 
   loadAliases(projectRoot: string): void {
     // parse tsconfig.json compilerOptions.paths
     // parse package.json exports map
   }
 
-  register(symbol: string, entityId: string): void { this.table[symbol] = entityId; }
+  register(symbol: string, entityId: string): void {
+    this.table[symbol] = entityId;
+  }
 
   resolveEdges(relations: Relation[]): Relation[] {
-    return relations.map(r => {
+    return relations.map((r) => {
       if (!r.targetSymbol) return r;
-      const resolvedId = this.table[r.targetSymbol] ?? this.table[this.applyAlias(r.targetSymbol)];
-      if (resolvedId) return { ...r, target: resolvedId, targetSymbol: undefined };
-      return { ...r, confidence: "AMBIGUOUS" };  // unresolved
+      const resolvedId =
+        this.table[r.targetSymbol] ??
+        this.table[this.applyAlias(r.targetSymbol)];
+      if (resolvedId)
+        return { ...r, target: resolvedId, targetSymbol: undefined };
+      return { ...r, confidence: "AMBIGUOUS" }; // unresolved
     });
   }
 }
 ```
+
 - Run after all per-file extractors complete, before `dedup()` and `semanticCleanup()`.
 - `cortex sync --verbose` reports unresolved symbol count: "12 symbols unresolved (kept as AMBIGUOUS)."
 
@@ -1776,13 +1987,15 @@ export class SymbolResolver {
 
 SCIP (Sourcegraph Code Intelligence Protocol) is a language-agnostic code graph format emitted by many language servers (scip-typescript, scip-java, scip-python, etc.). Graphify ingests SCIP JSON dumps as a high-fidelity alternative to tree-sitter extraction — SCIP provides type-resolved references that tree-sitter cannot.
 
-*What graphify does* (`scip_ingest.py`):
+_What graphify does_ (`scip_ingest.py`):
+
 - Reads a `dump.scip` (protobuf) or `dump.scip.json` file produced by a SCIP indexer.
 - Maps SCIP `Document` → entity (one per file), SCIP `Occurrence` → relationship edge with `confidence: "EXTRACTED"`.
 - SCIP-sourced edges are marked `meta.source: "scip"` — distinguishable from tree-sitter edges.
 - Falls back to tree-sitter if no SCIP dump is present.
 
-*Cortex implementation — new `src/ingest/adapters/scip.ts`*:
+_Cortex implementation — new `src/ingest/adapters/scip.ts`_:
+
 ```typescript
 export async function ingestScip(dumpPath: string, state: State): Promise<IngestResult> {
   const dump = await readScipDump(dumpPath);  // supports .scip.json; .scip (protobuf) via @bufbuild/protobuf
@@ -1797,11 +2010,13 @@ export async function ingestScip(dumpPath: string, state: State): Promise<Ingest
   return { entitiesAdded: ..., relationsAdded: ... };
 }
 ```
+
 - `cortex.config.json` → `ingest.scip: "dump.scip.json"` to enable. Default: disabled.
 - `cortex sync --scip dump.scip.json` one-shot override.
 - CI workflow note: run `npx @sourcegraph/scip-typescript index` before `cortex sync` for maximum relation accuracy.
 
 **DoD**
+
 - `source({filePath: "src/core/soul.ts"})`: returns all class method signatures, all type aliases, no body-local variables.
 - Fixture test suite: all 10 v1 languages pass.
 - CI fails if any fixture diverges from expected output.
@@ -1819,14 +2034,18 @@ The current plan adds per-language adapters but does not enforce a shared interf
 ```typescript
 // src/extract/LanguageProvider.ts
 export interface LanguageProvider {
-  readonly language: string;                    // e.g. "typescript", "python"
-  readonly extensions: readonly string[];       // e.g. [".ts", ".tsx"]
+  readonly language: string; // e.g. "typescript", "python"
+  readonly extensions: readonly string[]; // e.g. [".ts", ".tsx"]
 
   // Return the tree-sitter parser for this language.
   getParser(): Parser;
 
   // Extract entities and relations from a parsed tree.
-  extract(tree: Parser.Tree, source: string, filePath: string): ExtractionResult;
+  extract(
+    tree: Parser.Tree,
+    source: string,
+    filePath: string,
+  ): ExtractionResult;
 
   // (Optional) resolve cross-file references after all files are extracted.
   resolveSymbols?(table: SymbolTable): void;
@@ -1843,7 +2062,7 @@ const PROVIDERS: LanguageProvider[] = [
 
 export function getProvider(filePath: string): LanguageProvider | null {
   const ext = path.extname(filePath).toLowerCase();
-  return PROVIDERS.find(p => p.extensions.includes(ext)) ?? null;
+  return PROVIDERS.find((p) => p.extensions.includes(ext)) ?? null;
 }
 ```
 
@@ -1853,6 +2072,7 @@ export function getProvider(filePath: string): LanguageProvider | null {
 - The `resolveSymbols?` optional method lets languages that need cross-file resolution (TypeScript path aliases, Go package imports) participate in the post-extraction pass without modifying the shared resolver.
 
 **DoD extension**
+
 - All 10 v1 language adapters implement `LanguageProvider` — TypeScript `implements` keyword enforced.
 - `pipeline.ts` contains zero `if (lang === ...)` conditionals.
 - Adding a mock 11th language (`MockProvider`) to the registry: fixture test passes, no other file changes required.
@@ -1883,8 +2103,11 @@ Closes flaw #27 (`source` skeleton mode strips the public API while keeping irre
 
 ```typescript
 const CONTAINER_NODE_KINDS = new Set([
-  'class_declaration', 'interface_declaration',
-  'struct_item', 'impl_item', 'enum_declaration',
+  "class_declaration",
+  "interface_declaration",
+  "struct_item",
+  "impl_item",
+  "enum_declaration",
 ]);
 ```
 
@@ -1901,6 +2124,7 @@ Cortex requires API keys for every LLM call. No path exists for users who alread
 
 **What graphify does** (`llm.py`, 1,111 lines):
 8 backends abstracted behind a single `call_llm(prompt, model, **kwargs)` interface:
+
 1. OpenAI (any OpenAI-compatible endpoint — works for Azure OpenAI, local vLLM, etc.)
 2. Anthropic Claude (API key)
 3. **Claude CLI subscription path** (`_call_claude_cli`) — routes through the user's existing `claude` CLI binary using their Claude Code / claude.ai subscription. Zero API key required.
@@ -1911,11 +2135,13 @@ Cortex requires API keys for every LLM call. No path exists for users who alread
 8. DeepSeek
 
 Plus:
+
 - `_extract_with_adaptive_retry`: detects `context_length_exceeded` errors, halves chunk size, retries automatically.
 - `_pack_chunks_by_tokens`: token-aware chunking so large files are split at token boundaries, not line boundaries.
 - `ProcessPoolExecutor` for parallel multi-file extraction.
 
 **Implementation**
+
 - Create `src/llm/backends/` directory with one file per backend (all 8):
   - `anthropic.ts` (existing — refactor into this pattern)
   - `openai.ts` (OpenAI-compatible endpoint: works for Azure OpenAI, local vLLM, etc.)
@@ -1940,26 +2166,34 @@ Plus:
 
 Graphify automatically derives the optimal `num_ctx` (context window size) for Ollama models rather than using a fixed default. Ollama's default `num_ctx` is 2,048 tokens — far too small for code extraction. Without auto-derivation, long files get silently truncated.
 
-*What graphify does* (`llm.py`):
+_What graphify does_ (`llm.py`):
+
 ```python
 def _derive_ollama_num_ctx(model: str, client: httpx.Client) -> int:
     info = client.post("/api/show", json={"name": model}).json()
     max_ctx = info.get("model_info", {}).get("context_length", 4096)
     return min(max_ctx, 32768)  # cap at 32K to avoid OOM on consumer hardware
 ```
+
 - Queries `GET /api/show` on Ollama to get the model's declared `context_length`.
 - Uses `min(declared, 32768)` to prevent OOM on consumer hardware with large models.
 - Falls back to `4096` if the endpoint fails or the field is absent.
 
-*Cortex implementation — add to `src/llm/backends/ollama.ts`*:
+_Cortex implementation — add to `src/llm/backends/ollama.ts`_:
+
 ```typescript
 async function deriveNumCtx(model: string, baseUrl: string): Promise<number> {
   try {
-    const info = await fetch(`${baseUrl}/api/show`, { method: "POST", body: JSON.stringify({ name: model }) });
-    const json = await info.json() as { model_info?: { context_length?: number } };
+    const info = await fetch(`${baseUrl}/api/show`, {
+      method: "POST",
+      body: JSON.stringify({ name: model }),
+    });
+    const json = (await info.json()) as {
+      model_info?: { context_length?: number };
+    };
     return Math.min(json.model_info?.context_length ?? 4096, 32768);
   } catch {
-    return 4096;  // safe default
+    return 4096; // safe default
   }
 }
 
@@ -1967,13 +2201,15 @@ async function deriveNumCtx(model: string, baseUrl: string): Promise<number> {
 const numCtx = await deriveNumCtx(model, baseUrl);
 body = { model, prompt, options: { num_ctx: numCtx } };
 ```
+
 - `cortex sync --verbose` with Ollama backend logs: "Ollama num_ctx auto-derived: 16384 (from model llama3.2)."
 
 **Hollow LLM Response Detection (graphify `llm.py` pattern)**
 
 Graphify detects when an LLM returns HTTP 200 but with an empty or truncated response body — a sign that the model silently hit its context limit and returned nothing useful. Without this guard, Cortex silently produces 0 entities from a file, which looks like a successful extraction.
 
-*What graphify does* (`llm.py`):
+_What graphify does_ (`llm.py`):
+
 ```python
 def _is_hollow_response(text: str) -> bool:
     stripped = text.strip()
@@ -1984,11 +2220,13 @@ if _is_hollow_response(response_text):
     half = len(chunk) // 2
     results = _extract_with_adaptive_retry(chunk[:half]) + _extract_with_adaptive_retry(chunk[half:])
 ```
+
 - Empty/near-empty response → **bisection retry**: split the chunk in half, retry each half separately.
 - Bisection is applied recursively up to depth 3 (8 chunks max from one original chunk).
 - If all bisections are hollow → log `WARN: file <path> produced no entities after bisection — may be boilerplate or binary`.
 
-*Cortex implementation — add to `src/llm/index.ts`*:
+_Cortex implementation — add to `src/llm/index.ts`_:
+
 ```typescript
 const HOLLOW_RESPONSES = new Set(["", "[]", "{}", "null", "undefined"]);
 
@@ -1997,7 +2235,11 @@ function isHollowResponse(text: string): boolean {
   return stripped.length < 20 || HOLLOW_RESPONSES.has(stripped);
 }
 
-async function callLlmWithBisection(chunk: string, config: LlmConfig, depth = 0): Promise<LlmResult> {
+async function callLlmWithBisection(
+  chunk: string,
+  config: LlmConfig,
+  depth = 0,
+): Promise<LlmResult> {
   const response = await callLlm(chunk, config);
   if (!isHollowResponse(response.text) || depth >= 3) return response;
   const half = Math.floor(chunk.length / 2);
@@ -2008,11 +2250,13 @@ async function callLlmWithBisection(chunk: string, config: LlmConfig, depth = 0)
   return mergeResults(left, right);
 }
 ```
+
 - `callLlmWithBisection` replaces direct `callLlm` in the extraction pipeline.
 - Each bisection attempt is logged at DEBUG level: "Hollow response for chunk [0-2048] — bisecting."
 - Max depth 3 = at most 8 LLM calls per original chunk; prevents runaway cost.
 
 **DoD**
+
 - `cortex sync` with `llmBackend: "claude-cli"` uses the local `claude` binary without an API key.
 - `cortex sync` with `llmBackend: "bedrock"` uses IAM role from environment without an API key.
 - `cortex sync` with `llmBackend: "ollama"` calls `http://localhost:11434` — works fully offline.
@@ -2039,9 +2283,10 @@ async function callLlmWithBisection(chunk: string, config: LlmConfig, depth = 0)
 4. **Graphify proves the demand but didn't go far enough.** Graphify ships SKILL.md to 18 platforms but documents only `claude_desktop_config.json` for MCP, never writes it automatically, and falls back to "ask user to copy-paste" — the graphify user still has to find their own config path. We can do strictly better.
 
 **What graphify does** (`__main__.py:_PLATFORM_CONFIG`, `serve.py`)
+
 - Skill-first distribution to 18 platforms. Each install copies a per-platform `skill-*.md` to a known directory plus optional rule/hook/steering files.
 - MCP is an optional pip extra (`pip install graphifyy[mcp]`) and `python -m graphify.serve <graph.json>` starts a stdio server with 8 tools.
-- **MCP config is 100% manual.** Every `skill-*.md` contains the same static Step 7d JSON snippet pointing at `claude_desktop_config.json`. No code path writes to any IDE's config file. Antigravity is the lone exception: `_antigravity_install()` *prints* (not writes) a `~/.gemini/antigravity/mcp_config.json` snippet.
+- **MCP config is 100% manual.** Every `skill-*.md` contains the same static Step 7d JSON snippet pointing at `claude_desktop_config.json`. No code path writes to any IDE's config file. Antigravity is the lone exception: `_antigravity_install()` _prints_ (not writes) a `~/.gemini/antigravity/mcp_config.json` snippet.
 - Hot-reload + `_filter_blank_stdin` keep the MCP server stable when the graph changes underneath it.
 
 **Cortex's improvement over graphify**: ship the CLI mirror that graphify already has, add an MCP-config auto-writer that graphify deliberately skipped, and keep skill as the universal fallback. Net result: zero-config install on the IDEs we know, and graceful skill-only fallback everywhere else.
@@ -2053,25 +2298,25 @@ async function callLlmWithBisection(chunk: string, config: LlmConfig, depth = 0)
 - Create `src/cli/index.ts` with `commander` as the top-level dispatcher.
 - For every MCP tool currently exposed in `src/mcp/`, add a sibling CLI command:
 
-| MCP tool | CLI verb |
-|----------|----------|
-| `mcp__project-cortex__before_change` | `cortex before-change <entity>` |
-| `mcp__project-cortex__ingest` | `cortex ingest [--scope=...]` |
-| `mcp__project-cortex__audit` | `cortex audit [entity]` |
-| `mcp__project-cortex__source` | `cortex source <filePath> [--lines a-b]` |
-| `mcp__project-cortex__cortex_find` | `cortex find <pattern>` |
-| `mcp__project-cortex__read_knowledge_index` | `cortex index` |
-| `mcp__project-cortex__build_context_pack` | `cortex pack <entities...>` |
-| `mcp__project-cortex__impact_analysis` | `cortex impact <entity>` |
-| `mcp__project-cortex__get_pending_changes` | `cortex pending` |
-| `mcp__project-cortex__resolve_refs` | `cortex resolve <ref...>` |
-| `mcp__project-cortex__lint` | `cortex lint` |
-| `mcp__project-cortex__refresh_stale_entities` | `cortex refresh` |
-| `mcp__project-cortex__save_concept` | `cortex concept save <name> --body=...` |
-| `mcp__project-cortex__read_concept` | `cortex concept read <name>` |
-| `mcp__project-cortex__compress` | `cortex compress <file>` |
-| `mcp__project-cortex__get_savings` | `cortex savings` |
-| `mcp__project-cortex__cortex_soul_status` | `cortex soul status` |
+| MCP tool                                      | CLI verb                                 |
+| --------------------------------------------- | ---------------------------------------- |
+| `mcp__project-cortex__before_change`          | `cortex before-change <entity>`          |
+| `mcp__project-cortex__ingest`                 | `cortex ingest [--scope=...]`            |
+| `mcp__project-cortex__audit`                  | `cortex audit [entity]`                  |
+| `mcp__project-cortex__source`                 | `cortex source <filePath> [--lines a-b]` |
+| `mcp__project-cortex__cortex_find`            | `cortex find <pattern>`                  |
+| `mcp__project-cortex__read_knowledge_index`   | `cortex index`                           |
+| `mcp__project-cortex__build_context_pack`     | `cortex pack <entities...>`              |
+| `mcp__project-cortex__impact_analysis`        | `cortex impact <entity>`                 |
+| `mcp__project-cortex__get_pending_changes`    | `cortex pending`                         |
+| `mcp__project-cortex__resolve_refs`           | `cortex resolve <ref...>`                |
+| `mcp__project-cortex__lint`                   | `cortex lint`                            |
+| `mcp__project-cortex__refresh_stale_entities` | `cortex refresh`                         |
+| `mcp__project-cortex__save_concept`           | `cortex concept save <name> --body=...`  |
+| `mcp__project-cortex__read_concept`           | `cortex concept read <name>`             |
+| `mcp__project-cortex__compress`               | `cortex compress <file>`                 |
+| `mcp__project-cortex__get_savings`            | `cortex savings`                         |
+| `mcp__project-cortex__cortex_soul_status`     | `cortex soul status`                     |
 
 - Output contract:
   - Default: `--format=json` (structured, agent-readable).
@@ -2084,6 +2329,7 @@ async function callLlmWithBisection(chunk: string, config: LlmConfig, depth = 0)
 #### Layer 2: MCP server with transport choice and project-root discovery
 
 **Entrypoints:**
+
 - `cortex serve --stdio` — stdio transport (existing behavior, used by all current IDEs).
 - `cortex serve --http --port=3001` — HTTP/SSE transport for IDEs that prefer it (Cursor and Claude Code already support both). One server can handle multiple simultaneous project roots over HTTP, unlike stdio which is single-connection.
 
@@ -2099,7 +2345,7 @@ function resolveProjectRoot(explicit?: string): string {
   while (true) {
     if (fs.existsSync(path.join(dir, ".knowledge"))) return dir;
     const parent = path.dirname(dir);
-    if (parent === dir) break;  // reached filesystem root
+    if (parent === dir) break; // reached filesystem root
     dir = parent;
   }
 
@@ -2109,14 +2355,15 @@ function resolveProjectRoot(explicit?: string): string {
   // 4. Fail loudly with actionable fix
   throw new Error(
     "Could not locate .knowledge/ directory.\n" +
-    "Fix: run `cortex serve --project=/absolute/path/to/repo --stdio`\n" +
-    "  or set CORTEX_PROJECT_ROOT env var\n" +
-    "  or run `cortex ingest` first to create .knowledge/"
+      "Fix: run `cortex serve --project=/absolute/path/to/repo --stdio`\n" +
+      "  or set CORTEX_PROJECT_ROOT env var\n" +
+      "  or run `cortex ingest` first to create .knowledge/",
   );
 }
 ```
 
 The auto-config writer injects the `--project` arg using IDE-specific workspace variable when available:
+
 - Cursor/VS Code: `--project=${workspaceFolder}`
 - Claude Code: `--project=${workspaceRoot}` (if supported by the IDE version) or omit and rely on cwd walk
 - Claude Desktop (no workspace var): user must supply `--project=/absolute/path`; the install wizard prompts for it and bakes it into the stanza
@@ -2141,7 +2388,13 @@ export class CompatibleStdioServerTransport extends StdioServerTransport {
     // Newline-framed JSON starts with '{' (0x7b)
     if (firstByte === 0x7b) return "newline";
     // Content-length framed starts with 'C' from "Content-Length"
-    if (this.readBuffer.slice(0, 14).toString("ascii").startsWith("Content-Length")) return "content-length";
+    if (
+      this.readBuffer
+        .slice(0, 14)
+        .toString("ascii")
+        .startsWith("Content-Length")
+    )
+      return "content-length";
     return null;
   }
 
@@ -2150,7 +2403,8 @@ export class CompatibleStdioServerTransport extends StdioServerTransport {
       this.framingDetected = this.detectFraming();
     }
     if (this.framingDetected === "newline") return this.parseNewlineFrame();
-    if (this.framingDetected === "content-length") return this.parseContentLengthFrame();
+    if (this.framingDetected === "content-length")
+      return this.parseContentLengthFrame();
     return null;
   }
 }
@@ -2167,9 +2421,12 @@ GitNexus uses a single `createMcpServer(backend)` transport-agnostic factory. Th
 ```typescript
 // Transport-agnostic factory — same server, different wire protocols.
 export function createCortexMcpServer(
-  knowledgeManager: KnowledgeManager
+  knowledgeManager: KnowledgeManager,
 ): McpServer {
-  const server = new McpServer({ name: "project-cortex", version: pkg.version });
+  const server = new McpServer({
+    name: "project-cortex",
+    version: pkg.version,
+  });
   registerAllTools(server, knowledgeManager);
   registerAllResources(server, knowledgeManager);
   registerAllPrompts(server, knowledgeManager);
@@ -2178,14 +2435,16 @@ export function createCortexMcpServer(
 
 // --- stdio entry (cortex serve --stdio) ---
 const server = createCortexMcpServer(km);
-await server.connect(new CompatibleStdioServerTransport(process.stdin, safeStdout));
+await server.connect(
+  new CompatibleStdioServerTransport(process.stdin, safeStdout),
+);
 
 // --- HTTP entry (cortex serve --http --port=N) ---
 const server = createCortexMcpServer(km);
 const transport = new StreamableHTTPServerTransport({
   sessionIdGenerator: () => randomUUID(),
-  sessionTtlMs: 30 * 60 * 1000,        // 30-min session TTL
-  cleanupIntervalMs: 5 * 60 * 1000,     // 5-min cleanup sweep
+  sessionTtlMs: 30 * 60 * 1000, // 30-min session TTL
+  cleanupIntervalMs: 5 * 60 * 1000, // 5-min cleanup sweep
 });
 await server.connect(transport);
 const app = express();
@@ -2198,6 +2457,7 @@ app.listen(port);
 - `cortex serve --http --port=3001 --session-ttl=1800` starts the HTTP server. `cortex doctor` includes a check that the HTTP port responds within timeout.
 
 **DoD extension (transport)**
+
 - `CompatibleStdioServerTransport` handles both content-length and newline framing in the same session binary.
 - Integration test: mock client sends newline-framed `initialize` → server responds with valid JSON-RPC; same test with content-length framing.
 - `cortex serve --http --port=3002` starts an HTTP server; `curl -X POST localhost:3002/mcp` with a valid `initialize` JSON body returns a valid MCP response.
@@ -2229,34 +2489,34 @@ The skill content encodes the **full agent decision playbook**:
 ## When to call which Cortex command
 
 **Start of session** (once per repo, before any work):
-→ `cortex index`  — prints the knowledge index. Read it before touching source files.
+→ `cortex index` — prints the knowledge index. Read it before touching source files.
 
 **Before editing any file**:
-→ `cortex before-change <entityName>`  — returns blast radius (all affected entities).
-   Read it before writing code.
+→ `cortex before-change <entityName>` — returns blast radius (all affected entities).
+Read it before writing code.
 
 **After creating a new file or significant refactor**:
-→ `cortex ingest`  — re-syncs the knowledge graph.
+→ `cortex ingest` — re-syncs the knowledge graph.
 
 **Impact / deletion analysis**:
-→ `cortex impact <X>`  — "is X safe to delete?"
+→ `cortex impact <X>` — "is X safe to delete?"
 
 **Reading source code**:
 → NEVER use `cat`, `head`, `grep`, `rg`, or Read tool on `.ts`/`.js`/`.py` files.
-→ ALWAYS use `cortex source <filePath>`  — returns cached AST skeleton, saves tokens.
+→ ALWAYS use `cortex source <filePath>` — returns cached AST skeleton, saves tokens.
 
 **Stale knowledge**:
-→ `cortex refresh`  — re-extracts entities flagged as stale since last sync.
+→ `cortex refresh` — re-extracts entities flagged as stale since last sync.
 
 **Checking correctness**:
-→ `cortex audit [entity]`  — validate an entity page against the live source.
-→ `cortex lint`  — structural checks across the whole graph.
+→ `cortex audit [entity]` — validate an entity page against the live source.
+→ `cortex lint` — structural checks across the whole graph.
 
 **Understanding a concept**:
-→ `cortex concept read <name>`  — fetch a saved cross-cutting concept.
+→ `cortex concept read <name>` — fetch a saved cross-cutting concept.
 
 **Cost tracking**:
-→ `cortex savings`  — copy the brevity stats footer into your final reply.
+→ `cortex savings` — copy the brevity stats footer into your final reply.
 ```
 
 **If MCP is wired**: the agent's tool list will include `mcp__project-cortex__*` tools. Use those instead of the `cortex …` bash commands — they are identical implementations and return structured data more efficiently. The skill does not need to mention this explicitly; the agent's native tool-list visibility handles preference routing.
@@ -2268,7 +2528,9 @@ Each platform's skill destination mirrors graphify's `_PLATFORM_CONFIG` table. S
 GitNexus appends a `---\n**Next:**` section to every tool response, guiding agents through a deterministic workflow without requiring any system prompt instructions. This is critical: an agent that calls `read_knowledge_index` and then immediately starts editing code skips the impact check — the hint nudges it to call `impact_analysis` next.
 
 ```typescript
-const NEXT_STEP_HINTS: Partial<Record<CortexToolName, (args: unknown) => string>> = {
+const NEXT_STEP_HINTS: Partial<
+  Record<CortexToolName, (args: unknown) => string>
+> = {
   read_knowledge_index: () =>
     `\n\n---\n**Next:** use \`cortex_find({query: "<entity-name>"})\` to locate a specific entity, or \`read_entity({name: "..."})\` to drill into one.`,
   read_entity: (args: any) =>
@@ -2284,13 +2546,17 @@ const NEXT_STEP_HINTS: Partial<Record<CortexToolName, (args: unknown) => string>
 };
 
 // Wrap every tool handler's return value:
-function withNextStepHint(toolName: CortexToolName, args: unknown, result: McpToolResult): McpToolResult {
+function withNextStepHint(
+  toolName: CortexToolName,
+  args: unknown,
+  result: McpToolResult,
+): McpToolResult {
   const hintFn = NEXT_STEP_HINTS[toolName];
   if (!hintFn || result.isError) return result;
   return {
     ...result,
-    content: result.content.map(c =>
-      c.type === "text" ? { ...c, text: c.text + hintFn(args) } : c
+    content: result.content.map((c) =>
+      c.type === "text" ? { ...c, text: c.text + hintFn(args) } : c,
     ),
   };
 }
@@ -2303,6 +2569,7 @@ function withNextStepHint(toolName: CortexToolName, args: unknown, result: McpTo
 - `cortex doctor` check: "Hints enabled" — verify `CORTEX_NO_HINTS` is not set in the CI environment (CI should suppress hints to keep output clean).
 
 **DoD**
+
 - `read_entity` response ends with a `---\n**Next:**` block referencing `impact_analysis` with the entity name pre-filled.
 - `impact_analysis` response ends with a hint to review hop-1 dependents first.
 - `isError: true` responses have no hint appended.
@@ -2316,17 +2583,23 @@ This is what graphify chose not to build. Cortex builds it.
 **Refinement 2 — Smart command resolution** (replaces naive `npx -y`):
 
 ```typescript
-async function resolveCommand(projectDir: string, pinnedVersion?: string): Promise<{command: string; args: string[]}> {
+async function resolveCommand(
+  projectDir: string,
+  pinnedVersion?: string,
+): Promise<{ command: string; args: string[] }> {
   // 1. Global install on PATH — fastest, no download
   const globalPath = which.sync("cortex", { nothrow: true });
   if (globalPath) return { command: globalPath, args: ["serve", "--stdio"] };
 
   // 2. Local node_modules — works in monorepos
   const localBin = path.join(projectDir, "node_modules", ".bin", "cortex");
-  if (fs.existsSync(localBin)) return { command: localBin, args: ["serve", "--stdio"] };
+  if (fs.existsSync(localBin))
+    return { command: localBin, args: ["serve", "--stdio"] };
 
   // 3. npx fallback — cold-start downloads, but works on fresh machines
-  const ver = pinnedVersion ? `project-cortex@${pinnedVersion}` : "project-cortex";
+  const ver = pinnedVersion
+    ? `project-cortex@${pinnedVersion}`
+    : "project-cortex";
   return { command: "npx", args: ["-y", ver, "serve", "--stdio"] };
 }
 ```
@@ -2338,16 +2611,23 @@ async function resolveCommand(projectDir: string, pinnedVersion?: string): Promi
 ```typescript
 export type McpConfigTarget = {
   ide: string;
-  autoWrite: boolean;  // true = Cortex can surgically inject the stanza; false = print snippet only
+  autoWrite: boolean; // true = Cortex can surgically inject the stanza; false = print snippet only
   scopes: {
     project?: string;
     user?: Record<NodeJS.Platform, string>;
   };
-  schemaKey: "mcpServers" | "servers" | "context_servers" | "experimental.modelContextProtocolServers";
+  schemaKey:
+    | "mcpServers"
+    | "servers"
+    | "context_servers"
+    | "experimental.modelContextProtocolServers";
   format: "json" | "jsonc" | "xml";
   transport: "stdio" | "http" | "both";
-  supportsCwd?: boolean;  // true = stanza supports a cwd/workingDirectory field
-  stanza: (cmd: {command: string; args: string[]}, projectDir?: string) => object;
+  supportsCwd?: boolean; // true = stanza supports a cwd/workingDirectory field
+  stanza: (
+    cmd: { command: string; args: string[] },
+    projectDir?: string,
+  ) => object;
 };
 
 // ── Auto-write IDEs (11): Cortex surgically injects the stanza via mergeJsoncFile ─────────────
@@ -2360,9 +2640,10 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     autoWrite: true,
     scopes: {
       user: {
-        darwin: "~/Library/Application Support/Claude/claude_desktop_config.json",
-        win32:  "%APPDATA%/Claude/claude_desktop_config.json",
-        linux:  "~/.config/Claude/claude_desktop_config.json",
+        darwin:
+          "~/Library/Application Support/Claude/claude_desktop_config.json",
+        win32: "%APPDATA%/Claude/claude_desktop_config.json",
+        linux: "~/.config/Claude/claude_desktop_config.json",
       },
     },
     schemaKey: "mcpServers",
@@ -2374,7 +2655,14 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     // Claude Code CLI — ~/.claude/mcp.json (separate from the VS Code extension)
     ide: "claude-code",
     autoWrite: true,
-    scopes: { project: ".claude/mcp.json", user: { darwin: "~/.claude/mcp.json", win32: "~/.claude/mcp.json", linux: "~/.claude/mcp.json" } },
+    scopes: {
+      project: ".claude/mcp.json",
+      user: {
+        darwin: "~/.claude/mcp.json",
+        win32: "~/.claude/mcp.json",
+        linux: "~/.claude/mcp.json",
+      },
+    },
     schemaKey: "mcpServers",
     format: "json",
     transport: "both",
@@ -2386,7 +2674,13 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     // Format: plain JSON (no comments), key = "mcpServers", supports "cwd" field
     ide: "claude-code-extension",
     autoWrite: true,
-    scopes: { user: { darwin: "~/.claude/settings.json", win32: "~/.claude/settings.json", linux: "~/.claude/settings.json" } },
+    scopes: {
+      user: {
+        darwin: "~/.claude/settings.json",
+        win32: "~/.claude/settings.json",
+        linux: "~/.claude/settings.json",
+      },
+    },
     schemaKey: "mcpServers",
     format: "json",
     transport: "stdio",
@@ -2404,12 +2698,21 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
     schemaKey: "mcpServers",
     format: "json",
     transport: "both",
-    stanza: (cmd) => ({ ...cmd, env: { CORTEX_PROJECT_ROOT: "${workspaceFolder}" } }),
+    stanza: (cmd) => ({
+      ...cmd,
+      env: { CORTEX_PROJECT_ROOT: "${workspaceFolder}" },
+    }),
   },
   {
     ide: "windsurf",
     autoWrite: true,
-    scopes: { user: { darwin: "~/.codeium/windsurf/mcp_config.json", win32: "~/.codeium/windsurf/mcp_config.json", linux: "~/.codeium/windsurf/mcp_config.json" } },
+    scopes: {
+      user: {
+        darwin: "~/.codeium/windsurf/mcp_config.json",
+        win32: "~/.codeium/windsurf/mcp_config.json",
+        linux: "~/.codeium/windsurf/mcp_config.json",
+      },
+    },
     schemaKey: "mcpServers",
     format: "json",
     transport: "stdio",
@@ -2418,7 +2721,13 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
   {
     ide: "antigravity",
     autoWrite: true,
-    scopes: { user: { darwin: "~/.gemini/antigravity/mcp_config.json", linux: "~/.gemini/antigravity/mcp_config.json", win32: "~/.gemini/antigravity/mcp_config.json" } },
+    scopes: {
+      user: {
+        darwin: "~/.gemini/antigravity/mcp_config.json",
+        linux: "~/.gemini/antigravity/mcp_config.json",
+        win32: "~/.gemini/antigravity/mcp_config.json",
+      },
+    },
     schemaKey: "mcpServers",
     format: "json",
     transport: "stdio",
@@ -2454,7 +2763,13 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
   {
     ide: "trae",
     autoWrite: true,
-    scopes: { user: { darwin: "~/.trae/mcp_config.json", linux: "~/.trae/mcp_config.json", win32: "%APPDATA%/Trae/mcp_config.json" } },
+    scopes: {
+      user: {
+        darwin: "~/.trae/mcp_config.json",
+        linux: "~/.trae/mcp_config.json",
+        win32: "%APPDATA%/Trae/mcp_config.json",
+      },
+    },
     schemaKey: "mcpServers",
     format: "json",
     transport: "stdio",
@@ -2463,7 +2778,13 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
   {
     ide: "opencode",
     autoWrite: true,
-    scopes: { user: { darwin: "~/.config/opencode/config.json", linux: "~/.config/opencode/config.json", win32: "%APPDATA%/opencode/config.json" } },
+    scopes: {
+      user: {
+        darwin: "~/.config/opencode/config.json",
+        linux: "~/.config/opencode/config.json",
+        win32: "%APPDATA%/opencode/config.json",
+      },
+    },
     schemaKey: "mcpServers",
     format: "json",
     transport: "stdio",
@@ -2485,7 +2806,13 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
   {
     ide: "zed",
     autoWrite: false,
-    scopes: { user: { darwin: "~/Library/Application Support/Zed/settings.json", linux: "~/.config/zed/settings.json", win32: "%APPDATA%/Zed/settings.json" } },
+    scopes: {
+      user: {
+        darwin: "~/Library/Application Support/Zed/settings.json",
+        linux: "~/.config/zed/settings.json",
+        win32: "%APPDATA%/Zed/settings.json",
+      },
+    },
     schemaKey: "context_servers",
     format: "json",
     transport: "stdio",
@@ -2494,20 +2821,32 @@ export const MCP_REGISTRY: McpConfigTarget[] = [
   {
     ide: "continue",
     autoWrite: false,
-    scopes: { user: { darwin: "~/.continue/config.json", linux: "~/.continue/config.json", win32: "~/.continue/config.json" } },
+    scopes: {
+      user: {
+        darwin: "~/.continue/config.json",
+        linux: "~/.continue/config.json",
+        win32: "~/.continue/config.json",
+      },
+    },
     schemaKey: "experimental.modelContextProtocolServers",
     format: "json",
     transport: "stdio",
-    stanza: (cmd) => ({ name: "cortex", transport: "stdio", command: cmd.command, args: cmd.args }),
+    stanza: (cmd) => ({
+      name: "cortex",
+      transport: "stdio",
+      command: cmd.command,
+      args: cmd.args,
+    }),
   },
   {
     ide: "jetbrains",
     autoWrite: false,
     scopes: {
       user: {
-        darwin: "~/Library/Application Support/JetBrains/MPS2024.3/options/mcp.xml",
-        linux:  "~/.config/JetBrains/mps/options/mcp.xml",
-        win32:  "%APPDATA%/JetBrains/mps/options/mcp.xml",
+        darwin:
+          "~/Library/Application Support/JetBrains/MPS2024.3/options/mcp.xml",
+        linux: "~/.config/JetBrains/mps/options/mcp.xml",
+        win32: "%APPDATA%/JetBrains/mps/options/mcp.xml",
       },
     },
     schemaKey: "mcpServers",
@@ -2538,25 +2877,33 @@ import { parseTree, modify, applyEdits, ParseError } from "jsonc-parser";
 function detectIndentation(raw: string): string {
   const match = raw.match(/^[ \t]+/m);
   if (!match) return "  ";
-  return match[0].startsWith("\t") ? "\t" : match[0].slice(0, match[0].search(/[^ ]/)) || "  ";
+  return match[0].startsWith("\t")
+    ? "\t"
+    : match[0].slice(0, match[0].search(/[^ ]/)) || "  ";
 }
 
 // Idempotency: return true if the stanza is already present and identical.
-function stanzaAlreadyPresent(raw: string, keyPath: string[], stanzaJson: string): boolean {
+function stanzaAlreadyPresent(
+  raw: string,
+  keyPath: string[],
+  stanzaJson: string,
+): boolean {
   try {
-    const parsed = JSON.parse(raw);  // jsonc-parser for JSONC files
+    const parsed = JSON.parse(raw); // jsonc-parser for JSONC files
     let cursor: any = parsed;
     for (const key of keyPath) cursor = cursor?.[key];
     return JSON.stringify(cursor) === stanzaJson;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 // Surgically inject one key into a JSON/JSONC file without touching anything else.
 // Skips the file entirely if corrupt (parse errors) — never silently destroys user config.
 async function mergeJsoncFile(
   filePath: string,
-  keyPath: string[],  // e.g. ["mcpServers", "cortex"]
-  value: object
+  keyPath: string[], // e.g. ["mcpServers", "cortex"]
+  value: object,
 ): Promise<"written" | "already-present" | "skipped-corrupt"> {
   let raw = "";
   if (await pathExists(filePath)) {
@@ -2564,15 +2911,23 @@ async function mergeJsoncFile(
     const errors: ParseError[] = [];
     parseTree(raw, errors);
     if (errors.length > 0) {
-      console.warn(`[cortex] Skipping ${filePath}: parse errors detected. Fix manually.`);
+      console.warn(
+        `[cortex] Skipping ${filePath}: parse errors detected. Fix manually.`,
+      );
       return "skipped-corrupt";
     }
-    if (stanzaAlreadyPresent(raw, keyPath, JSON.stringify(value))) return "already-present";
+    if (stanzaAlreadyPresent(raw, keyPath, JSON.stringify(value)))
+      return "already-present";
     await fs.copyFile(filePath, `${filePath}.cortex.backup`);
   }
 
   const indent = raw ? detectIndentation(raw) : "  ";
-  const edits = modify(raw || "{}", keyPath, value, { formattingOptions: { tabSize: indent === "\t" ? 1 : indent.length, insertSpaces: indent !== "\t" } });
+  const edits = modify(raw || "{}", keyPath, value, {
+    formattingOptions: {
+      tabSize: indent === "\t" ? 1 : indent.length,
+      insertSpaces: indent !== "\t",
+    },
+  });
   const updated = applyEdits(raw || "{}", edits);
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -2588,7 +2943,10 @@ async function mergeJsoncFile(
 async function resolveCommandWin32(bin: string): Promise<string> {
   for (const ext of [".cmd", ".bat", ""]) {
     const candidate = `${bin}${ext}`;
-    try { execFileSync("where", [candidate], { stdio: "ignore" }); return candidate; } catch {}
+    try {
+      execFileSync("where", [candidate], { stdio: "ignore" });
+      return candidate;
+    } catch {}
   }
   return bin;
 }
@@ -2596,34 +2954,51 @@ async function resolveCommandWin32(bin: string): Promise<string> {
 async function wireMcp(
   target: McpConfigTarget,
   scope: "project" | "user",
-  opts: { dryRun: boolean; pinnedVersion?: string; projectDir: string }
+  opts: { dryRun: boolean; pinnedVersion?: string; projectDir: string },
 ) {
   if (!target.autoWrite) {
     // Snippet-only: print stanza + path, do not touch file.
     const cmd = await resolveCommand(opts.projectDir, opts.pinnedVersion);
     const stanza = target.stanza(cmd, opts.projectDir);
-    console.log(`\n[${target.ide}] Paste into ${resolveConfigPath(target, scope)}:\n`);
-    console.log(JSON.stringify({ [target.schemaKey.split(".").pop()!]: { cortex: stanza } }, null, 2));
-    console.log(`\nFor a full example: cortex install --snippet --platform ${target.ide}\n`);
+    console.log(
+      `\n[${target.ide}] Paste into ${resolveConfigPath(target, scope)}:\n`,
+    );
+    console.log(
+      JSON.stringify(
+        { [target.schemaKey.split(".").pop()!]: { cortex: stanza } },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\nFor a full example: cortex install --snippet --platform ${target.ide}\n`,
+    );
     return;
   }
 
   const configPath = resolveConfigPath(target, scope);
   let cmd = await resolveCommand(opts.projectDir, opts.pinnedVersion);
-  if (process.platform === "win32") cmd = { ...cmd, command: await resolveCommandWin32(cmd.command) };
+  if (process.platform === "win32")
+    cmd = { ...cmd, command: await resolveCommandWin32(cmd.command) };
 
-  const stanza = target.stanza(cmd, target.supportsCwd ? opts.projectDir : undefined);
+  const stanza = target.stanza(
+    cmd,
+    target.supportsCwd ? opts.projectDir : undefined,
+  );
   const keyPath = [...target.schemaKey.split("."), "cortex"];
 
   const result = await mergeJsoncFile(configPath, keyPath, stanza);
   if (result === "already-present") {
     console.log(`[${target.ide}] Already wired — no change.`);
   } else if (result === "skipped-corrupt") {
-    console.warn(`[${target.ide}] Config file has parse errors. Fix it, then re-run cortex install.`);
+    console.warn(
+      `[${target.ide}] Config file has parse errors. Fix it, then re-run cortex install.`,
+    );
   } else {
     const verified = JSON.parse(await fs.readFile(configPath, "utf8"));
     const written = getNestedKey(verified, target.schemaKey, "cortex");
-    if (!written) throw new Error(`MCP wiring verification failed for ${target.ide}`);
+    if (!written)
+      throw new Error(`MCP wiring verification failed for ${target.ide}`);
     console.log(`[${target.ide}] Wired → ${configPath}`);
   }
 }
@@ -2668,7 +3043,8 @@ function detectEnvironment(): "wsl" | "devcontainer" | "codespaces" | "native" {
     if (/microsoft|wsl/i.test(procVersion)) return "wsl";
   }
   // Devcontainer: REMOTE_CONTAINERS env or /.dockerenv exists
-  if (process.env.REMOTE_CONTAINERS || fs.existsSync("/.dockerenv")) return "devcontainer";
+  if (process.env.REMOTE_CONTAINERS || fs.existsSync("/.dockerenv"))
+    return "devcontainer";
   // Codespaces: CODESPACES env
   if (process.env.CODESPACES) return "codespaces";
   return "native";
@@ -2704,6 +3080,7 @@ Step 9 is a deliberate change from the original design: silent fallback is worse
 Persist the last-used platform in `~/.cortex/install.json` so repeat `cortex install` runs without re-prompting.
 
 **Safety guarantees:**
+
 - **Surgical injection** via `mergeJsoncFile` (jsonc-parser `modify` + `applyEdits`) — never overwrites the whole file. All other keys, all comments, all formatting are preserved.
 - **Idempotent** — if the `cortex` stanza already exists and is identical, the file is not touched at all.
 - **Corrupt-safe** — if the config file fails to parse, skip it and warn; never silently destroy it.
@@ -2766,6 +3143,7 @@ Today LLM backend, brevity level, soul opts, and project root are scattered acro
 - Schema URL provides IDE autocompletion in VS Code JSON editor.
 
 **DoD**
+
 - `cortex` binary on `PATH` after `npm install -g project-cortex`; `cortex --help` lists ≥17 verbs.
 - Every existing MCP tool has a CLI mirror that returns equivalent JSON when invoked with `--format=json`.
 - `cortex serve --stdio` starts an MCP server identical to today's behavior (regression-tested).
@@ -2817,21 +3195,40 @@ async function detectInstalledIDEs(): Promise<string[]> {
   const detected: string[] = [];
   for (const target of MCP_CONFIG_TARGETS) {
     // Check 1: does the config file path exist?
-    const configPath = resolveUserPath(target.scopes.user?.[process.platform] ?? "");
-    if (configPath && await fs.access(configPath).then(() => true).catch(() => false)) {
+    const configPath = resolveUserPath(
+      target.scopes.user?.[process.platform] ?? "",
+    );
+    if (
+      configPath &&
+      (await fs
+        .access(configPath)
+        .then(() => true)
+        .catch(() => false))
+    ) {
       detected.push(target.ide);
       continue;
     }
     // Check 2: is the IDE executable in PATH?
     if (target.executableNames) {
       for (const exe of target.executableNames) {
-        if (await which(exe).catch(() => null)) { detected.push(target.ide); break; }
+        if (await which(exe).catch(() => null)) {
+          detected.push(target.ide);
+          break;
+        }
       }
     }
     // Check 3: check common installation paths (macOS /Applications, Windows %LOCALAPPDATA%)
     if (target.installPaths) {
       for (const p of target.installPaths[process.platform] ?? []) {
-        if (await fs.access(p).then(() => true).catch(() => false)) { detected.push(target.ide); break; }
+        if (
+          await fs
+            .access(p)
+            .then(() => true)
+            .catch(() => false)
+        ) {
+          detected.push(target.ide);
+          break;
+        }
       }
     }
   }
@@ -2850,6 +3247,7 @@ Add `executableNames: string[]` and `installPaths: Partial<Record<NodeJS.Platfor
 **Flaws closed**: no direct flaw number — closes a market-segment gap. Graphify ingests `code + docs + PDF + images + video transcription + Office + Google Workspace` today. Cortex ingests code only. Enterprise customers store architectural decisions in Confluence PDFs, design reviews in Google Docs, onboarding videos, and system architecture images — all invisible to Cortex.
 
 **What graphify does** (`extract.py` + optional deps):
+
 - **PDF**: `pypdf` (text extraction) + `markdownify` (HTML→MD conversion). Enabled via `pip install graphifyy[pdf]`.
 - **Images**: sent to the configured vision-capable LLM (Claude, GPT-4V, Gemini Vision) for description + entity extraction.
 - **Video**: `faster-whisper` transcribes audio track → text; `yt-dlp` downloads YouTube/Loom URLs. The transcript is then treated as a document. Enabled via `pip install graphifyy[video]`.
@@ -2880,29 +3278,38 @@ Add `executableNames: string[]` and `installPaths: Partial<Record<NodeJS.Platfor
 
 Graphify ingests external URLs as knowledge sources — not just files on disk. This covers four URL categories: tweets, arXiv papers, general web pages, and YouTube videos. Cortex should support the same to allow teams to ingest RFCs, design docs, research papers, and architecture blog posts as first-class knowledge.
 
-*What graphify does* (`ingest.py`):
+_What graphify does_ (`ingest.py`):
+
 - **Tweets** (`twitter.com` / `x.com`): fetches via Twitter's oEmbed endpoint (`https://publish.twitter.com/oembed?url=<url>`). Extracts tweet text as a `document` entity. No API key required.
 - **arXiv papers** (`arxiv.org/abs/<id>`): fetches abstract via arXiv API (`https://export.arxiv.org/api/query?id_list=<id>`). Extracts title, authors, abstract as a `paper` entity.
 - **General web pages**: fetches HTML → converts to markdown via `markdownify`. Treated as `document` entity. Respects `robots.txt` (fetches via `urllib.robotparser`).
 - **YouTube** (`youtube.com`, `youtu.be`): downloads transcript via `youtube-transcript-api` (no yt-dlp for URL ingest; yt-dlp is for local video files). Transcript chunked as a `document` entity.
 
-*Cortex implementation — new `src/ingest/adapters/url.ts`*:
+_Cortex implementation — new `src/ingest/adapters/url.ts`_:
+
 ```typescript
-export type UrlIngestResult = { text: string; entityType: "document" | "paper"; title?: string; authors?: string[] };
+export type UrlIngestResult = {
+  text: string;
+  entityType: "document" | "paper";
+  title?: string;
+  authors?: string[];
+};
 
 export async function ingestUrl(url: string): Promise<UrlIngestResult> {
   if (/twitter\.com|x\.com/.test(url)) return ingestTweet(url);
   if (/arxiv\.org\/abs\//.test(url)) return ingestArxiv(url);
-  if (/youtube\.com\/watch|youtu\.be\//.test(url)) return ingestYouTubeTranscript(url);
-  return ingestWebPage(url);  // markdownify fallback
+  if (/youtube\.com\/watch|youtu\.be\//.test(url))
+    return ingestYouTubeTranscript(url);
+  return ingestWebPage(url); // markdownify fallback
 }
 
 async function ingestWebPage(url: string): Promise<UrlIngestResult> {
-  const html = await fetchWithRobotsCheck(url);  // respects robots.txt
-  const md = htmlToMarkdown(html);  // via 'turndown' npm package
+  const html = await fetchWithRobotsCheck(url); // respects robots.txt
+  const md = htmlToMarkdown(html); // via 'turndown' npm package
   return { text: md, entityType: "document" };
 }
 ```
+
 - `cortex ingest <url>` CLI command: `cortex ingest https://arxiv.org/abs/2310.11511` → ingests the paper.
 - `cortex.config.json` → `ingest.urls: ["https://...", "https://..."]` for always-on URL ingestion on every sync.
 - MCP tool `ingest` gains optional `url: string` parameter alongside `filePath`.
@@ -2912,7 +3319,8 @@ async function ingestWebPage(url: string): Promise<UrlIngestResult> {
 
 Graphify classifies `.md` and `.txt` files as academic papers vs. regular documents, then handles them differently — papers get their abstract extracted and get `file_type: "paper"` in the graph, enabling paper-specific analysis.
 
-*What graphify does* (`detect.py`): 11 regex patterns that collectively signal "this is an academic paper":
+_What graphify does_ (`detect.py`): 11 regex patterns that collectively signal "this is an academic paper":
+
 ```python
 PAPER_SIGNALS = [
   r"^#{1,2}\s+Abstract",          # ## Abstract heading
@@ -2932,27 +3340,38 @@ def classify_document(path, text) -> Literal["paper", "document"]:
     signals_found = sum(1 for p in PAPER_SIGNALS if re.search(p, text, re.MULTILINE))
     return "paper" if signals_found >= 3 else "document"
 ```
+
 - Files classified as `paper` get `file_type: "paper"` in the graph. This enables paper-specific knowledge extraction prompts (extract hypotheses, methodology, results — not code entities).
 
-*Cortex implementation — add to `src/ingest/fileType.ts`*:
+_Cortex implementation — add to `src/ingest/fileType.ts`_:
+
 ```typescript
 const PAPER_SIGNALS = [
-  /^#{1,2}\s+Abstract/m, /^#{1,2}\s+Introduction/m, /^#{1,2}\s+Related Work/m,
-  /^#{1,2}\s+Conclusion/m, /^#{1,2}\s+References/m,
-  /\[\d+\]/m, /arXiv:\d{4}\.\d{4,5}/, /doi:\s*10\.\d{4,9}\//,
-  /et al\./, /@\w+\{[\w]+,/, /\\begin\{document\}/,
+  /^#{1,2}\s+Abstract/m,
+  /^#{1,2}\s+Introduction/m,
+  /^#{1,2}\s+Related Work/m,
+  /^#{1,2}\s+Conclusion/m,
+  /^#{1,2}\s+References/m,
+  /\[\d+\]/m,
+  /arXiv:\d{4}\.\d{4,5}/,
+  /doi:\s*10\.\d{4,9}\//,
+  /et al\./,
+  /@\w+\{[\w]+,/,
+  /\\begin\{document\}/,
 ];
 
 export function classifyDocument(text: string): "paper" | "document" {
-  const hits = PAPER_SIGNALS.filter(p => p.test(text)).length;
+  const hits = PAPER_SIGNALS.filter((p) => p.test(text)).length;
   return hits >= 3 ? "paper" : "document";
 }
 ```
+
 - Papers use a different LLM synthesis prompt: "Extract the key hypothesis, methodology, results, and limitations of this paper."
 - Papers are excluded from `calls`/`imports` relationship extraction (those are code-only relation types).
 - `KNOWLEDGE_REPORT.md` includes a "Papers ingested: N" count.
 
 **DoD**
+
 - A `.pdf` file in the project → Cortex extracts text, synthesizes entities, writes knowledge entries.
 - A `.png` architecture diagram → Cortex sends to vision model, extracts entity names and relationships from the image.
 - A `.docx` Word doc → Cortex extracts text via `mammoth`, synthesizes knowledge entries.
@@ -2974,6 +3393,7 @@ export function classifyDocument(text: string): "paper" | "document" {
 **Flaws closed**: no direct flaw number — closes a developer-trust gap. Graphify ships with `bandit` (security linter), `pip-audit` (dependency CVE scanner), `hypothesis` (property tests), `pre-commit` hooks, `safety` (supply-chain scanner), and `Nuitka` standalone binary builds. Cortex has TypeScript strict mode but none of the CI hygiene infrastructure. A project with 115 known flaws and no security scanning is difficult to recommend to enterprise security teams.
 
 **What graphify does** (`pyproject.toml:dev deps`, `.pre-commit-config.yaml`, Nuitka pipeline):
+
 - `bandit` — static analysis for common Python security anti-patterns (no `eval`, no `shell=True`, etc.).
 - `pip-audit` — checks all dependencies against CVE databases.
 - `safety` — supply-chain vulnerability scanning.
@@ -2985,12 +3405,14 @@ export function classifyDocument(text: string): "paper" | "document" {
 **Implementation**
 
 **Security CI gate:**
+
 - Add `npm audit --audit-level=high` to CI. Fail the build on any high or critical CVE.
 - Add `socket.dev` GitHub App (or `@npmjs/socket` CLI) for supply-chain analysis — detects typosquatting, malware, obfuscation in new/updated deps.
 - Add `eslint-plugin-security` + `eslint-plugin-no-unsanitized` to `eslint` config — catches `eval`, `innerHTML`, dynamic `require`, prototype pollution patterns.
 - Add `semgrep` CI job with `semgrep.dev/c/r/typescript.lang.security` ruleset — catches path traversal, SSRF, SQL injection patterns in TypeScript.
 
 **Property-based tests (`fast-check`):**
+
 - Add `fast-check` (TypeScript `hypothesis` equivalent) to `devDependencies`.
 - Write property tests for the highest-risk modules:
   - `security.ts` (Phase 0.1): `fc.string()` → `validatePath()` → assert path never escapes sandbox.
@@ -3000,6 +3422,7 @@ export function classifyDocument(text: string): "paper" | "document" {
 - Target: every Phase 0 module gets at least one property test suite.
 
 **Pre-commit hooks (`husky` + `lint-staged`):**
+
 ```json
 // .husky/pre-commit
 npx lint-staged
@@ -3010,17 +3433,20 @@ npx lint-staged
   "*.{json,md}": ["prettier --write"]
 }
 ```
+
 - `husky install` added to `npm prepare` script (runs automatically on `npm install`).
 - Pre-commit blocks commit if any TypeScript error or ESLint security-plugin violation is present.
 - `cortex install` (Phase 0.15) optionally registers the Cortex knowledge-sync pre-commit hook from Phase 0.10 alongside husky's hooks.
 
 **Standalone binary builds (Bun `--compile`):**
+
 ```bash
 # Release pipeline
 bun build src/cli/index.ts --compile --outfile=dist/cortex-linux-x64
 bun build src/cli/index.ts --compile --outfile=dist/cortex-macos-arm64 --target=bun-darwin-arm64
 bun build src/cli/index.ts --compile --outfile=dist/cortex-windows-x64.exe --target=bun-windows-x64
 ```
+
 - Bun's `--compile` bundles runtime + app into a single self-contained binary (equivalent to Nuitka for Python).
 - Binaries published to GitHub Releases automatically by CI.
 - Install script: `curl -fsSL https://cortex.sh/install | sh` detects platform, downloads the correct binary, places in `/usr/local/bin/cortex`.
@@ -3028,6 +3454,7 @@ bun build src/cli/index.ts --compile --outfile=dist/cortex-windows-x64.exe --tar
 - Windows: PowerShell install script equivalent.
 
 **CI pipeline additions (`ci.yml`):**
+
 ```yaml
 jobs:
   security:
@@ -3038,12 +3465,13 @@ jobs:
     - run: npx eslint src/ --max-warnings=0
   test:
     - run: npm test -- --coverage
-    - run: npx fast-check-cli   # property test runner
+    - run: npx fast-check-cli # property test runner
   build:
     - run: bun build src/cli/index.ts --compile --outfile=dist/cortex-${{ matrix.platform }}
 ```
 
 **DoD**
+
 - `npm audit --audit-level=high` passes on CI with 0 high/critical CVEs.
 - `eslint-plugin-security` catches any `eval()` or `shell=true` equivalent introduced in new code — test by adding one deliberately, verifying CI fails.
 - At least one `fast-check` property test per Phase 0 module (security, validate, dedup, mcpWriter minimum). Each property test runs 1,000 random cases.
@@ -3060,35 +3488,38 @@ GitNexus's ingest pipeline is a typed DAG where each phase declares explicit inp
 // src/ingest/pipeline.ts
 interface Phase<InputType, OutputType> {
   name: string;
-  deps: string[];           // phases that must complete before this one
+  deps: string[]; // phases that must complete before this one
   run: (input: InputType, ctx: PipelineContext) => Promise<OutputType>;
 }
 
 // Phase registry — each phase registered by name.
 // Pipeline validates at startup: all deps must be registered; no cycles.
 const PHASES: Phase<any, any>[] = [
-  { name: "scan",         deps: [],                    run: scanFiles },
-  { name: "filter",       deps: ["scan"],               run: filterSensitive },
-  { name: "hash",         deps: ["filter"],             run: hashFiles },
-  { name: "parse",        deps: ["hash"],               run: parseWithTreeSitter },
-  { name: "symbolResolve",deps: ["parse"],              run: resolveSymbols },
-  { name: "dedup",        deps: ["symbolResolve"],      run: dedupNodes },
-  { name: "embed",        deps: ["dedup"],              run: embedEntities },
-  { name: "llmSynth",     deps: ["embed"],              run: synthesizeWithLlm },
-  { name: "validate",     deps: ["llmSynth"],           run: validateEntities },
-  { name: "community",    deps: ["validate"],           run: detectCommunities },
-  { name: "write",        deps: ["community"],          run: writeState },
-  { name: "report",       deps: ["write"],              run: generateGraphReport },
+  { name: "scan", deps: [], run: scanFiles },
+  { name: "filter", deps: ["scan"], run: filterSensitive },
+  { name: "hash", deps: ["filter"], run: hashFiles },
+  { name: "parse", deps: ["hash"], run: parseWithTreeSitter },
+  { name: "symbolResolve", deps: ["parse"], run: resolveSymbols },
+  { name: "dedup", deps: ["symbolResolve"], run: dedupNodes },
+  { name: "embed", deps: ["dedup"], run: embedEntities },
+  { name: "llmSynth", deps: ["embed"], run: synthesizeWithLlm },
+  { name: "validate", deps: ["llmSynth"], run: validateEntities },
+  { name: "community", deps: ["validate"], run: detectCommunities },
+  { name: "write", deps: ["community"], run: writeState },
+  { name: "report", deps: ["write"], run: generateGraphReport },
 ];
 
 function buildPipeline(phases: Phase<any, any>[]): () => Promise<void> {
   // Topological sort — detect cycles at startup, not at runtime.
   const sorted = topologicalSort(phases);
   return async () => {
-    const timer = new PhaseTimer();   // Phase 9 PhaseTimer integrated here
+    const timer = new PhaseTimer(); // Phase 9 PhaseTimer integrated here
     const results: Record<string, any> = {};
     for (const phase of sorted) {
-      results[phase.name] = await timer.time(phase.name, phase.run(results, ctx));
+      results[phase.name] = await timer.time(
+        phase.name,
+        phase.run(results, ctx),
+      );
     }
     console.log("Ingest timings:", timer.report());
   };
@@ -3102,6 +3533,7 @@ function buildPipeline(phases: Phase<any, any>[]): () => Promise<void> {
 - **`cortex ingest --phases report`**: skip to a named phase; prior phase outputs loaded from cache. Useful for regenerating `GRAPH_REPORT.md` without re-running LLM synthesis.
 
 **DoD extension**
+
 - `buildPipeline` with a missing dep throws a descriptive error at startup: `"Phase 'embed' depends on 'dedup' which is not registered"`.
 - `buildPipeline` with a cycle (`A → B → A`) throws: `"Cycle detected: A → B → A"`.
 - All 12 phases are registered; `cortex ingest` runs them in topological order.
@@ -3125,18 +3557,24 @@ async function runShadow<T>(
   primaryFn: () => Promise<T>,
   shadowFn: () => Promise<T>,
   compare: (a: T, b: T) => boolean,
-  opts: { failOnDivergence?: boolean } = {}
+  opts: { failOnDivergence?: boolean } = {},
 ): Promise<ShadowResult<T>> {
-  const [primaryResult, shadowResult] = await Promise.allSettled([primaryFn(), shadowFn()]);
+  const [primaryResult, shadowResult] = await Promise.allSettled([
+    primaryFn(),
+    shadowFn(),
+  ]);
 
   if (primaryResult.status === "rejected") throw primaryResult.reason;
 
   const primary = primaryResult.value;
-  const shadow = shadowResult.status === "fulfilled" ? shadowResult.value : null;
+  const shadow =
+    shadowResult.status === "fulfilled" ? shadowResult.value : null;
   const diverged = shadow !== null && !compare(primary, shadow as T);
 
   if (diverged && opts.failOnDivergence) {
-    throw new Error(`Shadow divergence: ${JSON.stringify({ primary, shadow }, null, 2)}`);
+    throw new Error(
+      `Shadow divergence: ${JSON.stringify({ primary, shadow }, null, 2)}`,
+    );
   }
 
   return { primary, shadow: shadow as T, diverged };
@@ -3144,14 +3582,15 @@ async function runShadow<T>(
 ```
 
 **Usage pattern for engine migrations:**
+
 ```typescript
 // During migration of synthesis engine: run old + new in parallel.
 // Old path always wins (primary); new path result is compared and logged.
 const result = await runShadow(
-  () => legacySynthesizeEntity(file),    // old path
-  () => dagSynthesizeEntity(file),       // new DAG path
+  () => legacySynthesizeEntity(file), // old path
+  () => dagSynthesizeEntity(file), // new DAG path
   (a, b) => entityEqual(a, b),
-  { failOnDivergence: process.env.CI === "true" }
+  { failOnDivergence: process.env.CI === "true" },
 );
 // In CI: divergence = test failure. Locally: divergence = warning.
 ```
@@ -3161,6 +3600,7 @@ const result = await runShadow(
 - Remove shadow harness once migration is validated — it's scaffolding, not permanent infrastructure.
 
 **DoD extension**
+
 - `runShadow` with matching functions → `diverged: false`, primary result returned.
 - `runShadow` with differing functions + `failOnDivergence: true` → throws with diff details.
 - Shadow function crash → `diverged: false` (primary result returned safely); crash logged to stderr.
@@ -3171,6 +3611,7 @@ const result = await runShadow(
 ### Phase 0 — Master DoD & Cross-References
 
 **Phase 0 is complete when:**
+
 - All 17 subphases have 0 failing tests.
 - `npm test` reports pass on all 17 new test suites.
 - `cortex doctor` exits 0 on the Cortex repo itself.
@@ -3183,6 +3624,7 @@ const result = await runShadow(
 **Phase 0 unlocks**: every Phase 1–189 is now safe to build. The security and data-integrity foundation is in place. Paying customers can be onboarded without CVE risk.
 
 **Cross-references**
+
 - Phase 6 (Active Guardrail): `validate.ts` from Phase 0.2 is its enforcement substrate — replace Phase 6's ad-hoc checks with `validate.ts` calls.
 - Phase 7 (Audit & Traceability): `cortex doctor` from Phase 0.7 is the self-audit CLI companion.
 - Phase 7.5 (Quality Governance): confidence labels from Phase 0.3 are the data quality primitive Phase 7.5 reports on.
@@ -3197,7 +3639,7 @@ const result = await runShadow(
 
 **Source**: Graphify | **Cross-references**: Phase 0.13 (LanguageProvider), Phase 10.8 (`cortex explain`)
 
-**Problem**: Cortex's synthesis describes *what* code does. The developer's intent — captured in `// NOTE:`, `// HACK:`, `// TODO:`, `// FIXME:` comments and docstrings — is either ignored or collapsed into prose. When a developer asks `cortex explain AuthService.login`, they get LLM-generated description but miss the original `// HACK: bypass session check for test users` that explains *why* the code is shaped that way.
+**Problem**: Cortex's synthesis describes _what_ code does. The developer's intent — captured in `// NOTE:`, `// HACK:`, `// TODO:`, `// FIXME:` comments and docstrings — is either ignored or collapsed into prose. When a developer asks `cortex explain AuthService.login`, they get LLM-generated description but miss the original `// HACK: bypass session check for test users` that explains _why_ the code is shaped that way.
 
 **Design**: Extract inline comments and docstrings during tree-sitter parsing as separate graph nodes with `HAS_RATIONALE` edges. Zero LLM cost — pure static extraction.
 
@@ -3255,8 +3697,13 @@ async function ingestScip(scipPath: string): Promise<GraphExtractionReport> {
       if (occ.symbol_roles & Scip.SymbolRole.Definition)
         nodes.push(buildNode(occ, doc.relative_path));
       else if (occ.symbol_roles & Scip.SymbolRole.Reference)
-        edges.push({ from: containerSymbol(doc, occ), to: occ.symbol,
-                     type: "CALLS", confidence: 0.99, reason: "lsp-resolved" });
+        edges.push({
+          from: containerSymbol(doc, occ),
+          to: occ.symbol,
+          type: "CALLS",
+          confidence: 0.99,
+          reason: "lsp-resolved",
+        });
     }
   }
   return { nodes: dedup(nodes), edges: applyConfidenceFloors(edges) };
@@ -3364,32 +3811,45 @@ type MicroDiffRule = {
 const MICRO_DIFF_RULES: MicroDiffRule[] = [
   {
     name: "param-rename",
-    match: d => d.additions === 1 && d.deletions === 1 && isParamRename(d),
-    apply: (e, d) => ({ description: e.description.replace(oldParam(d), newParam(d)) }),
+    match: (d) => d.additions === 1 && d.deletions === 1 && isParamRename(d),
+    apply: (e, d) => ({
+      description: e.description.replace(oldParam(d), newParam(d)),
+    }),
   },
   {
     name: "string-literal-change",
-    match: d => d.additions === 1 && d.deletions === 1 && isStringLiteralOnly(d),
-    apply: (e, d) => ({ /* description unchanged, only metadata updated */ }),
+    match: (d) =>
+      d.additions === 1 && d.deletions === 1 && isStringLiteralOnly(d),
+    apply: (e, d) => ({
+      /* description unchanged, only metadata updated */
+    }),
   },
   {
     name: "comment-only",
-    match: d => isCommentOnlyChange(d),
-    apply: (e, _d) => e,   // rationale nodes updated by Phase 0.18, synthesis untouched
+    match: (d) => isCommentOnlyChange(d),
+    apply: (e, _d) => e, // rationale nodes updated by Phase 0.18, synthesis untouched
   },
   {
     name: "return-type-change",
-    match: d => d.additions <= 2 && d.deletions <= 2 && isReturnTypeOnly(d),
+    match: (d) => d.additions <= 2 && d.deletions <= 2 && isReturnTypeOnly(d),
     apply: (e, d) => ({ description: appendReturnTypeNote(e.description, d) }),
   },
 ];
 
-async function synthesizeOrMicro(diff: FileDiff, entity: EntityRecord): Promise<EntityRecord> {
-  const rule = MICRO_DIFF_RULES.find(r => r.match(diff));
+async function synthesizeOrMicro(
+  diff: FileDiff,
+  entity: EntityRecord,
+): Promise<EntityRecord> {
+  const rule = MICRO_DIFF_RULES.find((r) => r.match(diff));
   if (rule) {
-    return { ...entity, ...rule.apply(entity, diff), synthesisMethod: "micro-rule", ruleApplied: rule.name };
+    return {
+      ...entity,
+      ...rule.apply(entity, diff),
+      synthesisMethod: "micro-rule",
+      ruleApplied: rule.name,
+    };
   }
-  return synthesizeWithLlm(diff, entity);   // full LLM path
+  return synthesizeWithLlm(diff, entity); // full LLM path
 }
 ```
 
@@ -3412,28 +3872,29 @@ async function synthesizeOrMicro(diff: FileDiff, entity: EntityRecord): Promise<
 ```typescript
 interface HallucinationReport {
   entityId: string;
-  claimedEdges: string[];           // edges the LLM claims exist
-  unverifiedEdges: string[];        // claimed edges not in Stage 1 graph
-  hallucinationRisk: boolean;       // true if unverifiedEdges.length > 0
-  confidence: number;               // synthesis confidence score after penalty
+  claimedEdges: string[]; // edges the LLM claims exist
+  unverifiedEdges: string[]; // claimed edges not in Stage 1 graph
+  hallucinationRisk: boolean; // true if unverifiedEdges.length > 0
+  confidence: number; // synthesis confidence score after penalty
 }
 
 async function crossCheckSynthesis(
   synthesis: SynthesisResult,
   stage1Graph: GraphExtractionReport,
 ): Promise<HallucinationReport> {
-  const claimedEdges = extractClaimedEdges(synthesis.description);   // regex + NLP
+  const claimedEdges = extractClaimedEdges(synthesis.description); // regex + NLP
   const unverified = claimedEdges.filter(
-    edge => !stage1Graph.edges.some(e => edgeMatches(e, edge))
+    (edge) => !stage1Graph.edges.some((e) => edgeMatches(e, edge)),
   );
   return {
     entityId: synthesis.entityId,
     claimedEdges,
     unverifiedEdges: unverified,
     hallucinationRisk: unverified.length > 0,
-    confidence: unverified.length > 0
-      ? Math.max(0.3, synthesis.confidence - unverified.length * 0.15)
-      : synthesis.confidence,
+    confidence:
+      unverified.length > 0
+        ? Math.max(0.3, synthesis.confidence - unverified.length * 0.15)
+        : synthesis.confidence,
   };
 }
 ```
@@ -3501,6 +3962,7 @@ Implement a file-based or SQLite-based local prompt cache with a configurable Ti
 - **Bypass**: Support a `--force` flag on CLI/sync to bypass the cache and force a fresh LLM call.
 
 **Definition of Done (DoD)**
+
 - Syntheses or checks with identical prompt hashes are served from cache in <10ms.
 - Cache respects configurable TTL and evicts old entries when crossing the threshold.
 - CLI command `cortex cache clear` or flag `--force` successfully invalidates/bypasses the cache.
@@ -3518,25 +3980,43 @@ Implement a file-based or SQLite-based local prompt cache with a configurable Ti
 
 ```typescript
 interface GraphVersion {
-  semver: string;          // "2.3.1"
-  major: number;           // entity added or removed
-  minor: number;           // synthesis content changed
-  patch: number;           // only metadata/confidence updated
+  semver: string; // "2.3.1"
+  major: number; // entity added or removed
+  minor: number; // synthesis content changed
+  patch: number; // only metadata/confidence updated
   bumpedAt: number;
-  bumpReason: string;      // e.g. "entity AuthService removed"
+  bumpReason: string; // e.g. "entity AuthService removed"
 }
 
-function bumpVersion(prev: GraphVersion, changeType: "major" | "minor" | "patch", reason: string): GraphVersion {
+function bumpVersion(
+  prev: GraphVersion,
+  changeType: "major" | "minor" | "patch",
+  reason: string,
+): GraphVersion {
   let { major, minor, patch } = prev;
-  if (changeType === "major") { major++; minor = 0; patch = 0; }
-  else if (changeType === "minor") { minor++; patch = 0; }
-  else { patch++; }
-  return { semver: `${major}.${minor}.${patch}`, major, minor, patch,
-           bumpedAt: Date.now(), bumpReason: reason };
+  if (changeType === "major") {
+    major++;
+    minor = 0;
+    patch = 0;
+  } else if (changeType === "minor") {
+    minor++;
+    patch = 0;
+  } else {
+    patch++;
+  }
+  return {
+    semver: `${major}.${minor}.${patch}`,
+    major,
+    minor,
+    patch,
+    bumpedAt: Date.now(),
+    bumpReason: reason,
+  };
 }
 ```
 
 **CLI verbs**:
+
 ```bash
 cortex diff v2.1.0 v2.3.0    # show entities added/removed/changed between two graph versions
 cortex restore v2.1.0         # roll back state.json to a specific graph version
@@ -3566,14 +4046,13 @@ function computeEntityId(
   overloadArity?: number,
   typeSignature?: string,
 ): string {
-  let base = slugify(qualifiedName);     // "AuthService.login"
+  let base = slugify(qualifiedName); // "AuthService.login"
   const tags: string[] = [];
 
-  if (overloadArity !== undefined)
-    tags.push(`#${overloadArity}`);      // "#2" for 2-param overload
+  if (overloadArity !== undefined) tags.push(`#${overloadArity}`); // "#2" for 2-param overload
 
   if (typeSignature && hasAmbiguousOverloads(qualifiedName))
-    tags.push(`~${typeSignature}`);      // "~string,boolean"
+    tags.push(`~${typeSignature}`); // "~string,boolean"
 
   return tags.length > 0 ? `${base}${tags.join("")}` : base;
 }
@@ -3584,8 +4063,8 @@ function computeEntityId(
 ```typescript
 interface RenameRecord {
   kind: "RENAME";
-  fromId: string;    // "authenticate"
-  toId: string;      // "authenticateUser"
+  fromId: string; // "authenticate"
+  toId: string; // "authenticateUser"
   detectedAt: number;
   similarity: number;
 }
@@ -3703,22 +4182,24 @@ Add MCP resource registrations alongside the existing tools in `src/mcp/server.t
 server.registerResource(
   "cortex://project/knowledge-index",
   "The full knowledge index (same as read_knowledge_index tool). Read this when you need a bird's-eye view of all entities.",
-  async () => fs.readFile(path.join(knowledgeDir, "index.md"), "utf8")
+  async () => fs.readFile(path.join(knowledgeDir, "index.md"), "utf8"),
 );
 
 server.registerResource(
   "cortex://project/graph-report",
   "GRAPH_REPORT.md — confidence audit, isolated nodes, thin community warnings, growth delta.",
-  async () => fs.readFile(path.join(knowledgeDir, "GRAPH_REPORT.md"), "utf8")
+  async () => fs.readFile(path.join(knowledgeDir, "GRAPH_REPORT.md"), "utf8"),
 );
 
 server.registerResource(
   "cortex://entity/{name}",
   "Full entity page for a named entity. Equivalent to read_entity but addressable by URI.",
   async (params) => {
-    const entity = state.entities.find(e => e.name === params.name);
-    return entity ? renderEntityPage(entity) : `Entity '${params.name}' not found`;
-  }
+    const entity = state.entities.find((e) => e.name === params.name);
+    return entity
+      ? renderEntityPage(entity)
+      : `Entity '${params.name}' not found`;
+  },
 );
 
 server.registerResource(
@@ -3726,8 +4207,10 @@ server.registerResource(
   "Full entity listing for a Leiden community cluster. Lazy — only fetched when the agent explicitly addresses this URI.",
   async (params) => {
     const community = getCommunity(Number(params.id));
-    return community ? renderCommunityContext(community) : `Community ${params.id} not found`;
-  }
+    return community
+      ? renderCommunityContext(community)
+      : `Community ${params.id} not found`;
+  },
 );
 ```
 
@@ -3737,6 +4220,7 @@ server.registerResource(
 - `cortex://project/knowledge-index` is always up to date — reads the live `.knowledge/index.md` file at request time.
 
 **DoD extension**
+
 - MCP `initialize` response includes `capabilities.resources`.
 - `resources/list` returns all 4 resource URIs with descriptions.
 - `resources/read cortex://entity/AuthService` returns the same content as `read_entity({name:"AuthService"})`.
@@ -3752,16 +4236,19 @@ Makes it easy to programmatically query Cortex from your own scripts, CI pipelin
 
 **Technical Terms**
 Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`) and Python (`projectcortex-sdk`).
+
 - **Communication**: The SDKs communicate with the local running Cortex daemon over a standardized REST API or local JSON-RPC socket.
 - **Features**: Single-line helpers like `cortex.readEntity('AuthMiddleware')`, `cortex.getImpact('User')`, `cortex.getQuality('PaymentService')`, and `cortex.runLint()`.
 - **Durable Memory Proxy Layer (`agentmemory` compatibility)**: Emulate the standard, lightweight SQLite/PostgreSQL `agentmemory` schema endpoints in `CortexMCPServer`. This exposes a standard memory backend route that external AI tools can tap into to retrieve relational context, preventing secondary agents from duplicating state or inventing contradictory rules.
 - **Use Cases**: Developers can use these SDKs to write custom git hooks, pre-commit scripts, or documentation generators.
 
 **Definition of Ready (DoR)**
+
 - Phase 4.5 is shipped.
 - Daemon REST API endpoints are stabilized.
 
 **Definition of Done (DoD)**
+
 - Official JS/TS client package (`@projectcortex/sdk`) and Python client package (`projectcortex-sdk`) built and tested.
 - SDKs can successfully connect to the local daemon and execute read/impact/quality operations.
 - **Standardized Proxy Interface**: Expose a fully-compliant, read-only `agentmemory` protocol endpoint from the local MCP daemon; tested successfully with external coding scripts querying knowledge paths.
@@ -3769,6 +4256,7 @@ Publish lightweight client SDKs for JavaScript/TypeScript (`@projectcortex/sdk`)
 - Tests cover offline/error recovery, API timeouts, concurrency safeguards, and payload verification.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Standardizes programmatic access to Cortex, unlocking custom automation for team setups; makes Cortex the single source of truth for all IDE agents.
 - ❌ **Cons**: Multiplies library maintenance across two ecosystems (NPM/PyPI); emulating third-party protocols requires keeping proxy schemas stable regardless of downstream state changes.
 
@@ -3781,21 +4269,25 @@ Turn Cortex into a local AI gateway. If you use a tool like Cursor, Aider, or an
 
 **Technical Terms**
 Implement an OpenAI-compatible REST server within the Cortex daemon listening on `localhost:3210`.
+
 - **Endpoint**: Implement `/v1/chat/completions` and `/v1/embeddings` standard endpoints.
 - **RAG Augmentation**: The gateway parses incoming prompt messages, runs a fast semantic search over the local architectural index (`state.json` / embeddings), injects the matching architectural context into the system message, and proxies the query to the primary model provider.
 - **Compatibility**: Any standard OpenAI client library or IDE configuration (e.g. Cursor OpenAI endpoint override) can point to `http://localhost:3210/v1` to get a Cortex-aware assistant.
 
 **Definition of Ready (DoR)**
+
 - Phase 33.1 (Model Provider Registry) is completed (required to route and proxy queries to multiple backends).
 - Semantic search or graph indexing endpoints are stable.
 
 **Definition of Done (DoD)**
+
 - REST server exposes `/v1/chat/completions` and `/v1/embeddings` matching the OpenAI API specification.
 - Incoming chat queries are dynamically augmented with matching architectural entities and concepts.
 - Custom OpenAI-compatible clients (e.g., Aider, python-openai SDK) can connect, stream responses, and receive context-rich completions.
 - Tests cover endpoint routing, context injection correctness, streaming response proxying, and error handling.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Seamless integration with IDE extensions and terminals that do not natively support MCP (e.g. Cursor, Aider). Zero setup required for standard OpenAI SDKs.
 - ❌ **Cons**: Introducing a proxy layer adds a latency overhead (typically 100-300ms) for the local retrieval step before proxying.
 
@@ -3808,6 +4300,7 @@ Introduce specialized expert AI personas (like Architect, Security Analyst, QA E
 
 **Technical Terms**
 Implement a suite of persona-based MCP Prompts inside the `CortexMCPServer` wrapper.
+
 - **Architect Persona**: Generates a prompt containing high-centrality entities, custom concepts, active `cortex.constraints.json` rules, and failed approaches.
 - **Security Persona**: Generates a prompt focused on security-tagged entities (e.g. auth strategies, crypto helpers), raw secret checks, and warnings related to data flow vulnerabilities.
 - **QA Persona**: Generates a prompt emphasizing lowest-quality entities, missing evidence scopes, test files (`*.test.*`), and verification commands.
@@ -3815,15 +4308,18 @@ Implement a suite of persona-based MCP Prompts inside the `CortexMCPServer` wrap
 - **Prompt Registration**: Exposes standard MCP Prompts (e.g. `cortex_persona_architect`) allowing clients to dynamically request targeted context.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality DSL) and Phase 7.7 (Debt Register) are completed.
 - MCP Server schema supports prompt listing and resolution.
 
 **Definition of Done (DoD)**
+
 - Four distinct MCP Prompts (`cortex_persona_architect`, `cortex_persona_security`, `cortex_persona_qa`, `cortex_persona_refactor`) are exposed by `CortexMCPServer`.
 - Prompt parameters support specifying a target directory or file scope.
 - Integration tests verify that each persona retrieves and formats its corresponding subset of context correctly.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Dramatically reduces context consumption by filtering for specific requirements; improves AI compliance with specialized coding standards.
 - ❌ **Cons**: Relies on accurate categorizations/tags in the knowledge graph; mitigated by default-mapping based on centrality, test patterns, and lint errors.
 
@@ -3837,6 +4333,7 @@ Graphify (direct competitor) has 35 README translations, a published ebook ("The
 **Technical Terms**
 
 **Multi-language README (35+ translations, CI-maintained):**
+
 - Source of truth: `README.md` in English.
 - `scripts/translate-readme.ts` — calls LLM (Claude) to translate to target languages; writes `README.{lang}.md`. Runs in CI on every README change.
 - Target languages v1 (match graphify): Chinese (Simplified + Traditional), Japanese, Korean, Spanish, French, German, Portuguese (BR), Russian, Hindi, Arabic, Turkish, Italian, Dutch, Polish, Vietnamese, Thai, Indonesian, Malay, Persian, Swahili, Ukrainian, Czech, Romanian, Greek, Hebrew, Swedish, Norwegian, Danish, Finnish, Hungarian, Bengali, Tagalog.
@@ -3844,23 +4341,27 @@ Graphify (direct competitor) has 35 README translations, a published ebook ("The
 - GitHub README language picker: `<!-- BEGIN TRANSLATIONS -->` block at top of README with flag emoji links to each translated version.
 
 **Free technical guide ("The Memory Layer"):**
+
 - A concise (20–40 page) free ebook / guide explaining: why AI coding agents need architectural memory, how knowledge graphs work, what makes Cortex different from naive RAG, practical patterns for onboarding a new repo.
 - Format: Markdown source in `docs/book/` → compiled to PDF + EPUB via `pandoc` + `weasyprint` in CI.
 - Distribution: free PDF on the Cortex website + GitHub Releases; paid expanded edition as an optional revenue stream (Gumroad / Lemon Squeezy).
 - Purpose: establishes Cortex as the authoritative voice on "memory for AI coding agents." Drives SEO and trust.
 
 **Social presence infrastructure:**
+
 - Weekly "Cortex Tip" posts on X and LinkedIn — short (280 char) + 1 code snippet. Written in `docs/social/tips.md`, automated via `scripts/post-tip.ts` (Buffer/Typefully API).
 - Demo GIF/video generator: `scripts/record-demo.ts` — uses `asciinema` to record CLI sessions, converts to GIF for social posts.
 - Product Hunt launch checklist in `docs/launch/producthunt.md`.
 - Hacker News "Show HN" template in `docs/launch/hn-show.md`.
 
 **Community SKILL.md extension gallery:**
+
 - `docs/community/skills/` — a curated list of user-submitted skill variants (custom decision trees, domain-specific playbooks, e.g. "Cortex for Solidity", "Cortex for data science pipelines").
 - Contribution guide: `CONTRIBUTING_SKILLS.md`.
 - Gallery rendered on the website as a searchable table.
 
 **DoD**
+
 - `npm run translate-readme` produces valid Markdown files for ≥10 languages; CI validates character count gate.
 - `docs/book/` exists with a complete outline (chapter headings + one-paragraph summaries) and ≥3 chapters of draft content.
 - `docs/social/tips.md` has ≥20 ready-to-post tips.
@@ -3947,12 +4448,12 @@ import { createMcpServer } from "../mcp/server.js";
 
 // src/cli/index.ts — after (lazy, per-verb)
 program.command("mcp").action(async () => {
-  const { createMcpServer } = await import("../mcp/server.js");   // only loaded for `mcp` verb
+  const { createMcpServer } = await import("../mcp/server.js"); // only loaded for `mcp` verb
   await createMcpServer();
 });
 
 program.command("watch").action(async () => {
-  const { CortexDaemon } = await import("../cli/watch.js");        // only loaded for `watch` verb
+  const { CortexDaemon } = await import("../cli/watch.js"); // only loaded for `watch` verb
   await new CortexDaemon().start();
 });
 ```
@@ -3966,12 +4467,13 @@ Each CLI command imports only what it needs. `cortex status` (frequent, lightwei
 ## 🩺 Phase 5.6: Daemon Watchdog & Self-Healing — ⏳ Planned (production reliability)
 
 **Layman's Terms**
-Cortex runs a lot of background processes — the file watcher, the LLM client, the MCP server, the sync queue, the embedding service, the bootstrap orchestrator. When one of them silently dies — file watcher hits inotify limit, MCP socket drops without reconnect, bootstrap hangs on an unresponsive provider, memory leak slowly degrades performance — the user doesn't notice for hours. They keep coding, expecting syntheses to happen, until eventually they realize *"wait, when was the last time anything got synthesized?"* Phase 5.6 introduces a watchdog process that heartbeats every component, auto-recovers via documented strategies per failure mode, and surfaces alerts when auto-recovery exhausts. This is the difference between "Cortex works on my laptop" and "Cortex runs reliably for weeks on a customer's production deployment."
+Cortex runs a lot of background processes — the file watcher, the LLM client, the MCP server, the sync queue, the embedding service, the bootstrap orchestrator. When one of them silently dies — file watcher hits inotify limit, MCP socket drops without reconnect, bootstrap hangs on an unresponsive provider, memory leak slowly degrades performance — the user doesn't notice for hours. They keep coding, expecting syntheses to happen, until eventually they realize _"wait, when was the last time anything got synthesized?"_ Phase 5.6 introduces a watchdog process that heartbeats every component, auto-recovers via documented strategies per failure mode, and surfaces alerts when auto-recovery exhausts. This is the difference between "Cortex works on my laptop" and "Cortex runs reliably for weeks on a customer's production deployment."
 
 **Technical Terms**
 A supervisor process that monitors every running Cortex component via heartbeats and applies per-component recovery strategies on detected failure:
 
 **Components monitored**:
+
 - **Sync watcher** (`cortex watch`) — Background file system change detection loop (e.g. via `chokidar`). Watches project files, runs incremental Tier 1 (local AST) syncs upon save to keep `state.json` fresh, and triggers LLM Librarian synthesis under Phase 20.23 logic for semantic updates.
 - **MCP server** (STDIO or HTTP) — IDE connection endpoint
 - **LLM provider connections** — per-provider liveness via lightweight health pings (Phase 33.1 registry)
@@ -3984,54 +4486,57 @@ A supervisor process that monitors every running Cortex component via heartbeats
 - **Phase 22 backend** (SQLite/Postgres) — connection pool health
 
 **Heartbeat protocol**:
+
 - Every monitored component emits a heartbeat every 10s to `~/.cortex/heartbeats/<component>.beat` (single-line JSON: `{ pid, ts, lastWorkAt, queueDepth, memMB, customMetrics }`)
 - Watchdog reads heartbeats every 15s; component is "stale" if no beat for 30s, "dead" if no beat for 90s
 - Custom metrics per component: sync watcher tracks `pendingDiffs`; MCP server tracks `activeConnections`; bootstrap tracks `currentBatch + ETA`
 
 **Recovery strategies** (per-component, declarative in `cortex.watchdog.yaml`):
+
 ```yaml
 recovery_strategies:
   sync_watcher:
-    on_stale:  log_warning
-    on_dead:   restart_with_last_known_state
+    on_stale: log_warning
+    on_dead: restart_with_last_known_state
     max_restarts_per_hour: 5
     on_restart_limit: alert_and_pause
-  
+
   mcp_server:
-    on_stale:  reconnect_attempt
-    on_dead:   restart_then_alert
+    on_stale: reconnect_attempt
+    on_dead: restart_then_alert
     max_restarts_per_hour: 10
-  
+
   llm_provider:
-    on_stale:  failover_to_next_provider  # Phase 33.1 chain
-    on_dead:   circuit_breaker_60s + failover
-  
+    on_stale: failover_to_next_provider # Phase 33.1 chain
+    on_dead: circuit_breaker_60s + failover
+
   file_watcher_subsystem:
     on_inotify_limit_reached: switch_to_polling_mode + alert
-    on_dead:   restart_with_polling_fallback
-  
+    on_dead: restart_with_polling_fallback
+
   bootstrap_orchestrator:
     on_progress_stall_minutes: 10
     on_progress_stall: checkpoint + log_warning
-    on_dead:   checkpoint + alert  # never auto-restart bootstrap; user decides
-  
+    on_dead: checkpoint + alert # never auto-restart bootstrap; user decides
+
   embedding_service:
-    on_dead:   restart_with_health_check
-    on_oom:    restart_with_smaller_batch_size + log
-  
+    on_dead: restart_with_health_check
+    on_oom: restart_with_smaller_batch_size + log
+
   lsp_subprocess:
-    on_dead:   respawn_with_pid_monitor
-    on_crash_loop: disable_lsp_tools + alert  # 3 crashes/5min = give up
-  
+    on_dead: respawn_with_pid_monitor
+    on_crash_loop: disable_lsp_tools + alert # 3 crashes/5min = give up
+
   central_server:
-    on_dead:   alert_immediately  # production server; humans must intervene
-  
+    on_dead: alert_immediately # production server; humans must intervene
+
   database:
     on_connection_pool_exhausted: alert + temporary_throttle
-    on_dead:   alert_immediately
+    on_dead: alert_immediately
 ```
 
 **Anomaly detection** (beyond simple dead/alive):
+
 - **Process restart loops**: same component restarted >3 times in 5 minutes → escalate, stop auto-restart
 - **Memory growth**: heartbeat tracks `memMB`; component exceeding 1.5× baseline for 30 minutes → graceful restart with memory dump
 - **Latency drift**: lastWorkAt → current age trending upward (e.g., 50ms → 500ms → 5s) → log warning, surface in Phase 31 dashboard
@@ -4039,6 +4544,7 @@ recovery_strategies:
 - **Heartbeat skew**: components drifting beyond NTP-sane time → log; may indicate clock issues
 
 **CLI surface**:
+
 - `cortex health` — current status of all monitored components with last-heartbeat age, recovery history, anomaly flags
 - `cortex health --watch` — live updating display in terminal
 - `cortex health --json` — machine-readable for scripting/CI
@@ -4090,7 +4596,7 @@ function checkMemoryBudget(): void {
   const rssMB = process.memoryUsage().rss / 1024 / 1024;
   if (rssMB > MAX_RSS_MB) {
     throw new MemoryBudgetExceededError(
-      `RSS ${rssMB.toFixed(0)}MB exceeds CORTEX_MAX_RSS_MB=${MAX_RSS_MB}. Aborting sync cycle.`
+      `RSS ${rssMB.toFixed(0)}MB exceeds CORTEX_MAX_RSS_MB=${MAX_RSS_MB}. Aborting sync cycle.`,
     );
   }
 }
@@ -4099,6 +4605,7 @@ function checkMemoryBudget(): void {
 ```
 
 When `MemoryBudgetExceededError` is thrown:
+
 - Current sync cycle is aborted cleanly (no partial writes)
 - Phase 5.6's watchdog logs the abort + schedules a retry after `CORTEX_MEMORY_RETRY_DELAY_MS` (default 30s)
 - `cortex doctor` surfaces a `MEMORY_BUDGET_EXCEEDED` warning with current RSS and configured limit
@@ -4107,36 +4614,45 @@ When `MemoryBudgetExceededError` is thrown:
 
 ### Phase 5 Refinement — Git Staleness Tracking in `cortex status` (GitNexus)
 
-Phase 33.5 Stage 0 already detects *whether* the index is stale (binary: `up-to-date` / `changes-detected`). What it doesn't surface is *how stale* — how many commits have landed since the last index. GitNexus's `git-staleness.ts` computes this with a single git command and surfaces it in status output.
+Phase 33.5 Stage 0 already detects _whether_ the index is stale (binary: `up-to-date` / `changes-detected`). What it doesn't surface is _how stale_ — how many commits have landed since the last index. GitNexus's `git-staleness.ts` computes this with a single git command and surfaces it in status output.
 
 **Problem**: `cortex status` today shows `Last sync: 3 days ago` with no indication of whether that's 1 commit or 200 commits behind. A developer who committed once 3 days ago has very different re-sync urgency than one whose team has pushed 80 commits.
 
 ```typescript
 // src/cli/status.ts
-async function getCommitsBehind(projectRoot: string, lastIndexedCommit: string): Promise<number> {
-  if (!lastIndexedCommit) return -1;  // never indexed
+async function getCommitsBehind(
+  projectRoot: string,
+  lastIndexedCommit: string,
+): Promise<number> {
+  if (!lastIndexedCommit) return -1; // never indexed
   try {
-    const out = await execa("git", [
-      "rev-list", "--count", `${lastIndexedCommit}..HEAD`
-    ], { cwd: projectRoot });
+    const out = await execa(
+      "git",
+      ["rev-list", "--count", `${lastIndexedCommit}..HEAD`],
+      { cwd: projectRoot },
+    );
     return parseInt(out.stdout.trim(), 10);
   } catch {
-    return -1;  // not a git repo or commit not found
+    return -1; // not a git repo or commit not found
   }
 }
 ```
 
 **`cortex status` output change**:
+
 ```
 Knowledge index:  47 commits behind HEAD  ⚠ (run: cortex sync)
                   (last indexed: abc1234, 2026-05-10)
 ```
+
 vs current clean state:
+
 ```
 Knowledge index:  up to date  ✓ (last sync: 2026-05-23 14:30)
 ```
 
 **Thresholds for `cortex doctor`**:
+
 - 0 commits behind → ✓ green
 - 1–10 commits → ⚠ yellow warning
 - 11+ commits → ✗ red, recommend `cortex sync`
@@ -4165,9 +4681,9 @@ schedules:
     args: { dry_run: false, auto_apply: false }
     trigger:
       type: cron
-      expression: "0 3 * * *"          # nightly at 3am
+      expression: "0 3 * * *" # nightly at 3am
       timezone: "America/New_York"
-    
+
   - id: weekly-hipaa-scan
     operation: compliance.report
     args: { framework: hipaa, format: pdf, attach: true }
@@ -4176,28 +4692,28 @@ schedules:
       expression: "0 6 * * MON"
       timezone: "UTC"
     on_failure: notify_compliance_channel
-    
+
   - id: embeddings-refresh-after-model-update
     operation: embed.rebuild
     args: {}
     trigger:
       type: at
-      timestamp: "2026-06-15T02:00:00Z"  # one-shot at specific time
-    
+      timestamp: "2026-06-15T02:00:00Z" # one-shot at specific time
+
   - id: health-roll-up
     operation: health.snapshot
     args: {}
     trigger:
       type: every
-      interval_ms: 300000               # every 5 minutes
-      anchor_to: "minute"               # align to clock minute
-    
+      interval_ms: 300000 # every 5 minutes
+      anchor_to: "minute" # align to clock minute
+
   - id: quarterly-qbr
     operation: qbr.generate
     args: { format: pdf }
     trigger:
       type: cron
-      expression: "0 9 1 */3 *"         # 9am on the 1st of each quarter
+      expression: "0 9 1 */3 *" # 9am on the 1st of each quarter
     on_completion: email_executives
 ```
 
@@ -4211,12 +4727,12 @@ interface ScheduledJobState {
   lastRunStatus?: "success" | "failure" | "skipped" | "running";
   lastRunDurationMs?: number;
   lastRunError?: string;
-  consecutiveErrors: number;          // for backoff
+  consecutiveErrors: number; // for backoff
   totalRuns: number;
   totalSuccesses: number;
   totalFailures: number;
   currentlyRunningPid?: number;
-  staggerOffsetMs?: number;           // jitter to avoid thundering-herd
+  staggerOffsetMs?: number; // jitter to avoid thundering-herd
 }
 ```
 
@@ -4225,12 +4741,15 @@ interface ScheduledJobState {
 ```typescript
 // src/scheduler/operations.ts
 const SCHEDULABLE_OPERATIONS = {
-  "consolidate":       () => import('../consolidation/run.ts'),
-  "compliance.report": (args) => import('../cli/compliance.ts').then(m => m.report(args)),
-  "embed.rebuild":     () => import('../embeddings/rebuild.ts'),
-  "qbr.generate":      (args) => import('../analytics/qbr.ts').then(m => m.generate(args)),
-  "health.snapshot":   () => import('../watchdog/snapshot.ts'),
-  "dlp.scan":          (args) => import('../dlp/retroactive.ts').then(m => m.scan(args)),
+  consolidate: () => import("../consolidation/run.ts"),
+  "compliance.report": (args) =>
+    import("../cli/compliance.ts").then((m) => m.report(args)),
+  "embed.rebuild": () => import("../embeddings/rebuild.ts"),
+  "qbr.generate": (args) =>
+    import("../analytics/qbr.ts").then((m) => m.generate(args)),
+  "health.snapshot": () => import("../watchdog/snapshot.ts"),
+  "dlp.scan": (args) =>
+    import("../dlp/retroactive.ts").then((m) => m.scan(args)),
   // ... extensible — Pro modules add their own operations
 };
 ```
@@ -4316,15 +4835,15 @@ Inspired by Nexus Phase 33.3 (Session Leadership & Concurrency Control). A leade
 
 **Leadership semantics**:
 
-| Operation class | Allowed when observer? | Allowed when leader? |
-|---|---|---|
-| Read (status, query, list) | ✅ | ✅ |
-| Synthesis (auto via watcher) | ⛔ (watcher doesn't run for observer) | ✅ |
-| Bootstrap / refine / consolidate | ⛔ | ✅ |
-| Edit / promote / approve | ⛔ | ✅ |
-| Policy changes (constraints, allowlists, schedules) | ⛔ | ✅ |
-| Approval actions (Phase 23 review, Phase 43.3 ACP) | ✅ (approvers can be observers) | ✅ |
-| Observation (live progress, notifications) | ✅ | ✅ |
+| Operation class                                     | Allowed when observer?                | Allowed when leader? |
+| --------------------------------------------------- | ------------------------------------- | -------------------- |
+| Read (status, query, list)                          | ✅                                    | ✅                   |
+| Synthesis (auto via watcher)                        | ⛔ (watcher doesn't run for observer) | ✅                   |
+| Bootstrap / refine / consolidate                    | ⛔                                    | ✅                   |
+| Edit / promote / approve                            | ⛔                                    | ✅                   |
+| Policy changes (constraints, allowlists, schedules) | ⛔                                    | ✅                   |
+| Approval actions (Phase 23 review, Phase 43.3 ACP)  | ✅ (approvers can be observers)       | ✅                   |
+| Observation (live progress, notifications)          | ✅                                    | ✅                   |
 
 **Leadership transfer**:
 
@@ -4397,19 +4916,23 @@ See the health of your codebase and how much money you've saved on AI tokens dir
 
 **Technical Terms**
 Implement shell prompt status integrations and custom statusline metrics.
+
 - **Prompt Emitter**: Add a CLI command `cortex prompt-status` that outputs a lightweight, configurable, single-line colorized status string (e.g. `[CORTEX 🧠 94% | ⚠️ 2 | 💰 $14.20]`).
 - **Latency Bounding**: Cache prompt status metrics inside `.knowledge/prompt_status.cache` to satisfy shell prompt responsiveness constraints (<10ms CLI runtime). Avoid file-system walks or heavy git queries during execution; read strictly from the cached state.
 - **Dynamic Hooks**: Expose installer scripts/instructions `cortex install-prompt [zsh|bash|powershell]` that inject prompt wrapper functions (`precmd` in Zsh, `PS1` in Bash, or custom prompt functions in PowerShell).
 
 **Definition of Ready (DoR)**
+
 - Phase 5 (CLI Polish & Daemonization) and Phase 13.2 (Brevity Engine) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex prompt-status` prints a formatted statusline in <10ms from the cached state.
 - `cortex install-prompt --zsh` generates valid shell configuration blocks.
 - Tests verify cache read fallback, status formatting rules, and latency limits.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Seamless, ambient developer awareness of codebase health; gamifies documentation quality and token savings directly inside the terminal.
 - ❌ **Cons**: Incorrectly configured shell prompt hooks can cause shell latency or styling errors. Mitigated by keeping prompt output under 10ms and using standard ANSI color sequences.
 
@@ -4773,20 +5296,23 @@ interface GraphAuditReport {
   generatedAt: string;
   entityCount: number;
   confidenceBreakdown: {
-    extracted: number;     // edges with reason "import-resolved" | "local-call" | "lsp-resolved"
-    inferred: number;      // edges with reason "inferred" | "interface-dispatch"
-    ambiguous: number;     // edges with reason "unknown" or no reason
+    extracted: number; // edges with reason "import-resolved" | "local-call" | "lsp-resolved"
+    inferred: number; // edges with reason "inferred" | "interface-dispatch"
+    ambiguous: number; // edges with reason "unknown" or no reason
   };
-  pctExtracted: number;    // extracted / total * 100
+  pctExtracted: number; // extracted / total * 100
   pctInferred: number;
   pctAmbiguous: number;
-  godNodes: string[];      // entity IDs above god-node threshold (Phase 7.21)
-  ambiguousOnlyEntities: string[];  // entities where ALL edges are AMBIGUOUS
-  lowQualityEntities: string[];     // quality < 0.4 (Phase 7.5)
-  surpriseConnections: Array<{ from: string; to: string; reason: string }>;  // cross-community edges
+  godNodes: string[]; // entity IDs above god-node threshold (Phase 7.21)
+  ambiguousOnlyEntities: string[]; // entities where ALL edges are AMBIGUOUS
+  lowQualityEntities: string[]; // quality < 0.4 (Phase 7.5)
+  surpriseConnections: Array<{ from: string; to: string; reason: string }>; // cross-community edges
 }
 
-async function generateGraphReport(state: CortexState, graph: GraphReport): Promise<string> {
+async function generateGraphReport(
+  state: CortexState,
+  graph: GraphReport,
+): Promise<string> {
   // Compute breakdown from edge reasons
   // Identify ambiguous-only entities (cortex lint already flags these — include in report)
   // Identify surprise connections: cross-community edges with weight > 0.7
@@ -4795,24 +5321,28 @@ async function generateGraphReport(state: CortexState, graph: GraphReport): Prom
 ```
 
 **Generated `GRAPH_REPORT.md` structure**:
+
 ```markdown
 # Cortex Graph Report — 2026-05-23
 
-**Entities**: 214  |  **Edges**: 891
+**Entities**: 214 | **Edges**: 891
 
 ## Extraction Confidence
-| Confidence | Count | % |
-|---|---|---|
-| EXTRACTED (import-resolved, local-call, lsp-resolved) | 612 | 68.7% |
-| INFERRED (interface-dispatch, inferred) | 198 | 22.2% |
-| AMBIGUOUS (unknown / no reason) | 81 | 9.1% |
+
+| Confidence                                            | Count | %     |
+| ----------------------------------------------------- | ----- | ----- |
+| EXTRACTED (import-resolved, local-call, lsp-resolved) | 612   | 68.7% |
+| INFERRED (interface-dispatch, inferred)               | 198   | 22.2% |
+| AMBIGUOUS (unknown / no reason)                       | 81    | 9.1%  |
 
 ## ⚠ Attention Required
+
 - **God nodes** (3): `AuthService`, `DatabaseManager`, `EventBus`
 - **Ambiguous-only entities** (2): `LegacyAdapter`, `UnknownHelper`
 - **Low-quality entities** (<0.4): 5 entities — run `cortex audit stale`
 
 ## Surprise Connections (cross-community, high-confidence)
+
 - `PaymentService` → `AuthService` (weight: 0.82, reason: import-resolved)
 ```
 
@@ -4864,7 +5394,7 @@ constraints:
     rule:
       sourcePattern: "src/payment/**"
       mustNotImport: "src/legacy/**"
-    severity: error        # error | warning
+    severity: error # error | warning
 
   - id: auth-evidence-required
     description: "All entities under src/auth/ must have at least one evidence entry"
@@ -4945,6 +5475,7 @@ Phase 7.5 ships a small internal `QualityEvaluator` module that any downstream p
 **DoD**: Passing a CI test report auto-sets `agenticVerified` on linked entities. Quality dimension reflects the boost identically to human review. `cortex status --quality` surfaces verification gaps. Tests: entity with no `## Verification` link (no boost), entity linked to passing test (boost applied), entity linked to failing test (no boost), human review flag preserved when CI state changes.
 
 **Pros & Cons**:
+
 - ✅ **Pros**: Unblocks fully autonomous agent pipelines. Removes the last human-gated bottleneck from quality governance. Deterministic — based on test pass/fail, not LLM sentiment.
 - ❌ **Cons**: Requires test suites to exist and be linked in entity pages. An entity with no tests stays quality-capped until a human reviews it (correct behavior — no tests means genuinely lower confidence).
 
@@ -4983,6 +5514,7 @@ When Phase 7.5.1 (Agentic Verification Loop) ships, enforce a **two-phase prove-
 **DoD**: Entities above the centrality threshold without evidence blocks emit `cortex lint` warnings. `save_synthesis` appends warnings for missing evidence on Anchor-Required entities. Librarian prompt enforces evidence for high-inbound entities. `audit_evidence` runs automatically as part of `cortex audit` for Anchor-Required entities. Tests: low-centrality entity with no evidence (no warning), high-centrality entity with no evidence (warning emitted), high-centrality entity with fresh evidence (no warning), high-centrality entity with stale evidence (STALE_EVIDENCE warning).
 
 **Pros & Cons**:
+
 - ✅ **Pros**: Directly combats semantic drift on the modules that matter most. The most-referenced entities have the highest blast radius when documentation drifts — making evidence mandatory exactly where it counts. Keeps the knowledge base honest as the codebase evolves.
 - ❌ **Cons**: Adds Librarian prompt overhead for high-centrality entities during ingestion. Mitigated by restricting the mandate to the top ~20% by centrality, not all entities.
 
@@ -4991,22 +5523,25 @@ When Phase 7.5.1 (Agentic Verification Loop) ships, enforce a **two-phase prove-
 ## 🎲 Phase 7.6: Global Architectural Lessons & Retrospective Log — ⏳ Planned
 
 **Layman's Terms**
-When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` view. More importantly, it turns this log into a living **Evolutionary Advisory Engine** (inspired by the Nemesis system): if an approach failed in the past due to a specific limitation (like an old Node version or a missing package), and today you upgrade your environment, Cortex actively alerts you: *"Hey, you can now implement that optimal approach you tried before, because the blocker is finally gone!"*
+When you run into architectural dead-ends or learn a lesson about the codebase, Cortex shouldn't just keep it hidden under a single entity. Phase 7.6 aggregates all entity-level `failedApproaches` into a single, project-wide `/lessons` or `/retrospect` view. More importantly, it turns this log into a living **Evolutionary Advisory Engine** (inspired by the Nemesis system): if an approach failed in the past due to a specific limitation (like an old Node version or a missing package), and today you upgrade your environment, Cortex actively alerts you: _"Hey, you can now implement that optimal approach you tried before, because the blocker is finally gone!"_
 
 **Technical Terms**
 Implement a global lessons compiler and active evolutionary advisor in the Knowledge Manager:
+
 - **Aggregation**: Collects all `failedApproaches` across all synthesized entities from `state.json`.
 - **Constraint/Blocker Tagging**: When the Librarian synthesizes a failed approach, it explicitly identifies and tags its **blocking conditions** in a structured schema (e.g., `"blocker": "node < 16"`, `"blocker": "dependency: react < 18"`, `"blocker": "flag: CORTEX_STRICT_MODE"`).
 - **Environment Shift Monitor**: During each sync pass, the compiler audits the active workspace environment (`package.json`, `tsconfig.json`, global active constraints, node environment).
-- **Active Evolutionary Advisory**: If a previously active blocker is resolved (e.g. the package is updated or a constraint is lifted), the compiler flags the associated failed approach and raises an active suggestion alert in `.knowledge/LESSONS.md` and CLI returns: *"Architectural Opportunity: [Approach] was previously blocked by [Blocker]. Since your environment changed, you can now safely execute this optimization."*
+- **Active Evolutionary Advisory**: If a previously active blocker is resolved (e.g. the package is updated or a constraint is lifted), the compiler flags the associated failed approach and raises an active suggestion alert in `.knowledge/LESSONS.md` and CLI returns: _"Architectural Opportunity: [Approach] was previously blocked by [Blocker]. Since your environment changed, you can now safely execute this optimization."_
 - **Manual Logs**: Exposes a CLI command `cortex lessons log --summary "..." --reason "..."` to record a global codebase-wide architectural lesson saved under `.knowledge/lessons.jsonl`.
 - **Output Emitter**: Compiles these into a unified report `.knowledge/LESSONS.md` during sync, highlighting chronological failures, active blocker status, and unlocked optimization advisories.
 
 **Definition of Ready (DoR)**
+
 - Phase 7 and Phase 7.5 are completed.
 - `state.json` schema supports `failedApproaches[]` with structured `blocker` metadata.
 
 **Definition of Done (DoD)**
+
 - `cortex lessons` command displaying chronological list of all entity-level and global failed approaches, actively highlighting their blocker statuses (Blocked vs. Unlocked).
 - **Evolutionary Advisory Trigger**: Modifying `package.json` or global environment variables to resolve a logged blocker successfully triggers an active optimization advisory on the next sync pass.
 - `cortex lessons log` command for manual global entries.
@@ -5014,6 +5549,7 @@ Implement a global lessons compiler and active evolutionary advisor in the Knowl
 - Tests covering blocker tagging correctness, environment change detection, and dynamic optimization advisory triggers.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Turns static failure logs into a dynamic, evolutionary optimization engine; prevents developers from forgetting old ideas that are now viable; mimics a biological codebase memory.
 - ❌ **Cons**: Relies on the Librarian accurately extracting and structuring the exact blocker criteria from the Git diff and commit messages. Mitigated by allowing developers to manually adjust or add blocker tags inside the Markdown files.
 
@@ -5026,20 +5562,24 @@ Instead of code smells and architectural debt being scattered across random `// 
 
 **Technical Terms**
 Implement a debt compiler in the Knowledge Manager.
+
 - **Aggregation**: Collects all active `warnings[]` from `state.json`, `org_constraint` violations from constraint checks, structural linter flags (orphans, silos, cycles, god modules), and entities below `CORTEX_QUALITY_GATE`.
 - **Ranking**: Computes a "Debt Priority Score" based on entity centrality, severity of violation (errors vs warnings), and quality decay.
 - **Output Emitter**: Compiles these into `.knowledge/DEBT.md` sorted by priority. Each entry points to the source file, lists the specific violation/drift, and outputs an actionable remediation recipe.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 and Phase 7.6 are completed.
 - Linter modules (`silo`, `cycle`, `orphan`, `god_module`) and quality metrics are fully exposed.
 
 **Definition of Done (DoD)**
+
 - Unified `.knowledge/DEBT.md` is compiled automatically during sync.
 - A new CLI command `cortex debt` prints active debt items ordered by priority score.
 - Tests verify correct compilation, ranking logic, and that resolving a violation automatically removes it from the register.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Surfaces hidden architectural decay dynamically; provides an actionable backlog for refactoring sprints.
 - ❌ **Cons**: Can generate noise if rules are configured too strictly; mitigated by severity levels and filtering thresholds.
 
@@ -5052,6 +5592,7 @@ Instead of just checking basic code style or linting rules, Cortex analyzes the 
 
 **Technical Terms**
 Implement structural graph metrics and review-time advisory prompts in the `OrgConstraintEvaluator` and a new `cortex review-advisory` CLI engine:
+
 - **Untested Hub Detector**: Cross-references PageRank centrality scores (from Phase 10) against entity relations. If a node is in the top 20% of centrality but has zero `called_by` or `depends_on` relationships with `*test*` or `*spec*` entities, flag it as an untested hub.
 - **Architectural Surprise (Unexpected Coupling) Detector**: Evaluates graph distance and community membership (Leiden communities from Phase 13.2). If a new relationship is synthesized that crosses two distinct, previously decoupled communities, flag a "surprise edge" warning.
 - **Hidden Coupling Detector**: Cross-references Phase 13.8.2 co-edit weights against the explicit dependency graph. If two entities have co-edit weight > 0.5 but no direct or transitive dependency edge, flag a hidden coupling advisory — these entities always change together despite having no modeled relationship. The missing edge should likely exist, or the structural coupling should be investigated. Advisory severity scales with co-edit weight.
@@ -5059,14 +5600,17 @@ Implement structural graph metrics and review-time advisory prompts in the `OrgC
 - **Emergent Insight Generator**: when a new edge is synthesized connecting entities from different graph communities (surprise edge), run a single lightweight LLM prompt: `These two entities were just connected for the first time. What emergent architectural insight does this connection suggest?` The generated insight is auto-persisted via `save_concept` with `derived_from` links to both source entities. Gated by `CORTEX_EMERGENT_INSIGHTS=true` (default: false — opt-in to avoid LLM cost on every surprise edge).
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality & Constraints) and Phase 10 (Centrality ranking) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex lint` flags untested hubs and unexpected cross-community coupling as separate lint warnings.
 - The `get_review_advisories` MCP tool returns actionable, graph-derived review questions for any code diff.
 - Tests cover untested hub calculation and surprise coupling detection on a synthetic community graph.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Leverages graph math to catch deep structural risks and test gaps that standard AST or static analysis tools miss.
 - ❌ **Cons**: Community-based surprise detection requires calibrating clustering thresholds to avoid false alerts in tightly coupled subsystems. Mitigated by keeping surprise warnings advisory only.
 
@@ -5079,20 +5623,24 @@ The problem with standard RAG (Retrieval-Augmented Generation) is that as code i
 
 **Technical Terms**
 Implement an automated garbage collection (GC) utility in the `KnowledgeManager`.
+
 - **Pruning Trigger**: Runs as a post-sync hook when file-count limits are reached or on explicit invocation (`cortex gc`).
 - **Relevance Evaluation**: Identifies candidate entities that have high staleness, 0% quality score, zero inbound dependencies (silos), and whose source files no longer exist.
 - **Archive Compression**: Deletes individual entity markdown files from `.knowledge/entities/` and appends their contents to a single structured `.knowledge/archive.jsonl` or `ARCHIVE.md` file.
 - **Lazy Resurrection**: If a future git diff re-introduces the entity name, Cortex automatically checks the archive, resurrects the historical context, and updates it instead of starting from scratch.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality Evaluator) and Phase 7.7 (Debt Register) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex gc` executes, moving qualifying entities to `.knowledge/ARCHIVE.md` and reducing active index size.
 - Integration tests verify that archived entities are elided from active `read_knowledge_index` payloads, saving context tokens.
 - Verification that referencing an archived entity in a new diff successfully pulls it out of the archive and reinstates it as an active entity.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Permanently curbs index bloat in large repositories; reduces active context cost by up to 30% for legacy codebases.
 - ❌ **Cons**: Archiving rules must be conservative to avoid sweeping active entities that are temporarily disconnected. Mitigated by checking local Git file existence first.
 
@@ -5105,20 +5653,24 @@ Keep your private API keys, passwords, and tokens out of your public git history
 
 **Technical Terms**
 Integrate a high-performance regex-based scanning and redaction pipeline inside the Knowledge Ingestion layer (`IngestionEngine` / `Librarian` synthesis handler):
+
 - **Secret Scanner**: Runs a suite of Shannon entropy and pattern matching regexes (targeting `authorization`, `api_key`, `token`, `password`, `secret`, `jwt`, `private_key`, `aws_access_key_id`, etc.) against all pending git diffs, files under synthesis, and evidence snippets.
 - **Redaction Filter**: Replaces any matched credential substring with a generic `[REDACTED]` token prior to LLM submission, and strips secrets from the raw text used to generate the evidence block in `state.json`.
 - **Compliance Check**: If a hardcoded secret is found in a file, registers a high-severity `cortex.constraints` warning in `state.json`, highlighting the file name to the developer.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality & Constraints) is completed.
 - Ingestion engine has a clean hook structure before sending diffs to the Librarian.
 
 **Definition of Done (DoD)**
+
 - Ingesting a diff with mock AWS keys or JWT secrets replaces all instances with `[REDACTED]` in `state.json` and the sent LLM prompt.
 - The secret scan warning is logged to `warnings[]` in `state.json` and surfaces in `cortex lint`.
 - Tests cover matching patterns for common credential schemas (JWTs, AWS credentials, generic password keys) and verify no false positives on regular code strings.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Crucial enterprise guardrail; prevents accidental leakage of API credentials and keys to the `.knowledge/` folder, which is typically committed to the repository.
 - ❌ **Cons**: Regex checks add a minor millisecond latency during ingestion. Mitigated by restricting scanning to text files and diff inputs.
 
@@ -5142,14 +5694,17 @@ suppressionPolicy?: {
 ```
 
 Suppressed entities excluded from `read_knowledge_index` and context packs by default. Queryable via `cortex find --include-suppressed` or when a query matches `resurfaceOn` keywords. Differentiates from:
+
 - **Deletion** (permanent, irreversible)
 - **Archival** (Phase 7.9 — moved to cold storage, fully retrievable)
 - **Staleness** (Phase 6 — flagged but still visible)
 
 **Definition of Ready (DoR)**
+
 - Phase 7.9 (Knowledge GC & Archive) is completed — suppression is the light-touch alternative to archival.
 
 **Definition of Done (DoD)**
+
 - `suppressionPolicy` field recognized by entity schema and persisted.
 - Suppressed entities excluded from default `read_knowledge_index` output and `cortex context build` packs.
 - `cortex find --include-suppressed` returns suppressed entities.
@@ -5157,6 +5712,7 @@ Suppressed entities excluded from `read_knowledge_index` and context packs by de
 - Tests cover: suppression filter in index/packer, keyword resurfacing, `--include-suppressed` flag.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Removes context noise without losing institutional memory. A codebase migrated from Redux to Zustand shouldn't have Redux entities polluting every pack — but should still answer "what state management did we use before?"
 - ❌ **Cons**: Adds a new entity lifecycle concept alongside deletion, archival, staleness — users must understand the differences.
 
@@ -5316,6 +5872,7 @@ Most edges in the graph connect entities in the same module. The interesting one
 Implement `analyze.py:surprising_connections()` equivalent — a multi-factor surprise score that ranks edges by how unexpected they are given the graph topology.
 
 **What graphify does** (`analyze.py:surprising_connections()`):
+
 - **Base definition of "surprising"**: an edge between two entities that have no other neighbors in common (Jaccard similarity of their neighbor sets < 0.1) and are in different Leiden communities.
 - **Multi-factor surprise score** (weighted sum):
   1. `community_distance` — number of community hops between source and target communities in the inter-community graph. Higher = more surprising.
@@ -5327,25 +5884,34 @@ Implement `analyze.py:surprising_connections()` equivalent — a multi-factor su
 Final score: `surprise = (0.3 × community_distance + 0.3 × neighbor_jaccard + 0.2 × language_cross) × confidence_weight - centrality_penalty`. Normalized to [0, 1].
 
 **Implementation** — new `src/analyze/surprising.ts`:
+
 ```typescript
 interface SurprisingEdge {
   source: string;
   target: string;
   relation: string;
   surpriseScore: number;
-  reasons: string[];  // human-readable: ["different communities (4→7)", "no shared neighbors", "cross-language: TS→Python"]
+  reasons: string[]; // human-readable: ["different communities (4→7)", "no shared neighbors", "cross-language: TS→Python"]
 }
 
-export function findSurprisingConnections(state: State, topN = 20): SurprisingEdge[] {
-  const edges = state.relations.filter(r => r.confidence !== "AMBIGUOUS");
+export function findSurprisingConnections(
+  state: State,
+  topN = 20,
+): SurprisingEdge[] {
+  const edges = state.relations.filter((r) => r.confidence !== "AMBIGUOUS");
   return edges
-    .map(r => ({ ...r, surpriseScore: computeSurprise(r, state), reasons: explainSurprise(r, state) }))
+    .map((r) => ({
+      ...r,
+      surpriseScore: computeSurprise(r, state),
+      reasons: explainSurprise(r, state),
+    }))
     .sort((a, b) => b.surpriseScore - a.surpriseScore)
     .slice(0, topN);
 }
 ```
 
 **CLI and MCP surfaces**:
+
 - `cortex analyze --surprising` — prints top-20 surprising connections with their scores and human-readable reasons.
 - `cortex analyze --surprising --threshold 0.7` — only show highly surprising connections.
 - `cortex analyze --surprising --format=json` — machine-readable output for integration with other tools.
@@ -5355,6 +5921,7 @@ export function findSurprisingConnections(state: State, topN = 20): SurprisingEd
 **DoR**: Phase 14.1 (Leiden communities) must be available — community distance is a core score component. Phase 0.3 (confidence labels) must be stable — confidence weight requires it.
 
 **DoD**
+
 - `cortex analyze --surprising` produces a ranked list of edge pairs with surprise scores ≥ 0 for a real codebase.
 - `cortex analyze --surprising --threshold 0.7` filters correctly.
 - MCP tool `analyze_surprising` returns equivalent structured data.
@@ -5383,25 +5950,27 @@ function computeGodNodeScore(entity: EntityRecord, graph: GraphReport): number {
   const inDeg = countInEdges(entity.id, graph);
   const outDeg = countOutEdges(entity.id, graph);
   const crossCommunityEdges = countCrossComEdges(entity.id, graph);
-  const avgDegree = graph.nodes.reduce((s, n) => s + n.degree, 0) / graph.nodes.length;
+  const avgDegree =
+    graph.nodes.reduce((s, n) => s + n.degree, 0) / graph.nodes.length;
 
   // Cross-community edges get 3× weight — they represent unexpected coupling
-  return (inDeg + outDeg) + (crossCommunityEdges * 3) - avgDegree;
+  return inDeg + outDeg + crossCommunityEdges * 3 - avgDegree;
 }
 
 function detectGodNodes(graph: GraphReport, topN = 10): GodNodeReport[] {
   return graph.nodes
-    .map(n => ({ entity: n, score: computeGodNodeScore(n, graph) }))
+    .map((n) => ({ entity: n, score: computeGodNodeScore(n, graph) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, topN)
-    .filter(n => n.score > GODNODE_THRESHOLD)
-    .map(n => ({
+    .filter((n) => n.score > GODNODE_THRESHOLD)
+    .map((n) => ({
       entityId: n.entity.id,
       score: n.score,
       inDegree: countInEdges(n.entity.id, graph),
       outDegree: countOutEdges(n.entity.id, graph),
       crossCommunityEdges: countCrossComEdges(n.entity.id, graph),
-      recommendation: "Consider extracting an interface or facade to reduce coupling.",
+      recommendation:
+        "Consider extracting an interface or facade to reduce coupling.",
     }));
 }
 ```
@@ -5423,20 +5992,24 @@ When you edit code in your editor, you shouldn't have to manually refresh the br
 
 **Technical Terms**
 Implement a lightweight read-only WebSocket endpoint at `ws://127.0.0.1:<port>/ws` inside the server launched by `cortex serve`.
+
 - **Event Streaming**: The file watcher and the ingestion sync pipeline broadcast graph diff events (e.g. `node_added`, `node_updated`, `node_deleted`, `edge_added`, `edge_deleted`) over the WebSocket to all connected browser clients.
 - **Dynamic UI Transitions**: The frontend graph viewer (Cytoscape/D3) listens to these events and applies smooth layout recalculations and micro-animations to highlight modified paths, flashing updated nodes to indicate a successful sync.
 
 **Definition of Ready (DoR)**
+
 - Phase 8 is completed.
 - Daemon watcher execution hooks are stable.
 
 **Definition of Done (DoD)**
+
 - Local HTTP server supports upgrading connections to WebSockets at `/ws`.
 - Graph diff events are automatically pushed to clients upon successful file-watch ingestions.
 - Web UI transitions and animates changes dynamically without reloading the browser page.
 - Tests cover WebSocket client connections, state synchronization on connect, and correct broadcast of mutation events.
 
 **Pros & Cons**
+
 - ✅ **Pros**: High-fidelity, real-time feedback for developers during coding sessions. Wow factor for local graph demo.
 - ❌ **Cons**: Running a WebSocket loop uses slight CPU/memory overhead in the daemon background.
 
@@ -5476,14 +6049,14 @@ The separation keeps the graph-update path responsive even when a long synthesis
 Add a content-hash check before broadcasting graph diff events to connected clients. Skip the broadcast when nothing has actually changed (e.g., file watcher fires on a no-op save):
 
 ```typescript
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
-let lastGraphHash = '';
+let lastGraphHash = "";
 
 function shouldBroadcast(event: GraphDiffEvent): boolean {
-  const hash = createHash('sha256')
+  const hash = createHash("sha256")
     .update(JSON.stringify(event))
-    .digest('hex')
+    .digest("hex")
     .slice(0, 16);
   if (hash === lastGraphHash) return false;
   lastGraphHash = hash;
@@ -5508,6 +6081,7 @@ Use SHA-256 (truncated to 16 hex chars) — not a weak djb2 hash. Prevents unnec
 Open your Cortex architectural memory vault directly inside Obsidian for free. Phase 8.2 configures your `.knowledge/` folders to be 100% compliant with standard Obsidian vaults, allowing you to open your codebase memory as a gorgeous, color-coded interactive graph view. It also sets up styling templates and informative visual tooltips on hover without writing any heavy custom desktop code.
 
 **Technical Terms**
+
 1. **Andrej Karpathy-Style Obsidian Wiki Compliance**: Ensure all inter-linkages utilize relative markdown paths (e.g. `[[entities/Name.md|Name]]` and `[[concepts/Name.md|Name]]`) rather than simple flat names. This guarantees links are fully resolved and clickable in both Obsidian and standard VS Code / GitHub markdown rendering engines.
 2. **Pre-Configured Node Coloring & Tooltips**: Scaffolds default `.obsidian/graph.json` and `.obsidian/appearance.json` configurations under `.knowledge/` (gitignored to avoid team merge conflicts). Establishes a Cyberpunk Dark Palette with precise HSL mappings:
    - **Electric Blue (`#3B82F6`)**: Concrete Entities
@@ -5521,18 +6095,20 @@ Open your Cortex architectural memory vault directly inside Obsidian for free. P
    - **Hot Pink (`#FF2E93`)**: High Centrality God Module (from Phase 7)
    - **Rust Orange (`#F97316`)**: Active Staleness Warning (`[!WARNING]`)
    - **Slate Gray (`#64748B`)**: Orphan Siloed Node
-   Optimizes markdown templates to front-load headers, warnings, summaries, and quality metrics so native Obsidian tooltips (Hover Page Preview) serve as instant visual diagnostic cards.
+     Optimizes markdown templates to front-load headers, warnings, summaries, and quality metrics so native Obsidian tooltips (Hover Page Preview) serve as instant visual diagnostic cards.
 
 **Obsidian Wiki Export — Per-Community Articles + God-Node Articles + Index (graphify `wiki.py` pattern)**
 
 Graphify generates a full Obsidian wiki from the knowledge graph: one article per community (summarizing all entities in that community), one article per god-node (because god-nodes span communities and deserve dedicated coverage), and a master `index.md` linking everything. Cortex's Phase 8.2 already makes `.knowledge/` Obsidian-compatible — this adds the community-level and god-node articles.
 
-*What graphify does* (`wiki.py`):
+_What graphify does_ (`wiki.py`):
+
 - **Per-community article** (`wiki/<community_label>.md`): generated via a single LLM call. Prompt: "Given these entities and their relationships: [entity list], write a 3-paragraph architectural summary of this module. Include: (1) the module's purpose, (2) its key components and their roles, (3) how it interfaces with the rest of the system." Saved to `wiki/<community_label>.md`.
 - **God-node articles** (`wiki/god_nodes/<entity_name>.md`): generated for each god-node. Prompt: "This entity connects multiple architectural modules. Summarize its cross-cutting role, list each module it bridges, and explain why it cannot be split." Saved to `wiki/god_nodes/<entity_name>.md`.
 - **`index.md`**: auto-generated master index listing all community articles with Obsidian wikilinks, god-node articles, plus a "Module Map" Mermaid diagram showing community-to-community relationships (which communities have cross-community edges).
 
-*Cortex implementation — new `src/wiki/` directory*:
+_Cortex implementation — new `src/wiki/` directory_:
+
 ```typescript
 // src/wiki/communityArticle.ts
 export async function generateCommunityArticle(
@@ -5551,6 +6127,7 @@ export async function generateGodNodeArticle(
 // src/wiki/index.ts
 export function generateWikiIndex(communities: CommunityMeta[], godNodes: Entity[]): string { ... }
 ```
+
 - New CLI command: `cortex wiki` — generates all community articles, god-node articles, and `index.md` into `.knowledge/wiki/`.
 - `cortex wiki --dry-run` shows what would be generated without writing.
 - `cortex wiki --community auth` regenerates only the `auth` community article.
@@ -5558,10 +6135,12 @@ export function generateWikiIndex(communities: CommunityMeta[], godNodes: Entity
 - Articles use Obsidian wikilinks `[[entity_name]]` for cross-references — fully clickable in the Obsidian graph.
 
 **Definition of Ready (DoR)**
+
 - Phase 8 is completed.
 - Phase 14.1 (Leiden communities) should be available for community-aware articles; falls back to directory buckets if absent.
 
 **Definition of Done (DoD)**
+
 - **Obsidian Vault Compliance**: Scaffolds a compliant `.knowledge/index.md` and generates relative, folder-scoped markdown links for maximum clickable portability across VS Code and GitHub.
 - **Sleek Theming Presets**: Generates local-only, gitignored `.obsidian/graph.json` and `.obsidian/appearance.json` presets mapping HSL color signals to quality scores, God modules, and active safeguards. Hover tooltips cleanly display diagnostic headers.
 - `cortex wiki` generates one article per community under `.knowledge/wiki/<community_label>.md`.
@@ -5573,6 +6152,7 @@ export function generateWikiIndex(communities: CommunityMeta[], godNodes: Entity
 - Tests cover offline parsing compatibility, relative link resolver robustness, and preset generation checks.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Turns architectural understanding into a shareable, stunning, zero-overhead interactive graph viewer; clickable links in standard VS Code and GitHub previews; zero runtime desktop bloat. Community articles make the graph legible to non-engineers (PM/EM onboarding).
 - ❌ **Cons**: Changing directory layout or names requires re-mapping link paths in the compilation pass (handled in-memory using `state.json` to preserve speed). Committing default `.obsidian/` folders to git could clutter developer preferences, mitigated by standard gitignore rules. Community article generation requires one LLM call per community — can be expensive on large repos; mitigated by caching.
 
@@ -5584,16 +6164,19 @@ export function generateWikiIndex(communities: CommunityMeta[], godNodes: Entity
 When your knowledge graph exceeds 300+ entities, Mermaid/Cytoscape CPU rendering slows to a crawl. Phase 8.3 adds a WebGL-based GPU-accelerated renderer that handles 1000+ entities at 60fps. Entity clusters flow and merge based on co-edit relationships, quality scores map to color temperature (green = high quality → red = decaying), and staleness renders as visual fading — all animated in real time via Phase 8.1's WebSocket stream.
 
 **Technical Terms**
+
 1. **WebGL Graph Renderer**: An alternative rendering mode using Three.js or raw WebGL. The graph is rendered as a GPU particle system where each entity is a billboarded sprite and each edge is a line primitive. Layout is computed on the GPU via a force-directed simulation running in vertex shaders.
 2. **Quality-to-Color Mapping**: Consumes Phase 7.5 quality scores as vertex attributes. Entities with score ≥ 0.8 render green, 0.5–0.8 amber, < 0.5 red. Staleness (staleSince flag) adds a pulsing desaturation effect.
 3. **Co-Edit Flow**: Edge spring tensions scale with Phase 13.8.2 co-edit weights — frequently co-edited entities cluster tightly; rarely co-edited pairs drift apart.
 4. **Fallback**: Automatically falls back to Mermaid rendering for graphs under 300 entities (no GPU needed). Configurable via `CORTEX_GRAPH_RENDERER=webgl|mermaid`.
 
 **Definition of Ready (DoR)**
+
 - Phase 8 is completed.
 - Phase 8.1 WebSocket stream is active.
 
 **Definition of Done (DoD)**
+
 - WebGL renderer renders 1000+ entity graphs at 60fps on modern GPU hardware.
 - Quality score color mapping is implemented and reacts to Phase 7.5 score changes.
 - Co-edit weight spring tension is implemented.
@@ -5601,6 +6184,7 @@ When your knowledge graph exceeds 300+ entities, Mermaid/Cytoscape CPU rendering
 - Tests cover: renderer selection, quality-color mapping, fallback trigger.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Solves the large-graph rendering problem for Phase 11 monorepo federations and Phase 21 polyrepo setups. Real-time animation makes co-edit patterns visually intuitive. High dashboard wow-factor for Phase 31 executive analytics.
 - ❌ **Cons**: Requires WebGL-compatible browser — falls back to Mermaid for terminal/SSH session users. GPU particle layout differs from force-directed CPU layout, potentially confusing users who switch between modes.
 
@@ -5612,16 +6196,19 @@ When your knowledge graph exceeds 300+ entities, Mermaid/Cytoscape CPU rendering
 Phase 18 uses hyperbolic (Poincaré) embeddings for internal math but never shows them visually. Phase 8.4 renders the knowledge graph on a Poincaré disk: the currently-edited entity sits at the center with full detail, direct dependencies occupy the middle ring, and distant entities shrink toward the perimeter. This maps 1:1 to Phase 20.6's hot/cold memory tiering — the visual layout IS the memory hierarchy.
 
 **Technical Terms**
+
 1. **Poincaré Disk Projection**: Each entity's hyperbolic embedding (from Phase 18) is projected onto the unit disk via the Poincaré metric. The selected entity is translated to the origin; all other entities are Möbius-transformed relative to it. Entities near the origin render at full size; entities approaching the boundary shrink according to their hyperbolic distance.
 2. **Memory Tier Visualization**: Hot-tier entities (in Phase 20.6 working set) cluster within the inner third of the disk. Cold-tier entities spread toward the boundary. Pinned entities (centrality > 0.8) are highlighted with a glow ring.
 3. **Pan & Zoom**: Clicking any entity re-centers the disk on that entity, re-running the Möbius transform server-side and streaming the updated layout via Phase 8.1 WebSocket.
 4. **Implementation**: Layout computation is a fast server-side matrix operation (no LLM needed). Rendering via D3.js canvas with hyperbolic transform helpers, or optionally via the Phase 8.3 WebGL renderer.
 
 **Definition of Ready (DoR)**
+
 - Phase 8 is completed.
 - Phase 18 hyperbolic embeddings are computed for all entities.
 
 **Definition of Done (DoD)**
+
 - Poincaré disk renders all entities with correct hyperbolic distances from the selected center entity.
 - Click-to-recenter works and streams updated layout via WebSocket.
 - Memory tier clustering (hot/inner, cold/outer) is visually distinct.
@@ -5629,6 +6216,7 @@ Phase 18 uses hyperbolic (Poincaré) embeddings for internal math but never show
 - Tests cover: Möbius transform correctness, tier visibility, center selection round-trip.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Makes the memory hierarchy (Phase 20.6) visually self-evident — no separate "show me hot entities" command needed. Hyperbolic space naturally fits hierarchical codebases. Leverages existing Phase 18 math; no new embedding computation.
 - ❌ **Cons**: Requires Phase 18 embeddings to exist — not available until Phase 18 is implemented. Poincaré disk can be disorienting for users unfamiliar with hyperbolic space; mitigated by a optional Euclidean toggle `--layout euclidean`.
 
@@ -5666,6 +6254,7 @@ function exportGraphML(graph: GraphReport): string {
 ```
 
 **CLI additions** (extending `src/cli/export.ts`):
+
 ```bash
 cortex export --neo4j                  # prints Cypher to stdout
 cortex export --neo4j --out graph.cypher   # writes to file
@@ -5735,25 +6324,33 @@ interface ImpactResult {
   entityName: string;
   dependents: Array<{ name: string; hop: number; relationTypes: string[] }>;
   stopReason: StopReason;
-  truncated: boolean;    // true if depth or timeout caused early exit
+  truncated: boolean; // true if depth or timeout caused early exit
   elapsedMs: number;
 }
 
 async function runImpactBfs(
   rootName: string,
-  opts: { maxDepth?: number; timeoutMs?: number }
+  opts: { maxDepth?: number; timeoutMs?: number },
 ): Promise<ImpactResult> {
   const maxDepth = opts.maxDepth ?? DEFAULT_IMPACT_DEPTH;
   const deadline = Date.now() + (opts.timeoutMs ?? DEFAULT_IMPACT_TIMEOUT_MS);
   const visited = new Set<string>();
-  const queue: Array<{ name: string; hop: number }> = [{ name: rootName, hop: 0 }];
+  const queue: Array<{ name: string; hop: number }> = [
+    { name: rootName, hop: 0 },
+  ];
   const results: ImpactResult["dependents"] = [];
   let stopReason: StopReason = "completed";
 
   while (queue.length > 0) {
-    if (Date.now() > deadline) { stopReason = "budgetExhausted"; break; }
+    if (Date.now() > deadline) {
+      stopReason = "budgetExhausted";
+      break;
+    }
     const { name, hop } = queue.shift()!;
-    if (hop > maxDepth) { stopReason = "depthExceeded"; break; }
+    if (hop > maxDepth) {
+      stopReason = "depthExceeded";
+      break;
+    }
     if (visited.has(name)) continue;
     visited.add(name);
     const dependents = getInboundLinks(name);
@@ -5762,7 +6359,14 @@ async function runImpactBfs(
       if (!visited.has(dep.name)) queue.push({ name: dep.name, hop: hop + 1 });
     }
   }
-  return { entityName: rootName, dependents: results, stopReason, truncated: stopReason !== "completed", elapsedMs: Date.now() - (deadline - (opts.timeoutMs ?? DEFAULT_IMPACT_TIMEOUT_MS)) };
+  return {
+    entityName: rootName,
+    dependents: results,
+    stopReason,
+    truncated: stopReason !== "completed",
+    elapsedMs:
+      Date.now() - (deadline - (opts.timeoutMs ?? DEFAULT_IMPACT_TIMEOUT_MS)),
+  };
 }
 ```
 
@@ -5781,11 +6385,19 @@ class PhaseTimer {
 
   async time<T>(phase: string, work: Promise<T>): Promise<T> {
     const start = Date.now();
-    try { return await work; }
-    finally { this.records.set(phase, (this.records.get(phase) ?? 0) + (Date.now() - start)); }
+    try {
+      return await work;
+    } finally {
+      this.records.set(
+        phase,
+        (this.records.get(phase) ?? 0) + (Date.now() - start),
+      );
+    }
   }
 
-  report(): Record<string, number> { return Object.fromEntries(this.records); }
+  report(): Record<string, number> {
+    return Object.fromEntries(this.records);
+  }
 }
 
 // Usage in cortex ingest:
@@ -5803,6 +6415,7 @@ console.log("Phase timings:", timer.report());
 - Use in: `impact_analysis` (BFS vs. ranking vs. serialization phases), `build_context_pack` (fetch vs. pack vs. compress), `ingest` (extract vs. embed vs. write).
 
 **DoD extension (BFS timeout + PhaseTimer)**
+
 - `impact_analysis("GodEntity", {timeoutMs: 100})` returns within 100ms + `stopReason: "budgetExhausted"`.
 - `impact_analysis("LeafEntity", {maxDepth: 3})` with no dependents beyond depth 3 returns `stopReason: "completed"`.
 - `cortex impact --depth 2` CLI flag is forwarded to `runImpactBfs` correctly.
@@ -5823,6 +6436,7 @@ Expose a BFS-based pathfinding query over the relationship graph in `state.json`
 - **MCP**: `get_dependency_path(source, target)` tool — returns the array of dependency hops, enabling IDE agents to trace indirect coupling before coding.
 
 **Definition of Done (DoD)**
+
 - `cortex path <source> <target>` returns the shortest path of typed edges in <50ms.
 - `get_dependency_path` MCP tool is registered and returns matching path details.
 - Pathfinding handles cycles, missing nodes, and disconnected components gracefully.
@@ -5877,7 +6491,7 @@ Path length: 3 hops | Weakest link: SessionValidator (0.88)
 
 **Source**: GitNexus (process detection) | **Cross-references**: Phase 9 (impact preview), Phase 0.13 (extraction), Phase 9.5 (API route analysis)
 
-**Problem**: The current knowledge graph captures *static call relationships* (function A imports and calls function B). It doesn't capture *execution flows* — the dynamic topology of what actually runs when a user triggers a feature. "What happens when the user hits `POST /auth/login`?" requires manually tracing from the route handler through 6 layers of middleware. GitNexus solves this with process detection: starting from entry points, it follows the call chain and groups entities by the flows they participate in.
+**Problem**: The current knowledge graph captures _static call relationships_ (function A imports and calls function B). It doesn't capture _execution flows_ — the dynamic topology of what actually runs when a user triggers a feature. "What happens when the user hits `POST /auth/login`?" requires manually tracing from the route handler through 6 layers of middleware. GitNexus solves this with process detection: starting from entry points, it follows the call chain and groups entities by the flows they participate in.
 
 **Design**:
 
@@ -5936,13 +6550,13 @@ function detectEntryPoints(graph: GraphReport): EntryPoint[] {
 // Forward: route → downstream entities
 // cortex api-impact "POST /auth/login"
 async function routeImpact(routePattern: string): Promise<RouteImpactReport> {
-  const flow = findFlowByRoute(routePattern);   // from Phase 9.4 flows
+  const flow = findFlowByRoute(routePattern); // from Phase 9.4 flows
   if (!flow) return { found: false, route: routePattern, entities: [] };
   return {
     found: true,
     route: routePattern,
     handler: flow.entryPoint,
-    entities: flow.participants.map(id => ({
+    entities: flow.participants.map((id) => ({
       entityId: id,
       depth: flow.participants.indexOf(id) + 1,
       crossCommunity: isCrossCommunity(id, flow.entryPoint),
@@ -5954,14 +6568,15 @@ async function routeImpact(routePattern: string): Promise<RouteImpactReport> {
 // cortex api-impact --reverse "TokenStore.revoke"
 async function entityRoutes(entityId: string): Promise<string[]> {
   return state.executionFlows
-    .filter(f => f.participants.includes(entityId))
-    .map(f => f.name);
+    .filter((f) => f.participants.includes(entityId))
+    .map((f) => f.name);
 }
 ```
 
 **MCP tool**: `api_impact({route: "POST /auth/login"})` and `api_impact({entity: "TokenStore.revoke", reverse: true})`.
 
 **CLI**:
+
 ```bash
 cortex api-impact "POST /auth/login"          # forward: which entities does this route touch?
 cortex api-impact --reverse "TokenStore.revoke"  # reverse: which routes reach this entity?
@@ -5983,20 +6598,23 @@ cortex api-impact --reverse "TokenStore.revoke"  # reverse: which routes reach t
 
 ```typescript
 interface GroupedSearchResult {
-  flow: string;               // e.g. "Login Flow" or "ungrouped"
+  flow: string; // e.g. "Login Flow" or "ungrouped"
   flowId: string;
-  results: SearchResult[];    // ranked within this flow by relevance
+  results: SearchResult[]; // ranked within this flow by relevance
 }
 
 interface GroupedSearchResponse {
   query: string;
   groups: GroupedSearchResult[];
-  ungrouped: SearchResult[];    // entities not in any flow
+  ungrouped: SearchResult[]; // entities not in any flow
   totalResults: number;
-  searchMode: SearchMode;       // Phase 0.9 progressive degradation field
+  searchMode: SearchMode; // Phase 0.9 progressive degradation field
 }
 
-async function groupedFind(query: string, opts: SearchOpts): Promise<GroupedSearchResponse> {
+async function groupedFind(
+  query: string,
+  opts: SearchOpts,
+): Promise<GroupedSearchResponse> {
   // 1. Run normal RRF search (Phase 13.5) to get flat ranked results
   const flat = await cortexSearch(query, opts);
 
@@ -6008,7 +6626,9 @@ async function groupedFind(query: string, opts: SearchOpts): Promise<GroupedSear
   const ungrouped: SearchResult[] = [];
 
   for (const result of flat.results) {
-    const matchingFlows = flows.filter(f => f.participants.includes(result.entityId));
+    const matchingFlows = flows.filter((f) =>
+      f.participants.includes(result.entityId),
+    );
     if (matchingFlows.length === 0) {
       ungrouped.push(result);
     } else {
@@ -6023,17 +6643,24 @@ async function groupedFind(query: string, opts: SearchOpts): Promise<GroupedSear
   // 4. Sort groups by total relevance score (flow with most relevant results first)
   const groups: GroupedSearchResult[] = [...buckets.entries()]
     .map(([flowId, results]) => ({
-      flow: flows.find(f => f.id === flowId)!.name,
+      flow: flows.find((f) => f.id === flowId)!.name,
       flowId,
       results: results.sort((a, b) => b.score - a.score),
     }))
     .sort((a, b) => b.results[0].score - a.results[0].score);
 
-  return { query, groups, ungrouped, totalResults: flat.results.length, searchMode: flat.searchMode };
+  return {
+    query,
+    groups,
+    ungrouped,
+    totalResults: flat.results.length,
+    searchMode: flat.searchMode,
+  };
 }
 ```
 
 **MCP response format** (backward-compatible — existing `results[]` preserved, `groups` is additive):
+
 ```json
 {
   "results": [...],
@@ -6132,6 +6759,7 @@ AI assistants like Cursor, Claude Code, and GitHub Copilot read local rules file
 
 **Technical Terms**
 Implement a target-agnostic rule patching utility in the `IDESetupLayer`.
+
 - **Target Files**: Scans the workspace root for `.cursorrules`, `GEMINI.md`, `CLAUDE.md`, `.windsurfrules`, and `.copilotinstructions`.
 - **Marker Syntax**: Injects and updates blocks bounded by `<!-- cortex-begin -->` and `<!-- cortex-end -->` comments.
 - **Payload Generation**: Renders a compact, brevity-compliant representation of:
@@ -6142,14 +6770,17 @@ Implement a target-agnostic rule patching utility in the `IDESetupLayer`.
 - **Preservation**: Parses the rest of the file using a simple split-and-replace algorithm to ensure all user-defined instructions outside the marker blocks are preserved byte-for-byte.
 
 **Definition of Ready (DoR)**
+
 - Phase 10 (Onboarding & Guided Reading) and Phase 13.2 (Brevity Engine) are completed.
 
 **Definition of Done (DoD)**
+
 - On `cortex sync`, if any of the target rule files exist, they are patched with the marker block.
 - A new CLI flag `cortex rules --inject` initializes files that don't exist yet with the marker block.
 - Integration tests verify that manual edits inside the file but outside the markers are preserved after subsequent syncs, and that incorrect marker formatting fails gracefully.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Connects Cortex's live memory stream seamlessly with standard editor configurations without risk of data loss.
 - ❌ **Cons**: Rules files formats vary slightly by editor; mitigated by using clean Markdown structures inside the comments that all standard IDEs interpret correctly.
 
@@ -6161,6 +6792,7 @@ Implement a target-agnostic rule patching utility in the `IDESetupLayer`.
 When an AI assistant (like Claude Code, Cursor, or Copilot) starts up, it reads and indexes files in your project. If you have a large architectural knowledge base under `.knowledge/`, the AI reads all of it immediately — burning thousands of tokens before you even type your first line of code. Phase 10.3 automatically configures your AI's ignore files (`.claudeignore`, `.cursorignore`, `.copilotignore`, `.windsurfignore`, and `.cfignore`) to keep `.knowledge/` out of the startup index. Because the Cortex MCP server runs locally, the AI can still read any entity or concept on demand via MCP tools at zero startup cost.
 
 **Technical Terms**
+
 - **Ignore Scaffolder**: During `cortex init` or `cortex setup`, automatically inspect the project root and look for:
   - `.claudeignore` (Claude Code)
   - `.cursorignore` (Cursor)
@@ -6172,13 +6804,16 @@ When an AI assistant (like Claude Code, Cursor, or Copilot) starts up, it reads 
 - **MCP Pass-Through**: Ensure the local `CortexMCPServer` bypasses the ignore logic (which it does naturally since it reads the filesystem directly rather than going through the editor's file API), allowing the AI to query files inside `.knowledge/` on demand while paying 0 tokens during startup auto-indexing.
 
 **Definition of Ready (DoR)**
+
 - Phase 10.2 (Smart Rule File Patching) is completed.
 
 **Definition of Done (DoD)**
+
 - Running `cortex init` or `cortex setup` automatically detects active IDE folders and populates the respective ignore files with `.knowledge/` and related folders.
 - Testing verifies that the ignore entries are appended cleanly without duplicating existing lines.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Keeps startup footprint minimal (~0 tokens for metadata) while maintaining 100% on-demand coverage via MCP.
 - ❌ **Cons**: Direct manual inspection of the `.knowledge/` files inside the editor might be hidden unless explicitly searched or configured in display settings.
 
@@ -6187,25 +6822,29 @@ When an AI assistant (like Claude Code, Cursor, or Copilot) starts up, it reads 
 ## 🎓 Phase 10.4: Managed `CLAUDE.md` & AI Rules Orchestration — ⏳ Planned
 
 **Layman's Terms**
-Claude Code and other tools look for a `CLAUDE.md` file at session startup to learn the commands, build patterns, and design rules for the repository. Phase 10.4 auto-generates or updates `CLAUDE.md` (and related rules files) to teach the AI how to use Project Cortex. It instructs the AI to query the `project-cortex` MCP tools *first* when asked architectural questions instead of wasting tokens by grep-searching source files, and lists common commands (like `cortex status` or `cortex ingest`) for easy developer reference.
+Claude Code and other tools look for a `CLAUDE.md` file at session startup to learn the commands, build patterns, and design rules for the repository. Phase 10.4 auto-generates or updates `CLAUDE.md` (and related rules files) to teach the AI how to use Project Cortex. It instructs the AI to query the `project-cortex` MCP tools _first_ when asked architectural questions instead of wasting tokens by grep-searching source files, and lists common commands (like `cortex status` or `cortex ingest`) for easy developer reference.
 
 **Technical Terms**
+
 - **`CLAUDE.md` Manager**: A module inside `IDESetupLayer` that handles creating and updating `CLAUDE.md`.
 - **Command Indexing**: Formats and exposes common commands (`npm run dev`, `npm test`, `cortex ingest`, `cortex status`) in the standard `CLAUDE.md` layout.
 - **MCP Instructions Injection**: Injects instructions directing the assistant to:
-  * Call `read_knowledge_index` first before doing any global file scans.
-  * Use `before_change` before writing code or modifying structures.
-  * Run `cortex ingest` or `/ingest_cortex` after modifying files.
+  - Call `read_knowledge_index` first before doing any global file scans.
+  - Use `before_change` before writing code or modifying structures.
+  - Run `cortex ingest` or `/ingest_cortex` after modifying files.
 - **Telegraphic / Brevity Constraints**: Integrates with the Brevity Engine (Phase 13.2) to specify the expected token-optimized output style.
 
 **Definition of Ready (DoR)**
+
 - Phase 10.3 (Zero-Token Startup) is completed.
 
 **Definition of Done (DoD)**
+
 - Running `cortex init` or `cortex setup` generates a compliant `CLAUDE.md` in the project root if one does not exist, or updates it with the Project Cortex marker block.
 - Standard IDE commands list is parsed and injected.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Seamlessly guides external AI agents to use the optimized Cortex pathways without manual intervention.
 - ❌ **Cons**: Requires keeping the generated `CLAUDE.md` in sync with standard project command scripts.
 
@@ -6217,19 +6856,23 @@ Claude Code and other tools look for a `CLAUDE.md` file at session startup to le
 AI models read text like humans do: they remember the beginning and the end of a document very well, but they often forget details sitting in the middle (known as the U-shaped attention curve). Phase 10.5 analyzes your repository rules files (like `CLAUDE.md` and `.cursorrules`) and automatically reorganizes them. It detects critical directives containing warning keywords like MUST, NEVER, and ALWAYS, and shifts them to the high-attention zones (the top and bottom 15% of the file) while placing less critical context in the middle. This keeps the AI highly compliant with your constraints.
 
 **Technical Terms**
+
 - **Attention Curve Scorer**: Evaluates the text layout of rule files (`CLAUDE.md`, `.cursorrules`) and maps instructions onto a percentage position (0% to 100%).
 - **Rule Classifier**: Extracts specific rules based on imperative keywords (MUST, MUST NOT, NEVER, ALWAYS, REQUIRED) and assigns priority scores.
 - **Dynamic Reordering**: Moves high-priority rules out of the "attention valley" (the 30% to 70% middle segment of the file) and groups them near the top (0% to 15%) or the bottom (85% to 100%) of their respective sections.
 - **Integrity Guard**: Ensures section headings and custom comments are not broken during reordering by parsing rule files as block-based trees.
 
 **Definition of Ready (DoR)**
+
 - Phase 10.4 (Rules Orchestration) is completed.
 
 **Definition of Done (DoD)**
+
 - A new command `cortex rules --optimize` parses `CLAUDE.md` and `.cursorrules`, relocates critical rules out of the 30-70% attention zone, and writes back the reordered rules.
 - Tests verify that reordering does not lose or corrupt any instructions, and successfully optimizes rule positioning.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Greatly increases instruction adherence for long rules files without adding any token cost.
 - ❌ **Cons**: Modifies file layout which might surprise developers who expect rules to remain in the exact order they wrote them. Mitigated by keeping original copies backed up.
 
@@ -6241,18 +6884,22 @@ AI models read text like humans do: they remember the beginning and the end of a
 When a long conversation with an AI assistant goes on, the chat history eventually fills up, forcing the AI to compact/summarize the chat. When this happens, the AI often forgets key architectural decisions you made, leading to mistakes later. Phase 10.6 automatically injects a short, permanent list of critical decisions and active tasks (compiled locally from the Cortex log) right back into the assistant's startup prompt. This acts as a set of "continuity breadcrumbs" so the AI instantly knows the exact state of the project even after a compaction or crash.
 
 **Technical Terms**
+
 - **Decision Extractor**: Reads `cortex.log` and active synthesis entries to identify marked design decisions ("chose X because Y").
 - **Anchored Context Hook**: Modifies the `inject-knowledge` hook in `setup.ts` to append a compact `[Session Continuity Pointer]` block to the context.
 - **Compaction Digest**: Stores a 1-sentence summary of the last 3 architectural decisions and active tasks (from `.knowledge/task.md` or equivalent) as an immutable system prompt rule, protecting them from compaction summarization pruning.
 
 **Definition of Ready (DoR)**
+
 - Phase 10.3 (Zero-Token Startup) is completed.
 
 **Definition of Done (DoD)**
+
 - The pre-tool hook injects the most recent 3 decisions and active task statuses from the project logs.
 - The model successfully references the breadcrumbs after simulation of context compaction.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Eradicates "context drift" where models forget design directions across long coding sessions.
 - ❌ **Cons**: Burns a tiny token overhead (around 150-250 tokens) to carry the active breadcrumbs.
 
@@ -6264,18 +6911,22 @@ When a long conversation with an AI assistant goes on, the chat history eventual
 AI assistants read rule files like `CLAUDE.md` and `.cursorrules` in their entirety when starting a session. If these files get too long (e.g. over 200 lines), the AI might silently ignore the end of the file, or waste thousands of tokens on every single turn. Phase 10.7 adds a checker to Cortex. If your rule files exceed 200 lines, Cortex alerts you with a warning during code updates. It can also automatically split your rules, moving detailed development guidelines into smaller topic files (like `.cortex/rules/styling.md`) and instructing the AI to read them only when it is actually editing those files.
 
 **Technical Terms**
+
 - **Rule Size Scanner**: Measures the line count and token weight of rule files (`CLAUDE.md`, `.cursorrules`, etc.).
 - **Truncation Warning**: Emits an architectural lint warning if a rule file exceeds 200 lines (the common threshold where models start suffering from recall degradation or truncation).
 - **Rule Splitting Engine**: Extracts long guidelines into topic-specific rules files under `.cortex/rules/` and replaces the verbose inline text in `CLAUDE.md` with dynamic reference hooks (e.g., "For styling guidelines, run `cortex rule read styling`").
 
 **Definition of Ready (DoR)**
+
 - Phase 10.4 (Rules Orchestration) is completed.
 
 **Definition of Done (DoD)**
+
 - `cortex lint` emits a warning when `CLAUDE.md` or `.cursorrules` exceeds 200 lines.
 - `cortex rules --split` extracts sections into `.cortex/rules/` and references them in the main rules files.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Keeps rule file context footprints minimal and prevents silent truncation of rules.
 - ❌ **Cons**: Splitting rules requires the AI agent to follow dynamic links, which adds a minor hop when the rules are needed.
 
@@ -6350,16 +7001,23 @@ async function explainSymbol(query: string): Promise<ExplainResult> {
 **Design**:
 
 ```typescript
-async function generateSuggestedQuestions(graph: GraphReport): Promise<string[]> {
+async function generateSuggestedQuestions(
+  graph: GraphReport,
+): Promise<string[]> {
   // Rule-based generation — no LLM call needed
   const questions: string[] = [];
   const godNodes = graph.godNodeReport?.slice(0, 3) ?? [];
-  const highCoverage = graph.nodes.filter(n => n.testCoverage !== undefined && n.testCoverage < 0.5 && n.inDegree > 3);
-  const entryPoints = graph.executionFlows?.map(f => f.name) ?? [];
+  const highCoverage = graph.nodes.filter(
+    (n) =>
+      n.testCoverage !== undefined && n.testCoverage < 0.5 && n.inDegree > 3,
+  );
+  const entryPoints = graph.executionFlows?.map((f) => f.name) ?? [];
 
   // Template questions based on graph topology
   if (godNodes.length > 0)
-    questions.push(`What are the most connected entities in this codebase? (${godNodes[0].entityId} has ${godNodes[0].inDegree + godNodes[0].outDegree} connections)`);
+    questions.push(
+      `What are the most connected entities in this codebase? (${godNodes[0].entityId} has ${godNodes[0].inDegree + godNodes[0].outDegree} connections)`,
+    );
   if (entryPoints.length > 0)
     questions.push(`What happens when a user calls ${entryPoints[0]}?`);
   if (highCoverage.length > 0)
@@ -6373,6 +7031,7 @@ async function generateSuggestedQuestions(graph: GraphReport): Promise<string[]>
 ```
 
 Questions are stored in `state.json` under `suggestedQuestions: string[]` and refreshed after each bootstrap or full re-synthesis. Surfaced in three places:
+
 - `cortex status` — printed below status summary
 - `cortex doctor` — shown as "Things you can ask Cortex:"
 - MCP `get_cortex_status` response — included in the status object
@@ -6387,18 +7046,18 @@ Questions are stored in `state.json` under `suggestedQuestions: string[]` and re
 
 **Source**: GitNexus (`--skills` flag) | **Cross-references**: Phase 10 (onboarding), Phase 14 (Large-Diff Clustering), Phase 4.5 (IDE integration)
 
-**Problem**: Cortex exposes knowledge via MCP tools. But Claude Code also supports *skills* — pre-written `.md` files in `.claude/skills/` that the agent loads as reusable knowledge snippets. GitNexus auto-generates skill files per Leiden community after analysis, giving each community a dedicated skill file with key entities, entry points, and execution flows. Any Claude Code session in the repo automatically gets community-scoped context.
+**Problem**: Cortex exposes knowledge via MCP tools. But Claude Code also supports _skills_ — pre-written `.md` files in `.claude/skills/` that the agent loads as reusable knowledge snippets. GitNexus auto-generates skill files per Leiden community after analysis, giving each community a dedicated skill file with key entities, entry points, and execution flows. Any Claude Code session in the repo automatically gets community-scoped context.
 
 **Design**:
 
 ```typescript
 interface CommunitySkillFile {
   communityId: number;
-  communityName: string;     // LLM-generated semantic label (e.g., "Authentication Flow")
-  keyEntities: string[];     // top-5 by centrality
-  entryPoints: string[];     // execution flow entry points in this community
-  flows: string[];           // execution flow names
-  filePath: string;          // ".claude/skills/generated/authentication-flow.md"
+  communityName: string; // LLM-generated semantic label (e.g., "Authentication Flow")
+  keyEntities: string[]; // top-5 by centrality
+  entryPoints: string[]; // execution flow entry points in this community
+  flows: string[]; // execution flow names
+  filePath: string; // ".claude/skills/generated/authentication-flow.md"
 }
 
 async function generateSkillFiles(graph: GraphReport): Promise<void> {
@@ -6408,20 +7067,26 @@ async function generateSkillFiles(graph: GraphReport): Promise<void> {
   for (const community of graph.communities) {
     const skill = buildCommunitySkill(community, graph);
     const filename = slugify(community.label) + ".md";
-    await fs.writeFile(path.join(outputDir, filename), renderSkillMarkdown(skill));
+    await fs.writeFile(
+      path.join(outputDir, filename),
+      renderSkillMarkdown(skill),
+    );
   }
 }
 
 function renderSkillMarkdown(skill: CommunitySkillFile): string {
-  return `# ${skill.communityName}\n\n` +
+  return (
+    `# ${skill.communityName}\n\n` +
     `**Key entities**: ${skill.keyEntities.join(", ")}\n\n` +
     `**Entry points**: ${skill.entryPoints.join(", ")}\n\n` +
     `**Execution flows**: ${skill.flows.join(", ")}\n\n` +
-    `Use \`cortex explain <entity>\` for details on any entity above.\n`;
+    `Use \`cortex explain <entity>\` for details on any entity above.\n`
+  );
 }
 ```
 
 **Generated file structure**:
+
 ```
 .claude/skills/generated/
   authentication-flow.md
@@ -6451,13 +7116,17 @@ interface CommunityLabelOverrides {
   [communityId: string]: string;
 }
 
-async function resolveCommunityLabel(communityId: string, autoLabel: string): Promise<string> {
-  const overrides = await loadLabelOverrides();  // reads .cortex/community-labels.json
+async function resolveCommunityLabel(
+  communityId: string,
+  autoLabel: string,
+): Promise<string> {
+  const overrides = await loadLabelOverrides(); // reads .cortex/community-labels.json
   return overrides[`community_${communityId}`] ?? autoLabel;
 }
 ```
 
 **Behavior**:
+
 - `cortex generate-skills` reads `.cortex/community-labels.json` before writing skill file names and headings.
 - Overrides persist across re-syntheses — LLM-generated names are defaults, not sources of truth once overridden.
 - `cortex community-labels list` prints current communities + auto-names. `cortex community-labels set <id> <name>` writes the override to `.cortex/community-labels.json`.
@@ -6520,14 +7189,14 @@ GitNexus maintains a global registry of repos (`registry.json`) and a lazy LRU p
 interface RepoConnection {
   workspaceName: string;
   knowledgeManager: KnowledgeManager;
-  lastUsed: number;          // epoch ms — for LRU eviction
-  activeRequests: number;    // current concurrent tool calls
-  lastStalenessCheck: number;// epoch ms — throttle staleness probes
+  lastUsed: number; // epoch ms — for LRU eviction
+  activeRequests: number; // current concurrent tool calls
+  lastStalenessCheck: number; // epoch ms — throttle staleness probes
 }
 
 const MAX_OPEN_REPOS = 5;
 const MAX_CONCURRENT_PER_REPO = 8;
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000;        // 5 minutes
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const STALENESS_CHECK_THROTTLE_MS = 5 * 1000; // 5 seconds
 
 class RepoPool {
@@ -6551,11 +7220,13 @@ class RepoPool {
     // Throttled staleness check — at most once every 5 seconds per repo.
     if (Date.now() - conn.lastStalenessCheck > STALENESS_CHECK_THROTTLE_MS) {
       conn.lastStalenessCheck = Date.now();
-      await conn.knowledgeManager.checkStaleness();  // triggers hot-reload if needed
+      await conn.knowledgeManager.checkStaleness(); // triggers hot-reload if needed
     }
 
     if (conn.activeRequests >= MAX_CONCURRENT_PER_REPO) {
-      throw new Error(`Workspace '${workspaceName}' is busy (${MAX_CONCURRENT_PER_REPO} concurrent requests). Retry shortly.`);
+      throw new Error(
+        `Workspace '${workspaceName}' is busy (${MAX_CONCURRENT_PER_REPO} concurrent requests). Retry shortly.`,
+      );
     }
 
     conn.activeRequests++;
@@ -6572,7 +7243,8 @@ class RepoPool {
   evictIdle(): void {
     const cutoff = Date.now() - IDLE_TIMEOUT_MS;
     for (const [name, conn] of this.pool) {
-      if (conn.lastUsed < cutoff && conn.activeRequests === 0) this.pool.delete(name);
+      if (conn.lastUsed < cutoff && conn.activeRequests === 0)
+        this.pool.delete(name);
     }
   }
 }
@@ -6588,6 +7260,7 @@ export const repoPool = new RepoPool();
 - `cortex.config.json: multiRepo: true` enables multi-repo mode; default false (single-repo stays unchanged).
 
 **DoD extension**
+
 - `repoPool.acquire("ws-a")` 5 times with no releases → 5th call succeeds; 6th (new workspace) evicts LRU.
 - `acquire` on a workspace with 8 active requests → throws "busy" error.
 - Idle workspace after 5 minutes → `evictIdle()` removes it; next `acquire` re-opens cleanly.
@@ -6607,21 +7280,22 @@ export const repoPool = new RepoPool();
 
 ```typescript
 interface RepoGroup {
-  name: string;              // "platform-team"
-  members: string[];         // ["~/repos/auth-service", "~/repos/payment-service", "~/repos/api-gateway"]
-  contracts: Contract[];     // extracted cross-repo provider/consumer relationships
+  name: string; // "platform-team"
+  members: string[]; // ["~/repos/auth-service", "~/repos/payment-service", "~/repos/api-gateway"]
+  contracts: Contract[]; // extracted cross-repo provider/consumer relationships
 }
 
 interface Contract {
-  provider: string;          // "auth-service:AuthService"  (repo:entity)
-  consumer: string;          // "api-gateway:AuthMiddleware"
-  importPath: string;        // "@platform/auth-service"
+  provider: string; // "auth-service:AuthService"  (repo:entity)
+  consumer: string; // "api-gateway:AuthMiddleware"
+  importPath: string; // "@platform/auth-service"
   confidence: number;
   edgeType: "CROSS_REPO_CALLS" | "CROSS_REPO_IMPORTS" | "CROSS_REPO_INHERITS";
 }
 ```
 
 **CLI verbs**:
+
 ```bash
 cortex group create platform-team ~/repos/auth ~/repos/payments ~/repos/gateway
 cortex group sync platform-team    # extract contracts from all member repos
@@ -6641,41 +7315,69 @@ cortex group query platform-team "AuthService"   # scoped cross-repo search
 
 ### Phase 11.5 Refinement — Language-Specific Protocol Pattern Matching (GitNexus)
 
-Phase 11.5 describes contract extraction at the interface level but doesn't specify *how* to detect HTTP/gRPC/message-queue contracts in source code. GitNexus ships separate per-language pattern sets for each protocol. Without this, `group sync` can only detect contracts declared in `.cortex/contracts.json` — it can't auto-extract them from code.
+Phase 11.5 describes contract extraction at the interface level but doesn't specify _how_ to detect HTTP/gRPC/message-queue contracts in source code. GitNexus ships separate per-language pattern sets for each protocol. Without this, `group sync` can only detect contracts declared in `.cortex/contracts.json` — it can't auto-extract them from code.
 
 **Design**: one pattern file per `(language, protocol)` pair. Each pattern is a regex applied to source lines, with a named capture group for the route/method/topic.
 
 ```typescript
 interface ContractPattern {
-  language: string;       // "typescript" | "go" | "python" | "java"
+  language: string; // "typescript" | "go" | "python" | "java"
   protocol: "http" | "grpc" | "message-topic";
   pattern: RegExp;
   roleCapture: "provider" | "consumer";
-  extract(match: RegExpMatchArray): { method?: string; path?: string; topic?: string };
+  extract(match: RegExpMatchArray): {
+    method?: string;
+    path?: string;
+    topic?: string;
+  };
 }
 
 // Examples of language-specific HTTP patterns:
 const HTTP_PATTERNS: ContractPattern[] = [
   // TypeScript / Express
-  { language: "typescript", protocol: "http", roleCapture: "provider",
+  {
+    language: "typescript",
+    protocol: "http",
+    roleCapture: "provider",
     pattern: /app\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/,
-    extract: m => ({ method: m[1].toUpperCase(), path: m[2] }) },
+    extract: (m) => ({ method: m[1].toUpperCase(), path: m[2] }),
+  },
   // TypeScript / NestJS
-  { language: "typescript", protocol: "http", roleCapture: "provider",
+  {
+    language: "typescript",
+    protocol: "http",
+    roleCapture: "provider",
     pattern: /@(Get|Post|Put|Delete|Patch)\s*\(\s*['"`]([^'"`]*)['"`]/,
-    extract: m => ({ method: m[1].toUpperCase(), path: m[2] }) },
+    extract: (m) => ({ method: m[1].toUpperCase(), path: m[2] }),
+  },
   // Go
-  { language: "go", protocol: "http", roleCapture: "provider",
+  {
+    language: "go",
+    protocol: "http",
+    roleCapture: "provider",
     pattern: /mux\.HandleFunc\s*\(\s*"([^"]+)"/,
-    extract: m => ({ path: m[1] }) },
+    extract: (m) => ({ path: m[1] }),
+  },
   // Python / FastAPI
-  { language: "python", protocol: "http", roleCapture: "provider",
+  {
+    language: "python",
+    protocol: "http",
+    roleCapture: "provider",
     pattern: /@app\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/,
-    extract: m => ({ method: m[1].toUpperCase(), path: m[2] }) },
+    extract: (m) => ({ method: m[1].toUpperCase(), path: m[2] }),
+  },
   // Java / Spring
-  { language: "java", protocol: "http", roleCapture: "provider",
-    pattern: /@(GetMapping|PostMapping|PutMapping|DeleteMapping|RequestMapping)\s*\(\s*["']([^"']*)["']/,
-    extract: m => ({ method: m[1].replace("Mapping","").toUpperCase(), path: m[2] }) },
+  {
+    language: "java",
+    protocol: "http",
+    roleCapture: "provider",
+    pattern:
+      /@(GetMapping|PostMapping|PutMapping|DeleteMapping|RequestMapping)\s*\(\s*["']([^"']*)["']/,
+    extract: (m) => ({
+      method: m[1].replace("Mapping", "").toUpperCase(),
+      path: m[2],
+    }),
+  },
 ];
 ```
 
@@ -6692,10 +7394,10 @@ During `group sync`, the same contract can be detected multiple times: once from
 ```typescript
 function contractRichness(c: Contract): number {
   let score = 0;
-  if (c.symbolUid)    score += 3;   // SCIP/LSP-resolved symbol — most precise
-  if (c.importPath)   score += 2;   // file-level import path — good
-  if (c.serviceTag)   score += 1;   // service-level tag — weaker
-  if (c.fromManifest) score += 0;   // manifest-declared only — weakest auto-source
+  if (c.symbolUid) score += 3; // SCIP/LSP-resolved symbol — most precise
+  if (c.importPath) score += 2; // file-level import path — good
+  if (c.serviceTag) score += 1; // service-level tag — weaker
+  if (c.fromManifest) score += 0; // manifest-declared only — weakest auto-source
   return score;
 }
 
@@ -6733,12 +7435,15 @@ function deduplicateContracts(contracts: Contract[]): Contract[] {
 // Already using RRF in Phase 13.5 for in-repo BM25+semantic merging.
 // Phase 11.6 applies the same RRF at the cross-repo level.
 
-async function groupQuery(groupName: string, query: string): Promise<MergedSearchResult[]> {
+async function groupQuery(
+  groupName: string,
+  query: string,
+): Promise<MergedSearchResult[]> {
   const group = loadGroup(groupName);
-  
+
   // Per-repo searches in parallel
   const perRepoResults = await Promise.all(
-    group.members.map(repoPath => searchRepo(repoPath, query))
+    group.members.map((repoPath) => searchRepo(repoPath, query)),
   );
 
   // RRF merge: each repo's ranked list contributes 1/(k + rank) to each result's score
@@ -6831,19 +7536,23 @@ Catch coding mistakes and design contract violations _before_ you even commit th
 
 **Technical Terms**
 Implement git-hook integration in `src/cli/hooks.ts` that configures a `.git/hooks/pre-commit` script.
+
 - **Hook Execution**: During git commit, the hook runs `cortex lint --errors-only` and `cortex audit-quality --gate`.
 - **Commit Gating**: If any `error`-severity custom constraint is violated, or if the code changes drop the quality score of the affected entities below `CORTEX_QUALITY_GATE`, it terminates with exit code `1`, blocking the commit.
 - **Bypassing**: Supports git's native `--no-verify` flag to allow developers to bypass the gate in emergencies, logging the bypass warning to the local log trail.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality DSL) and Phase 12 (Git & CI Integration) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex install-hooks --pre-commit` successfully writes the pre-commit script.
 - Verification that committing a code change that violates `cortex.constraints.json` is blocked with exit code `1` and a clear error report.
 - Verification that `--no-verify` successfully overrides the hook and writes a bypass log entry.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Short-circuits architectural mistakes locally before they reach CI or pull requests.
 - ❌ **Cons**: Can frustrate developers with blocking gates on small changes. Mitigated by restricting failure triggers strictly to `error` severity levels and allowing simple bypass flags.
 
@@ -6852,10 +7561,11 @@ Implement git-hook integration in `src/cli/hooks.ts` that configures a `.git/hoo
 ## 🔗 Phase 12.3: Architecturally Aware Commit Generation — ⏳ Planned
 
 **Layman's Terms**
-Let Cortex write your git commit messages. Because Cortex already understands your architectural changes, it can generate standard conventional commit messages (e.g. `feat(auth): ...`) that focus on *why* the changes were made to the architecture, saving you time and keeping git history clean.
+Let Cortex write your git commit messages. Because Cortex already understands your architectural changes, it can generate standard conventional commit messages (e.g. `feat(auth): ...`) that focus on _why_ the changes were made to the architecture, saving you time and keeping git history clean.
 
 **Technical Terms**
 Implement standard conventional commit generation in `src/cli/commit.ts`.
+
 - **Command**: `cortex commit-msg [--dry-run]` or `cortex commit`.
 - **Diff Parsing**: Invokes `getPendingDiff()` to scan unstaged and staged files.
 - **Context Injection**: Passes the current diff along with the list of impacted entities and relationships from the last known Knowledge Graph state.
@@ -6863,14 +7573,17 @@ Implement standard conventional commit generation in `src/cli/commit.ts`.
 - **Dry-run**: In dry-run mode, prints the proposed commit message to standard output. In standard mode, runs `git commit -m "<proposed_msg>"` directly.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality DSL) and Phase 12 (Git & CI Integration) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex commit-msg` generates a compliant conventional commit message based on local diffs.
 - Generated commit messages correctly specify the affected entity as the scope (e.g. `refactor(authController): ...`).
 - Tests verify commit pattern formatting, scope accuracy, and correct execution of dry-run options.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Automates clean, descriptive commit messages rooted in real architectural impact, promoting better team commit histories.
 - ❌ **Cons**: Relying fully on LLM generations can sometimes require manual edits for minor formatting preferences. Mitigated by allowing the user to review/edit the generated message before completing the commit.
 
@@ -6883,6 +7596,7 @@ When you run tests or build commands that fail, they often print thousands of li
 
 **Technical Terms**
 Intercept commands run via `cortex run -- <cmd>`.
+
 - **Log Buffering (Teeing)**: If the standard output of the command exceeds a configurable threshold (default: 4KB) or the command exits with a non-zero exit code, write the complete raw output to `.knowledge/diagnostics/<command>_<timestamp>.log`.
 - **Hybrid Sandbox + Compact Thresholding**:
   - `TS_COMPACT_INLINE_THRESHOLD` (default: 4KB): Outputs below this are returned inline. Outputs above this return a minified summary block while writing the full output to the diagnostics directory.
@@ -6891,15 +7605,18 @@ Intercept commands run via `cortex run -- <cmd>`.
 - **MCP Tooling**: Expose a `read_diagnostic_log(hash)` tool enabling agents to pull specific slices of the full log on demand, preventing immediate context window bloat.
 
 **Definition of Ready (DoR)**
+
 - Phase 12 (Git & CI Integration) and Phase 13 (Token Economics) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex run -- <cmd>` executes commands and writes full outputs to `.knowledge/diagnostics/` on failure/large size.
 - Hybrid mode behaves correctly according to `TS_COMPACT_INLINE_THRESHOLD` and `TS_COMPACT_TINY_THRESHOLD` environment variables.
 - Returns to the caller a minified summary block containing a pointer to the diagnostics file.
 - Tests verify stdout/stderr captures, threshold splitting, and `read_diagnostic_log` tool resolution.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Keeps the agent's context window extremely clean on failure cascades; prevents massive spending spikes caused by compiling/test runner output dump loops.
 - ❌ **Cons**: Requires the agent to make a second tool call to fetch raw logs if the initial summary is insufficient. Mitigated by ensuring the default summary includes standard compiler/test traceback formats.
 
@@ -6912,6 +7629,7 @@ AI assistants frequently run commands like `git diff`, `git status`, and `npm te
 
 **Technical Terms**
 Implement command-specific output minifiers inside `src/cli/run.ts`.
+
 - **Compound Command Chain Splitting**: Intercepts chained commands (e.g. `cd src && npm test` or `export ENV=test && jest`). The parser tokenizes the command sequence (splitting by `&&`, `||`, and `;`), extracts the last meaningful target command segment (such as `npm test` or `jest`), and routes its stdout to the corresponding specific output minifier. Bails gracefully on complex subshells, loops, and heredocs.
 - **Command Interceptors**: Detect and wrap common command classes:
   - `git status`: Collapses verbose descriptions into a dense, directory-grouped file count summary.
@@ -6921,15 +7639,18 @@ Implement command-specific output minifiers inside `src/cli/run.ts`.
 - **Parsing Engine**: A rules-based stream transformer that strips progress indicators, coloring escape codes, and recurring success boilerplate before outputting.
 
 **Definition of Ready (DoR)**
+
 - Phase 12.4 (Diagnostic Run Buffer) is completed.
 
 **Definition of Done (DoD)**
+
 - Intercepted commands output >= 60% fewer tokens than raw shell outputs while preserving technical accuracy.
 - `cortex run -- git status` prints a minified structure.
 - Compound command splitting successfully extracts and routes target commands within `&&` / `;` chains.
 - Tests cover parsers for Git status, Git diffs, Jest, and cargo test outputs, as well as compound chain splitting.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Huge token and speed savings for agent terminal executions; increases the agent's attention span by stripping terminal filler.
 - ❌ **Cons**: Regex/rules-based output parsers can drift if tool CLI formats change; mitigated by failing back to raw stdout/stderr if parsing throws or fails to match.
 
@@ -6942,6 +7663,7 @@ You shouldn't have to remember to run `cortex run` manually. Cortex can install 
 
 **Technical Terms**
 Implement automated command interception and AI-specific config hooks:
+
 - **Local Path Shims**: `cortex init-hooks --shims` creates a directory at `.knowledge/shims/` containing lightweight shell executables (e.g. `git`, `npm`, `cargo`) that check if an agent environment variable is present (such as `CLAUDE_CODE`, `VSCODE_PID`, or `TERM_PROGRAM=vscode`). If present, they pass arguments transparently to `cortex run -- <cmd>`; otherwise, they fall back to the user's system binaries.
 - **Pre-Execution Command Rewriter**: Intercepts bare commands typed by the agent and automatically rewrites them to denser variants before shell execution:
   - `git status` -> `git status --porcelain=v2 --branch` (for structured, dense status output).
@@ -6951,15 +7673,18 @@ Implement automated command interception and AI-specific config hooks:
 - **Rule Injection Templates**: Automatically patches project-scoped agent files (e.g. `.cursorrules`, `.windsurfrules`, `.clinerules`) to include standardized instruction headers telling the agent to prepend commands with `cortex run --` or reference `.knowledge/shims/` in its environment.
 
 **Definition of Ready (DoR)**
+
 - Phase 12.5 (Terminal Command Output Minifier) is completed.
 
 **Definition of Done (DoD)**
+
 - Shims successfully intercept commands like `git status` and transparently apply minification in agent sessions without modifying global shell paths.
 - Pre-execution command rewriting matches and replaces configured command patterns safely.
 - Execution of shims falls back to standard behavior outside of AI agent terminals.
 - Verification that rules are correctly appended to `.cursorrules` or `.clinerules` during initialization.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Seamless, zero-effort token savings across all agent operations without requiring the developer to prefix commands manually.
 - ❌ **Cons**: Modifying local executable precedence in the PATH of the terminal session requires agent environment variable detection that might occasionally be bypassed in non-standard shells. Mitigated by keeping shims isolated and safe-failing back to standard binaries.
 
@@ -6972,19 +7697,23 @@ When you ask your AI assistant to read a file, it reads all the detailed code li
 
 **Technical Terms**
 Implement a file reading minification mode `cortex read <file> --signatures-only` (or `--aggressive` verbosity level).
+
 - **Outliner Engine**: Build `src/knowledge/outliner.ts` to parse file contents.
 - **AST/Regex Parser**: Support JavaScript, TypeScript, Python, Rust, and Go. Strips function and method bodies (braced blocks `{ ... }`, indented blocks under `def`, function blocks), leaving class hierarchies, exports, method signatures, return types, parameters, and comments intact.
 - **MCP Integration**: Expose an optional `signaturesOnly: boolean` parameter to the `read_entity` and `read_concept` MCP tools to request only their structural interface metadata.
 
 **Definition of Ready (DoR)**
+
 - Phase 12.6 (Local Command Interception Shims) is completed.
 
 **Definition of Done (DoD)**
+
 - `cortex read <file> --signatures-only` outputs only structural code declarations.
 - Verified >= 50% token size reduction on large codebase files (e.g. controllers or service modules) while retaining interface contracts.
 - Tests verify outliner parses typescript classes, python function declarations, and rust structs accurately.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Massive token savings for files containing large function bodies that the AI does not need to modify but only needs to reference for method shapes.
 - ❌ **Cons**: Building reliable parsers for all supported languages can require solid AST rules. Mitigated by utilizing fast parser libraries or falling back gracefully to standard full-body reads on syntax failure.
 
@@ -6997,18 +7726,22 @@ If a server log repeats the same error message 500 times, or if a curl request d
 
 **Technical Terms**
 Extend command minifiers in `cortex run` to handle data-heavy stream sources:
+
 - **Log Deduplicator**: Intercepts outputs of logging commands (such as `docker logs`, `kubectl logs`, or general tail commands). Buffers output lines to group adjacent identical lines or highly repetitive stack traces, emitting a single compressed line with a count suffix: `[x50 duplicate lines collapsed: <log_text>]`.
 - **Web Fetch Interceptor**: Wraps `curl` and `wget` executions. Filters out download progress bars from stderr. Parses HTML responses to clean, readable Markdown text using an internal parser, truncating responses above a threshold (default: 6KB) and writing the raw output to the diagnostics directory.
 
 **Definition of Ready (DoR)**
+
 - Phase 12.7 (Smart Code Outliner) is completed.
 
 **Definition of Done (DoD)**
+
 - `cortex run -- docker logs <container>` returns a deduplicated log output.
 - `cortex run -- curl <url>` outputs stripped Markdown of the web page with progress indications removed.
 - Tests verify log deduplication collapses matching strings and curl wrapping handles raw html conversion.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Prevents massive token waste when agents fetch documentation via curl or tail error-heavy logs; simplifies parsing for the LLM.
 - ❌ **Cons**: Parsing arbitrary HTML responses can sometimes lose important structure like tabular layout headers. Mitigated by keeping raw response logs readable in the diagnostics cache folder.
 
@@ -7021,6 +7754,7 @@ When you review a Pull Request, scanning line-by-line code changes can be overwh
 
 **Technical Terms**
 Implement a command to compute differences between two architectural states:
+
 - **Command**: `cortex graph diff --target <commit-or-branch>` (defaults to comparing current HEAD to the base branch, e.g. `main` or `origin/main`).
 - **State Reconstruction**: Reconstructs the target graph from `log.jsonl` using the Phase 7 evolution log replay engine.
 - **Graph Diffing Engine**: Compares the two graphs node-by-node and edge-by-edge. Identifies:
@@ -7031,14 +7765,17 @@ Implement a command to compute differences between two architectural states:
 - **Format Options**: Supports Markdown format (clean, compact table summarizing changes) and Mermaid format (renders a visual flowchart where added edges are green and broken edges/violations are colored red).
 
 **Definition of Ready (DoR)**
+
 - Phase 7 (Audit Logs) and Phase 8 (Mermaid Visual Graph) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex graph diff --target main` outputs a structured Markdown diff of architectural changes.
 - Mermaid graph diff output correctly renders added/removed nodes and edges with quality-coded styling.
 - Tests verify graph diffing logic correctly flags added/removed relationships and quality changes.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Provides an instant high-level overview of design changes in Pull Requests, reducing the cognitive load for human reviewers and the token footprint for AI reviewers.
 - ❌ **Cons**: Diffs can become large in PRs that perform wide-scale package renames. Mitigated by grouping changes by directory or module scope.
 
@@ -7047,9 +7784,10 @@ Implement a command to compute differences between two architectural states:
 ## 🔗 Phase 12.10: Baseline-Driven Quality Gates — ⏳ Planned
 
 **Layman's Terms**
-In a CI/CD pipeline, you don't want to block development just because an existing legacy file is poorly documented. Instead, you only want to make sure your Pull Request doesn't make the codebase *worse* or degrade the structure. Phase 12.10 introduces a "quality baseline" file. When you set up your CI, Cortex compares your PR's architectural quality against this baseline. If the overall quality score drops by more than 5% or a modified file's score drops by more than 15%, the build fails, guaranteeing quality never decays over time.
+In a CI/CD pipeline, you don't want to block development just because an existing legacy file is poorly documented. Instead, you only want to make sure your Pull Request doesn't make the codebase _worse_ or degrade the structure. Phase 12.10 introduces a "quality baseline" file. When you set up your CI, Cortex compares your PR's architectural quality against this baseline. If the overall quality score drops by more than 5% or a modified file's score drops by more than 15%, the build fails, guaranteeing quality never decays over time.
 
 **Technical Terms**
+
 - **Baseline Generator**: `cortex quality baseline --save` writes the current workspace's average quality score and per-entity scores to `.knowledge/quality-baseline.json`.
 - **Quality Gate Evaluator**: `cortex quality check --baseline <file> [--threshold-overall 0.05] [--threshold-entity 0.15]` performs comparison logic.
   - Computes the percentage change in overall average quality. If it degrades beyond the threshold, it exits with status `1`.
@@ -7057,14 +7795,17 @@ In a CI/CD pipeline, you don't want to block development just because an existin
 - **CI Integration**: Integrates directly with the `cortex-action` GitHub Action as a PR-blocking gate.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality DSL) and Phase 12 (Git & CI Integration) are completed.
 
 **Definition of Done (DoD)**
+
 - CLI commands `cortex quality baseline` and `cortex quality check` are fully implemented.
 - `cortex quality check` correctly returns exit code `1` and prints detailed regression reports upon threshold violation.
 - Tests cover baseline generation, comparison arithmetic, mock regressions, and threshold compliance.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Enforces continuous improvement of architecture without penalizing teams for historical debt.
 - ❌ **Cons**: Baseline files must be checked into git and updated as refactorings occur, similar to lockfiles or coverage baselines.
 
@@ -7073,9 +7814,10 @@ In a CI/CD pipeline, you don't want to block development just because an existin
 ## 🔗 Phase 12.11: Architectural Changelog Generator — ⏳ Planned
 
 **Layman's Terms**
-Standard release notes generators look at git commits to list files modified. Cortex's changelog tool looks at the *architecture* of your codebase. It inspects the history log to tell you exactly how the design of your codebase evolved between releases—listing new components added, interfaces updated, and design patterns adopted—giving your team a clear, high-level structural history of every version release.
+Standard release notes generators look at git commits to list files modified. Cortex's changelog tool looks at the _architecture_ of your codebase. It inspects the history log to tell you exactly how the design of your codebase evolved between releases—listing new components added, interfaces updated, and design patterns adopted—giving your team a clear, high-level structural history of every version release.
 
 **Technical Terms**
+
 - **Command**: `cortex changelog --since-tag <tag-or-commit> [--format markdown|json]`
 - **Log Processor**: Reads the `log.jsonl` from the target point to current HEAD.
 - **Structural Grouping**: Categorizes updates into:
@@ -7085,14 +7827,17 @@ Standard release notes generators look at git commits to list files modified. Co
 - **Notification Integration**: Formats the output for simple integration into release scripts and Slack/Discord announcement channels.
 
 **Definition of Ready (DoR)**
+
 - Phase 7 (Audit Logs) and Phase 12 (Git & CI Integration) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex changelog` CLI command is fully functional.
 - The command successfully accepts git tags or commits as start references.
 - Output formats (Markdown/JSON) are tested and verified for correct categorizations of entities, contracts, and quality improvements.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Connects code-level release processes directly to design-level changelogs, raising architectural visibility for developers and stakeholders.
 - ❌ **Cons**: Relies on clean commit-tag history to resolve start boundaries; falls back to time-based boundaries if tags are not resolvable.
 
@@ -7104,6 +7849,7 @@ Standard release notes generators look at git commits to list files modified. Co
 When you develop or deploy an MCP server, you want to be sure it complies perfectly with the Model Context Protocol rules and doesn't break when new tools or features are added. Phase 12.12 creates an automated integration test suite that spawns a live Cortex MCP server process, sends real protocol requests, and verifies that the tools, formats, and schemas work perfectly. This ensures your AI assistants never experience connection failures or crash loops during development.
 
 **Technical Terms**
+
 - **Process Spawner Test Runner**: A script (`npm run test:mcp-compliance`) that spins up the Model Context Protocol server in a separate process.
 - **Protocol Schema Validator**: Sends standardized JSON-RPC 2.0 payloads to the stdin/stdout streams to exercise the full MCP lifecycle:
   - `tools/list`: Checks schema and fields of all exposed tool declarations.
@@ -7112,14 +7858,17 @@ When you develop or deploy an MCP server, you want to be sure it complies perfec
 - **CI Pipeline Integration**: Wired as an integration-test step (`npm run test:mcp-compliance`) in the CI/CD workflow to prevent merging breaking protocol changes.
 
 **Definition of Ready (DoR)**
+
 - Phase 12 (Git & CI Integration) is completed.
 
 **Definition of Done (DoD)**
+
 - Automated script `npm run test:mcp-compliance` is executable and tests the entire JSON-RPC surface of the MCP server.
 - Verifies output validation using standard JSON schemas matching the Model Context Protocol specification.
 - Test runner runs in the CI pipeline on pull requests.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Guarantees protocol compliance and shields IDE clients from runtime MCP parser failures and schema drifts.
 - ❌ **Cons**: Spawning external server processes in tests requires careful port/lifecycle management to prevent zombie processes.
 
@@ -7131,6 +7880,7 @@ When you develop or deploy an MCP server, you want to be sure it complies perfec
 Teams often use tools like `commitlint` to force developers to write clear commits (like `feat(auth): add OAuth`). However, developers often write vague or incorrect scopes (like `feat(fixes): edit`). Phase 12.13 links your commit linter directly to Project Cortex. When you commit, it checks the scope of your commit message against the actual entities in your architecture. If you commit `feat(AuthService): add OAuth` and `AuthService` exists, it passes; if you use a fake scope, it suggests the closest valid entity name.
 
 **Technical Terms**
+
 - **Commitlint Plugin Hook**: A plugin/config script for standard commit linters (e.g. `commitlint.config.js`) that imports the local Cortex knowledge manager.
 - **Scope Index Matcher**: Resolves the commit message scope (the text in parentheses) against the list of active entities and concepts in the `.knowledge/` database.
 - **Validation Rules**:
@@ -7139,14 +7889,17 @@ Teams often use tools like `commitlint` to force developers to write clear commi
   - If unmatched, performs a Levenshtein distance check (reusing the Phase 13 ranker) to suggest the correct architectural scope to the developer.
 
 **Definition of Ready (DoR)**
+
 - Phase 7.5 (Quality DSL) and Phase 12.3 (Architecturally Aware Commit Generation) are completed.
 
 **Definition of Done (DoD)**
+
 - Commit lint hook successfully queries the local index and blocks commits with invalid architectural scopes.
 - Prints helpful correction suggestions when a developer misspells a scope.
 - Tests verify validation logic across matched, unmatched, and config-exempt scopes.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Enforces structural discipline in git history, making sure every commit is accurately indexed against the architectural components it alters.
 - ❌ **Cons**: Can block trivial commits if developers aren't familiar with entity naming. Mitigated by allowing customizable list exemptions for non-code scopes (e.g. `deps`, `docs`).
 
@@ -7158,6 +7911,7 @@ Teams often use tools like `commitlint` to force developers to write clear commi
 When using AI agents, developers often waste thousands of tokens because the agent does things inefficiently—like reading a massive file using terminal commands instead of the specialized Cortex tool. Phase 12.14 adds a command that scans your past AI conversations and tells you exactly how many tokens were wasted, flagging bad habits (like native terminal overrides, consecutive searches, and reading without context) and helping you optimize your rules.
 
 **Technical Terms**
+
 - **Command**: `cortex discover [--project <path>] [--format markdown|json|adoption]`
 - **Transcript Parser**: Scans local agent session logs (e.g., `.claude/projects/*/*.jsonl` or `.knowledge/logs/*.jsonl` files) for token-wasting anti-patterns:
   - **Tool-bypass chains**: Where the agent runs native commands (`cat`, `grep`, `find`) on source code files instead of querying the Cortex MCP tools (`read_entity`, `cortex_find`).
@@ -7166,14 +7920,17 @@ When using AI agents, developers often waste thousands of tokens because the age
 - **Reporting Engine**: Emits a token efficiency score, the TS-vs-native tool usage ratio, and concrete recommendations for updating `.cursorrules` or `.clinerules` to correct agent behavior.
 
 **Definition of Ready (DoR)**
+
 - Phase 12.6 (Local Command Interception Shims) and Phase 13 (Token Economics) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex discover` scans transcripts and correctly identifies/reports target anti-pattern occurrences.
 - Generates markdown-formatted adoption reports with sparklines or token savings trend percentages.
 - Tests cover parser match rules against mock session JSONL transcripts.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Identifies invisible context-bloat and high-cost behavior, enabling developers to iteratively prune their agent prompts and rules.
 - ❌ **Cons**: Relying on parsing third-party agent log paths requires handling minor JSONL format differences between different CLI tools (Claude Code vs Cursor).
 
@@ -7197,6 +7954,7 @@ When using AI agents, developers often waste thousands of tokens because the age
 **DoD**: Bumping a package version in `package.json` marks all entities that import it as `[STALE]` with the correct reason. Major version bumps emit high-severity warnings. `cortex lint` surfaces affected entities. Tests: minor bump (stale, no warning), major bump (stale + high-severity warning), package removal (stale + removal warning), unrelated manifest change (no stale cascade), entity with no import of changed package (unaffected).
 
 **Pros & Cons**:
+
 - ✅ **Pros**: Closes the ecosystem blindness gap — architectural memory now knows when external API contracts may have changed. Prevents agents from using deprecated external APIs because "Cortex said it was fine." Particularly valuable for teams running automated dependency updates (Renovate, Dependabot).
 - ❌ **Cons**: Import scanning via grep is heuristic — dynamic imports, aliased package names, and barrel re-exports can be missed. Mitigated by flagging affected entities conservatively (prefer false-positive staleness over silent drift).
 
@@ -7208,6 +7966,7 @@ When using AI agents, developers often waste thousands of tokens because the age
 Graphify ships `graphify prs --triage --conflicts` today. It looks at all open pull requests at once, maps each PR's changed files to the knowledge graph's community clusters, and flags PR pairs that are touching the same cluster — meaning they're likely to conflict with each other at merge time or step on each other's architectural assumptions. Cortex doesn't have this. This phase adds `cortex prs --triage` as a first-class CLI command and three MCP tools.
 
 **What graphify does** (`serve.py`: `list_prs`, `get_pr_impact`, `triage_prs`):
+
 - `list_prs` — fetches all open PRs from the GitHub API; returns title, author, files changed, and entity names matched via path lookup.
 - `get_pr_impact(pr_number)` — resolves which Cortex entities are touched by a PR's file changes; returns impact list with confidence scores.
 - `triage_prs` — runs `get_pr_impact` across all open PRs; builds a PR × PR conflict matrix; flags pairs sharing ≥1 graph community; ranks by conflict severity (shared-community size × number of shared entities).
@@ -7237,6 +7996,7 @@ Graphify ships `graphify prs --triage --conflicts` today. It looks at all open p
   - `triage_prs` — calls `triagePrs`; returns conflict matrix.
 
 - **CLI commands** (add to Layer-1 CLI from Phase 0.15):
+
   ```bash
   cortex prs --list                    # list all open PRs with entity impact counts
   cortex prs --impact 42               # impact analysis for PR #42
@@ -7251,30 +8011,35 @@ Graphify ships `graphify prs --triage --conflicts` today. It looks at all open p
 
 Graphify maps local git worktrees to open PR branches, so `cortex prs --list` can show the developer their local worktrees alongside their GitHub PR status — all in one view.
 
-*What graphify does* (`prs.py`):
+_What graphify does_ (`prs.py`):
+
 - Runs `git worktree list --porcelain` to get all registered worktrees and their current branch names.
 - For each worktree branch, searches the open PR list for a PR with `head.ref == branch_name`.
 - Returns a merged view: `{worktree: "/path/to/worktree", branch: "feature/auth", pr: {number: 42, status: "PENDING", title: "..."} | null}`.
 - This means `graphify prs` shows which of your local worktrees have open PRs and their current CI/review status — no context-switching to GitHub required.
 
-*Cortex implementation — add to `src/git/prClient.ts`*:
+_Cortex implementation — add to `src/git/prClient.ts`_:
+
 ```typescript
 interface WorktreePrMapping {
   worktreePath: string;
   branch: string;
-  pr: PullRequest | null;  // null = no open PR for this branch
+  pr: PullRequest | null; // null = no open PR for this branch
 }
 
-export async function getWorktreePrMappings(repo: string): Promise<WorktreePrMapping[]> {
-  const worktrees = await parseGitWorktrees();  // parse `git worktree list --porcelain`
+export async function getWorktreePrMappings(
+  repo: string,
+): Promise<WorktreePrMapping[]> {
+  const worktrees = await parseGitWorktrees(); // parse `git worktree list --porcelain`
   const openPRs = await listOpenPRs(repo);
-  return worktrees.map(wt => ({
+  return worktrees.map((wt) => ({
     worktreePath: wt.path,
     branch: wt.branch,
-    pr: openPRs.find(pr => pr.headBranch === wt.branch) ?? null,
+    pr: openPRs.find((pr) => pr.headBranch === wt.branch) ?? null,
   }));
 }
 ```
+
 - `cortex prs --list` default output now shows worktree-linked PRs first (with worktree path), then unlinked PRs.
 - `cortex prs --worktrees` shows only worktrees that have open PRs.
 
@@ -7282,34 +8047,52 @@ export async function getWorktreePrMappings(repo: string): Promise<WorktreePrMap
 
 Graphify models each PR as an 8-state machine with ANSI-colored output and a 14-day staleness threshold. Cortex's existing `cortex prs --list` returns raw GitHub state — this adds the full state machine layer on top.
 
-*What graphify does* (`prs.py`):
+_What graphify does_ (`prs.py`):
 
-| State | Condition | ANSI Color |
-|-------|-----------|------------|
-| `DRAFT` | PR is a draft | Dim gray |
-| `READY` | Ready for review, no reviews yet | Green |
-| `PENDING` | Awaiting reviewer response (review requested) | Yellow |
-| `APPROVED` | All required reviewers approved | Bold green |
-| `CHANGES-REQ` | At least one reviewer requested changes | Red |
-| `CI-FAIL` | Latest commit CI status = failure | Red + CI icon |
-| `STALE` | No activity in > 14 days | Dim yellow |
-| `WRONG-BASE` | Base branch is not the default branch (merge target mismatch) | Magenta |
+| State         | Condition                                                     | ANSI Color    |
+| ------------- | ------------------------------------------------------------- | ------------- |
+| `DRAFT`       | PR is a draft                                                 | Dim gray      |
+| `READY`       | Ready for review, no reviews yet                              | Green         |
+| `PENDING`     | Awaiting reviewer response (review requested)                 | Yellow        |
+| `APPROVED`    | All required reviewers approved                               | Bold green    |
+| `CHANGES-REQ` | At least one reviewer requested changes                       | Red           |
+| `CI-FAIL`     | Latest commit CI status = failure                             | Red + CI icon |
+| `STALE`       | No activity in > 14 days                                      | Dim yellow    |
+| `WRONG-BASE`  | Base branch is not the default branch (merge target mismatch) | Magenta       |
 
 State priority (when multiple apply): `CI-FAIL > CHANGES-REQ > STALE > WRONG-BASE > APPROVED > PENDING > DRAFT > READY`.
 
 Staleness: if `updated_at < now - 14 days` → `STALE`. Configurable via `cortex.config.json:pr.staleDays` (default: 14).
 
-*Cortex implementation — new `src/git/prState.ts`*:
+_Cortex implementation — new `src/git/prState.ts`_:
+
 ```typescript
-export type PrState = "DRAFT" | "READY" | "PENDING" | "APPROVED" | "CHANGES-REQ" | "CI-FAIL" | "STALE" | "WRONG-BASE";
+export type PrState =
+  | "DRAFT"
+  | "READY"
+  | "PENDING"
+  | "APPROVED"
+  | "CHANGES-REQ"
+  | "CI-FAIL"
+  | "STALE"
+  | "WRONG-BASE";
 
 const STATE_COLORS: Record<PrState, string> = {
-  DRAFT: "\x1b[2m", READY: "\x1b[32m", PENDING: "\x1b[33m",
-  APPROVED: "\x1b[1;32m", "CHANGES-REQ": "\x1b[31m", "CI-FAIL": "\x1b[31m",
-  STALE: "\x1b[2;33m", "WRONG-BASE": "\x1b[35m",
+  DRAFT: "\x1b[2m",
+  READY: "\x1b[32m",
+  PENDING: "\x1b[33m",
+  APPROVED: "\x1b[1;32m",
+  "CHANGES-REQ": "\x1b[31m",
+  "CI-FAIL": "\x1b[31m",
+  STALE: "\x1b[2;33m",
+  "WRONG-BASE": "\x1b[35m",
 };
 
-export function classifyPrState(pr: PullRequest, defaultBranch: string, staleDays = 14): PrState {
+export function classifyPrState(
+  pr: PullRequest,
+  defaultBranch: string,
+  staleDays = 14,
+): PrState {
   if (pr.ciStatus === "failure") return "CI-FAIL";
   if (pr.reviewDecision === "CHANGES_REQUESTED") return "CHANGES-REQ";
   if (daysSince(pr.updatedAt) > staleDays) return "STALE";
@@ -7320,6 +8103,7 @@ export function classifyPrState(pr: PullRequest, defaultBranch: string, staleDay
   return "READY";
 }
 ```
+
 - `cortex prs --list` output format (one line per PR):
   ```
   #42  [APPROVED ]  feature/auth    → main   AuthService, TokenStore (+3 entities)
@@ -7332,6 +8116,7 @@ export function classifyPrState(pr: PullRequest, defaultBranch: string, staleDay
 **DoR**: Phase 12 (Git & CI) is stable. Phase 14.1 (Leiden communities) is helpful but not required — falls back to directory buckets.
 
 **DoD**
+
 - `cortex prs --list` authenticates via `GITHUB_TOKEN` and returns open PR list with entity impact counts.
 - `cortex prs --triage` produces a conflict matrix identifying PR pairs sharing graph communities.
 - `cortex prs --conflicts` shows only conflicting pairs, sorted by severity score.
@@ -7366,17 +8151,23 @@ async function attachTestCoverage(
   state: CortexState,
 ): Promise<void> {
   const summary: Record<string, CoverageEntry> = JSON.parse(
-    await fs.readFile(coveragePath, "utf8")
+    await fs.readFile(coveragePath, "utf8"),
   );
   for (const entity of state.entities) {
-    const entry = summary[entity.sourceFile] ?? summary[normalizePath(entity.sourceFile)];
+    const entry =
+      summary[entity.sourceFile] ?? summary[normalizePath(entity.sourceFile)];
     if (entry) {
       entity.testCoverage = {
         statements: entry.statements.pct / 100,
         branches: entry.branches.pct / 100,
         functions: entry.functions.pct / 100,
         lines: entry.lines.pct / 100,
-        overall: (entry.statements.pct + entry.branches.pct + entry.functions.pct + entry.lines.pct) / 400,
+        overall:
+          (entry.statements.pct +
+            entry.branches.pct +
+            entry.functions.pct +
+            entry.lines.pct) /
+          400,
       };
     }
   }
@@ -7388,6 +8179,7 @@ async function attachTestCoverage(
 **`build_context_pack` integration**: When building a context pack, entities are sorted by a composite risk score: `(1 - testCoverage.overall) × inDegree × centrality`. High-risk, low-tested, high-dependency entities appear first.
 
 **CLI**:
+
 ```bash
 cortex coverage --attach ./coverage/coverage-summary.json   # attach coverage to state
 cortex lint --coverage                                        # show LOW_COVERAGE_HUB warnings
@@ -7425,34 +8217,66 @@ The inverse of `isTestFile`: a static allowlist of root-level config/manifest fi
 ```typescript
 const IMPORTANT_ROOT_FILES = new Set([
   // Version control
-  '.gitignore', '.gitattributes', 'CODEOWNERS',
+  ".gitignore",
+  ".gitattributes",
+  "CODEOWNERS",
   // Documentation
-  'README.md', 'README.rst', 'README.txt', 'CONTRIBUTING.md', 'CHANGELOG.md', 'SECURITY.md',
+  "README.md",
+  "README.rst",
+  "README.txt",
+  "CONTRIBUTING.md",
+  "CHANGELOG.md",
+  "SECURITY.md",
   // Package manifests
-  'package.json', 'pyproject.toml', 'Cargo.toml', 'go.mod', 'pom.xml',
-  'build.gradle', 'build.gradle.kts', 'Gemfile', 'composer.json',
+  "package.json",
+  "pyproject.toml",
+  "Cargo.toml",
+  "go.mod",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "Gemfile",
+  "composer.json",
   // TypeScript / JS config
-  'tsconfig.json', 'jsconfig.json', '.eslintrc', '.prettierrc', '.babelrc',
+  "tsconfig.json",
+  "jsconfig.json",
+  ".eslintrc",
+  ".prettierrc",
+  ".babelrc",
   // Python tooling
-  'setup.py', 'setup.cfg', 'requirements.txt', 'mypy.ini', '.flake8', 'tox.ini',
+  "setup.py",
+  "setup.cfg",
+  "requirements.txt",
+  "mypy.ini",
+  ".flake8",
+  "tox.ini",
   // Build / CI
-  'Dockerfile', 'docker-compose.yml', 'Makefile', 'Justfile', 'Taskfile.yml',
-  '.travis.yml', '.gitlab-ci.yml', 'Jenkinsfile',
+  "Dockerfile",
+  "docker-compose.yml",
+  "Makefile",
+  "Justfile",
+  "Taskfile.yml",
+  ".travis.yml",
+  ".gitlab-ci.yml",
+  "Jenkinsfile",
   // Environment / secrets template
-  '.env.example',
+  ".env.example",
   // Cortex-specific
-  'CLAUDE.md', 'AGENTS.md', '.cortexignore',
+  "CLAUDE.md",
+  "AGENTS.md",
+  ".cortexignore",
 ]);
 
 function isImportantRootFile(relPath: string): boolean {
-  const basename = relPath.split('/').at(-1) ?? relPath;
+  const basename = relPath.split("/").at(-1) ?? relPath;
   // Only root-level files (no directory separator in the first segment)
-  const isRoot = !relPath.includes('/') || relPath.split('/').length === 2;
+  const isRoot = !relPath.includes("/") || relPath.split("/").length === 2;
   return isRoot && IMPORTANT_ROOT_FILES.has(basename);
 }
 ```
 
 **Apply in**:
+
 - `cortex_find` result scoring: `+0.5` score multiplier on any entity whose `sourceFile` matches `isImportantRootFile`
 - `build_context_pack` greedy fill: always include important-root-file entities before lower-ranked ones, regardless of PageRank order
 - Ingest pipeline: never skip or deprioritize these files during extraction, even if they appear "small" or "low-complexity"
@@ -7475,7 +8299,7 @@ Three small, self-contained surfaces over the existing knowledge — no new data
    - `--scope <entity-or-concept>` — narrow to a subgraph (reuses Phase 8's graph traversal).
    - `--depth N` — link-hop traversal depth from the scope root.
    - `--format markdown|json` — markdown for humans/IDEs, JSON for programmatic consumers.
-           The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
+     The packer fills the budget greedily by PageRank order (Phase 10's centrality scoring): highest-centrality entities first, then their direct neighbors, until the budget is exhausted. The bundle is self-contained — every `[[WikiLink]]` inside it points at something also in the bundle, or is footnoted as "elided for budget."
 
 2. **Response compression in MCP outputs (sqz-style reference pointers).** Wrap MCP tool responses (`read_knowledge_index`, `read_entity`, `read_concept`, `get_pending_changes`) with a per-session content-addressed cache. On the first response that contains a given large block (e.g., a 4KB entity description), the full text is emitted. On any subsequent response in the same session that would repeat the same block, the body is replaced with a `§ref:<hash>§` token plus a small legend the agent can resolve client-side via a new `resolve_refs(refs[])` tool. Sessions are scoped to a single MCP connection; eviction is LRU on a small fixed budget (256KB by default). Backward-compatible: clients that don't call `resolve_refs` simply see the placeholder and ignore it.
 
@@ -7521,20 +8345,24 @@ Cortex keeps your AI token usage extremely low and predictable by only sending p
 
 **Technical Terms**
 Extend `cortex test-cost` with comparative raw-vs-dense math and customized tokenizer-family heuristic multipliers:
+
 1. **Refined Multi-Provider Heuristics**: Token counts are computed using target-specific ratios based on the active provider (`gpt-4o`/`o1` at ~3.8 chars/token, `claude-3-5-sonnet` at ~3.4, `gemini-1.5-pro` at ~3.6) to get highly precise metrics offline.
 2. **Simulated Raw Baseline Projection**: For any pending code changes, Cortex parses the diff, reads the full contents of all affected files from the filesystem, and computes a simulated baseline token count if those complete files were sent alongside the system prompt.
 3. **Advanced Comparative Reports**: Added CLI flags `--compare` (to show a side-by-side terminal table comparing token counts and USD costs across models) and `--projection` (to show weekly, monthly, and annual ROI calculations based on standard developer sync rates).
 
 **Definition of Ready (DoR)**
+
 - Phase 13 is fully implemented and passes all test suites.
 
 **Definition of Done (DoD)**
+
 - `cortex test-cost --compare` prints a comparative table showing input tokens, output tokens, and projected costs per provider for both Raw and Dense payloads.
 - `cortex test-cost --projection` prints forecasted savings (weekly, monthly, and yearly in USD) based on typical sync frequencies.
 - Accurate provider-specific tokenizer ratios are implemented in `packer.ts` and verified.
 - Unit and integration tests verify the correct parsing of modified files, full-file reading, and math logic of savings projections.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Explicitly proves Cortex's ROI in real dollars; acts as the mathematical engine required for down-stream savings ledgering (Phase 13.3).
 - ❌ **Cons**: Full-file reading of modified files adds minor I/O overhead before sync, but is fast and restricted to changed files only.
 
@@ -7547,6 +8375,7 @@ Save up to 50% of your AI token costs by stripping out prose fluff, introductory
 
 **Technical Terms**
 Implement a "Brevity Engine" containing:
+
 1. **Telegraphic Memory Compiler (`cortex compress <file>`)**: A parser that minifies Markdown files (e.g. `GEMINI.md` and `.knowledge/onboarding_*.md`) by applying a set of brevity transformations:
    - Removes conversational filler (e.g. "In order to...", "Please make sure to...", "It is important that...").
    - Simplifies sentences into dense, telegraphic fragments (e.g. "Do X to resolve Y").
@@ -7556,15 +8385,18 @@ Implement a "Brevity Engine" containing:
 4. **Brevity Telemetry & Savings Register (`cortex stats`)**: Compute and log the token difference between standard (uncompressed) returns/files and their minified equivalents. Save these savings metrics to `state.json` so users can query their dollar savings.
 
 **Definition of Ready (DoR)**
+
 - Phase 13 (Token Economics) and Phase 10 (Onboarding) are completed.
 
 **Definition of Done (DoD)**
+
 - `cortex compress <file>` compiles a markdown file to a minified version, proving >= 40% token reduction while retaining all code references.
 - Environment variable `CORTEX_BREVITY_LEVEL` and config option in `cortex.json` are honored across all MCP tool descriptions and returns.
 - Integration tests verify that minified `GEMINI.md` and minified MCP responses preserve 100% of target paths, contracts, and links.
 - `cortex stats` displays the cumulative tokens and USD saved through reference compression and brevity transformations.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Dramatically reduces both input and output token consumption across all developer sessions; makes instructions faster for LLMs to read.
 - ❌ **Cons**: Extremely terse explanations might occasionally feel cryptic for human developers who read `GEMINI.md` directly. Mitigated by keeping telegraphic mode fully opt-in via configuration.
 
@@ -7577,6 +8409,7 @@ Keep track of exactly how much money and how many tokens Cortex has saved you. R
 
 **Technical Terms**
 Implement a persistent local ledger to audit token and monetary savings.
+
 - **Persistent Ledger**: Appends transactional savings entries to `.knowledge/savings_ledger.jsonl`.
 - **Instrumentation points**:
   - Ingest bypasses: saved tokens = `raw_diff_size - compressed_synthesis_size`.
@@ -7588,14 +8421,17 @@ Implement a persistent local ledger to audit token and monetary savings.
   - `cortex savings --graph`: Emits an ASCII chart mapping token savings over the last 30 days.
 
 **Definition of Ready (DoR)**
+
 - Phase 13.2 (Brevity Engine) is completed.
 
 **Definition of Done (DoD)**
+
 - Transactional ledger updates on every compression/minification occurrence.
 - `cortex savings` successfully reads the ledger and displays correct aggregated token/USD figures.
 - Tests verify calculation correctness across all provider types and handles malformed ledger entries.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Quantifies the real-world value of running Cortex; highlights optimizations in response size and command interceptions.
 - ❌ **Cons**: Modest storage and file-write overhead for appending to the log ledger; mitigated by keeping entries short and performing local non-blocking writes.
 
@@ -7608,19 +8444,23 @@ Protect your wallet from runaway AI loops. If your editor or terminal agent goes
 
 **Technical Terms**
 Implement a session-based usage tracker and gatekeeper:
+
 - **Usage Store**: Volatile session tracking file `.knowledge/.session_usage.json` containing timestamped sync costs and invocation counters.
 - **Configurable Limits**: Read `max_session_cost_usd` and `max_sync_calls_per_hour` limits from the environment or `.cortexrc`.
 - **Pre-flight Enforcement**: Intercept synthesis triggers. If limits are violated, abort with a clean budget-exceeded error before initiating the LLM call.
 
 **Definition of Ready (DoR)**
+
 - Phase 13.3 (Savings Ledger) is completed.
 
 **Definition of Done (DoD)**
+
 - Synthesizing after crossing the threshold fails and does not make an LLM call.
 - Budget warnings are logged and displayed in the terminal.
 - Tests verify correct gating behavior under simulated budget constraints.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Important safety net for autonomous or looped agent sessions.
 - ❌ **Cons**: Needs to be configured correctly to avoid blocking legitimate developer syncs during large refactoring sessions.
 
@@ -7632,12 +8472,12 @@ Implement a session-based usage tracker and gatekeeper:
 
 Add project-size-tier controls to `build_context_pack` and context output tools. Four tiers based on indexed file count:
 
-| Tier | Files | maxOutputChars | defaultMaxFiles | maxCharsPerFile | Meta-text |
-|------|-------|----------------|-----------------|-----------------|-----------|
-| Tiny | <500 | 18,000 | 5 | 3,800 | Off |
-| Small | <5,000 | 13,000 | 6 | 2,500 | On |
-| Medium | <15,000 | 35,000 | 12 | 7,000 | On |
-| Large | ≥15,000 | 38,000 | 14 | 7,000 | On |
+| Tier   | Files   | maxOutputChars | defaultMaxFiles | maxCharsPerFile | Meta-text |
+| ------ | ------- | -------------- | --------------- | --------------- | --------- |
+| Tiny   | <500    | 18,000         | 5               | 3,800           | Off       |
+| Small  | <5,000  | 13,000         | 6               | 2,500           | On        |
+| Medium | <15,000 | 35,000         | 12              | 7,000           | On        |
+| Large  | ≥15,000 | 38,000         | 14              | 7,000           | On        |
 
 Meta-text (relationships map, "additional relevant files", completeness signal, budget note) is suppressed for Tiny projects where one rich call is the whole story.
 
@@ -7652,6 +8492,7 @@ Make searching your architecture robust to typos and spelling mistakes. If you s
 
 **Technical Terms**
 Implement a dual-strategy search ranker in `src/knowledge/find.ts` without database dependencies:
+
 - **Dual Ranking Strategy**:
   1. Token/Substring matching (exact matches, word starts, substring overlaps).
   2. Levenshtein Distance matching (evaluates character edit distance for query terms against entity/concept names).
@@ -7659,14 +8500,17 @@ Implement a dual-strategy search ranker in `src/knowledge/find.ts` without datab
 - **Typo Correction**: Auto-correct highly likely typo matches (Levenshtein distance <= 2) before displaying search previews.
 
 **Definition of Ready (DoR)**
+
 - The base `FindManager` is fully tested and verified.
 
 **Definition of Done (DoD)**
+
 - Searching for `authContrller` successfully ranks the `AuthController` entity at the top.
 - RRF calculations are verified with a deterministic unit test.
 - Tests check that Levenshtein distance matching does not degrade sub-millisecond search performance for typical workspace sizes.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Greatly improves developer search experience under MCP; makes agent retrieval tolerant of minor typos in queries.
 - ❌ **Cons**: Slight CPU cost for calculating Levenshtein edit distance on large node trees. Mitigated by filtering candidate lists by length and character prefixes first.
 
@@ -7713,6 +8557,7 @@ The MCP `initialize` response's `instructions` field should contain a tight, age
 Tool descriptions should describe parameters and return values only. Coaching text in tool descriptions re-sends on every tool call (inflating per-call context); in `SERVER_INSTRUCTIONS` it sends exactly once.
 
 Template structure for Cortex:
+
 - `## Tool selection by intent` — one-liner per tool matching the "what are you trying to do?" framing
 - `## Common chains` — 3-5 multi-tool workflows (onboarding, before-edit, after-sync)
 - `## Limitations` — honest caveats (index lag, heuristic cross-file resolution)
@@ -7728,18 +8573,22 @@ When you search for multiple words (like "auth token"), Cortex boosts the rank o
 
 **Technical Terms**
 Upgrade query scoring and preview extraction in `src/knowledge/find.ts`:
+
 - **Proximity Score**: Add a score bonus if multiple query terms appear within a 5-word window of each other in the entity description or evidence.
 - **Smart Snippets**: Instead of truncating descriptions from the beginning, extract a 120-character text window centered around the first matching term, prefixed/suffixed with `...` if truncated.
 
 **Definition of Ready (DoR)**
+
 - Phase 13.5 (RRF Ranker) is completed.
 
 **Definition of Done (DoD)**
+
 - Multi-term searches boost adjacent-term results over scattered occurrences.
 - Search result previews display the text surrounding the matching search terms.
 - Tests cover proximity calculations and snippet boundary checks.
 
 **Pros & Cons**
+
 - ✅ **Pros**: High readability for search results; aligns MCP returns with standard search engine behaviors.
 - ❌ **Cons**: Slightly more complex string parsing logic. Mitigated by keeping matching algorithms pure and performant.
 
@@ -7753,27 +8602,34 @@ Upgrade query scoring and preview extraction in `src/knowledge/find.ts`:
 **Problem** (Flaw #26): `cortex_find` ranks by RRF score but a high-RRF query can return 3 sections of the same entity at ranks #1–#3, crowding out distinct results. The agent sees one entity from three angles and misses two other relevant entities entirely.
 
 **What MMR does**: After RRF produces a ranked list, MMR re-selects results iteratively using:
+
 ```
 score = lambda × relevance − (1 − lambda) × maxSimilarityToSelected
 ```
+
 where `lambda = 0.7` (relevance-favoring; set to 0.5 for pure diversity). Similarity is Jaccard on pre-tokenized token sets. CJK-aware tokenizer: unigrams + adjacent bigrams for CJK sequences, whitespace split otherwise. All items are pre-tokenized once before the loop (O(n²) Jaccard, but bounded by result set size, typically <50 items).
 
 **Implementation**:
+
 - New file `src/search/mmr.ts` (~120 lines, pure TS, zero deps):
   ```typescript
-  export interface MMRConfig { enabled: boolean; lambda: number; }
+  export interface MMRConfig {
+    enabled: boolean;
+    lambda: number;
+  }
   export const DEFAULT_MMR_CONFIG: MMRConfig = { enabled: false, lambda: 0.7 };
-  export function tokenize(text: string): Set<string>  // CJK-aware
-  export function jaccardSimilarity(a: Set<string>, b: Set<string>): number
-  export function mmrRerank<T extends { name: string; description?: string; score: number }>(
-    items: T[], config?: Partial<MMRConfig>
-  ): T[]
+  export function tokenize(text: string): Set<string>; // CJK-aware
+  export function jaccardSimilarity(a: Set<string>, b: Set<string>): number;
+  export function mmrRerank<
+    T extends { name: string; description?: string; score: number },
+  >(items: T[], config?: Partial<MMRConfig>): T[];
   ```
 - Wire into `cortex_find` as a post-RRF pass: `if (config.search?.mmr?.enabled) results = mmrRerank(results, config.search.mmr)`.
 - Expose `lambda` in `configure_brevity` (or a future `configure_search` tool). Default `enabled: false` so existing behavior is unchanged until opted in.
 - Cap MMR input at top-50 items to bound O(n²) cost.
 
 **DoD**:
+
 - `cortex_find("authentication")` on a codebase with 5 auth-related entities returns distinct entities, not 3 sections of `AuthService`.
 - MMR disabled by default; `configure_search({mmr: {enabled: true, lambda: 0.7}})` enables it.
 - Unit tests: Jaccard similarity, tokenizer (ASCII + CJK), MMR selection order with known lambda.
@@ -7797,20 +8653,24 @@ Add `CORTEX_CONTEXT_LINENUMS=0` env var to disable (useful for A/B token-cost me
 During a coding session, the AI reads the same source code files over and over again to check things. Reading a large file multiple times eats up thousands of tokens. Phase 13.7 intercepts file-reading commands inside the AI assistant. If the AI asks to read a file it has already seen in the current session and the file hasn't changed, Cortex returns a tiny skeleton (imports, class structures, and function signatures) instead of the full code. If the file has changed, Cortex returns a unified diff showing only what changed. This slashes token usage on re-reads by up to 95%.
 
 **Technical Terms**
+
 - **Read Cache Hook**: Integrates into the `PreToolUse` hook (e.g., `inject-knowledge.js`) to intercept file-reading operations (`view_file`, `cat`, etc.).
 - **AST Skeleton Parser**: For JS, TS, and Python files, generates a lightweight abstract syntax tree (AST) skeleton (imports, class definitions, method signatures, exports, and JSDoc blocks) on the first read. On subsequent reads in the same session of an unchanged file, returns this skeleton instead of the full source.
 - **Delta Diffing Engine**: On re-read of a modified file, computes a unified diff and returns only the diff lines, preventing full-file re-transmission.
 - **Bypass Safeguards**: Re-reads fall back to full file transfers if the diff exceeds a threshold (e.g., 1,500 characters) or if the model requests a full bypass.
 
 **Definition of Ready (DoR)**
+
 - Phase 10.3 (Zero-Token Startup) is completed.
 
 **Definition of Done (DoD)**
+
 - File read operations from hooked AI clients are intercepted and successfully optimized with skeletons or unified diffs for cached items.
 - Token reduction reaches at least 80% on simulated code file re-reads.
 - Performance tests confirm that delta generation adds negligible processing latency (<15ms).
 
 **Pros & Cons**
+
 - ✅ **Pros**: Substantial token savings during iterative file editing; fits directly inside existing Claude Code hooks.
 - ❌ **Cons**: AI must be able to work off of structural summaries and diffs. If the AI needs full implementation details, it must trigger a bypass read.
 
@@ -7819,25 +8679,29 @@ During a coding session, the AI reads the same source code files over and over a
 ## 💸 Phase 13.7.2: Speculative Static Verification & Grounded Fallback Resolution (Adaptive Retrieval Guardrails) — ✅ Done (verified 2026-05-21)
 
 **Layman's Terms**
-Make your AI co-pilot incredibly reliable and self-healing. When gathering files to help you code, Cortex runs a super-fast check behind the scenes: *"Do the gathered files contain everything the AI needs to understand the changes?"* If the system detects a missing piece (like a reference to a newly added utility that hasn't been documented yet), instead of letting the AI guess or throw a blind error, it instantly runs a local "grep" search across your files, extracts the missing code, and feeds it to the AI as a real-time safety net. You get perfect answers even if the project documentation is momentarily out of sync.
+Make your AI co-pilot incredibly reliable and self-healing. When gathering files to help you code, Cortex runs a super-fast check behind the scenes: _"Do the gathered files contain everything the AI needs to understand the changes?"_ If the system detects a missing piece (like a reference to a newly added utility that hasn't been documented yet), instead of letting the AI guess or throw a blind error, it instantly runs a local "grep" search across your files, extracts the missing code, and feeds it to the AI as a real-time safety net. You get perfect answers even if the project documentation is momentarily out of sync.
 
 **Technical Terms**
 Implement adaptive retrieval verification and local grep-fallback engines inside the context assembly pipeline:
+
 - **Speculative Static Verification**: When compiling a token-bounded context pack inside `src/knowledge/packer.ts`, extract all imports and explicit class/function relationships of the target entities. Run a static verification pass to ensure all mapped relationships (Phase 6 edges) are resolved within the active context bundle.
 - **Dynamic Context Expansion**: If critical 1-hop dependencies or contract interfaces are missing from the compact bundle, dynamically "zoom in" and expand the retrieval radius to automatically pull in the missing contracts before the final payload is generated.
 - **Grounded Fallback Resolution**: If a queried relationship or class reference is missing from `.knowledge/` altogether (e.g. a fresh, un-ingested file), intercept the error and execute a sub-millisecond local string search (`git grep` or native node-grep) across the active source code directory.
 - **Signature Extraction Fallback**: Extract the matching raw source code block or interface signature, validate its structure, and inject it as a `[Grounded Fallback Context]` block into the context pack.
 
 **Definition of Ready (DoR)**
+
 - Phase 6 (Typed Relationships) and Phase 13.5 (RRF Ranker) are completed.
 
 **Definition of Done (DoD)**
+
 - **Static Import Verification**: Context packing automatically detects when 100% of physical imports of the target target are resolved in the context pack.
 - **Grep Fallback Extraction**: Querying a newly created, un-synced module falls back to live local source code search and successfully retrieves its raw signature, verified by integration tests.
 - **Zero-Latency Invariant**: The static verification and fallback search add less than 15ms of overhead to the total context assembly pass.
 - Tests cover static import coverage verification, deep contract extraction, and grep-fallback signature integration.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Guarantees absolute context completeness; prevents AI hallucinations caused by missing interface files; operates completely offline and local-first with zero API overhead.
 - ❌ **Cons**: Grep fallbacks are string-based and can return false-positive matching signatures if multiple modules share the exact same helper function names. Mitigated by filtering results based on source file proximity.
 
@@ -7853,6 +8717,7 @@ When you use an AI assistant, it forgets everything you did in the previous task
 Implement the dynamic context orchestration framework alongside the deterministic, vector-and-graph-hybrid memory and reinforcement engine (Cortex Soul v1):
 
 ### A. Core Co-Pilot Context Framework
+
 - **User Profile Model (`src/knowledge/profile.ts`)**: Loads and validates `user_profile.json` at the workspace root to check for team constraints (e.g. disallowed libraries) and risk tolerances.
 - **Experience Ledger (`src/knowledge/experience.ts`)**: Append-only telemetry manager logging sync decisions, validation outcomes, and reverted commits in `experience.jsonl`.
 - **Cognitive Search Ranker (`src/knowledge/find.ts` & `src/knowledge/packer.ts`)**: Reweights graph search and context-packing candidates dynamically based on the active task mode (`DEBUG` prioritizes past violations and reverts; `PLANNING` prioritizes high-centrality interfaces and parent structures).
@@ -7864,6 +8729,7 @@ Implement the dynamic context orchestration framework alongside the deterministi
 > **Cortex Soul** is a persistent memory graph system where memory nodes are weighted by outcome-based reinforcement (Nemesis-style evolution) and retrieved through lens-dependent scoring functions with optional controlled stochastic drift (Pharmaicy-style interpretation modes).
 
 #### 1. Memory Graph Data Structures (`src/knowledge/soul.ts`)
+
 ```typescript
 export type MemoryNode = {
   id: string;
@@ -7877,37 +8743,49 @@ export type MemoryNode = {
   };
   // Nemesis-style evolution metrics
   weights: {
-    salience: number;        // Importance score [0.0 - 1.0]
-    successBias: number;     // Reinforced if outcome is successful
-    failureBias: number;     // Reinforced if outcome is unsuccessful
-    decay: number;           // Time decay factor
-    certainty: number;       // Confidence in the memory's correctness [0.0 - 1.0]
-    credibility: number;     // Source trustworthiness [0.0 - 1.0]; higher for directly observed vs. inferred
-    energy: number;          // Activation potential [0.0 - 1.0]; decays without reinforcement, spikes on co-occurrence
+    salience: number; // Importance score [0.0 - 1.0]
+    successBias: number; // Reinforced if outcome is successful
+    failureBias: number; // Reinforced if outcome is unsuccessful
+    decay: number; // Time decay factor
+    certainty: number; // Confidence in the memory's correctness [0.0 - 1.0]
+    credibility: number; // Source trustworthiness [0.0 - 1.0]; higher for directly observed vs. inferred
+    energy: number; // Activation potential [0.0 - 1.0]; decays without reinforcement, spikes on co-occurrence
   };
 };
 
 export type MemoryEdge = {
   from: string;
   to: string;
-  type: "causal" | "contradiction" | "reinforcement" | "dependency" | "association";
-  strength: number;          // Edge relationship strength [0.0 - 1.0]
+  type:
+    | "causal"
+    | "contradiction"
+    | "reinforcement"
+    | "dependency"
+    | "association";
+  strength: number; // Edge relationship strength [0.0 - 1.0]
 };
 
 export type SoulState = {
   globalBiases: {
-    riskTolerance: number;   // Affects code generation adventurousness [0.0 (cautious) - 1.0 (creative)]
-    creativityBias: number;  // Multiplier for semantic distance exploration
-    precisionBias: number;   // Weighting multiplier for strict static checks
+    riskTolerance: number; // Affects code generation adventurousness [0.0 (cautious) - 1.0 (creative)]
+    creativityBias: number; // Multiplier for semantic distance exploration
+    precisionBias: number; // Weighting multiplier for strict static checks
   };
   memoryWeightMultiplier: Record<string, number>;
 };
 
-export type CognitiveLens = "ENGINEERING" | "FORENSIC" | "STRATEGIC" | "CREATIVE" | "EXECUTION";
+export type CognitiveLens =
+  | "ENGINEERING"
+  | "FORENSIC"
+  | "STRATEGIC"
+  | "CREATIVE"
+  | "EXECUTION";
 ```
 
 #### 2. Weighted Memory Retrieval (Pharmaicy Logic)
+
 Compute candidate relevance by combining semantic similarity, node weights, active cognitive lenses, and evolving global biases:
+
 ```typescript
 export function retrieveMemory(
   query: string,
@@ -7915,17 +8793,17 @@ export function retrieveMemory(
   lens: CognitiveLens,
   soul: SoulState,
   similarityFunc: (a: MemoryNode, q: string) => number,
-  K: number
+  K: number,
 ): { node: MemoryNode; score: number }[] {
   return candidates
-    .map(node => ({
+    .map((node) => ({
       node,
       score:
         similarityFunc(node, query) *
         node.weights.salience *
         node.weights.decay *
         getLensWeight(node, lens) *
-        getSoulBias(node, soul)
+        getSoulBias(node, soul),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, K);
@@ -7933,27 +8811,38 @@ export function retrieveMemory(
 
 function getLensWeight(node: MemoryNode, lens: CognitiveLens): number {
   switch (lens) {
-    case "ENGINEERING": return node.type === "decision" ? 1.2 : 1.0;
-    case "FORENSIC":    return node.type === "failure" ? 1.5 : 1.0;
-    case "STRATEGIC":   return node.metadata.domain ? 1.3 : 1.0;
-    case "CREATIVE":    return node.type === "insight" ? 1.4 : 1.1;
-    case "EXECUTION":   return node.type === "decision" ? 1.5 : 0.8;
-    default:            return 1.0;
+    case "ENGINEERING":
+      return node.type === "decision" ? 1.2 : 1.0;
+    case "FORENSIC":
+      return node.type === "failure" ? 1.5 : 1.0;
+    case "STRATEGIC":
+      return node.metadata.domain ? 1.3 : 1.0;
+    case "CREATIVE":
+      return node.type === "insight" ? 1.4 : 1.1;
+    case "EXECUTION":
+      return node.type === "decision" ? 1.5 : 0.8;
+    default:
+      return 1.0;
   }
 }
 
 function getSoulBias(node: MemoryNode, soul: SoulState): number {
   let bias = 1.0;
-  if (node.type === "failure") bias *= (2.0 - soul.globalBiases.riskTolerance);
-  if (node.type === "insight") bias *= (1.0 + soul.globalBiases.creativityBias);
+  if (node.type === "failure") bias *= 2.0 - soul.globalBiases.riskTolerance;
+  if (node.type === "insight") bias *= 1.0 + soul.globalBiases.creativityBias;
   return bias;
 }
 ```
 
 #### 3. Soul Evolution & Blocker Reinforcement Loop (Nemesis Logic)
+
 Runs immediately after code modifications, test executions, or commit verification loops to adapt weights based on outcome feedback:
+
 ```typescript
-export function updateSoul(memoryNode: MemoryNode, outcome: { success: boolean }): void {
+export function updateSoul(
+  memoryNode: MemoryNode,
+  outcome: { success: boolean },
+): void {
   if (outcome.success) {
     memoryNode.weights.salience += 0.1;
     memoryNode.weights.successBias += 0.2;
@@ -7961,18 +8850,24 @@ export function updateSoul(memoryNode: MemoryNode, outcome: { success: boolean }
     memoryNode.weights.failureBias += 0.2;
     memoryNode.weights.salience -= 0.05; // Slightly dampen salience to prevent locking onto failures
   }
-  memoryNode.weights.salience = Math.min(Math.max(memoryNode.weights.salience, 0), 1);
+  memoryNode.weights.salience = Math.min(
+    Math.max(memoryNode.weights.salience, 0),
+    1,
+  );
 }
 
 export function applyDecay(node: MemoryNode, deltaTime: number): void {
   node.weights.salience *= Math.exp(-node.weights.decay * deltaTime);
 }
 
-export function applyDrift(nodes: { node: MemoryNode; score: number }[], driftLevel: number): { node: MemoryNode; score: number }[] {
+export function applyDrift(
+  nodes: { node: MemoryNode; score: number }[],
+  driftLevel: number,
+): { node: MemoryNode; score: number }[] {
   if (driftLevel === 0) return nodes;
-  return nodes.map(n => ({
+  return nodes.map((n) => ({
     ...n,
-    score: n.score + (Math.random() - 0.5) * 2 * driftLevel // Pseudo-Gaussian stochastic exploration
+    score: n.score + (Math.random() - 0.5) * 2 * driftLevel, // Pseudo-Gaussian stochastic exploration
   }));
 }
 ```
@@ -7980,15 +8875,23 @@ export function applyDrift(nodes: { node: MemoryNode; score: number }[], driftLe
 #### 4. Advanced Cortex Soul Enhancements (Lightweight & Safe)
 
 ##### A. Co-Occurrence Graph Reinforcement (Undocumented File Connection Engine)
-- **Layman's Terms**: The system remembers which files you edit together. If you change a database file and always end up editing a specific UI handler, Cortex automatically links them. The next time you edit that database file, it warns you: *"Hey, you usually edit this UI file too, don't forget it!"*
+
+- **Layman's Terms**: The system remembers which files you edit together. If you change a database file and always end up editing a specific UI handler, Cortex automatically links them. The next time you edit that database file, it warns you: _"Hey, you usually edit this UI file too, don't forget it!"_
 - **Technical Terms**: `association` type memory edges are created or reinforced during ingestion whenever multiple files are modified in a single successful sync pass. This implements implicit behavior mapping without LLM calls.
+
 ```typescript
-export function reinforceCoOccurrence(modifiedEntityIds: string[], edges: MemoryEdge[]): MemoryEdge[] {
+export function reinforceCoOccurrence(
+  modifiedEntityIds: string[],
+  edges: MemoryEdge[],
+): MemoryEdge[] {
   for (let i = 0; i < modifiedEntityIds.length; i++) {
     for (let j = i + 1; j < modifiedEntityIds.length; j++) {
       const from = modifiedEntityIds[i];
       const to = modifiedEntityIds[j];
-      let edge = edges.find(e => (e.from === from && e.to === to) || (e.from === to && e.to === from));
+      let edge = edges.find(
+        (e) =>
+          (e.from === from && e.to === to) || (e.from === to && e.to === from),
+      );
       if (edge) {
         edge.strength = Math.min(edge.strength + 0.05, 1.0);
       } else {
@@ -8001,12 +8904,23 @@ export function reinforceCoOccurrence(modifiedEntityIds: string[], edges: Memory
 ```
 
 ##### B. Adaptive Forensic Guardrail (Dynamic Risk Clamping)
+
 - **Layman's Terms**: If a specific section of code has broken your tests or compilation loops in the past, Cortex gets extremely cautious. It automatically activates strict validation modes and forces rigorous checks so you don't repeat the mistake.
 - **Technical Terms**: Scan matching historic `failure` memory nodes for a target entity. If the maximum historical failure bias exceeds a safe threshold, the workspace risk tolerance is dynamically clamped to maximum strictness.
+
 ```typescript
-export function evaluateRiskClamping(targetEntity: string, candidates: MemoryNode[], soul: SoulState): number {
-  const matchingFailures = candidates.filter(n => n.metadata.source === targetEntity && n.type === "failure");
-  const maxFailureBias = Math.max(...matchingFailures.map(n => n.weights.failureBias), 0);
+export function evaluateRiskClamping(
+  targetEntity: string,
+  candidates: MemoryNode[],
+  soul: SoulState,
+): number {
+  const matchingFailures = candidates.filter(
+    (n) => n.metadata.source === targetEntity && n.type === "failure",
+  );
+  const maxFailureBias = Math.max(
+    ...matchingFailures.map((n) => n.weights.failureBias),
+    0,
+  );
   if (maxFailureBias > 0.6) {
     soul.globalBiases.riskTolerance = 0.1; // Force maximum caution
   }
@@ -8015,22 +8929,28 @@ export function evaluateRiskClamping(targetEntity: string, candidates: MemoryNod
 ```
 
 ##### C. Temporal Landmark Compression (Memory Chunking)
+
 - **Layman's Terms**: Instead of remembering every tiny detail of your 500 past edits (which would slow the AI down and cost you money), Cortex compresses older history into "Story Chapters" (like "Module A Redesign"). It keeps the high-level lesson but drops the microscopic file-by-file clutter.
 - **Technical Terms**: Compresses episodic memory nodes within a temporal window into a single parent landmark node when an ingestion boundary stabilizes, reducing active memory search overhead.
+
 ```typescript
-export function compressMilestone(nodes: MemoryNode[], milestoneName: string): MemoryNode {
+export function compressMilestone(
+  nodes: MemoryNode[],
+  milestoneName: string,
+): MemoryNode {
   return {
     id: `milestone-${Date.now()}`,
     type: "insight",
     content: `Compressed Milestone: ${milestoneName}. Unified lessons from ${nodes.length} historical modifications.`,
     timestamp: Date.now(),
     metadata: { domain: "milestone" },
-    weights: { salience: 0.8, successBias: 0.5, failureBias: 0.0, decay: 0.01 }
+    weights: { salience: 0.8, successBias: 0.5, failureBias: 0.0, decay: 0.01 },
   };
 }
 ```
 
 #### 5. Dynamic Run-Loop Execution Flow
+
 ```mermaid
 graph TD
     Query["User Task / Code Commit"] --> Lens["Select Cognitive Lens (e.g. FORENSIC on tests)"]
@@ -8043,9 +8963,11 @@ graph TD
 ```
 
 **Definition of Ready (DoR)**
+
 - Phase 13.5 (Fuzzy Search Ranker) and Phase 13.7.2 (Speculative Retrieval Guardrails) are completed.
 
 **Definition of Done (DoD)**
+
 - **User Profile Modeling (`user_profile.json`)**: A structured `.knowledge/user_profile.json` is created and parsed to inject developer rules, disallowed libraries, and preferred brevity styles without context window pollution.
 - **Systemic Experience Ledger (`experience.jsonl`)**: An append-only transaction stream `.knowledge/experience.jsonl` logs sync decisions, verification results, and reverts to identify unstable patterns and prevent repetitive AI errors.
 - **Cognitive Mode-Based Reranking (`cognitive.ts`)**: The search ranker adjusts node weights dynamically based on active intent modes (e.g. `DEBUG` prioritizes past faults, `PLANNING` prioritizes parent structures), delivering 3x higher relevance in the exact same token limits.
@@ -8060,6 +8982,7 @@ graph TD
 - Tests verify retrieval scoring correctness, lens weight amplification, outcome bias updates, and decay/drift operations.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Prevents repetitive AI coding failure loops by grounding it in local workspace history; slashes token overhead by 50% via high-relevance lens filtering; creates a persistent codebase experience.
 - ❌ **Cons**: Requires structuring output feedback (success/failure) from local compiler runs or IDE commands to trigger the update loop reliably.
 
@@ -8068,10 +8991,10 @@ graph TD
 ## 🔗 Phase 13.8.2: Dynamic Co-Edit Edge Weighting — ⏳ Planned
 
 **Layman's Terms**
-Right now, every knowledge graph tool (Obsidian, Notion, Roam, and Cortex today) uses **static links**. When you write `AuthController depends_on JwtUtils`, that link is either there or it isn't — it never gets stronger or weaker. But in real codebases, some file pairs are edited together *constantly* (controller + its test, service + its DTO), while other links go stale and never get touched again. Phase 13.8.2 makes Cortex's graph edges **alive** — they strengthen automatically when files are co-edited in the same commit and decay slowly when they drift apart. This means the context packer automatically prioritizes the files you *actually work with together*, not just the ones that happen to have an import statement.
+Right now, every knowledge graph tool (Obsidian, Notion, Roam, and Cortex today) uses **static links**. When you write `AuthController depends_on JwtUtils`, that link is either there or it isn't — it never gets stronger or weaker. But in real codebases, some file pairs are edited together _constantly_ (controller + its test, service + its DTO), while other links go stale and never get touched again. Phase 13.8.2 makes Cortex's graph edges **alive** — they strengthen automatically when files are co-edited in the same commit and decay slowly when they drift apart. This means the context packer automatically prioritizes the files you _actually work with together_, not just the ones that happen to have an import statement.
 
 **Why This Matters (The Competitive Differentiator)**
-Every competitor treats dependency edges as binary switches (exists / doesn't exist). Cortex will be the first architectural memory tool where the graph **learns from your editing patterns** without any LLM calls. When the context packer has to choose which 5 files to include in a 4,000-token budget, it picks the ones with the highest co-edit weight — the files that *actually matter together* based on real developer behavior, not just static import analysis.
+Every competitor treats dependency edges as binary switches (exists / doesn't exist). Cortex will be the first architectural memory tool where the graph **learns from your editing patterns** without any LLM calls. When the context packer has to choose which 5 files to include in a 4,000-token budget, it picks the ones with the highest co-edit weight — the files that _actually matter together_ based on real developer behavior, not just static import analysis.
 
 **Technical Terms & Engineering Spec**
 
@@ -8080,7 +9003,9 @@ Every competitor treats dependency edges as binary switches (exists / doesn't ex
 Co-edit detection does **not** require git commits. It fires on three independent signal layers, each with a different trust level, so that even uncommitted edits build up co-edit weight over time:
 
 #### Tier 1 — File-System Co-Saves (Weakest, Finest Grain)
+
 When `cortex watch` detects file-save events, it groups files saved within a configurable time window (default: 60 seconds). Files saved in the same window are treated as a co-edit pair.
+
 ```typescript
 // Tier 1: co-save within 60s window
 edge.coEditWeight = edge.coEditWeight * (1 - 0.02) + 0.02;
@@ -8088,7 +9013,9 @@ edge.coEditWeight = edge.coEditWeight * (1 - 0.02) + 0.02;
 ```
 
 #### Tier 2 — Sync Diff Co-Occurrence (Medium, Default Trigger)
+
 On every `cortex sync` (manual or watcher-triggered), Cortex runs `git diff` which includes **unstaged, uncommitted working-tree changes**. All files appearing in the same sync diff are co-edit pairs.
+
 ```typescript
 // Tier 2: both files appear in the same sync diff (committed or not)
 edge.coEditWeight = edge.coEditWeight * (1 - 0.05) + 0.05;
@@ -8096,15 +9023,19 @@ edge.coEditWeight = edge.coEditWeight * (1 - 0.05) + 0.05;
 ```
 
 #### Tier 3 — Git Commit Bundling (Strongest, Coarsest Grain)
+
 When the sync diff includes committed changes, files that share the same commit hash get the strongest co-edit signal.
+
 ```typescript
 // Tier 3: both files in the same git commit
-edge.coEditWeight = edge.coEditWeight * (1 - 0.10) + 0.10;
+edge.coEditWeight = edge.coEditWeight * (1 - 0.1) + 0.1;
 // Strongest signal — you deliberately bundled these together
 ```
 
 #### Decay on Every Sync Tick
+
 Edges that were **not** co-edited in the current sync tick decay slowly:
+
 ```typescript
 // For every edge NOT co-edited in this tick:
 edge.coEditWeight *= decayFactor;
@@ -8114,13 +9045,14 @@ edge.coEditWeight *= decayFactor;
 **Why 3 tiers?** A developer who never commits but saves files A and B together 20 times still builds `coEditWeight ≈ 0.33` from Tier 1 alone. Committing is the strongest signal, but it's not required. The system learns from whatever workflow the developer actually uses.
 
 #### IDE/MCP Route — Tier 4: `save_synthesis` sourceFile Extraction
+
 When the developer uses the **IDE route** (Gemini, Claude, Cursor calling MCP tools directly), there is no `cortex watch` daemon and no file-system watcher running. Tiers 1-3 don't fire because there's no CLI sync loop. Instead, co-edit signals come from the MCP tools themselves:
 
 - **`save_synthesis` hook**: Every entity in a synthesis call carries a `sourceFile` field. When `save_synthesis` receives entities touching multiple source files in a single call, those files are treated as a co-edit set:
   ```typescript
   // Inside save_synthesis handler:
   const sourceFiles = synthesis.entities
-    .map(e => e.sourceFile)
+    .map((e) => e.sourceFile)
     .filter(Boolean);
   // All unique pairs from this set = co-edited
   for (const [fileA, fileB] of allPairs(sourceFiles)) {
@@ -8130,29 +9062,36 @@ When the developer uses the **IDE route** (Gemini, Claude, Cursor calling MCP to
 - **`ingest` hook**: When the agent calls `ingest` (which internally calls `get_pending_changes` → LLM → `save_synthesis`), Tier 2 and 3 fire naturally since `get_pending_changes` reads `git diff`.
 - **`get_pending_changes` is read-only** — it does not update co-edit weights. Weights only update on write operations (`save_synthesis` or `ingest`).
 
-| Route | Tiers That Fire | How |
-| :--- | :--- | :--- |
-| **CLI (`cortex watch` / `cortex sync`)** | Tier 1 + 2 + 3 | fs watcher + git diff + commit hash grouping |
-| **IDE/MCP (`save_synthesis` direct)** | Tier 4 | sourceFile extraction from synthesis entities |
-| **IDE/MCP (`ingest` tool)** | Tier 2 + 3 + 4 | git diff (via get_pending_changes) + sourceFile extraction |
+| Route                                    | Tiers That Fire | How                                                        |
+| :--------------------------------------- | :-------------- | :--------------------------------------------------------- |
+| **CLI (`cortex watch` / `cortex sync`)** | Tier 1 + 2 + 3  | fs watcher + git diff + commit hash grouping               |
+| **IDE/MCP (`save_synthesis` direct)**    | Tier 4          | sourceFile extraction from synthesis entities              |
+| **IDE/MCP (`ingest` tool)**              | Tier 2 + 3 + 4  | git diff (via get_pending_changes) + sourceFile extraction |
 
 ### B. Where Co-Edit Weights Are Used
 
-| Cortex Subsystem | How It Uses Co-Edit Weights |
-| :--- | :--- |
+| Cortex Subsystem                               | How It Uses Co-Edit Weights                                                                                                                                                                                                                                                               |
+| :--------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Context Packer (`src/knowledge/packer.ts`)** | When assembling `build_context_pack`, entities with high co-edit weights to the currently modified files are boosted in the priority ranking. A file with `coEditWeight: 0.8` to the active file beats a file with `coEditWeight: 0.1` even if the latter has higher PageRank centrality. |
-| **Graph Visualization (`graph` tool)** | Edge thickness in the Mermaid output scales with `coEditWeight`. Thick edges = frequently co-edited. Thin/dashed edges = stale connections that may be candidates for pruning. |
-| **Stale Detection (`audit` tool)** | If an entity has `depends_on` relationships but all of them have `coEditWeight < 0.05`, that's a signal the dependency may be dead code. Flag it in the audit report. |
-| **Impact Analysis (`impact_analysis` tool)** | When computing blast radius, weight the severity of downstream impact by co-edit strength. A dependent with `coEditWeight: 0.9` is a much higher blast-radius risk than one with `coEditWeight: 0.02`. |
+| **Graph Visualization (`graph` tool)**         | Edge thickness in the Mermaid output scales with `coEditWeight`. Thick edges = frequently co-edited. Thin/dashed edges = stale connections that may be candidates for pruning.                                                                                                            |
+| **Stale Detection (`audit` tool)**             | If an entity has `depends_on` relationships but all of them have `coEditWeight < 0.05`, that's a signal the dependency may be dead code. Flag it in the audit report.                                                                                                                     |
+| **Impact Analysis (`impact_analysis` tool)**   | When computing blast radius, weight the severity of downstream impact by co-edit strength. A dependent with `coEditWeight: 0.9` is a much higher blast-radius risk than one with `coEditWeight: 0.02`.                                                                                    |
 
 ### C. Data Model Changes
 
 Add a `coEditWeight` field to the existing relationship model in `state.json`:
+
 ```typescript
 interface Relationship {
   target: string;
-  kind: "depends_on" | "called_by" | "supports" | "contradicts" | "derived_from" | "parent_of";
-  coEditWeight?: number;  // 0.0 to 1.0, default 0.0 for new edges
+  kind:
+    | "depends_on"
+    | "called_by"
+    | "supports"
+    | "contradicts"
+    | "derived_from"
+    | "parent_of";
+  coEditWeight?: number; // 0.0 to 1.0, default 0.0 for new edges
 }
 ```
 
@@ -8188,10 +9127,12 @@ flowchart LR
 ```
 
 **Definition of Ready (DoR)**
+
 - Phase 6 (Typed Relationships) is completed — co-edit weights extend the existing `relationships[]` array.
 - Phase 13.8 (Cortex Soul) is completed or in progress — the co-edit weight system complements the Soul's experience ledger.
 
 **Definition of Done (DoD)**
+
 - **EMA Update Verified**: Co-editing files A and B in 5 consecutive commits increases `coEditWeight(A,B)` from 0.0 to ≥ 0.41 (verified mathematically: `1 - 0.9^5`).
 - **Decay Verified**: An edge untouched for 100 syncs decays from 1.0 to ≤ 0.61 (verified: `0.995^100`).
 - **Packer Integration**: `build_context_pack` with `CORTEX_COEDIT_BLEND=0.3` provably reorders entity priority vs pure PageRank when co-edit weights diverge.
@@ -8201,6 +9142,7 @@ flowchart LR
 - Tests cover: EMA convergence, decay rate correctness, packer reordering, edge creation for new co-edit pairs, decay-to-zero cleanup threshold.
 
 **Pros & Cons**
+
 - ✅ **Pros**: First architectural memory tool with graph edges that learn from developer behavior; zero LLM cost; ~50 lines of core logic; directly improves context relevance for the most common editing patterns; complements Phase 13.8 Soul without adding complexity.
 - ❌ **Cons**: Requires git history access (already available via existing diff extraction); co-edit signal is noisy for large refactoring commits where 30+ files change together (mitigated by capping pair generation to files within the same directory bucket, reusing Phase 14's clustering logic when available).
 
@@ -8229,9 +9171,11 @@ Detect whether a group of 3 frequently co-edited files forms a **triangle** (all
 ```typescript
 function isTriangle(a: string, b: string, c: string, edges: Map): boolean {
   const threshold = 0.3;
-  return getWeight(a, b) > threshold
-      && getWeight(b, c) > threshold
-      && getWeight(a, c) > threshold;
+  return (
+    getWeight(a, b) > threshold &&
+    getWeight(b, c) > threshold &&
+    getWeight(a, c) > threshold
+  );
 }
 ```
 
@@ -8250,7 +9194,7 @@ effectiveWeight(B, C) = coEditWeight(B, C) * (1 - maxCoEditWeight(B));
 ```
 
 - **Implementation**: Single multiplication per edge during `build_context_pack` ranking (~3 lines).
-- **Why it matters**: Prevents hub files (like `utils.ts`) that are co-edited with everything from pulling in their entire neighborhood. The monogamy constraint forces the budget toward the *strongest* companion only.
+- **Why it matters**: Prevents hub files (like `utils.ts`) that are co-edited with everything from pulling in their entire neighborhood. The monogamy constraint forces the budget toward the _strongest_ companion only.
 - **DoD**: A hub file with `coEditWeight: 0.9` to File A and `coEditWeight: 0.6` to File C produces `effectiveWeight(hub, C) = 0.06`, verified to not promote File C over genuinely relevant files.
 
 ### H. Oja's Rule Weight Normalization
@@ -8260,11 +9204,11 @@ Prevent co-edit weights from saturating at 1.0 for "everything files" (e.g., `in
 ```typescript
 // After EMA update, normalize: Oja's rule
 const norm = Math.sqrt(edges.reduce((sum, e) => sum + e.coEditWeight ** 2, 0));
-if (norm > 1) edges.forEach(e => e.coEditWeight /= norm);
+if (norm > 1) edges.forEach((e) => (e.coEditWeight /= norm));
 ```
 
 - **Implementation**: 3 lines in `src/knowledge/writer.ts`, called after each EMA update batch.
-- **Why it matters**: Without normalization, files touched in every commit would accumulate `coEditWeight: 1.0` with everything, making the signal useless. Oja's rule ensures weights represent *relative* co-edit importance, not absolute frequency.
+- **Why it matters**: Without normalization, files touched in every commit would accumulate `coEditWeight: 1.0` with everything, making the signal useless. Oja's rule ensures weights represent _relative_ co-edit importance, not absolute frequency.
 - **DoD**: A file co-edited with 20 other files has its weights normalized such that the L2 norm of its outgoing weights ≤ 1.0.
 
 ### I. Casimir Shortcut Channels
@@ -8303,7 +9247,7 @@ SA result:       [jwtUtils (300), authMiddleware (250), tokenConfig (200),
 function annealContextPack(
   entities: ScoredEntity[],
   budget: number,
-  options: { initTemp?: number; coolingRate?: number; iterations?: number }
+  options: { initTemp?: number; coolingRate?: number; iterations?: number },
 ): ScoredEntity[] {
   const { initTemp = 1.0, coolingRate = 0.995, iterations = 500 } = options;
   let current = greedyPack(entities, budget); // start from greedy solution
@@ -8339,9 +9283,11 @@ function annealContextPack(
 - **Config**: `CORTEX_PACKER_MODE` (default `greedy`), `CORTEX_SA_ITERATIONS` (default `500`), `CORTEX_SA_COOLING` (default `0.995`).
 
 **Definition of Ready (DoR)**
+
 - Phase 5 (Context Packer) and Phase 13.8.2 (Co-Edit Weights) are completed.
 
 **Definition of Done (DoD)**
+
 - SA packer produces measurably higher total relevance scores than greedy packer on test cases with >20 candidate entities.
 - SA packer respects token budget — never exceeds allocated limit.
 - SA packer runs in <50ms for up to 200 candidate entities.
@@ -8349,6 +9295,7 @@ function annealContextPack(
 - Tests cover: budget boundary, improvement over greedy on known-suboptimal cases, cooling convergence.
 
 **Pros & Cons**
+
 - ✅ **Pros**: 10-30% better context quality on complex codebases where greedy gets stuck; mathematically proven to converge toward global optimum; zero LLM cost; <10ms runtime.
 - ❌ **Cons**: Non-deterministic output (different runs may produce slightly different packs); adds ~80 lines of code; marginal improvement on small codebases (<20 entities) where greedy is already near-optimal.
 
@@ -8370,14 +9317,11 @@ In a well-organized codebase, many modules have similar connectivity (e.g., 5 co
 The quantum walk operates on the same graph but uses a **unitary evolution** operator instead of a stochastic transition matrix:
 
 ```typescript
-function quantumWalkRank(
-  adjacency: number[][],
-  steps: number = 20
-): number[] {
+function quantumWalkRank(adjacency: number[][], steps: number = 20): number[] {
   const n = adjacency.length;
   // Build Szegedy walk operator from adjacency matrix
-  const P = buildTransitionMatrix(adjacency);       // same as PageRank
-  const W = buildSzegedyOperator(P);                // unitary operator (2n × 2n)
+  const P = buildTransitionMatrix(adjacency); // same as PageRank
+  const W = buildSzegedyOperator(P); // unitary operator (2n × 2n)
 
   // Initialize uniform superposition
   let state = uniformSuperposition(2 * n);
@@ -8390,7 +9334,7 @@ function quantumWalkRank(
   // Measure: probability of finding the walker at each node
   const scores = new Array(n).fill(0);
   for (let i = 0; i < n; i++) {
-    scores[i] = state[i] ** 2 + state[i + n] ** 2;  // sum of amplitudes squared
+    scores[i] = state[i] ** 2 + state[i + n] ** 2; // sum of amplitudes squared
   }
   return normalize(scores);
 }
@@ -8407,9 +9351,11 @@ Where PageRank gives 5 controllers identical scores (e.g., all 0.042), quantum w
 - **Config**: `CORTEX_RANK_MODE` (default `pagerank`), `CORTEX_QWALK_STEPS` (default `20`).
 
 **Definition of Ready (DoR)**
+
 - Phase 5 (Context Packer with PageRank) is completed.
 
 **Definition of Done (DoD)**
+
 - Quantum walk ranking produces strictly fewer tied scores than PageRank on a test graph with ≥20 nodes of similar connectivity.
 - Scores are normalized to sum to 1.0 (valid probability distribution).
 - Ranking is deterministic (same graph → same scores, unlike SA).
@@ -8417,6 +9363,7 @@ Where PageRank gives 5 controllers identical scores (e.g., all 0.042), quantum w
 - Tests cover: tie-breaking verification, score normalization, performance under 50ms for 200 entities.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Breaks ties that PageRank cannot; deterministic; classically simulable; well-studied mathematical foundation; better at identifying secondary hubs and bridge nodes.
 - ❌ **Cons**: O(n²) complexity vs O(n) for PageRank — acceptable for <500 entities but not for massive monorepos; conceptually harder for contributors to understand; marginal improvement when graph has natural hierarchy (few ties).
 
@@ -8425,23 +9372,25 @@ Where PageRank gives 5 controllers identical scores (e.g., all 0.042), quantum w
 ## 🎯 Phase 13.8.5: Contextual RAG Preprocessing — ⏳ Planned
 
 **Layman's Terms**
-When Cortex sends a code file to the AI, it sends the raw content with no explanation. The AI has to figure out *why* this file is in the context pack. Phase 13.8.5 prepends a 1-sentence "relevance header" to each entity in the pack — explaining why Cortex included it (e.g., "Included because it shares a strong co-edit pattern with the active file" or "Included as a high-centrality hub that many modules depend on"). This makes the AI significantly better at using the context correctly.
+When Cortex sends a code file to the AI, it sends the raw content with no explanation. The AI has to figure out _why_ this file is in the context pack. Phase 13.8.5 prepends a 1-sentence "relevance header" to each entity in the pack — explaining why Cortex included it (e.g., "Included because it shares a strong co-edit pattern with the active file" or "Included as a high-centrality hub that many modules depend on"). This makes the AI significantly better at using the context correctly.
 
 **Technical Terms & Engineering Spec**
 
 ### A. The Problem: Uncontextualized Chunks
 
 Current context pack output:
+
 ```
 ## AuthMiddleware
 Role: Express middleware for JWT verification...
 ```
 
-AI's internal question: *"Why am I seeing this? Is the user editing this? Does it depend on what I'm changing? Should I modify it?"*
+AI's internal question: _"Why am I seeing this? Is the user editing this? Does it depend on what I'm changing? Should I modify it?"_
 
 ### B. The Solution: Relevance Headers
 
 Enhanced context pack output:
+
 ```
 ## AuthMiddleware
 > 📎 Included: co-edit weight 0.72 with active file AuthController.
@@ -8458,13 +9407,13 @@ Headers are generated deterministically from graph signals already available:
 function generateRelevanceHeader(entity: Entity, activeFile: string): string {
   const reasons: string[] = [];
   const coEdit = getCoEditWeight(entity, activeFile);
-  if (coEdit > 0.3) reasons.push(`co-edit weight ${coEdit.toFixed(2)} with active file`);
+  if (coEdit > 0.3)
+    reasons.push(`co-edit weight ${coEdit.toFixed(2)} with active file`);
   const rel = getRelationship(entity, activeFile);
   if (rel) reasons.push(`${rel.kind} relationship`);
-  if (entity.centrality > 0.7) reasons.push(`high-centrality hub (${entity.centrality.toFixed(2)})`);
-  return reasons.length > 0
-    ? `> 📎 Included: ${reasons.join('; ')}.\n`
-    : '';
+  if (entity.centrality > 0.7)
+    reasons.push(`high-centrality hub (${entity.centrality.toFixed(2)})`);
+  return reasons.length > 0 ? `> 📎 Included: ${reasons.join("; ")}.\n` : "";
 }
 ```
 
@@ -8475,9 +9424,11 @@ function generateRelevanceHeader(entity: Entity, activeFile: string): string {
 - **Config**: `CORTEX_CONTEXT_HEADERS` (default `true`).
 
 **Definition of Ready (DoR)**
+
 - Phase 5 (Context Packer) and Phase 13.8.2 (Co-Edit Weights) are completed.
 
 **Definition of Done (DoD)**
+
 - Every entity in `build_context_pack` output includes a relevance header when `CORTEX_CONTEXT_HEADERS=true`.
 - Headers are generated deterministically from graph signals (no LLM calls).
 - Headers add ≤30 tokens per entity.
@@ -8485,7 +9436,8 @@ function generateRelevanceHeader(entity: Entity, activeFile: string): string {
 - Tests cover: header generation for co-edit, relationship, and centrality signals; empty header for entities with no clear relevance signal.
 
 **Pros & Cons**
-- ✅ **Pros**: Makes the AI understand *why* each file is in context, leading to better-targeted responses; zero LLM cost; ~30 lines of code; trivial token overhead.
+
+- ✅ **Pros**: Makes the AI understand _why_ each file is in context, leading to better-targeted responses; zero LLM cost; ~30 lines of code; trivial token overhead.
 - ❌ **Cons**: Adds slight token overhead per entity; headers may become stale if graph signals change mid-session (mitigated by regenerating on each `build_context_pack` call).
 
 ---
@@ -8493,7 +9445,7 @@ function generateRelevanceHeader(entity: Entity, activeFile: string): string {
 ## 🎯 Phase 13.8.6: Selective Retrieval Gate — ⏳ Planned
 
 **Layman's Terms**
-Not every question needs Cortex to search the knowledge base. If the developer asks "what does `console.log` do?", Cortex shouldn't waste time retrieving architectural context. Phase 13.8.6 adds a cheap pre-filter that decides — before doing any retrieval — whether the current query actually *needs* external context. If not, it skips retrieval entirely, saving tokens and latency.
+Not every question needs Cortex to search the knowledge base. If the developer asks "what does `console.log` do?", Cortex shouldn't waste time retrieving architectural context. Phase 13.8.6 adds a cheap pre-filter that decides — before doing any retrieval — whether the current query actually _needs_ external context. If not, it skips retrieval entirely, saving tokens and latency.
 
 **Technical Terms & Engineering Spec**
 
@@ -8508,17 +9460,25 @@ function needsRetrieval(query: string, activeFile: string | null): boolean {
     /how do I/i,
     /syntax for/i,
   ];
-  if (genericPatterns.some(p => p.test(query)) && !activeFile) return false;
+  if (genericPatterns.some((p) => p.test(query)) && !activeFile) return false;
 
   // Skip retrieval if no active file context
   if (!activeFile) return false;
 
   // Always retrieve for modification-intent queries
   const modifyPatterns = [
-    /refactor/i, /fix/i, /add/i, /implement/i, /change/i,
-    /update/i, /modify/i, /delete/i, /rename/i, /move/i,
+    /refactor/i,
+    /fix/i,
+    /add/i,
+    /implement/i,
+    /change/i,
+    /update/i,
+    /modify/i,
+    /delete/i,
+    /rename/i,
+    /move/i,
   ];
-  if (modifyPatterns.some(p => p.test(query))) return true;
+  if (modifyPatterns.some((p) => p.test(query))) return true;
 
   // Default: retrieve
   return true;
@@ -8531,15 +9491,18 @@ function needsRetrieval(query: string, activeFile: string | null): boolean {
 - **Config**: `CORTEX_RETRIEVAL_GATE` (default `true`).
 
 **Definition of Ready (DoR)**
+
 - Phase 5 (Context Packer) is completed.
 
 **Definition of Done (DoD)**
+
 - Queries matching generic patterns with no active file context skip retrieval entirely.
 - Queries with modification intent always trigger retrieval.
 - `CORTEX_RETRIEVAL_GATE=false` disables the gate (always retrieve).
 - Tests cover: generic question bypass, modification intent pass-through, edge cases.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Saves tokens and latency on ~20% of typical IDE interactions that don't need architectural context; ~15 lines of code; zero false negatives on modification-intent queries.
 - ❌ **Cons**: Risk of false negatives — a question phrased generically might actually need context. Mitigated by defaulting to retrieve when uncertain.
 
@@ -8556,38 +9519,45 @@ Right now, `cortex watch` polls for file changes on a timer or file-system event
 
 Borrowed from Spiking Neural Networks (SNNs): instead of continuous polling, define discrete "spike" events that trigger targeted graph updates:
 
-| Spike Event | Source | What It Updates |
-| :--- | :--- | :--- |
-| `FILE_SAVE` | fs watcher | co-edit weights for the saved file's edges (Tier 1) |
-| `COMPILE_PASS` | compiler/build tool | Boost `coEditWeight` for all files in the successful build |
-| `COMPILE_FAIL` | compiler/build tool | Decay `coEditWeight` for files in the failed build |
-| `TEST_PASS` | test runner | Strengthen edges between test file and its source file |
-| `TEST_FAIL` | test runner | Flag the source file's entity for staleness check |
-| `GIT_COMMIT` | git hook | Tier 3 co-edit weight update for committed files |
-| `BRANCH_SWITCH` | git hook | Reset all active co-edit weights to baseline (ESD) |
+| Spike Event     | Source              | What It Updates                                            |
+| :-------------- | :------------------ | :--------------------------------------------------------- |
+| `FILE_SAVE`     | fs watcher          | co-edit weights for the saved file's edges (Tier 1)        |
+| `COMPILE_PASS`  | compiler/build tool | Boost `coEditWeight` for all files in the successful build |
+| `COMPILE_FAIL`  | compiler/build tool | Decay `coEditWeight` for files in the failed build         |
+| `TEST_PASS`     | test runner         | Strengthen edges between test file and its source file     |
+| `TEST_FAIL`     | test runner         | Flag the source file's entity for staleness check          |
+| `GIT_COMMIT`    | git hook            | Tier 3 co-edit weight update for committed files           |
+| `BRANCH_SWITCH` | git hook            | Reset all active co-edit weights to baseline (ESD)         |
 
 ### B. Spike Processing
 
 ```typescript
 interface Spike {
-  type: 'FILE_SAVE' | 'COMPILE_PASS' | 'COMPILE_FAIL' | 'TEST_PASS' | 'TEST_FAIL' | 'GIT_COMMIT' | 'BRANCH_SWITCH';
+  type:
+    | "FILE_SAVE"
+    | "COMPILE_PASS"
+    | "COMPILE_FAIL"
+    | "TEST_PASS"
+    | "TEST_FAIL"
+    | "GIT_COMMIT"
+    | "BRANCH_SWITCH";
   files: string[];
   timestamp: number;
 }
 
 function processSpike(spike: Spike, graph: KnowledgeGraph): void {
   switch (spike.type) {
-    case 'FILE_SAVE':
-      updateCoEditWeights(spike.files, 0.02);  // Tier 1
+    case "FILE_SAVE":
+      updateCoEditWeights(spike.files, 0.02); // Tier 1
       break;
-    case 'COMPILE_PASS':
-      updateCoEditWeights(spike.files, 0.05);  // boost
+    case "COMPILE_PASS":
+      updateCoEditWeights(spike.files, 0.05); // boost
       break;
-    case 'COMPILE_FAIL':
-      decayCoEditWeights(spike.files, 0.1);    // punish
+    case "COMPILE_FAIL":
+      decayCoEditWeights(spike.files, 0.1); // punish
       break;
-    case 'BRANCH_SWITCH':
-      resetAllActiveWeights(graph);             // ESD
+    case "BRANCH_SWITCH":
+      resetAllActiveWeights(graph); // ESD
       break;
     // ... other cases
   }
@@ -8602,10 +9572,12 @@ function processSpike(spike: Spike, graph: KnowledgeGraph): void {
 - **Config**: `CORTEX_SPIKE_MODE` (default `false` — opt-in, since it requires integration with build tools).
 
 **Definition of Ready (DoR)**
+
 - Phase 13.8.2 (Co-Edit Weights) is completed.
 - Phase 5 (CLI/Daemon) is completed.
 
 **Definition of Done (DoD)**
+
 - `FILE_SAVE` spikes trigger Tier 1 co-edit weight updates within 10ms.
 - `BRANCH_SWITCH` spikes reset all active weights to 0.0 (ESD behavior).
 - `COMPILE_PASS` spikes boost co-edit weights for all files in the build.
@@ -8614,6 +9586,7 @@ function processSpike(spike: Spike, graph: KnowledgeGraph): void {
 - Tests cover: each spike type's expected graph mutation, spike queue ordering, ESD reset correctness.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Near-instant targeted graph updates instead of full-graph scans; reduces idle CPU usage by ~60%; enables real-time co-edit signal from compiler/test feedback; pairs naturally with Phase 13.8 Soul's experience ledger.
 - ❌ **Cons**: Requires integration with the developer's build toolchain (compiler, test runner) to emit spikes — opt-in complexity; spike queue management adds ~40 lines of code; `BRANCH_SWITCH` detection requires a git hook or polling `HEAD`.
 
@@ -8629,23 +9602,26 @@ A computed `edgeConfidence: number` (0–1) on each relationship:
 
 ```typescript
 edgeConfidence = weighted_mean(
-  coEditWeight,           // behavioral signal (Phase 13.8.2)
-  causalStrength,         // temporal co-change signal (Phase 20.14)
-  evidenceCount > 0 ? 1 : 0,  // grounded in cited code (Phase 7)
-  hasContradiction ? 0 : 1    // no open contradiction on this edge (Phase 16)
-)
+  coEditWeight, // behavioral signal (Phase 13.8.2)
+  causalStrength, // temporal co-change signal (Phase 20.14)
+  evidenceCount > 0 ? 1 : 0, // grounded in cited code (Phase 7)
+  hasContradiction ? 0 : 1, // no open contradiction on this edge (Phase 16)
+);
 ```
 
 Default weights: `{ coEdit: 0.3, causal: 0.3, evidence: 0.2, contradiction: 0.2 }`, configurable via `CORTEX_EDGE_CONFIDENCE_WEIGHTS`. Edge confidence is computed on read and stored ephemerally — it's a projection, not a persisted field. Used by:
+
 - **Context packer**: traverse edges with `edgeConfidence > 0.5` preferentially; low-confidence edges require explicit `--include-weak` flag.
 - **Impact analysis**: blast-radius weighting scales with edge confidence.
 - **Graph visualization**: edge opacity or dash pattern reflects confidence.
 
 **Definition of Ready (DoR)**
+
 - Phase 13.8.2 (coEditWeight) and Phase 20.14 (causalStrength) are completed.
 - Phase 7 evidence and Phase 16 contradiction flags are stable.
 
 **Definition of Done (DoD)**
+
 - `edgeConfidence` computed for every relationship at read time from existing fields.
 - Configurable weight vector respected.
 - Context packer skips edges below confidence threshold (default 0.3) unless `--include-weak` is set.
@@ -8653,6 +9629,7 @@ Default weights: `{ coEdit: 0.3, causal: 0.3, evidence: 0.2, contradiction: 0.2 
 - Tests cover: confidence computation on edges with various signal combinations, threshold filtering, weight override.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Single trust number per relationship — no mental arithmetic across 4 unrelated signals. Packer and impact analysis get strictly better edge-guidance; this is pure refinement with zero new data collection. ~30 lines of scoring logic.
 - ❌ **Cons**: Default weight vector may not suit all codebases — mitigated by explicit configuration. Edges with zero signals produce 0.5 (neutral) rather than 0.0 to avoid penalizing unsensed relationships.
 
@@ -8664,17 +9641,21 @@ Default weights: `{ coEdit: 0.3, causal: 0.3, evidence: 0.2, contradiction: 0.2 
 Prevent token minifiers from breaking or corrupting complex language text or layout status emojis. Phase 13.9 integrates grapheme cluster segmentation into our token compressor so that Chinese, Japanese, Korean comments, system-status emojis, and code formatting remain completely uncorrupted during high-ratio compression passes.
 
 **Technical Terms**
+
 - **Grapheme-Safe Token Compression (TokenJuice rules)**: Integrate Node's native compiled C++ `Intl.Segmenter` API inside `src/knowledge/brevity.ts`. Rather than using standard byte-level slices or regex matches, analyze strings at the grapheme cluster level.
 - **Multi-Byte Preservation**: Retains multi-byte CJK comments, custom visual glyphs, status emojis, and layout indicators from truncation during telemetry or context-packer compression passes.
 
 **Definition of Ready (DoR)**
+
 - Phase 13.2 (Brevity Engine) is completed.
 
 **Definition of Done (DoD)**
+
 - **Grapheme Safety Verified**: Minified outputs containing Chinese/Japanese/Korean text comments and visual status emojis are processed with 100% character and glyph preservation.
 - Tests verify character and glyph preservation across high-ratio compression boundaries.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Guaranteed safety for international developers; prevents emoji and UI visual rendering bugs in compressed context payloads.
 - ❌ **Cons**: Using native `Intl.Segmenter` loops adds minor computational parsing overhead (1-2ms per massive file).
 
@@ -8689,7 +9670,7 @@ When assembling context packs, prefer entities with high information density (lo
 In the context packer scoring function, add a density dimension:
 
 ```typescript
-density_score = relevanceToQuery / descriptionTokenCount
+density_score = relevanceToQuery / descriptionTokenCount;
 ```
 
 - `relevanceToQuery`: existing relevance score (centrality x quality blend)
@@ -8701,15 +9682,18 @@ Entities with high density (compact, signal-rich descriptions) are preferred ove
 **Irreducible entity detection**: entities whose description resists compression (compression ratio > 0.8 — the shortest faithful summary is still 80%+ of the full text) are flagged as `irreducible`. Irreducible entities are exempted from the density penalty: their packer score reverts to raw `relevanceToQuery` without the density multiplier, preventing the scanner from penalizing complexity that can't be usefully compressed.
 
 **Definition of Ready (DoR)**
+
 - Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
 
 **Definition of Done (DoD)**
+
 - `density_score` computed per entity during `build_context_pack`.
 - Score-weighted pack results prefer compact entities over verbose ones at equal relevance.
 - `CORTEX_DENSITY_BETA` configurable (default 0.3).
 - Tests cover: density bias reorders pack inclusion vs pure relevance scoring, B=0 produces identical ranking to current behavior.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Extracts maximum value per token — directly reduces context pack size for equivalent relevance signal. No new data structures, no new storage. ~20 lines of scoring adjustment.
 - ❌ **Cons**: Slight risk of overly aggressive pruning on entities that are long because they're genuinely complex — mitigated by B defaulting to 0.3 (conservative density bias).
 
@@ -8725,14 +9709,26 @@ A second graph traversal pass in `src/knowledge/packer.ts` running alongside the
 
 ```typescript
 // Forward wave: from scope root outward
-const forwardCandidates = bfs(entityGraph, scopeRoot, { direction: "outbound", depth: CORTEX_BIDIRECTIONAL_DEPTH });
+const forwardCandidates = bfs(entityGraph, scopeRoot, {
+  direction: "outbound",
+  depth: CORTEX_BIDIRECTIONAL_DEPTH,
+});
 
 // Backward wave: from top 5% PageRank hubs inward
-const topHubs = entities.sortBy("pageRank").slice(0, Math.ceil(entities.length * 0.05));
-const backwardCandidates = topHubs.flatMap(hub => bfs(entityGraph, hub, { direction: "inbound", depth: CORTEX_BIDIRECTIONAL_DEPTH }));
+const topHubs = entities
+  .sortBy("pageRank")
+  .slice(0, Math.ceil(entities.length * 0.05));
+const backwardCandidates = topHubs.flatMap((hub) =>
+  bfs(entityGraph, hub, {
+    direction: "inbound",
+    depth: CORTEX_BIDIRECTIONAL_DEPTH,
+  }),
+);
 
 // Intersection: entities reachable from both waves
-const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id));
+const intersection = forwardCandidates.filter((e) =>
+  backwardCandidates.has(e.id),
+);
 ```
 
 - The intersection is scored at `(forwardHops + backwardHops) / 2` for packer priority — entities close to both the scope root and a hub rank highest.
@@ -8740,16 +9736,19 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 - Catches "pull" relationships: entities that important hubs depend on, but the current scope root doesn't directly reach.
 
 **Definition of Ready (DoR)**
+
 - Phase 13 (Context Packs) is completed — packer scoring function exists and is parameterized.
 - Phase 10 centrality scores are available — needed to identify hub entities.
 
 **Definition of Done (DoD)**
+
 - Bidirectional traversal produces the forward/backward intersection set.
 - Intersection entities score higher in packer ranking than forward-only entities at equal relevance.
 - `CORTEX_BIDIRECTIONAL_DEPTH=0` produces identical results to current (forward-only) behavior.
 - Tests cover: intersection correctness on a known graph, depth=0 backward-compatibility, hub selection respects PageRank ordering.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Catches a genuine blind spot in forward-only traversal — hub-dependent entities that are structurally important but not locally reachable. No new data structures. ~30 lines of traversal logic. Complements Phase 13.8.2 (co-edit weighting) which is behavioral signal — this is structural signal.
 - ❌ **Cons**: Adds ~1 extra BFS per context pack per hub (capped at top 5% of entities). On a 500-entity graph with 2-hop depth, this is <10 extra traversals of <50 nodes each — negligible overhead. Hub selection is sensitive to PageRank quality — stale PageRank scores produce stale hub sets.
 
@@ -8772,6 +9771,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **Layman's Terms**: AI agents get frustrated too. When Cortex forces them to make multiple tool calls just to fix a typo, or alerts them that 15 files are "stale" because of a formatting change, it wastes their time and the user's tokens. Phase 13.13 acts on direct AI feedback to smooth out these workflow blockers: making pre-flight checks one-shot, allowing precise method-level reads, and ignoring harmless formatting changes.
 
 **Technical Terms**: Implement a set of UX and workflow improvements derived from direct agent feedback to reduce token waste and latency:
+
 1. **One-Shot Pre-Flight (`before_change`)**: Promote the unified `before_change` tool in `AGENTS.md` and deprecate manual sequential calls (`read_index` -> `read_entity` -> `read_concept`) to reduce pre-flight latency.
 2. **Method-Level AST Reads (`read_method`)**: Enhance the `source` tool (or add `read_method`) to extract the full logic body of a specific function. This prevents agents from having to use `bypass=true` on a 500-line file just to debug a single loop stripped by the AST skeleton.
 3. **Semantic Diffing**: Upgrade the ingestion engine to parse AST deltas. If a change only affects whitespace, formatting, or comments without altering the public interface or logic, it bypasses the stale cascade, eliminating alert fatigue (False Alarms).
@@ -8788,13 +9788,13 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 
 ## 💰 Phase 13.14: Economic Viability & Zero-Overhead Ingestion — ⏳ Planned
 
-**Layman's Terms**: Right now, every time an AI agent syncs your knowledge base, it is doing the most expensive thing possible — paying for the smartest, most expensive AI model to read documentation it barely changes. Phase 13.14 fixes this by routing all automatic background work through dirt-cheap local or free AI models, moving the expensive "thinking" work off the agent entirely, and teaching the system to skip syncs when nothing architecturally meaningful changed. The result is that the hidden cost of *running* Cortex drops by 95%, making it financially positive even on small codebases.
+**Layman's Terms**: Right now, every time an AI agent syncs your knowledge base, it is doing the most expensive thing possible — paying for the smartest, most expensive AI model to read documentation it barely changes. Phase 13.14 fixes this by routing all automatic background work through dirt-cheap local or free AI models, moving the expensive "thinking" work off the agent entirely, and teaching the system to skip syncs when nothing architecturally meaningful changed. The result is that the hidden cost of _running_ Cortex drops by 95%, making it financially positive even on small codebases.
 
 **Technical Terms**: A set of four targeted architectural changes that address the three root causes of Cortex's negative ROI on small codebases: (1) agent-executed synthesis charged at Opus/Sonnet rates, (2) unlimited auto-sync firehoses, and (3) no pre-screen filter to detect non-architectural changes.
 
 ### Sub-phase 13.14.1 — Server-Side Synthesis (Highest Impact)
 
-**The problem**: When the agent calls the `ingest` MCP tool, the MCP server returns the raw Librarian prompt + full diff back to the agent. The *agent* then synthesizes the result and calls `save_synthesis`. This means ingestion is billed at whatever model the agent is — currently Sonnet or Opus at $3–$75/M tokens. A single agent-executed ingest can cost $0.50–$1.00.
+**The problem**: When the agent calls the `ingest` MCP tool, the MCP server returns the raw Librarian prompt + full diff back to the agent. The _agent_ then synthesizes the result and calls `save_synthesis`. This means ingestion is billed at whatever model the agent is — currently Sonnet or Opus at $3–$75/M tokens. A single agent-executed ingest can cost $0.50–$1.00.
 
 **The fix**: Move all synthesis work inside the MCP server process.
 
@@ -8813,11 +9813,11 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 
 **The fix**: Introduce explicit model tiers:
 
-| Trigger | Default Model | Rationale |
-|---|---|---|
-| `cortex watch` (auto on file save) | `gemini-2.0-flash` or `ollama/llama3.1` | Frequent, incremental, low-stakes |
-| `cortex sync` (manual CLI) | User-configured model | Intentional, batch, quality matters |
-| Agent `ingest` MCP tool | `CORTEX_INGEST_MODEL` (server-side) | Never the agent's model |
+| Trigger                            | Default Model                           | Rationale                           |
+| ---------------------------------- | --------------------------------------- | ----------------------------------- |
+| `cortex watch` (auto on file save) | `gemini-2.0-flash` or `ollama/llama3.1` | Frequent, incremental, low-stakes   |
+| `cortex sync` (manual CLI)         | User-configured model                   | Intentional, batch, quality matters |
+| Agent `ingest` MCP tool            | `CORTEX_INGEST_MODEL` (server-side)     | Never the agent's model             |
 
 - **New env vars**: `CORTEX_WATCH_MODEL` (default: `gemini-2.0-flash`), `CORTEX_SYNC_MODEL` (default: user's `CORTEX_MODEL`).
 - Both can be set to `none` to disable LLM synthesis for that trigger path entirely.
@@ -8855,6 +9855,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **DoR**: Phase 13.7 (AST Skeleton) is stable. Phase 33.1 (Model Provider Registry) is preferred but not required — two-tier routing can be implemented with direct provider checks before Phase 33.1 lands.
 
 **DoD**:
+
 - `ingest` MCP tool performs synthesis server-side; agent receives only a one-line confirmation. Agent billing for ingestion = $0.
 - `CORTEX_INGEST_MODEL` defaults to `gemini-2.0-flash`; setting to an Ollama model produces $0.00 ingestion.
 - `CORTEX_WATCH_MODEL` and `CORTEX_SYNC_MODEL` route to separate models.
@@ -8863,6 +9864,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 - Tests cover: server-side synthesis return shape, two-tier model routing, filter correctly skipping whitespace diffs, filter passing through signature changes, commit-mode trigger detection, debounce window batching.
 
 **Pros & Cons**:
+
 - ✅ **Pros**: Flips Cortex from net-negative to net-positive ROI even on small single-developer codebases. Makes ingestion costs effectively invisible. Eliminates the single largest hidden cost (agent-executed synthesis at Opus rates).
 - ❌ **Cons**: Server-side synthesis removes the agent's ability to review or steer the synthesis output mid-run. The diff significance filter may occasionally misclassify a meaningful change as architectural no-op (mitigated by conservative Skip criteria — only purely syntactic changes qualify).
 
@@ -8879,6 +9881,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Developers skip writing changelogs because it's tedious. AI agents can't generate accurate ones without reading all changed files. Cortex already has both the diff and the semantic summary in memory during ingestion.
 
 **The fix**: After every successful synthesis, append a structured entry to `CHANGELOG.md` (or create it if absent):
+
 - Format: standard Keep a Changelog (`## [Unreleased]` → `### Changed`, `### Added`, `### Fixed`)
 - Source: the `summary` field from the synthesis result + entity action types (`create`/`update`/`delete`)
 - Zero extra LLM calls — the summary is already generated as part of `save_synthesis`
@@ -8894,6 +9897,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Developers write vague PR descriptions ("fixed stuff", "updated auth") because writing good ones is slow. Reviewers then spend 15+ minutes reverse-engineering what changed. AI agents asked to write PR descriptions cold have to read all changed files.
 
 **The fix**: When a `git commit` is detected, generate a draft PR description and write it to `.cortex/pr_draft.md`:
+
 - **Title**: derived from the synthesis summary (one sentence)
 - **What changed**: bullet list from entity actions (`create`/`update`/`delete` with entity names)
 - **Why** (optional): extracted from commit message if conventional commit format detected
@@ -8911,6 +9915,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Developers run full test suites when only 3 files changed, wasting minutes on every save. Agents have no way to know which test files cover which source entities without reading them all.
 
 **The fix**: After every synthesis, traverse the blast-radius graph to generate an affected test report:
+
 - **Algorithm**: find all entities in `state.json` whose source file path matches `*.test.*`, `*.spec.*`, or lives in a `tests/` directory. Cross-reference against the inbound dependency edges of changed entities.
 - **Output**: a ranked list written to `.cortex/affected_tests.txt`: `[HIGH] tests/auth.test.ts — directly covers AuthService (changed)`, `[MEDIUM] tests/booking.test.ts — covers BookingService (1-hop from changed AuthService)`
 - **Zero LLM calls** — pure graph traversal using existing Phase 6 typed edges
@@ -8926,6 +9931,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Every new agent session cold-starts from zero. Even on a codebase the agent has seen before, it must re-read files to rebuild context. This costs 1,000–5,000 tokens of file reads before any useful work begins.
 
 **The fix**: On every sync, generate a compact "delta briefing" and store it in `.cortex/session_delta.md`:
+
 - **Content**: what changed since the last session — new entities, updated entities, deleted entities, and a one-paragraph architectural summary of the shift
 - **Size cap**: 500 tokens maximum. If more changed, summarize at the concept level only.
 - **Injection**: the existing `inject-knowledge.js` Claude Code hook (Phase 46) is extended to also prepend the session delta when a new PPID is detected
@@ -8940,6 +9946,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Developers write vague commit messages. The conventional commit format (`feat:`, `fix:`, `refactor:`) carries semantic meaning but is rarely used correctly. AI agents can't generate accurate commit messages without reading all changed files.
 
 **The fix**: When `cortex sync` or `cortex watch` detects uncommitted staged changes (via `git diff --cached`), generate a suggested conventional commit message and print it to the terminal:
+
 - Infer type from entity actions: new entity → `feat:`, deleted entity → `refactor:`, constraint violation → `fix:`, docs-only → `docs:`
 - Scope: the primary directory of changed entities
 - Subject: one-sentence synthesis summary, truncated to 72 characters
@@ -8953,6 +9960,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Small codebases accumulate dead code faster than large ones because there's no systematic review. An entity with zero inbound edges that hasn't been touched in 90+ days is almost certainly dead code — but neither the developer nor the agent has an easy way to surface this.
 
 **The fix**: During every synthesis, run a zero-cost graph pass:
+
 - Flag any entity with: (a) zero inbound `depends_on`/`called_by` edges AND (b) `lastModified` > 90 days ago AND (c) not in an entry point list (`main.ts`, `index.ts`, route files)
 - Surface these in `cortex lint` output under a new `dead_code` category
 - **New env var**: `CORTEX_DEAD_CODE_DAYS` (default: `90`) — age threshold before flagging
@@ -8966,6 +9974,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Not all commits are equally risky. A change to a leaf utility with no dependents is safe. A change to a high-centrality entity with 20 downstream consumers is dangerous. Developers have no way to quickly assess commit risk before pushing.
 
 **The fix**: After every synthesis, compute a **Regression Risk Score** (0–10) for the commit:
+
 - **Factors** (all derived from existing graph data, zero LLM cost):
   - Number of stale downstream entities triggered (blast-radius count)
   - Quality score of changed entities (low quality = higher risk)
@@ -8982,6 +9991,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: The only way to get architectural information out of Cortex is through structured tool calls (`read_entity`, `cortex_find`, etc.). Developers can't ask "why does the checkout flow import auth?" or "what would break if I deleted PaymentGuard?" in plain English.
 
 **The fix**: Add a `cortex ask "<question>"` CLI command and a `cortex_ask` MCP tool:
+
 - **Implementation**: takes the question, runs `cortex_find` to identify relevant entities, builds a context pack scoped to those entities, and passes the pack + question to a cheap model (Flash/local) for a grounded answer
 - **Grounding**: the answer must cite entity names and relationship types from the knowledge graph — hallucinations are structurally impossible because the model only has graph data, not raw code
 - **Cost**: ~$0.001–$0.003 per query using Flash
@@ -8995,6 +10005,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: AI agents (and human developers) starting a new task often waste 5–10 turns reconstructing what was left unfinished in the previous session (e.g., "which files did I modify?", "what test failures were remaining?").
 
 **The fix**: Save task context state to `.cortex/session_state.json` at the end of each session:
+
 - **State captured**: Uncommitted changes, active branch name, last failed test file from testing tool history, last modified files sorted by timestamp, and a 1-sentence "remaining work" summary calculated during the final sync.
 - **Zero LLM cost**: Most metrics are gathered via fast, local git/system commands.
 - **MCP tool/CLI command**: `cortex resume` automatically reads and formats this state block to the AI agent upon new session initialization.
@@ -9007,6 +10018,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **The problem**: Architecture rules (`mustNotImport`, quality gates) are only checked when a developer manually runs tests/audits. Violations are regularly committed and pushed, and only discovered later or during code review.
 
 **The fix**: Integrate Cortex checks into the CI/CD pipeline (e.g. GitHub Actions, GitLab CI):
+
 - **Command**: `cortex ci --check` parses the incoming PR diff against the target branch's architecture graph.
 - **Features**:
   - Automatically posts a markdown comment on the PR containing the Regression Risk Score, affected downstream systems, and any constraint/dependency violations.
@@ -9019,6 +10031,7 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 **DoR**: Phase 13.14 (Zero-Overhead Ingestion) is in progress. Phase 6 (Typed Relationships) is stable — graph traversal for tests/risk/dead-code depends on it.
 
 **DoD**:
+
 - `CHANGELOG.md` is auto-updated after every sync with a structured entry. No manual changelog writing needed.
 - `.cortex/pr_draft.md` is generated on every commit-detected sync and printed by `cortex pr`.
 - `cortex tests` prints a ranked affected-test list after every sync, derived from graph traversal with zero LLM calls.
@@ -9033,13 +10046,13 @@ const intersection = forwardCandidates.filter(e => backwardCandidates.has(e.id))
 - Tests cover: changelog append format, PR draft structure, test impact ranking, session delta size cap, commit message type inference, dead code age threshold, risk score factor weighting, natural language query grounding, session state structure, CI block behaviors.
 
 **Pros & Cons**:
+
 - ✅ **Pros**: Eliminates negative ROI for all codebase sizes by adding developer value that exists independent of context overflow. Each sub-phase produces concrete, measurable time savings. Most outputs require zero or near-zero additional LLM calls — they are computed from the graph data already built during ingestion. Transforms Cortex from "AI memory tool" to "git-commit pipeline with structured outputs."
 - ❌ **Cons**: Each sub-phase adds surface area to the sync pipeline — more output targets mean more failure modes. Changelog and PR draft quality depends on synthesis quality; if the Librarian produces a vague summary, the derived outputs are also vague. The natural language query tool (13.15.8) requires a secondary LLM call — it should never be called autonomously by the agent to avoid cost loops.
 
 ---
 
 ## 🗂️ Phase 14: Large-Diff Clustering — ⏳ Planned
-
 
 **Layman's Terms**
 When you change 30+ files at once — say, touching auth, database, and UI all in one save — Cortex currently dumps everything on the AI in one go and asks for a summary. That produces vague, generic knowledge entries because the AI is trying to make sense of too many unrelated things at once. Phase 14 sorts the files into focused groups first (auth changes together, database changes together, UI changes together), then summarises each group separately. The result is sharper, more accurate knowledge entries for large codebases.
@@ -9091,6 +10104,7 @@ Introduce a deterministic clustering step that runs _before_ the LLM synthesis c
 For `cortex watch` (Phase 0.13/14 file watching daemon), adopt aider's regex pattern for detecting AI work requests embedded as code comments. Cross-language, editor-agnostic, zero-config trigger mechanism.
 
 **AI comment regex** (Python `#`, JS/TS `//`, SQL `--`, Lisp `;`):
+
 ```typescript
 const AI_COMMENT_PATTERN = /(?:#|\/\/|--|;+) *(ai\b.*|.*\bai[?!]?) *$/im;
 
@@ -9100,11 +10114,13 @@ function hasAiComment(fileContent: string): boolean {
 ```
 
 **Trigger action variants**:
+
 - `# ai` — open-ended request (the comment text IS the request)
 - `# ai!` — strong mode (auto-execute without confirmation)
 - `# ai?` — question mode (ask about the code without modifying)
 
 **Implementation rules** (from aider `watch.py:65-200`):
+
 1. Use `chokidar` (Node) or `watchfiles` (Python/Rust) for cross-platform file watching
 2. Load gitignore patterns via `pathspec` / `ignore` library — handles complex glob patterns correctly
 3. Skip files >1MB — prevents loading compiled assets or large data fixtures
@@ -9122,6 +10138,7 @@ function hasAiComment(fileContent: string): boolean {
 Phase 14 groups changed files by directory when a diff is too large. That's a blunt heuristic — two files in the same folder might be completely unrelated, while two files in different folders might be tightly coupled. Phase 14.1 replaces directory bucketing with **Leiden community detection**: a proper graph algorithm that reads the actual relationship edges in the knowledge graph and groups entities by how strongly they're connected to each other. The result is clusters that reflect real architectural boundaries, not just where files happen to live on disk.
 
 **What graphify does** (`cluster.py`, `graspologic` optional dep):
+
 - Builds an adjacency matrix from the knowledge graph's entity nodes and relationship edges.
 - Runs the **Leiden algorithm** (an improvement over Louvain; converges faster, produces better modularity scores).
 - Each entity is assigned a `community_id` integer. Highly connected entities share a community. Loosely connected entities are in different communities.
@@ -9141,8 +10158,16 @@ Phase 14 groups changed files by directory when a diff is too large. That's a bl
   ```json
   {
     "communities": {
-      "4": { "size": 12, "centralEntities": ["AuthService", "TokenStore"], "label": "auth" },
-      "7": { "size": 8,  "centralEntities": ["PaymentGateway"], "label": "payments" }
+      "4": {
+        "size": 12,
+        "centralEntities": ["AuthService", "TokenStore"],
+        "label": "auth"
+      },
+      "7": {
+        "size": 8,
+        "centralEntities": ["PaymentGateway"],
+        "label": "payments"
+      }
     },
     "godNodes": ["ApiRouter", "ConfigLoader"],
     "modularity": 0.73,
@@ -9162,6 +10187,7 @@ Phase 14 groups changed files by directory when a diff is too large. That's a bl
 **DoR**: Phase 0.3 (confidence labels) is stable — edge weights depend on it. Phase 8 (graph visualization) benefits immediately. Phase 14 and 12.16 use community IDs.
 
 **DoD**
+
 - After `cortex ingest`, `.knowledge/communities.json` is written with community assignments and modularity score.
 - Each entity in `state.json` has a `community_id` integer field.
 - `cortex lint` surfaces god-nodes with community count.
@@ -9176,20 +10202,24 @@ Phase 14 groups changed files by directory when a diff is too large. That's a bl
 
 Graphify runs a secondary Leiden pass on communities that have low internal cohesion — communities where edges within the community are sparse relative to the community size. A large community with few internal edges is likely an over-merged cluster that should be split.
 
-*What graphify does* (`cluster.py`):
+_What graphify does_ (`cluster.py`):
+
 - After the primary Leiden pass, computes **internal cohesion** for each community: `cohesion = actual_internal_edges / possible_internal_edges` (density formula).
 - Communities with `cohesion < 0.15` (configurable threshold) are flagged as low-cohesion.
 - A secondary Leiden pass is run on the subgraph of each low-cohesion community independently, with a higher resolution parameter (`resolution × 1.5`) — this forces more granular splitting within the weak community.
 - Re-split sub-communities are assigned new IDs and merged back into the global community map.
 - Runs recursively at most once per community (no infinite re-splitting: only the primary communities are re-split, not the secondary ones).
 
-*Cortex implementation — add to `src/cluster/leiden.ts`*:
+_Cortex implementation — add to `src/cluster/leiden.ts`_:
+
 ```typescript
-const COHESION_THRESHOLD = 0.15;  // configurable via CORTEX_COHESION_THRESHOLD env var
+const COHESION_THRESHOLD = 0.15; // configurable via CORTEX_COHESION_THRESHOLD env var
 
 function computeCohesion(communityId: number, graph: Graphology): number {
-  const members = graph.filterNodes(n => graph.getNodeAttribute(n, "community_id") === communityId);
-  if (members.length < 2) return 1.0;  // single-node community is perfectly cohesive
+  const members = graph.filterNodes(
+    (n) => graph.getNodeAttribute(n, "community_id") === communityId,
+  );
+  if (members.length < 2) return 1.0; // single-node community is perfectly cohesive
   const actualEdges = countInternalEdges(members, graph);
   const possibleEdges = (members.length * (members.length - 1)) / 2;
   return actualEdges / possibleEdges;
@@ -9198,11 +10228,11 @@ function computeCohesion(communityId: number, graph: Graphology): number {
 export function resplitLowCohesionCommunities(
   initialAssignment: Map<string, number>,
   graph: Graphology,
-  resolution: number
+  resolution: number,
 ): Map<string, number> {
   let nextId = Math.max(...initialAssignment.values()) + 1;
   const finalAssignment = new Map(initialAssignment);
-  
+
   const communityIds = new Set(initialAssignment.values());
   for (const cid of communityIds) {
     if (computeCohesion(cid, graph) < COHESION_THRESHOLD) {
@@ -9218,9 +10248,10 @@ export function resplitLowCohesionCommunities(
   return finalAssignment;
 }
 ```
+
 - `communities.json` gains per-community `cohesion: number` field.
 - `cortex doctor` gains check: "Low-cohesion communities: N (re-split threshold: 0.15)."
-- `cortex lint` warns: `"Community 3 has low cohesion (0.08) — was auto-split into 2 sub-communities."` 
+- `cortex lint` warns: `"Community 3 has low cohesion (0.08) — was auto-split into 2 sub-communities."`
 - `CORTEX_COHESION_THRESHOLD=0.20` tightens the re-split threshold.
 - `CORTEX_COHESION_THRESHOLD=0` disables re-splitting entirely.
 
@@ -9238,6 +10269,7 @@ Supercharge your AI assistant with the ability to "zoom in and out" of your code
 
 **Technical Terms**
 Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval) framework using your workspace directory topology:
+
 1. **Topological Hierarchy Mapping (`state.json`)**: During ingestion, map directories as abstract parent nodes in the logical dependency graph. Concrete file entities are mapped as child nodes (`child_of`) based on their physical folder paths.
 2. **Deterministic Folder Summarization (`directory_summary.md`)**: When a directory has structural changes (files added, deleted, or moved), the Librarian compiles a high-level summary of the module's unified role, boundaries, and public API, written to `.knowledge/entities/[dir_name]_summary.md`. No summary is generated for unchanged directories.
 3. **Multi-Tier Zoomable Context Packing (`src/knowledge/packer.ts`)**: When compiling a token-bounded context pack:
@@ -9248,9 +10280,11 @@ Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstr
 5. **PageRank Centrality Hub Summaries (GraphRAG Adaptation)**: When compiling a directory summary, use the graph centrality values calculated in Phase 7 to identify "Transit Hub" modules (entities with high PageRank or degree centrality). Generate a consolidated transit hub summary `transit_hub_summary.md` detailing how these central intersection files coordinate system-wide architectural traffic.
 
 **Definition of Ready (DoR)**
+
 - Phase 8.2 (Obsidian Vault Compliance) and Phase 13 (Token Economics) are completed.
 
 **Definition of Done (DoD)**
+
 - **Deterministic Parent Mapping**: Directory parent nodes and child relationships are successfully serialized inside `state.json`.
 - **Automated Directory Summary Generation**: Compilation of `[dir_name]_summary.md` is successfully triggered on directory additions or structural changes, and garbage-collected when directories physically empty out.
 - **Dynamic Zoomable Context Packs**: The context packer correctly trims neighborhood and distant nodes based on graph hop distance, proving a >= 50% token reduction compared to flat raw loading on the same neighborhood.
@@ -9260,6 +10294,7 @@ Implement a deterministic, vector-free adaptation of the RAPTOR (Recursive Abstr
 - Tests cover: hierarchy compilation, directory addition/deletion triggers, self-cleaning garbage collection, dynamic zoom trimming logic, transit hub calculations, and direct query contract compatibility.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Massive context window token and cost savings (up to 70% reduction); prevents AI "lost-in-the-middle" issues by maintaining high conceptual focus; enhances Obsidian visual structures into clean topological constellations.
 - ❌ **Cons**: Relies on sensible codebase folder structures to operate at peak efficiency (flat root repositories collapse into a single broad summary); directory summaries require a single cheap LLM compilation pass when folders structurally change.
 
@@ -9314,10 +10349,11 @@ A new module that ingests CI run results (success / failure / which tests failed
 Cortex already detects when new code contradicts the existing knowledge — _"the auth module is documented as JWT but the new code uses cookies."_ Today those contradictions are logged inline in `log.md` and then forgotten. Phase 16 promotes the contradiction history into a queryable graph: when a developer or AI reads `[[AuthService]]`, the response surfaces every unresolved contradiction touching that entity. Future syntheses see the contradiction history in CURRENT CONTEXT and can no longer silently re-introduce rejected patterns.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Paraconsistent Logic**
-> *Source Domain:* Mathematical Logic / Philosophy.
+> _Source Domain:_ Mathematical Logic / Philosophy.
 > Standard classical logic "explodes" when it encounters a contradiction (if A and Not-A are both true, anything can be proven). But legacy codebases are fundamentally contradictory. Paraconsistent logic frameworks are designed to tolerate localized contradictions without corrupting the entire knowledge system. Cortex treats contradictions not as errors to be panicked over, but as stable, queryable topological features. The graph holds "Auth is JWT" and "Auth is Session" simultaneously, tagging the contradictory edge, preventing global state corruption while isolating the discrepancy for human review.
-Promote `warnings[]` (today a per-log-entry free-form string array) into a first-class contradiction graph. Each warning containing `[[WikiLink]]` references is parsed into a directed edge between the referenced entities/concepts, stamped with the synthesis event that produced it and a mutable status. The graph is queryable via CLI, surfaced in `read_entity` / `read_concept` MCP responses, and injected into CURRENT CONTEXT for entities touched by the next synthesis.
+> Promote `warnings[]` (today a per-log-entry free-form string array) into a first-class contradiction graph. Each warning containing `[[WikiLink]]` references is parsed into a directed edge between the referenced entities/concepts, stamped with the synthesis event that produced it and a mutable status. The graph is queryable via CLI, surfaced in `read_entity` / `read_concept` MCP responses, and injected into CURRENT CONTEXT for entities touched by the next synthesis.
 
 - **Schema (additive)**: a new top-level `contradictions[]` array in `state.json` — `{ id, between: [name1, name2], summary, recordedAt, sourceSynthesis, status: "open" | "resolved" | "muted", resolution?: { note, resolvedAt } }`. Existing `warnings[]` arrays in `log.md` stay; `contradictions[]` is a structured projection on top.
 - **Edge extraction**: deterministic, no LLM. A small parser scans warning text for `[[WikiLink]]` references and emits one contradiction record per pair. Warnings with zero wikilinks remain as free-form log warnings — the Librarian's system prompt is updated to encourage link-bearing warnings going forward.
@@ -9362,8 +10398,9 @@ Promote `warnings[]` (today a per-log-entry free-form string array) into a first
 Sometimes the AI is sure about what a code change means; sometimes it's guessing. Today Cortex treats both the same — it just writes down whatever the AI said. Phase 17 makes Cortex sample the AI's synthesis multiple times at the same input and check whether the answers agree. When they agree, it commits silently. When they disagree, it surfaces a short structured question — _"Did this change introduce `[[OAuth2Strategy]]` or modify the existing `[[JWTStrategy]]`?"_ — and waits for an answer before persisting. The user (or an IDE agent) picks one; Cortex commits with that choice. The "confidence" signal is structural inter-sample agreement, not an LLM-emitted number.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Quantum Superposition & Wave Function Collapse**
-> *Source Domain:* Quantum Mechanics.
+> _Source Domain:_ Quantum Mechanics.
 > When an LLM evaluates a highly ambiguous code change, multiple architectural interpretations may be valid simultaneously. Instead of forcing the LLM to greedily pick one (which leads to hallucinations), Cortex places the architectural state in "superposition" — it holds multiple contradictory interpretations in memory as uncommitted possibilities. When a human developer answers a clarifying prompt, that "observation" collapses the wave function, forcing the system into a single, verified truth state that is then committed to the knowledge graph.
 
 Implement self-consistency sampling (Wang et al., 2022 — _Self-Consistency Improves Chain of Thought Reasoning in Language Models_) as a synthesis-quality signal. For each synthesis call, sample the Librarian _N_ times (default _N=3_) at non-zero temperature, structurally diff the outputs, and route by inter-sample agreement. Supports multi-model consensus verification checks: when running in multi-provider mode, queries are routed to two different providers (e.g. Claude and Gemini) and cross-verified via a consensus checker to calculate a confidence score (0-100%) and resolve discrepancy before committing.
@@ -9419,21 +10456,25 @@ When you make a significant design change, different models might disagree on th
 
 **Technical Terms**
 Implement a multi-model architectural debate command: `cortex debate <entity-name | file-path>`.
+
 - **Orchestration**: The command queries the Model Provider Registry (Phase 33.1) to pick two distinct model providers (e.g., Anthropic Claude and OpenAI GPT-4o) with different training data/biases.
 - **Round-Robin Debate**: The system orchestrates a 3-turn structured debate between the models. Model A drafts an analysis of the entity's architecture and design patterns; Model B critiques it and points out hidden dependencies or code smells; Model A responds; and finally, both contribute to generating a unified, high-quality consensus suggestion report.
 - **Output**: The consensus suggestion is saved to `.knowledge/suggestions/debates/<entity>.md` and displayed to the user via the CLI.
 
 **Definition of Ready (DoR)**
+
 - Phase 33.1 (Model Provider Registry) is completed.
 - CLI argument parsing framework is stable.
 
 **Definition of Done (DoD)**
+
 - `cortex debate` CLI command successfully spawns and manages a multi-provider round-robin debate.
 - Output consensus Markdown report is generated with clear sections: Arguments, Critiques, and Consensus Trade-Offs.
 - Supports configuring debate depth (e.g. `--turns N`).
 - Tests cover debate orchestration, prompt formatting, state handling, and error/timeout handling.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Leverages multi-model perspective diversity to surface architectural blind spots that a single provider might miss.
 - ❌ **Cons**: Higher token consumption due to multiple round-robin LLM calls.
 
@@ -9445,8 +10486,9 @@ Implement a multi-model architectural debate command: `cortex debate <entity-nam
 Cortex understands structure (the typed dependency graph) and Cortex understands text (the synthesised descriptions). Phase 18 fuses them into a single vector per entity, so a question like _"which other entity is architecturally most similar to `[[AuthService]]`?"_ can be answered numerically without re-reading the whole index. The embeddings also become the substrate for Phase 19's distilled Librarian and a link-injection assist for Phase 6.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Poincaré Embeddings (Hyperbolic Geometry)**
-> *Source Domain:* Differential Geometry / String Theory.
+> _Source Domain:_ Differential Geometry / String Theory.
 > Standard vector databases use flat (Euclidean) space. But software architecture and dependency graphs are highly hierarchical (trees and DAGs). In flat space, trying to embed a deep tree forces nodes at the edges to crowd together, losing fidelity. In hyperbolic space (specifically the Poincaré ball model), volume grows exponentially as you move outward from the origin—perfectly matching the capacity needed for hierarchical software structures. By switching from cosine similarity in Euclidean space to hyperbolic distance, Cortex can perform zero-hallucination structural code search and cluster deep dependency trees with massive accuracy improvements.
 
 For each entity, compute a hybrid embedding that fuses three signals:
@@ -9493,23 +10535,25 @@ Embeddings are **not** used as retrieval-instead-of-reading. Cortex's index-firs
 
 ### Phase 18 Refinement — `EMBEDDING_TEXT_VERSION` for Template-Change Invalidation (GitNexus)
 
-Phase 18 already tracks `modelHash` per vector so mixed-projection vectors are detectable. A complementary gap: when the *embedding text template* changes (e.g., we add entity `fileKind` to the text fed to the encoder), all existing vectors are stale — but there's no mechanism to detect this. GitNexus stamps a `EMBEDDING_TEXT_VERSION` string on each vector so a template change auto-invalidates.
+Phase 18 already tracks `modelHash` per vector so mixed-projection vectors are detectable. A complementary gap: when the _embedding text template_ changes (e.g., we add entity `fileKind` to the text fed to the encoder), all existing vectors are stale — but there's no mechanism to detect this. GitNexus stamps a `EMBEDDING_TEXT_VERSION` string on each vector so a template change auto-invalidates.
 
 ```typescript
 // src/embeddings/encoder.ts
-const EMBEDDING_TEXT_VERSION = "v2";  // bump manually when generateEmbeddingText() changes
+const EMBEDDING_TEXT_VERSION = "v2"; // bump manually when generateEmbeddingText() changes
 
 interface EmbeddingRecord {
   vector: number[];
   dim: number;
   modelHash: string;
-  textVersion: string;   // new field — e.g. "v2"
+  textVersion: string; // new field — e.g. "v2"
   updatedAt: string;
 }
 
 function isEmbeddingStale(record: EmbeddingRecord): boolean {
-  return record.modelHash !== currentModelHash() ||
-         record.textVersion !== EMBEDDING_TEXT_VERSION;
+  return (
+    record.modelHash !== currentModelHash() ||
+    record.textVersion !== EMBEDDING_TEXT_VERSION
+  );
 }
 ```
 
@@ -9616,6 +10660,7 @@ What happens to the rest of the app if I remove `PaymentService`? What breaks if
 A simulation engine that applies hypothetical mutations to an in-memory copy of the entity graph (not to `state.json` or `src/`) and re-evaluates blast-radius, constraint violations, lint checks, and quality scores against the mutated graph. Results are strictly ephemeral — no persistent changes to any file.
 
 Four simulation primitives:
+
 - `cortex simulate remove <entity>` — delete the entity and all its edges; report orphaned dependents, constraint violations introduced/resolved, cycle resolutions, and quality-score deltas for affected neighbors.
 - `cortex simulate merge <entityA> <entityB>` — collapse two entities into one; show relationship union, new god-module risk (if combined edge count exceeds `CORTEX_GOD_MODULE_THRESHOLD`), and constraint re-evaluation.
 - `cortex simulate extract <entity> --into <newA> <newB>` — simulate splitting an entity's relationships between two children; show new coupling, silo risk, and which constraints would apply to each child.
@@ -9664,16 +10709,18 @@ Some parts of the codebase are just more dangerous than others — they change c
 Grounded in Nagappan & Ball (ICSE 2008): network analysis on a dependency graph predicts which modules are most defect-prone — 10% higher recall than complexity metrics alone on the Windows Server 2003 dataset. Cortex already has the dependency graph (Phase 6 `relationships[]`), CI failure history (Phase 15 `ciSignal`), and entity churn (derivable from `log.jsonl`). Phase 20.2 combines them into a defect-prediction surface with no LLM in the computation path.
 
 > 🔬 **Scientific Foundation: Hawkes Processes (Self-Exciting Point Processes)**
-> *Source Domain:* Seismology / Quantitative Finance.
-> In seismology, an earthquake drastically increases the probability of aftershocks in the immediate area. Hawkes processes model this "self-exciting" mathematical decay. In software, a bug fix in a file is an "earthquake" that increases the probability of another bug in that *same* file or its dependency neighbors within 48 hours. By applying Hawkes math, Cortex doesn't just look at static churn; it models the temporal decay of risk, dynamically warning users: *"This file was part of a major refactor 12 hours ago. Hawkes probability of a hidden regression is 84%."*
+> _Source Domain:_ Seismology / Quantitative Finance.
+> In seismology, an earthquake drastically increases the probability of aftershocks in the immediate area. Hawkes processes model this "self-exciting" mathematical decay. In software, a bug fix in a file is an "earthquake" that increases the probability of another bug in that _same_ file or its dependency neighbors within 48 hours. By applying Hawkes math, Cortex doesn't just look at static churn; it models the temporal decay of risk, dynamically warning users: _"This file was part of a major refactor 12 hours ago. Hawkes probability of a hidden regression is 84%."_
 
 Per-entity hotspot score fusing three signals:
+
 - **Churn score**: count of synthesis events touching the entity in a rolling window (default 90 days), normalized to [0, 1] against the max-churned entity.
 - **Centrality score**: Phase 8/10's PageRank over the typed dependency graph. High centrality = many entities depend on this one; a bug here cascades.
 - **CI failure rate**: from Phase 15's `ciSignal` — `redRunsSince / (greenRunsSince + redRunsSince)`. Defaults to 0.5 (neutral) when no CI data exists.
 - **Hotspot score (Hawkes-adjusted)**: `churn × centrality × (1 + ci_failure_rate) × hawkes_decay_factor` — entities that are heavily modified, highly coupled, and frequently fail CI score highest. Formula weights are configurable via `CORTEX_HOTSPOT_WEIGHTS`.
 
 CLI:
+
 - `cortex predict hotspots [--top N] [--since DATE]` — ranked hotspot list with scores and contributing factor breakdown.
 - `cortex predict impact <entity>` — given an entity you're about to modify, list its dependents ranked by hotspot score ("if you change `AuthService`, these are the riskiest downstream entities").
 - `cortex predict explain <entity>` — break down the hotspot score into its three components with interpretation text.
@@ -9722,11 +10769,13 @@ Some entities are one change away from structural collapse — one more dependen
 3. **Quality gate proximity**: entities where quality score is within 0.05 of the Phase 7.5 quality gate threshold. One more bad synthesis drops them below the gate.
 
 **Definition of Ready (DoR)**
+
 - Phase 20.2 (Hotspot Prediction) is completed — shares the `cortex predict` command namespace.
 - Phase 6 constraints include god_module threshold configuration.
 - Phase 7.5 quality gates are defined.
 
 **Definition of Done (DoD)**
+
 - `cortex predict tipping-points` returns all three detector types.
 - God-module proximity flagged for entities at threshold - 1 dependencies.
 - Bridge nodes correctly identified via articulation-point detection.
@@ -9734,6 +10783,7 @@ Some entities are one change away from structural collapse — one more dependen
 - Tests cover: each detector type on synthetic graphs, edge cases (empty graph, fully connected graph, single-bridge graph).
 
 **Pros & Cons**
+
 - ✅ **Pros**: Catches structural risk before it materializes — the most valuable intervention point. Zero LLM cost. Complements hotspot prediction (current bugs) with forward-looking risk.
 - ❌ **Cons**: Bridge-node detection produces false positives in intentionally star-shaped topologies (e.g., API gateways). Mitigated by severity labeling and by explaining why the entity is a bridge.
 
@@ -9750,6 +10800,7 @@ To escape architectural "local minima" (where a simple fix doesn't resolve deep 
 Inspired by ROSE (2024) — transformer-based refactoring recommendation fine-tuned on 2M+ historical refactorings — but implemented without a trained model: a curated anti-pattern → pattern mapping table that operates over `LintManager` output and instantiates concrete suggestions against the entity's actual graph neighborhood.
 
 Anti-pattern → pattern library (initial set):
+
 - `god_module` (too many relationships) → Strategy (extract behavior variants), Facade (wrap and delegate sub-systems), or Module Split (if sub-clusters exist in the neighborhood).
 - `cycle` (A → B → A) → Dependency Inversion Principle (introduce an abstract interface entity both sides depend on), Mediator (introduce a coordinator entity).
 - `hub_dependency` (one entity with >N incoming `depends_on` edges) → Abstract Factory, Adapter, or Pub-Sub / Event Bus.
@@ -9757,6 +10808,7 @@ Anti-pattern → pattern library (initial set):
 - `silo` (disconnected subgraph) → Bridge Pattern, API Gateway entity suggestion.
 
 Each suggestion output:
+
 1. Anti-pattern summary from lint output.
 2. Recommended pattern(s) with one-line rationale.
 3. Concrete entity-level suggestion: which entity to introduce, which edges to redirect.
@@ -9804,13 +10856,15 @@ MCP tool: `get_pattern_suggestions(entity?)` for IDE surface.
 You can write unit tests to make sure your code doesn't break. Phase 20.4 gives you "architecture tests" — rules like "the dependency graph must never have cycles," "no single entity can have more than 15 incoming dependencies," or "at least 80% of entities must have CI evidence." These run in CI automatically. When the architecture drifts outside the bounds the team agreed on, the build fails and the team is alerted — before it ships.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Fitness Landscapes & Pareto Frontiers**
-> *Source Domain:* Evolutionary Biology / Mathematical Economics.
+> _Source Domain:_ Evolutionary Biology / Mathematical Economics.
 > In evolution, there is no single "perfect" organism—only peaks and valleys on a multidimensional fitness landscape. Similarly, in software architecture, there is no perfect design, only trade-offs (e.g., Latency vs. Memory vs. Maintainability). Instead of enforcing a rigid binary rule, Phase 20.4 maps the architecture onto a Pareto Frontier. When Cortex evaluates fitness functions, it charts the architecture's trajectory on this landscape, warning the team when an evolution optimizes one dimension (e.g., speed) at the critical expense of another (e.g., coupling), keeping the system on the optimal evolutionary frontier.
 
 Grounded in Ford, Parsons, Kua — "Building Evolutionary Architectures" (O'Reilly, 2017). Fitness functions are automated governance checks that verify the architecture remains within acceptable bounds as the system evolves — the architectural equivalent of unit tests. Phase 20.4 implements them as declarative YAML evaluated by `cortex fitness`, intentionally distinct from Phase 6's entity-level constraints (per-entity import rules) and Phase 7.5's org constraints (domain-level rules). Fitness functions are systemic: they measure properties of the entire graph at a point in time.
 
 Pre-built fitness function library (initial set):
+
 - `ff:no-cycles` — FAIL if any cycle exists in the dependency graph.
 - `ff:max-coupling <N>` — FAIL if any entity has more than N incoming `depends_on` edges.
 - `ff:min-evidence-coverage <ratio>` — FAIL if fewer than `ratio × 100%` of entities have ≥1 evidence anchor.
@@ -9823,6 +10877,7 @@ Pre-built fitness function library (initial set):
 User-defined fitness functions extend the same format via `cortex.fitness.yaml`. Custom rules use a safe DSL subset (`mustNotEdge`, `requiresField`, `maxCount`, `minRatio`) — no arbitrary script execution.
 
 CLI:
+
 - `cortex fitness run [--ff <id> | --all]` — evaluate and report PASS/FAIL per function with severity.
 - `cortex fitness suggest` — analyze the codebase and generate a `cortex.fitness.yaml` seed based on what the current graph already violates (rule-based, no LLM).
 - CI integration: Phase 12 GitHub Action gains a `cortex fitness run --all` step; error-severity failures block merge (`--warn-only` override for teams not yet ready to enforce).
@@ -9913,20 +10968,28 @@ Phase 20.5 generates architecture documentation. Add a `--push` flag that deploy
 
 ```typescript
 // cortex wiki --push [--token $GITHUB_TOKEN]
-async function pushToGitHubWiki(docsDir: string, repoSlug: string, token: string): Promise<void> {
+async function pushToGitHubWiki(
+  docsDir: string,
+  repoSlug: string,
+  token: string,
+): Promise<void> {
   // GitHub Wiki is a separate git repo at https://github.com/<owner>/<repo>.wiki.git
   const wikiUrl = `https://${token}@github.com/${repoSlug}.wiki.git`;
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cortex-wiki-"));
   await git.clone(wikiUrl, tmpDir);
   // Copy generated docs to wiki repo
   await fs.cp(docsDir, tmpDir, { recursive: true });
-  await git.cwd(tmpDir).add(".").commit(`docs: update architecture wiki via cortex wiki`);
+  await git
+    .cwd(tmpDir)
+    .add(".")
+    .commit(`docs: update architecture wiki via cortex wiki`);
   await git.cwd(tmpDir).push("origin", "master");
   await fs.rm(tmpDir, { recursive: true });
 }
 ```
 
 **CLI**:
+
 ```bash
 cortex wiki                          # generate docs to .wiki/ directory
 cortex wiki --push                   # generate + push to GitHub Wiki (uses GITHUB_TOKEN)
@@ -9944,21 +11007,25 @@ Instead of developers manually writing and updating design decision markdown fil
 
 **Technical Terms**
 Extend Phase 20.5 with an automated ADR generation engine.
+
 - **Trigger**: Detects changes to `cortex.constraints.json`, custom entity contracts, or major dependency structure (high-centrality entities).
 - **Synthesis**: Runs a specialized prompt asking the Librarian to synthesize a standard ADR (following MADR or template format) based on the git diff, containing: Context (Why), Decision (What changed), and Consequences (Impact).
 - **Storage**: Appends/writes the ADRs to `.knowledge/decisions/adr-XXXX.md` and updates a central `.knowledge/decisions/README.md` index.
 
 **Definition of Ready (DoR)**
+
 - Phase 20.5 is completed.
 - `state.json` tracks core dependencies and centrality scores.
 
 **Definition of Done (DoD)**
+
 - Changes to core constraints or high-centrality entities automatically trigger a background ADR draft.
 - Drafts are saved in MADR format under `.knowledge/decisions/` with clear metadata (date, author, status: proposed/accepted).
 - Central ADR directory index (`README.md`) is kept updated.
 - Tests verify that mutating a constraint file successfully generates a structured ADR file.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Standardizes and automates design decision tracking, preserving architectural rationale in the repo.
 - ❌ **Cons**: Might generate too many minor stubs for rapid config changes; mitigated by grouping logic and thresholding based on centrality delta.
 
@@ -9966,7 +11033,7 @@ Extend Phase 20.5 with an automated ADR generation engine.
 
 ## 🧠 Phase 20.6: Hierarchical Memory Tiering — ⏳ Planned (research-grade)
 
-**Research grounding**: MemGPT (Packer, Wooders, Lin, Fang, Patil, Stoica, Gonzalez — UC Berkeley 2023 — *"MemGPT: Towards LLMs as Operating Systems"*, arXiv:2310.08560). MemGPT introduces a hierarchical memory architecture inspired by traditional OS virtual memory: a small "main context" (in the LLM's window) and a large "external context" paged in/out via function calls. The LLM controls its own paging via a small set of memory-management functions. Reports that MemGPT outperforms fixed-context baselines on long-document QA and multi-session chat consistency.
+**Research grounding**: MemGPT (Packer, Wooders, Lin, Fang, Patil, Stoica, Gonzalez — UC Berkeley 2023 — _"MemGPT: Towards LLMs as Operating Systems"_, arXiv:2310.08560). MemGPT introduces a hierarchical memory architecture inspired by traditional OS virtual memory: a small "main context" (in the LLM's window) and a large "external context" paged in/out via function calls. The LLM controls its own paging via a small set of memory-management functions. Reports that MemGPT outperforms fixed-context baselines on long-document QA and multi-session chat consistency.
 
 **Layman's Terms**
 Standard LLM tools dump the entire repo into the context window for every query, costing $5-$10 per prompt on massive codebases. Phase 20.6 introduces a two-tier memory architecture (a hot/cold caching layer). Cortex "freezes" irrelevant codebase segments into cold storage, ensuring they consume zero tokens unless specifically queried, cutting API costs by 80-90%. The AI controls the paging itself — it can request "load the auth subsystem into working memory" and "evict the payment subsystem to make room."
@@ -10015,7 +11082,7 @@ A two-tier memory architecture over `state.json`:
 
 ## 👤 Phase 20.7: Personalized Per-Developer Memory — ⏳ Planned
 
-**Research grounding**: Mem0 (Mem0 AI, 2024 — *"Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory"*). Mem0 is an open-source memory layer for AI agents that stores facts, preferences, and history per user in a hybrid vector + graph + key-value store. Its key contribution is the **ADD/UPDATE/DELETE/NOOP** decision: every potential memory operation is classified before commit, so contradictory or redundant facts don't accumulate. Mem0 reports significant memory quality gains over append-only memory stores.
+**Research grounding**: Mem0 (Mem0 AI, 2024 — _"Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory"_). Mem0 is an open-source memory layer for AI agents that stores facts, preferences, and history per user in a hybrid vector + graph + key-value store. Its key contribution is the **ADD/UPDATE/DELETE/NOOP** decision: every potential memory operation is classified before commit, so contradictory or redundant facts don't accumulate. Mem0 reports significant memory quality gains over append-only memory stores.
 
 **Layman's Terms**
 Today Cortex's knowledge is the team's knowledge — every developer reads the same entity descriptions. But every developer has their own context: "I work on the payment subsystem," "I prefer functional style," "I burned a day last week trying to use the legacy auth API." Phase 20.7 adds a personalized memory layer per developer: Cortex tracks what each developer has worked on, what failed approaches they've personally hit, what patterns they prefer. The AI assistant then knows you specifically, not just your team. Inspired by Mem0's personalized agent memory architecture.
@@ -10076,19 +11143,23 @@ If you have Cursor open in one window, Claude Code in another terminal, and a Cl
 
 **Technical Terms**
 Expose a real-time session state synchronization protocol via the Cortex daemon and MCP Server.
+
 - **Shared State Schema**: Stored in memory (daemon runtime) or fallback `.knowledge/workspace_sync.json` (gitignored). Contains active agent sessions, focus file paths, active terminal commands, and current goals.
 - **Real-Time Registration**: MCP client tools dynamically register the agent's active session state (e.g. on every `get_pending_changes` or `read_knowledge_index` call, the client passes its agent ID, current file, and target task).
 - **Cross-Agent Warning Injector**: When any agent calls `get_pending_changes`, the response pre-injects a `workspaceConflicts` warnings array detailing active lock scopes or concurrent tasks on the same graph neighborhood.
 
 **Definition of Ready (DoR)**
+
 - Phase 5 (CLI Polish & Daemonization) and Phase 20.7 (Personalized Memory) are completed.
 
 **Definition of Done (DoD)**
+
 - Dynamic registration of agent workspace states via the MCP server.
 - Verification that when Agent A registers an active task on `src/auth/` and Agent B requests context, Agent B's return payload contains a conflict alert.
 - CLI command `cortex workspace status` prints the list of active agents, their active files, and tasks.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Eliminates race conditions and redundant edits in multi-agent workflows; connects isolated IDE chats.
 - ❌ **Cons**: Relies on IDE agents providing their context during MCP calls. Mitigated by auto-deriving focus files from the IDE's roots list notifications and recently modified git files.
 
@@ -10101,6 +11172,7 @@ When the AI talks to a developer, it learns things. "Alice prefers functional st
 
 **Technical Terms**
 Implements the Mem0 three-stage consolidation pipeline (Chhikara et al., ECAI 2025, arXiv:2504.19413). For each interaction, Cortex runs:
+
 1. **Extraction phase**: recent messages + a periodically refreshed global summary are passed to an LLM prompt to distill salient memory facts (short statements).
 2. **Update phase**: each candidate fact is embedded and compared via cosine similarity against existing memory embeddings in the vector store. The top-K similar memories are retrieved. An LLM classifies the operation: **ADD** (new fact), **UPDATE** (refine existing), **DELETE** (contradiction/obsolescence), **NOOP** (duplicate). The update is executed on the persistent store.
 3. **Graph extension** (Mem0g variant): entities and relationships are extracted from the consolidated fact and stored in a lightweight in-memory graph (or Neo4j when available) for multi-hop relational retrieval.
@@ -10108,17 +11180,20 @@ Implements the Mem0 three-stage consolidation pipeline (Chhikara et al., ECAI 20
 **Core Components**: new `src/memory/consolidation/pipeline.ts` (extraction prompt + embedding comparison + LLM classification router), `src/memory/consolidation/store.ts` (vector store wrapper with ADD/UPDATE/DELETE/NOOP operations), `src/memory/consolidation/graph.ts` (entity-extraction → relationship persistence for graph memories), configuration for embedding model (reuses existing Phase 13.5 embedding pipeline).
 
 **Definition of Ready (DoR)**
+
 - Phase 20.7 (Personalized Per-Developer Memory) is shipped — the per-developer fact store exists.
 - Phase 13.5 embedding pipeline is shipped (for semantic similarity comparison).
 - Vector store (existing from Phase 13 caching) is available for memory embeddings.
 
 **Definition of Done (DoD)**
+
 - After 5+ interactions with a developer, the memory store contains deduplicated, updated facts with no stale contradictions.
 - LLM triggers ADD for genuinely new facts, UPDATE for refinements ("prefers TypeScript" → "strongly prefers TypeScript with strict mode"), DELETE for contradictions ("used to prefer Mocha" → "now uses Vitest").
 - Graph memory enables answering "what relationships does Alice have to the auth subsystem?" via entity traversal.
 - Cost benchmark: consolidation adds ≤20ms p95 per interaction beyond the base Phase 20.7 memory write.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Memory stays compact and coherent without manual curation; graph variant enables multi-hop relational retrieval; Mem0 benchmark shows 26% accuracy improvement over naive storage.
 - ❌ **Cons**: Each interaction costs one extra LLM call for consolidation; occasional false DELETE when a fact is nuanced rather than contradictory. Mitigated by confidence threshold: only DELETE when similarity >0.95.
 
@@ -10127,7 +11202,7 @@ Implements the Mem0 three-stage consolidation pipeline (Chhikara et al., ECAI 20
 ## Phase 20.7.3: Prospective Memory & Belief Revision — ⏳ Planned
 
 **Layman's Terms**
-Two problems with naive memory: (1) you store a fact but never think to retrieve it in the context where it matters, and (2) when new facts contradict old ones, the old ones just get deleted leaving no trace. Phase 20.7.3 fixes both: at write time, Cortex imagines *when* this fact might be useful next and tags it with future query scenarios. At update time, contradictions don't vanish — they form a *version chain* so you can see what changed and why. Inspired by Kumiho's prospective indexing and belief revision (arXiv:2603.17244, 2026), using zero additional infrastructure.
+Two problems with naive memory: (1) you store a fact but never think to retrieve it in the context where it matters, and (2) when new facts contradict old ones, the old ones just get deleted leaving no trace. Phase 20.7.3 fixes both: at write time, Cortex imagines _when_ this fact might be useful next and tags it with future query scenarios. At update time, contradictions don't vanish — they form a _version chain_ so you can see what changed and why. Inspired by Kumiho's prospective indexing and belief revision (arXiv:2603.17244, 2026), using zero additional infrastructure.
 
 **Technical Terms**
 Two lightweight passes on top of Phase 20.7.2's consolidation pipeline:
@@ -10139,16 +11214,19 @@ Two lightweight passes on top of Phase 20.7.2's consolidation pipeline:
 **Core Components**: additions to `src/memory/consolidation/pipeline.ts` (prospective query generation pass after consolidation), new field `prospectiveQueries` on the memory schema (embedded via Phase 13.5), additions to retrieval reranking (prospective match boost), modifications to `src/memory/consolidation/store.ts` (supersededBy link replacing hard DELETE), new `src/memory/revision/history.ts` (version chain inspection CLI).
 
 **Definition of Ready (DoR)**
+
 - Phase 20.7.2 (consolidation pipeline) is shipped.
 - Phase 13.5 (embedding pipeline) is shipped.
 
 **Definition of Done (DoD)**
+
 - Prospective indexing: after writing "Alice migrated auth libraries," generating queries like "what auth does Alice use?" returns the fact with boosted relevance vs. naive semantic search.
 - Belief revision: when a fact is superseded, `cortex memory history alice` shows the old fact, the new fact, and the `revisionReason` ("migrated from Passport to Auth.js v5").
 - No new storage backends — all data fits in existing vector store + memory record schema.
 - Each prospective pass adds ≤1 LLM call per memory write; version chain stores ≤1KB per revision.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Future-query-aware retrieval catches relevant memories that pure semantic search would miss; version chains provide full audit trail of knowledge evolution without AGM infrastructure; zero new storage backends.
 - ❌ **Cons**: Prospective indexing adds an LLM call per memory write (~10% overhead on write path). Version chains add slight retrieval complexity (filter out inactive versions).
 
@@ -10156,7 +11234,7 @@ Two lightweight passes on top of Phase 20.7.2's consolidation pipeline:
 
 ## 🌊 Phase 20.8: Memory Stream Retrieval Scoring — ⏳ Planned (research-grade)
 
-**Research grounding**: Generative Agents (Park, O'Brien, Cai, Morris, Liang, Bernstein — Stanford 2023 — *"Generative Agents: Interactive Simulacra of Human Behavior"*, arXiv:2304.03442). The agents use a memory stream — an append-only log of observations — with a retrieval scoring formula combining **recency** (exponential decay), **importance** (LLM-rated 1-10), and **relevance** (cosine similarity to query). The combined score, not pure similarity, drives what gets surfaced. The paper's behavioral evaluations show this scoring produces more believable, contextually-grounded agent behavior than similarity-only retrieval.
+**Research grounding**: Generative Agents (Park, O'Brien, Cai, Morris, Liang, Bernstein — Stanford 2023 — _"Generative Agents: Interactive Simulacra of Human Behavior"_, arXiv:2304.03442). The agents use a memory stream — an append-only log of observations — with a retrieval scoring formula combining **recency** (exponential decay), **importance** (LLM-rated 1-10), and **relevance** (cosine similarity to query). The combined score, not pure similarity, drives what gets surfaced. The paper's behavioral evaluations show this scoring produces more believable, contextually-grounded agent behavior than similarity-only retrieval.
 
 **Layman's Terms**
 When the AI asks "what do I know about authentication?" today, Cortex returns whatever entity has the best name match. Phase 20.8 makes retrieval smarter: it scores each candidate by three things at once — how recently was it touched, how important is it to the codebase, and how relevant is it to the actual question. An entity touched yesterday with high centrality beats an obscure one with a slightly closer name match. This is the retrieval-scoring formula from Stanford's Generative Agents paper, adapted to Cortex's entity store.
@@ -10212,8 +11290,8 @@ The formula is documented as a heuristic, weights are configurable, and the comp
 
 **Research grounding**: Two convergent 2024 papers.
 
-- **GraphRAG** (Edge, Trinh, Cheng, Bradley, Chao, Mody, Truitt, Larson — Microsoft Research 2024 — *"From Local to Global: A Graph RAG Approach to Query-Focused Summarization"*, arXiv:2404.16130). Detects communities (Leiden algorithm) in an LLM-extracted knowledge graph and generates per-community summaries that enable global queries impossible with chunk-based RAG.
-- **RAPTOR** (Sarthi, Abdullah, Tuli, Khanna, Goldie, Manning — Stanford 2024 — *"RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval"*, ICLR 2024). Builds a tree of recursive abstractive summaries at multiple levels of granularity; retrieval traverses the tree to find the right granularity for a query.
+- **GraphRAG** (Edge, Trinh, Cheng, Bradley, Chao, Mody, Truitt, Larson — Microsoft Research 2024 — _"From Local to Global: A Graph RAG Approach to Query-Focused Summarization"_, arXiv:2404.16130). Detects communities (Leiden algorithm) in an LLM-extracted knowledge graph and generates per-community summaries that enable global queries impossible with chunk-based RAG.
+- **RAPTOR** (Sarthi, Abdullah, Tuli, Khanna, Goldie, Manning — Stanford 2024 — _"RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval"_, ICLR 2024). Builds a tree of recursive abstractive summaries at multiple levels of granularity; retrieval traverses the tree to find the right granularity for a query.
 
 **Layman's Terms**
 Today Cortex has individual entities (`AuthService`, `JWTValidator`, `SessionStore`) but nothing that says "these three together are the authentication subsystem." If you ask "what does this codebase do at a high level?", Cortex can't answer — it only has entity-level descriptions, not subsystem-level ones. Phase 20.9 detects clusters of tightly-connected entities (using the Leiden algorithm Microsoft's GraphRAG uses) and generates a hierarchical summary tree: entity → module → subsystem → system. Now Cortex can answer global queries because it has summaries at every scale.
@@ -10271,16 +11349,17 @@ MCP tool: `read_community(name)` returns a community summary for IDE consumption
 
 ## 🦛 Phase 20.10: Hippocampal Retrieval — ⏳ Planned (research-grade)
 
-**Research grounding**: HippoRAG (Gutiérrez, Shu, Gu, Yasunaga, Su — Ohio State University + Stanford 2024 — *"HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models"*, arXiv:2405.14831, NeurIPS 2024). Models the hippocampal indexing theory of human memory: an entity-centric index (analog to the hippocampus) combined with Personalized PageRank for one-step multi-hop retrieval. Reports 20-30% improvement over standard RAG on multi-hop QA (MuSiQue, 2WikiMultiHopQA) at 10-30× lower inference cost than iterative RAG.
+**Research grounding**: HippoRAG (Gutiérrez, Shu, Gu, Yasunaga, Su — Ohio State University + Stanford 2024 — _"HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models"_, arXiv:2405.14831, NeurIPS 2024). Models the hippocampal indexing theory of human memory: an entity-centric index (analog to the hippocampus) combined with Personalized PageRank for one-step multi-hop retrieval. Reports 20-30% improvement over standard RAG on multi-hop QA (MuSiQue, 2WikiMultiHopQA) at 10-30× lower inference cost than iterative RAG.
 
 **Layman's Terms**
 When you ask Cortex "which entities are likely affected if I change the JWT validator?", today it does a one-hop dependency lookup. But the real answer might be three hops away — the JWT validator is used by the auth middleware, called by the API gateway, which serves payment endpoints. Phase 20.10 implements hippocampus-inspired retrieval: it does one mathematical computation (Personalized PageRank) that captures all multi-hop reachability at once. Faster, more accurate, and grounded in cognitive science research (HippoRAG, OSU 2024).
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Hippocampal Indexing Theory**
-> *Source Domain:* Cognitive Neuroscience.
-> The hippocampus doesn't store memories; it stores the *index* of cortical patterns. Cortex's vector DB shouldn't store code; it should store the *activation patterns* of how concepts link, acting as an index to pull the raw code from the disk only when needed. This allows for lightning-fast multi-hop retrieval without context explosion.
-Personalized PageRank (PPR) based multi-hop retrieval over the typed dependency graph. Given a query entity (or set), the personalized PageRank vector is computed with restart probability anchored to the query, yielding a relevance score for every entity in the graph that captures multi-hop reachability in one computation.
+> _Source Domain:_ Cognitive Neuroscience.
+> The hippocampus doesn't store memories; it stores the _index_ of cortical patterns. Cortex's vector DB shouldn't store code; it should store the _activation patterns_ of how concepts link, acting as an index to pull the raw code from the disk only when needed. This allows for lightning-fast multi-hop retrieval without context explosion.
+> Personalized PageRank (PPR) based multi-hop retrieval over the typed dependency graph. Given a query entity (or set), the personalized PageRank vector is computed with restart probability anchored to the query, yielding a relevance score for every entity in the graph that captures multi-hop reachability in one computation.
 
 Pipeline:
 
@@ -10327,9 +11406,9 @@ Applied at:
 
 ## 🔁 Phase 20.11: Reflexion-Style Self-Correcting Synthesis — ⏳ Planned (research-grade)
 
-**Research grounding**: Reflexion (Shinn, Cassano, Berman, Gopinath, Narasimhan, Yao — Northeastern + Princeton + MIT 2023 — *"Reflexion: Language Agents with Verbal Reinforcement Learning"*, arXiv:2303.11366, NeurIPS 2023). Agents reflect verbally on their failures, store the reflection in episodic memory, and use it next time. Reports 91% pass@1 on HumanEval (vs. 80% GPT-4 baseline) via reflexion across iterations.
+**Research grounding**: Reflexion (Shinn, Cassano, Berman, Gopinath, Narasimhan, Yao — Northeastern + Princeton + MIT 2023 — _"Reflexion: Language Agents with Verbal Reinforcement Learning"_, arXiv:2303.11366, NeurIPS 2023). Agents reflect verbally on their failures, store the reflection in episodic memory, and use it next time. Reports 91% pass@1 on HumanEval (vs. 80% GPT-4 baseline) via reflexion across iterations.
 
-Related: **Self-RAG** (Asai, Wu, Wang, Sil, Hajishirzi — UW 2023 — *"Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"*) demonstrates the same self-correction pattern for retrieval. **CRAG** (Yan, Gui, Li, Sun, Tu — 2024 — *"Corrective Retrieval Augmented Generation"*) extends it with a retrieval-evaluator triggering corrections.
+Related: **Self-RAG** (Asai, Wu, Wang, Sil, Hajishirzi — UW 2023 — _"Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"_) demonstrates the same self-correction pattern for retrieval. **CRAG** (Yan, Gui, Li, Sun, Tu — 2024 — _"Corrective Retrieval Augmented Generation"_) extends it with a retrieval-evaluator triggering corrections.
 
 **Layman's Terms**
 Today when the Librarian (the AI doing synthesis) gets something wrong — produces a synthesis flagged by lint, or contradicting existing knowledge, or rejected by human review — Cortex just records the rejection. The Librarian gets no feedback. Phase 20.11 closes the loop: when a synthesis fails some quality check, Cortex generates a "reflection" — a short text explaining what went wrong and what to try differently — and stores it. The next synthesis on the same area sees the reflection in its context and avoids the same mistake. This is the Reflexion pattern (NeurIPS 2023), applied to Cortex's Librarian.
@@ -10339,10 +11418,10 @@ A reflection-and-retry loop around synthesis, triggered by quality-check failure
 
 Triggers (failure signals that produce a reflection):
 
-- **Lint failure**: synthesis introduces a `god_module`, `cycle`, or `silo` lint warning. Reflection: *"The previous synthesis on this area introduced a cycle between [A] and [B]; avoid creating circular dependencies."*
-- **Contradiction**: synthesis introduces inconsistency with an existing entity (Phase 16's contradiction detection). Reflection: *"The previous synthesis claimed [X] uses JWT, contradicting existing knowledge that [X] uses cookies; reconcile or explicitly resolve."*
-- **Human review rejection**: synthesis rejected via Phase 23's `cortex review reject`. Reflection: *"The previous synthesis was rejected by [reviewer] with reason: [text]."*
-- **CI signal degradation**: synthesis touches an entity whose `ciSignal` worsens within N days. Reflection: *"The previous synthesis on [entity] correlated with [redRunsSince increase]; consider reviewing the contract assumption."*
+- **Lint failure**: synthesis introduces a `god_module`, `cycle`, or `silo` lint warning. Reflection: _"The previous synthesis on this area introduced a cycle between [A] and [B]; avoid creating circular dependencies."_
+- **Contradiction**: synthesis introduces inconsistency with an existing entity (Phase 16's contradiction detection). Reflection: _"The previous synthesis claimed [X] uses JWT, contradicting existing knowledge that [X] uses cookies; reconcile or explicitly resolve."_
+- **Human review rejection**: synthesis rejected via Phase 23's `cortex review reject`. Reflection: _"The previous synthesis was rejected by [reviewer] with reason: [text]."_
+- **CI signal degradation**: synthesis touches an entity whose `ciSignal` worsens within N days. Reflection: _"The previous synthesis on [entity] correlated with [redRunsSince increase]; consider reviewing the contract assumption."_
 
 Reflection storage: additive `reflections[]` field in entity records — `{ entity, trigger, summary, recordedAt, sourceSynthesis }`. Bounded per entity (default 5 most recent; LRU eviction).
 
@@ -10390,19 +11469,20 @@ CLI:
 
 **Research grounding**: Temporal knowledge graph (TKG) literature.
 
-- **TNTComplEx** (Lacroix, Obozinski, Usunier — Facebook AI Research 2020 — *"Tensor Decompositions for Temporal Knowledge Base Completion"*, ICLR 2020). Adds a time dimension to ComplEx KG embeddings: facts become `(subject, predicate, object, time)` tuples.
-- **TimePlex** (Jain, Rathi, Chakrabarti — IIT Delhi + IBM 2020 — *"Temporal Knowledge Base Completion: New Algorithms and Evaluation Protocols"*, EMNLP 2020). Models time-validity intervals with relation-pair recurrent patterns.
-- **TeMP** (Wu, Cao, Hamilton, Tang, Maddison, Cohen — McGill 2020 — *"TeMP: Temporal Message Passing for Temporal Knowledge Graph Completion"*, EMNLP 2020). Message-passing over a temporal graph.
+- **TNTComplEx** (Lacroix, Obozinski, Usunier — Facebook AI Research 2020 — _"Tensor Decompositions for Temporal Knowledge Base Completion"_, ICLR 2020). Adds a time dimension to ComplEx KG embeddings: facts become `(subject, predicate, object, time)` tuples.
+- **TimePlex** (Jain, Rathi, Chakrabarti — IIT Delhi + IBM 2020 — _"Temporal Knowledge Base Completion: New Algorithms and Evaluation Protocols"_, EMNLP 2020). Models time-validity intervals with relation-pair recurrent patterns.
+- **TeMP** (Wu, Cao, Hamilton, Tang, Maddison, Cohen — McGill 2020 — _"TeMP: Temporal Message Passing for Temporal Knowledge Graph Completion"_, EMNLP 2020). Message-passing over a temporal graph.
 
 Together these establish a representation pattern: every fact carries `(validFrom, validTo)` intervals, enabling time-travel queries like "what was true at time T?" and "when did fact F become true?" without log replay.
 
 **Layman's Terms**
-Today Cortex tells you what the architecture is *right now*. It can't tell you what it was last month — "did AuthService depend on JWT then?" or "when did we switch from sessions to OAuth?" Phase 20.12 adds time-validity intervals to every relationship: each `depends_on` edge has a `validFrom` and (optionally) `validTo`. Cortex can now answer time-travel queries directly without replaying the entire JSONL log. This is the temporal knowledge graph pattern from KG research (TNTComplEx, TimePlex), applied to Cortex's architecture graph.
+Today Cortex tells you what the architecture is _right now_. It can't tell you what it was last month — "did AuthService depend on JWT then?" or "when did we switch from sessions to OAuth?" Phase 20.12 adds time-validity intervals to every relationship: each `depends_on` edge has a `validFrom` and (optionally) `validTo`. Cortex can now answer time-travel queries directly without replaying the entire JSONL log. This is the temporal knowledge graph pattern from KG research (TNTComplEx, TimePlex), applied to Cortex's architecture graph.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Minkowski Spacetime (Worldlines)**
-> *Source Domain:* Special Relativity / Physics.
-> In relativity, objects don't just exist in space; they travel along "worldlines" through spacetime. Cortex treats entities exactly like this. An entity isn't a static point in `state.json`; it's a worldline. A bug isn't a bad state; it's an event intersection in spacetime. By adopting this physics-based topology, Cortex can trivially answer questions like *"What did this architecture's spacetime volume look like relative to the Auth migration event?"* without brute-force log replay.
+> _Source Domain:_ Special Relativity / Physics.
+> In relativity, objects don't just exist in space; they travel along "worldlines" through spacetime. Cortex treats entities exactly like this. An entity isn't a static point in `state.json`; it's a worldline. A bug isn't a bad state; it's an event intersection in spacetime. By adopting this physics-based topology, Cortex can trivially answer questions like _"What did this architecture's spacetime volume look like relative to the Auth migration event?"_ without brute-force log replay.
 
 Time-aware extension to the entity relationship model. Each edge in `state.json.entities[].relationships[]` gains:
 
@@ -10459,9 +11539,9 @@ Integrates with Phase 7's `cortex evolution --replay --at <commit>` at a finer g
 
 ## 🎒 Phase 20.13: Pattern Skill Library — ⏳ Planned
 
-**Research grounding**: VOYAGER (Wang, Xie, Jiang, Mandlekar, Xiao, Zhu, Fan, Anandkumar — NVIDIA + Caltech 2023 — *"VOYAGER: An Open-Ended Embodied Agent with Large Language Models"*, arXiv:2305.16291, TMLR 2024). VOYAGER is a lifelong learning agent in Minecraft that maintains a growing "skill library" — reusable code snippets the agent has successfully used. New tasks consult the library before generating new skills. Reports 3.3× more unique items, 2.3× longer distances, 15.3× faster tech tree progression than baselines.
+**Research grounding**: VOYAGER (Wang, Xie, Jiang, Mandlekar, Xiao, Zhu, Fan, Anandkumar — NVIDIA + Caltech 2023 — _"VOYAGER: An Open-Ended Embodied Agent with Large Language Models"_, arXiv:2305.16291, TMLR 2024). VOYAGER is a lifelong learning agent in Minecraft that maintains a growing "skill library" — reusable code snippets the agent has successfully used. New tasks consult the library before generating new skills. Reports 3.3× more unique items, 2.3× longer distances, 15.3× faster tech tree progression than baselines.
 
-Related: **Generative Agents** skill-formation patterns (Park et al. 2023), and the broader case-based reasoning literature going back to Schank (1982) — *Dynamic Memory*.
+Related: **Generative Agents** skill-formation patterns (Park et al. 2023), and the broader case-based reasoning literature going back to Schank (1982) — _Dynamic Memory_.
 
 **Layman's Terms**
 When a refactor succeeds (say, "extract a Strategy pattern from a god module" or "introduce a Repository to break a database cycle"), Cortex today doesn't remember the pattern of that successful change. Phase 20.13 builds a "skill library" — a growing catalog of refactor patterns the team has successfully applied, indexed by the anti-pattern they resolved. Next time the same anti-pattern appears, Cortex consults the library first: "your team has resolved this kind of cycle 3 times before, here's how." Skills are concrete, executable patterns — what edges changed, what new entities were introduced — not vague advice. This is the VOYAGER architecture (NVIDIA 2023), applied to code refactoring.
@@ -10474,14 +11554,14 @@ Skill structure:
 ```yaml
 # .knowledge/skills/<skill-id>.yaml
 id: extract-strategy-from-god-module-2026-04-12
-trigger: god_module  # lint anti-pattern type
-applied_to_entity: AuthMiddleware  # historical example
+trigger: god_module # lint anti-pattern type
+applied_to_entity: AuthMiddleware # historical example
 graph_before:
   entity_count: 1
   external_edges: 24
 graph_after:
-  entity_count: 4  # 1 facade + 3 strategies
-  external_edges: 8  # delegated through facade
+  entity_count: 4 # 1 facade + 3 strategies
+  external_edges: 8 # delegated through facade
 sequence_of_synthesis_events: [event_id_1, event_id_2]
 outcome_signals:
   ci_signal_delta: improved
@@ -10534,15 +11614,16 @@ Lifecycle:
 
 ## ⚖️ Phase 20.14: Causal Impact Analysis — ⏳ Planned (research-grade)
 
-**Research grounding**: Judea Pearl — *Causality: Models, Reasoning, and Inference* (Cambridge 2009, 2nd ed., 50,000+ citations). *The Book of Why* (Pearl & Mackenzie 2018). Pearl's structural causal models (SCM) and do-calculus distinguish correlation from causation, enabling counterfactual queries ("what would have happened if X had not occurred?"). Recent software engineering applications: **CausalDebugger** (Brun et al. ICSE 2023); **Causal Inference for Bug Localization** (Wang & Lin FSE 2024); **CausalRL** for fault-tolerant systems (Zheng et al. ASE 2024).
+**Research grounding**: Judea Pearl — _Causality: Models, Reasoning, and Inference_ (Cambridge 2009, 2nd ed., 50,000+ citations). _The Book of Why_ (Pearl & Mackenzie 2018). Pearl's structural causal models (SCM) and do-calculus distinguish correlation from causation, enabling counterfactual queries ("what would have happened if X had not occurred?"). Recent software engineering applications: **CausalDebugger** (Brun et al. ICSE 2023); **Causal Inference for Bug Localization** (Wang & Lin FSE 2024); **CausalRL** for fault-tolerant systems (Zheng et al. ASE 2024).
 
 **Layman's Terms**
-Today Cortex tells you "AuthService and SessionStore are related" but doesn't tell you whether changing AuthService will *cause* SessionStore to break, or whether they're correlated through some shared parent dependency. Phase 20.14 builds a causal model over the architecture: when you ask "what happens if I remove the JWT library?", Cortex answers using Pearl's do-calculus — the same math the FDA uses to evaluate drug interventions — to give a causal answer, not just a correlational one. Root-cause analysis ("which entity is the likely origin of this failure?") becomes a first-class query.
+Today Cortex tells you "AuthService and SessionStore are related" but doesn't tell you whether changing AuthService will _cause_ SessionStore to break, or whether they're correlated through some shared parent dependency. Phase 20.14 builds a causal model over the architecture: when you ask "what happens if I remove the JWT library?", Cortex answers using Pearl's do-calculus — the same math the FDA uses to evaluate drug interventions — to give a causal answer, not just a correlational one. Root-cause analysis ("which entity is the likely origin of this failure?") becomes a first-class query.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Pearl's Do-Calculus ($do(X)$)**
-> *Source Domain:* Causal Inference (Judea Pearl).
-> The system distinguishes between *correlation* (X and Y change together) and *causation* (intervening to change X *causes* Y to break). Cortex uses structural causal models to mathematically prove if a refactor will break a downstream service, answering counterfactual queries like *"What would have happened to the payment service if the auth module had not been migrated?"*
+> _Source Domain:_ Causal Inference (Judea Pearl).
+> The system distinguishes between _correlation_ (X and Y change together) and _causation_ (intervening to change X _causes_ Y to break). Cortex uses structural causal models to mathematically prove if a refactor will break a downstream service, answering counterfactual queries like _"What would have happened to the payment service if the auth module had not been migrated?"_
 
 A structural causal model (SCM) layer over the Phase 6 typed dependency graph. Each `depends_on` edge gains a `causalStrength: number` (0-1) derived from observed change-propagation in `log.jsonl`: if changes to A historically caused changes to B within N syncs, the A→B edge gains causal strength proportional to the conditional probability `P(change_B | change_A)` over the empirical history.
 
@@ -10553,6 +11634,7 @@ Three new query types:
 3. **Root cause** — `cortex causal root-cause --symptom <entity>`: given a broken/failing entity, walk backwards through high-causal-strength edges to rank likely originating entities.
 
 Causal-strength computation:
+
 - For each ordered pair (A, B) with a `depends_on` edge: count syncs where A changed and B changed within the same sync or next N=3 syncs; divide by total A-change events. Output ∈ [0, 1].
 - Updated incrementally on each sync; full recomputation via `cortex causal rebuild`.
 - Stored as additive field in `relationships[]`; absent for edges with <3 A-change events (low-sample warning surfaced).
@@ -10560,9 +11642,9 @@ Causal-strength computation:
 **Architecture & System Design**
 
 - **Core Components**: new `src/causal/scm.ts` (SCM construction from `log.jsonl`), new `src/causal/docalculus.ts` (intervention + counterfactual queries, Pearl algorithms), new `src/causal/rootcause.ts` (backward causal walk), new `src/cli/causal.ts`, additive `causalStrength` field on `relationships[]`.
-- **Design Pattern**: Observed-frequency SCM. We don't assume unobserved causal mechanisms — we observe co-change frequency and treat it as the empirical causal signal. This is *not* full Pearl SCM with latent confounders; it's a useful approximation that matches what we can directly observe (sync co-occurrence over git history).
+- **Design Pattern**: Observed-frequency SCM. We don't assume unobserved causal mechanisms — we observe co-change frequency and treat it as the empirical causal signal. This is _not_ full Pearl SCM with latent confounders; it's a useful approximation that matches what we can directly observe (sync co-occurrence over git history).
 - **Key Considerations**:
-  - Causal strength is **derived, not asserted**. The system never claims A *causes* B metaphysically; it reports the empirical co-change conditional probability with a confidence interval based on sample size. Documentation explicitly frames the metric as "if A changes, expect B to change with this empirical probability."
+  - Causal strength is **derived, not asserted**. The system never claims A _causes_ B metaphysically; it reports the empirical co-change conditional probability with a confidence interval based on sample size. Documentation explicitly frames the metric as "if A changes, expect B to change with this empirical probability."
   - The SCM is acyclic by construction: cycles are broken by treating them as bidirectional uncertainty. Phase 7's cycle detection still applies.
   - Counterfactual queries on sparse history (low N) return wide confidence intervals — users see "low confidence (n=3 observations)" annotations rather than misleading point estimates.
 
@@ -10589,7 +11671,7 @@ Causal-strength computation:
 
 ## 🧠 Phase 20.15: Dual-Process Synthesis (System 1 / System 2) — ⏳ Planned (research-grade)
 
-**Research grounding**: Daniel Kahneman — *Thinking, Fast and Slow* (Macmillan 2011, 100,000+ citations). System 1 (fast, intuitive) vs System 2 (slow, deliberative). LLM application: **Tree of Thoughts** (Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan — Princeton 2023 — arXiv:2305.10601, NeurIPS 2023, 1500+ citations). **Self-Refine** (Madaan et al., CMU 2023, NeurIPS 2023). **Chain-of-Thought** (Wei, Wang, Schuurmans, Bosma, Ichter, Xia, Chi, Le, Zhou — Google 2022 — NeurIPS 2022, 6000+ citations).
+**Research grounding**: Daniel Kahneman — _Thinking, Fast and Slow_ (Macmillan 2011, 100,000+ citations). System 1 (fast, intuitive) vs System 2 (slow, deliberative). LLM application: **Tree of Thoughts** (Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan — Princeton 2023 — arXiv:2305.10601, NeurIPS 2023, 1500+ citations). **Self-Refine** (Madaan et al., CMU 2023, NeurIPS 2023). **Chain-of-Thought** (Wei, Wang, Schuurmans, Bosma, Ichter, Xia, Chi, Le, Zhou — Google 2022 — NeurIPS 2022, 6000+ citations).
 
 **Layman's Terms**
 Today Cortex synthesizes every change the same way — same prompt, same depth, same time budget. But not every change deserves the same thought: a typo fix doesn't require deep architectural reasoning; introducing a new domain model does. Phase 20.15 routes syntheses by complexity: simple diffs go to a fast path (Phase 19 distilled model, single shot); complex diffs trigger a deliberate path (frontier model with tree-of-thoughts reasoning across multiple alternatives). This is Kahneman's System 1 / System 2 distinction — the most-cited cognitive psychology framework of the 21st century — applied to the Librarian.
@@ -10601,6 +11683,7 @@ Two synthesis paths gated by a deterministic complexity classifier:
 - **System 2 (slow path)**: frontier model with Tree-of-Thoughts — generate K=3 candidate syntheses with different reasoning chains, score each via a separate critic LLM call (structural validity + consistency + evidence anchoring), return the best. ~5-10s per diff.
 
 Complexity classifier signals (combined into a routing score 0-1):
+
 - Diff size (lines, files touched) — normalized
 - Number of entities in CURRENT CONTEXT affected
 - Centrality of touched entities (Phase 8/10)
@@ -10643,7 +11726,7 @@ CLI overrides: `cortex sync --force-slow` (always deliberate), `cortex sync --fo
 
 ## 🧬 Phase 20.15.1: Protein Folding — Argument Prediction — ⏳ Planned (research-grade)
 
-**Research grounding**: **AlphaFold** (Jumper et al., DeepMind 2021 — *"Highly accurate protein structure prediction with AlphaFold"*, Nature 2021, 30,000+ citations) predicts 3D structure from a 1D amino-acid sequence. Conceptual analog: given a partial reasoning chain (1D argument sequence), predict the logical endpoints (3D conclusions) the chain is folding toward. Operates purely over the graph — no protein data, no model training.
+**Research grounding**: **AlphaFold** (Jumper et al., DeepMind 2021 — _"Highly accurate protein structure prediction with AlphaFold"_, Nature 2021, 30,000+ citations) predicts 3D structure from a 1D amino-acid sequence. Conceptual analog: given a partial reasoning chain (1D argument sequence), predict the logical endpoints (3D conclusions) the chain is folding toward. Operates purely over the graph — no protein data, no model training.
 
 **Layman's Terms**
 When you or Cortex starts an incomplete reasoning chain — "if we move to microservices, then auth needs to be extracted, which means..." — Phase 20.15.1 predicts where that chain is heading. It reads the Partial graph of entities + argument edges and asks "what conclusion does this chain fold toward?" It's AlphaFold for arguments, not proteins.
@@ -10668,10 +11751,12 @@ Post-20.15 dual-process routing is stable. Adds a lightweight prediction layer t
   - False positives (predicted conclusions that are wrong) are harmless because they're never synthesized — they sit as drafts until manually promoted or pruned by Phase 20.17 consolidation.
 
 **Definition of Ready (DoR)**
+
 - Phase 20.15 dual-process routing stable.
 - `"premise"` and `"supports"` relationship kinds present in the graph (Phase 6).
 
 **Definition of Done (DoD)**
+
 - `cortex predict --chain <entityIds>` returns ranked predictions with confidence scores.
 - Draft entities created with `predicted: true` flag; not auto-synthesized.
 - Predictions gated on chain length > 3.
@@ -10686,7 +11771,7 @@ Post-20.15 dual-process routing is stable. Adds a lightweight prediction layer t
 
 ## 🎭 Phase 20.16: Multi-Agent Librarian Collaboration — ⏳ Planned (research-grade)
 
-**Research grounding**: **AutoGen** (Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, Awadallah, White, Burger, Wang — Microsoft Research + Penn State 2023 — *"AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation"*, arXiv:2308.08155, ICLR 2024). **MetaGPT** (Hong, Zheng, Chen, Cheng, Wang, Zhang, Wang, Yau, Lin, Zhou, Ran, Xiao, Wu, Schmidhuber — DeepWisdom 2023 — arXiv:2308.00352, ICLR 2024 Oral). **Multi-Agent Debate** (Du, Li, Torralba, Tenenbaum, Mordatch — MIT 2023 — arXiv:2305.14325). **CAMEL** (Li, Hammoud, Itani, Khizbullin, Ghanem — KAUST 2023, NeurIPS 2023). **ChatDev** (Qian, Liu, Zhang, Chen, Dang, Liu, Cong, Sun — Tsinghua 2024, ACL 2024).
+**Research grounding**: **AutoGen** (Wu, Bansal, Zhang, Wu, Li, Zhu, Jiang, Zhang, Zhang, Liu, Awadallah, White, Burger, Wang — Microsoft Research + Penn State 2023 — _"AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation"_, arXiv:2308.08155, ICLR 2024). **MetaGPT** (Hong, Zheng, Chen, Cheng, Wang, Zhang, Wang, Yau, Lin, Zhou, Ran, Xiao, Wu, Schmidhuber — DeepWisdom 2023 — arXiv:2308.00352, ICLR 2024 Oral). **Multi-Agent Debate** (Du, Li, Torralba, Tenenbaum, Mordatch — MIT 2023 — arXiv:2305.14325). **CAMEL** (Li, Hammoud, Itani, Khizbullin, Ghanem — KAUST 2023, NeurIPS 2023). **ChatDev** (Qian, Liu, Zhang, Chen, Dang, Liu, Cong, Sun — Tsinghua 2024, ACL 2024).
 
 **Layman's Terms**
 Today Cortex has one Librarian — a single AI handling every kind of architectural insight. But "is this auth pattern secure?" needs different expertise than "is this query going to scale?" Phase 20.16 splits the Librarian into specialists — ArchitectLibrarian (general structure), SecurityLibrarian (auth/secrets/access), PerformanceLibrarian (scaling/caching/queries), DomainLibrarian (business logic). They debate on every synthesis: each proposes its view, they critique each other, a final consensus is written. Inspired by Microsoft's AutoGen and MIT's Multi-Agent Debate research showing that LLM debate improves factual accuracy.
@@ -10746,14 +11831,15 @@ CLI: `cortex sync --agents <list>` overrides activation (e.g., `--agents archite
 
 ## 😴 Phase 20.17: Sleep Consolidation & Memory Reorganization — ⏳ Planned (research-grade)
 
-**Research grounding**: **Generative Agents** (Park et al., Stanford 2023) — agents have a "reflection" phase that consolidates raw observations into higher-order insights. Biological inspiration: **Walker & Stickgold** — *"Sleep-dependent learning and memory consolidation"* (Neuron 2004); **Diekelmann & Born** — *"The memory function of sleep"* (Nature Reviews Neuroscience 2010, 3000+ citations). Computational analog: **Complementary Learning Systems** (McClelland, McNaughton, O'Reilly — Psych Review 1995, 5000+ citations). LLM application: **MemoryBank** (Zhong, Guo, Gao, Ye, Wang — Fudan 2024 — AAAI 2024).
+**Research grounding**: **Generative Agents** (Park et al., Stanford 2023) — agents have a "reflection" phase that consolidates raw observations into higher-order insights. Biological inspiration: **Walker & Stickgold** — _"Sleep-dependent learning and memory consolidation"_ (Neuron 2004); **Diekelmann & Born** — _"The memory function of sleep"_ (Nature Reviews Neuroscience 2010, 3000+ citations). Computational analog: **Complementary Learning Systems** (McClelland, McNaughton, O'Reilly — Psych Review 1995, 5000+ citations). LLM application: **MemoryBank** (Zhong, Guo, Gao, Ye, Wang — Fudan 2024 — AAAI 2024).
 
 **Layman's Terms**
 Humans don't just accumulate facts — they sleep, and during sleep the brain reorganizes what was learned that day into deeper patterns. Today Cortex just keeps adding entities forever. Phase 20.17 adds a "sleep" phase: every N syncs (or nightly via cron), Cortex runs a consolidation pass that merges duplicate concepts, archives resolved contradictions, generates higher-order pattern insights, and prunes truly dead entities. The knowledge base stays sharp instead of accumulating as cruft.
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Sleep Consolidation (Synaptic Downscaling)**
-> *Source Domain:* Sleep Biology / Neuroscience.
+> _Source Domain:_ Sleep Biology / Neuroscience.
 > During sleep, the brain replays the day's events, compresses memories, and prunes weak synaptic connections (Synaptic Homeostasis Hypothesis). Cortex replicates this: when the IDE is closed or idle at 3 AM, a background daemon replays the day's git commits, compresses the knowledge graph, prunes dead synaptic weights (using Oja's rule from Phase 13.8), and even hallucinates possible refactorings (dreams) to test architectural stability for the next day.
 
 A batch consolidation pass triggered explicitly (`cortex consolidate`) or on a schedule (Phase 12 cron). Six operations:
@@ -10816,7 +11902,7 @@ Default schedule: nightly at 3am via cron, with `--dry-run` mode defaulting to t
 
 ## 🌳 Phase 20.18: Tree-of-Thoughts & Self-Ask Synthesis — ⏳ Planned (research-grade)
 
-**Research grounding**: **Tree of Thoughts** (Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan — Princeton + Google DeepMind 2023 — *"Tree of Thoughts: Deliberate Problem Solving with Large Language Models"*, NeurIPS 2023, arXiv:2305.10601). **Self-Ask** (Press, Zhang, Min, Schmidt, Smith, Lewis — UW + Meta 2022 — *"Measuring and Narrowing the Compositionality Gap in Language Models"*, EMNLP 2023). **IRCoT** (Trivedi, Balasubramanian, Khot, Sabharwal — AI2 2023 — *"Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions"*, ACL 2023). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022, ICLR 2023). **LATS** (Zhou, Yang, Chen, Yang, Liu, Wong, Zhu, Wang, Lake — Stanford 2024 — *"Language Agent Tree Search Unifies Reasoning Acting and Planning"*, ICML 2024).
+**Research grounding**: **Tree of Thoughts** (Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan — Princeton + Google DeepMind 2023 — _"Tree of Thoughts: Deliberate Problem Solving with Large Language Models"_, NeurIPS 2023, arXiv:2305.10601). **Self-Ask** (Press, Zhang, Min, Schmidt, Smith, Lewis — UW + Meta 2022 — _"Measuring and Narrowing the Compositionality Gap in Language Models"_, EMNLP 2023). **IRCoT** (Trivedi, Balasubramanian, Khot, Sabharwal — AI2 2023 — _"Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions"_, ACL 2023). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022, ICLR 2023). **LATS** (Zhou, Yang, Chen, Yang, Liu, Wong, Zhu, Wang, Lake — Stanford 2024 — _"Language Agent Tree Search Unifies Reasoning Acting and Planning"_, ICML 2024).
 
 This is the implementation layer for Phase 20.15's System 2 path.
 
@@ -10827,12 +11913,14 @@ When Phase 20.15 routes a change to the "slow path" — the deliberate System 2 
 Three complementary deliberate-reasoning mechanisms invoked by Phase 20.15's slow path:
 
 **Tree-of-Thoughts (ToT)** synthesis:
+
 1. Generate K=3 root candidates (parallel LLM calls, temperature 0.7).
 2. For each root, generate 2 follow-up "thought" expansions exploring different angles.
 3. A critic LLM scores each branch on structural validity (matches `SynthesisSchema`?), consistency (no contradiction with existing entities), evidence anchoring (citation quality).
 4. Return the best-scoring branch.
 
 **Self-Ask decomposition** — for syntheses where the diff touches >5 entities or crosses module boundaries:
+
 1. Decomposer LLM call: "what sub-questions must be answered to synthesize this diff?" Outputs structured list of (entity, question) pairs.
 2. For each sub-question, retrieve relevant context (entity descriptions + Phase 20.10 PPR neighborhood) and synthesize a partial answer.
 3. Aggregator LLM call stitches partial answers into the final synthesis.
@@ -10872,7 +11960,7 @@ All three produce structured intermediate artifacts inspectable via `cortex synt
 
 ## ✏️ Phase 20.19: Surgical Knowledge Editing — ⏳ Planned
 
-**Research grounding**: **ROME** (Meng, Bau, Andonian, Belinkov — MIT + Northeastern 2022 — *"Locating and Editing Factual Associations in GPT"*, NeurIPS 2022, arXiv:2202.05262). **MEMIT** (Meng, Sharma, Andonian, Belinkov, Bau — MIT 2023 — *"Mass-Editing Memory in a Transformer"*, ICLR 2023). **MEND** (Mitchell, Lin, Bosselut, Finn, Manning — Stanford 2022, ICLR 2022). These papers introduce "locate-and-edit" techniques for surgical updates to factual knowledge in transformer models without retraining. The patterns apply to structured knowledge bases too.
+**Research grounding**: **ROME** (Meng, Bau, Andonian, Belinkov — MIT + Northeastern 2022 — _"Locating and Editing Factual Associations in GPT"_, NeurIPS 2022, arXiv:2202.05262). **MEMIT** (Meng, Sharma, Andonian, Belinkov, Bau — MIT 2023 — _"Mass-Editing Memory in a Transformer"_, ICLR 2023). **MEND** (Mitchell, Lin, Bosselut, Finn, Manning — Stanford 2022, ICLR 2022). These papers introduce "locate-and-edit" techniques for surgical updates to factual knowledge in transformer models without retraining. The patterns apply to structured knowledge bases too.
 
 **Layman's Terms**
 Today when one fact about an entity changes — say, the auth library version is upgraded — Cortex must re-synthesize the entire entity description, which can shift unrelated details. Phase 20.19 adds surgical editing: change ONE specific fact about an entity (the library version, the file path, a single relationship) without touching the rest. Inspired by MIT's ROME/MEMIT work on editing facts in neural networks without retraining, applied here to Cortex's knowledge graph.
@@ -10888,6 +11976,7 @@ Edit operations:
 - `cortex edit constraint <entity> add|remove <constraint>` — surgical constraint updates.
 
 Every edit:
+
 1. Validates against `SynthesisSchema`.
 2. Writes an explicit `edit:` typed entry to `log.jsonl` (distinct from `synthesis:` entries) with `field`, `before`, `after`, `editor` (git user), optional `reason`.
 3. Updates `lastRefined` but NOT `firstSeenAt`.
@@ -10932,18 +12021,19 @@ MCP tool: `edit_entity(entity, field, value, reason?)` for IDE-assisted surgical
 
 ## 🔮 Phase 20.20: Active Inference & Predictive Synthesis — ⏳ Planned (research-grade)
 
-**Research grounding**: Karl Friston — *"The free-energy principle: a unified brain theory?"* (Nature Reviews Neuroscience 2010, 6000+ citations). **Active Inference**: Parr, Pezzulo, Friston — *Active Inference: The Free Energy Principle in Mind, Brain, and Behavior* (MIT Press 2022). Computational implementation: pymdp (Heins, Millidge, Demekas, Klein, Friston, Couzin, Tschantz — JOSS 2022). The core idea: an intelligent agent maintains a generative model of its environment and minimizes surprise (prediction error) by either updating the model or acting on the environment. Friston has h-index >250; this is among the most-cited frameworks in computational neuroscience.
+**Research grounding**: Karl Friston — _"The free-energy principle: a unified brain theory?"_ (Nature Reviews Neuroscience 2010, 6000+ citations). **Active Inference**: Parr, Pezzulo, Friston — _Active Inference: The Free Energy Principle in Mind, Brain, and Behavior_ (MIT Press 2022). Computational implementation: pymdp (Heins, Millidge, Demekas, Klein, Friston, Couzin, Tschantz — JOSS 2022). The core idea: an intelligent agent maintains a generative model of its environment and minimizes surprise (prediction error) by either updating the model or acting on the environment. Friston has h-index >250; this is among the most-cited frameworks in computational neuroscience.
 
 **Layman's Terms**
-Today Cortex is reactive — it waits for a code change, then synthesizes. Phase 20.20 makes it predictive: before you commit a change, Cortex predicts what synthesis it expects based on past patterns. When your actual change matches the prediction, the system is unsurprised and synthesizes quickly. When your change is wildly unexpected ("you just imported a payment library in the auth module — never seen that before"), the system surfaces *surprise* as a signal: "this is unusual relative to your codebase's pattern — worth a careful look." Inspired by Karl Friston's Free Energy Principle.
+Today Cortex is reactive — it waits for a code change, then synthesizes. Phase 20.20 makes it predictive: before you commit a change, Cortex predicts what synthesis it expects based on past patterns. When your actual change matches the prediction, the system is unsurprised and synthesizes quickly. When your change is wildly unexpected ("you just imported a payment library in the auth module — never seen that before"), the system surfaces _surprise_ as a signal: "this is unusual relative to your codebase's pattern — worth a careful look." Inspired by Karl Friston's Free Energy Principle.
 
 **Technical Terms**
-> 🔬 **Scientific Foundation: Predictive Coding (Free Energy Principle)**
-> *Source Domain:* Neuroscience (Karl Friston).
-> The brain doesn't react to stimuli; it constantly predicts what will happen and only processes "surprise" (prediction errors). Cortex should predict what files you will edit next based on historical dependencies. If you edit something expected, synthesis is fast. If you edit something else, that "surprise signal" triggers a heavy re-indexing of that specific edge. By minimizing surprise (Free Energy), Cortex actively pulls the developer back toward established architectural patterns.
-A predictive model over the synthesis distribution: P(synthesis | diff, current_context). On each diff:
 
-1. **Prediction step**: a fast prediction LLM call (Phase 19 distilled Librarian) generates an *expected* synthesis given the diff and CURRENT CONTEXT, *before* the actual synthesis runs.
+> 🔬 **Scientific Foundation: Predictive Coding (Free Energy Principle)**
+> _Source Domain:_ Neuroscience (Karl Friston).
+> The brain doesn't react to stimuli; it constantly predicts what will happen and only processes "surprise" (prediction errors). Cortex should predict what files you will edit next based on historical dependencies. If you edit something expected, synthesis is fast. If you edit something else, that "surprise signal" triggers a heavy re-indexing of that specific edge. By minimizing surprise (Free Energy), Cortex actively pulls the developer back toward established architectural patterns.
+> A predictive model over the synthesis distribution: P(synthesis | diff, current_context). On each diff:
+
+1. **Prediction step**: a fast prediction LLM call (Phase 19 distilled Librarian) generates an _expected_ synthesis given the diff and CURRENT CONTEXT, _before_ the actual synthesis runs.
 2. **Synthesis step**: actual synthesis proceeds (any path — fast, slow, multi-agent).
 3. **Surprise computation**: structural diff between prediction and actual synthesis:
    - Entity-set Jaccard distance
@@ -10992,10 +12082,10 @@ CLI: `cortex surprise log [--top N]` — ranked list of most-surprising recent s
 
 ## 📚 Phase 20.21: Episodic-Semantic Memory Consolidation — ⏳ Planned (research-grade)
 
-**Research grounding**: Endel Tulving — *Elements of Episodic Memory* (Oxford 1983); *"How many memory systems are there?"* (American Psychologist 1985, 6000+ citations). Tulving's distinction: **episodic** memory (specific events, time-tagged) vs **semantic** memory (general facts, atemporal). Computational analog: **Complementary Learning Systems** (McClelland, McNaughton, O'Reilly — Psych Review 1995, 5000+ citations): hippocampus (episodic, fast learning) consolidates to neocortex (semantic, slow learning) during sleep. Recent LLM application: **MemoryBank** (Zhong et al., AAAI 2024); **A-MEM** (Xu et al., 2024) — agentic memory management.
+**Research grounding**: Endel Tulving — _Elements of Episodic Memory_ (Oxford 1983); _"How many memory systems are there?"_ (American Psychologist 1985, 6000+ citations). Tulving's distinction: **episodic** memory (specific events, time-tagged) vs **semantic** memory (general facts, atemporal). Computational analog: **Complementary Learning Systems** (McClelland, McNaughton, O'Reilly — Psych Review 1995, 5000+ citations): hippocampus (episodic, fast learning) consolidates to neocortex (semantic, slow learning) during sleep. Recent LLM application: **MemoryBank** (Zhong et al., AAAI 2024); **A-MEM** (Xu et al., 2024) — agentic memory management.
 
 **Layman's Terms**
-Cortex already has two kinds of memory but doesn't distinguish them: `log.jsonl` is *episodic* (specific events: "on March 12 we changed AuthService") and `state.json` entities are *semantic* (general facts: "AuthService validates JWTs"). Today the transformation from one to the other is implicit. Phase 20.21 makes it explicit: a structured pipeline that consolidates episodic events into semantic facts, with traceability ("this semantic fact derives from these 3 episodic events"). Grounded in Tulving's foundational memory theory.
+Cortex already has two kinds of memory but doesn't distinguish them: `log.jsonl` is _episodic_ (specific events: "on March 12 we changed AuthService") and `state.json` entities are _semantic_ (general facts: "AuthService validates JWTs"). Today the transformation from one to the other is implicit. Phase 20.21 makes it explicit: a structured pipeline that consolidates episodic events into semantic facts, with traceability ("this semantic fact derives from these 3 episodic events"). Grounded in Tulving's foundational memory theory.
 
 **Technical Terms**
 A typed pipeline that explicitly transforms episodic events (`log.jsonl`) into semantic claims (`state.json` entity fields), with provenance tracking.
@@ -11061,7 +12151,7 @@ Retrieval:
 
 ## 🔁 Phase 20.22: Spaced Repetition & Forgetting Curves — ⏳ Planned
 
-**Research grounding**: Hermann Ebbinghaus — *Memory: A Contribution to Experimental Psychology* (1885) — the foundational forgetting curve, the oldest experimental psychology result still cited daily. **SuperMemo SM-2** (Wozniak 1990) — the spaced repetition algorithm used by Anki and most modern flashcard systems. Modern formalization: **A Stochastic Model of Human Memory** (Cepeda, Vul, Rohrer, Wixted, Pashler — Psych Sci 2008). LLM application: **Active Forgetting in LLMs** (Bian, Huang, Cheng, Liu — 2024).
+**Research grounding**: Hermann Ebbinghaus — _Memory: A Contribution to Experimental Psychology_ (1885) — the foundational forgetting curve, the oldest experimental psychology result still cited daily. **SuperMemo SM-2** (Wozniak 1990) — the spaced repetition algorithm used by Anki and most modern flashcard systems. Modern formalization: **A Stochastic Model of Human Memory** (Cepeda, Vul, Rohrer, Wixted, Pashler — Psych Sci 2008). LLM application: **Active Forgetting in LLMs** (Bian, Huang, Cheng, Liu — 2024).
 
 **Layman's Terms**
 Some Cortex entities haven't been touched in 6 months. Are they still accurate? Today nothing reminds you to check. Phase 20.22 applies spaced repetition (the science behind Anki flashcards) to architectural memory: entities get review intervals that grow when confirmed accurate and shrink when found inaccurate. The system surfaces "due for review" entities proactively. Grounded in Ebbinghaus's 1885 forgetting curve and the SuperMemo SM-2 algorithm — 140 years of evidence-grounded memory science.
@@ -11082,11 +12172,13 @@ reviewSchedule: {
 ```
 
 SM-2 update on review outcome:
+
 - `confirmed` (still accurate): `interval *= EF`, `EF` unchanged.
 - `updated` (still relevant but needed edits): `interval *= 1.3`, `EF -= 0.15`.
 - `stale` (no longer accurate): `interval = 1`, `EF -= 0.25` (floor 1.3).
 
 Triggers:
+
 - Manual: `cortex review-due [--top N]` lists entities past `nextDue`.
 - MCP: `read_knowledge_index` surfaces a `reviewDue: [...]` block.
 - CI: Phase 12 GitHub Action gains an optional weekly summary commenting on stale entities.
@@ -11128,6 +12220,7 @@ Every entity passes through predictable stages: emerging (new, few relationships
 
 **Technical Terms**
 A computed `lifecyclePhase: "emerging" | "growing" | "mature" | "declining" | "archived"` derived from:
+
 - **emerging**: created <30 days, <3 relationships
 - **growing**: created <90 days, relationships increasing (detected via log.jsonl trend)
 - **mature**: stable description, quality >0.7, well-evidenced (evidence count >2), no recent staleness signals
@@ -11135,15 +12228,18 @@ A computed `lifecyclePhase: "emerging" | "growing" | "mature" | "declining" | "a
 - **archived**: removed from active index (Phase 7.9) or fossilized (Phase 40.6)
 
 Computed on read from existing fields — no new storage. Surface:
+
 - **Context packer**: deprioritize declining entities; prioritize emerging/growing entities for enrichment.
 - **Graph visualization**: color nodes by lifecycle phase (green=mature, amber=declining, blue=emerging).
 - **Cortex lint**: warn on declining entities with no archival plan.
 
 **Definition of Ready (DoR)**
+
 - Phase 20.22 (Spaced Repetition) is completed — provides creation timestamps and quality trends.
 - Phase 7.5 quality scores are stable.
 
 **Definition of Done (DoD)**
+
 - `lifecyclePhase` computed for every entity on read.
 - Phase boundaries configurable via `CORTEX_LIFECYCLE_THRESHOLDS` (age days, relationship count, quality floor).
 - Context packer deprioritizes declining entities.
@@ -11151,6 +12247,7 @@ Computed on read from existing fields — no new storage. Surface:
 - Tests cover: each phase correctly classified from synthetic entity records, configurable threshold overrides.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Explicit lifecycle awareness without new storage or new synthesis. Refines retrieval quality — declining entities get less budget, emerging entities get more attention. ~25 lines of computed-field logic.
 - ❌ **Cons**: Phase boundaries are heuristic — a long-dormant entity might be "mature" not "declining." Mitigated by configurable thresholds and by always surfacing the raw signals alongside the computed phase.
 
@@ -11158,7 +12255,7 @@ Computed on read from existing fields — no new storage. Surface:
 
 ## 🛠️ Phase 20.23: Tool-Use Augmented Synthesis — ⏳ Planned (research-grade)
 
-**Research grounding**: **Toolformer** (Schick, Dwivedi-Yu, Dessì, Raileanu, Lomeli, Zettlemoyer, Cancedda, Scialom — Meta AI 2023 — *"Toolformer: Language Models Can Teach Themselves to Use Tools"*, NeurIPS 2023, arXiv:2302.04761, 1500+ citations). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022 — *"ReAct: Synergizing Reasoning and Acting in Language Models"*, ICLR 2023, 2000+ citations). **Gorilla** (Patil, Zhang, Wang, Gonzalez — UC Berkeley 2023 — arXiv:2305.15334). **LATS** (Zhou et al., ICML 2024). **Voyager** tool-use mechanics (Wang et al., NVIDIA TMLR 2024).
+**Research grounding**: **Toolformer** (Schick, Dwivedi-Yu, Dessì, Raileanu, Lomeli, Zettlemoyer, Cancedda, Scialom — Meta AI 2023 — _"Toolformer: Language Models Can Teach Themselves to Use Tools"_, NeurIPS 2023, arXiv:2302.04761, 1500+ citations). **ReAct** (Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao — Princeton + Google 2022 — _"ReAct: Synergizing Reasoning and Acting in Language Models"_, ICLR 2023, 2000+ citations). **Gorilla** (Patil, Zhang, Wang, Gonzalez — UC Berkeley 2023 — arXiv:2305.15334). **LATS** (Zhou et al., ICML 2024). **Voyager** tool-use mechanics (Wang et al., NVIDIA TMLR 2024).
 
 **Layman's Terms**
 Today the Librarian synthesizes from the diff text + existing knowledge alone. Sometimes that's not enough — to truly understand a change, the Librarian needs to grep the codebase, run git blame, or query the language server. Phase 20.23 gives the Librarian tools: it can mid-synthesis call `grep`, `git_blame`, `read_file`, `ts_lookup_symbol`, etc., to ground its synthesis in concrete evidence rather than speculation. This is the Toolformer (Meta NeurIPS 2023) and ReAct (Princeton ICLR 2023) pattern.
@@ -11226,7 +12323,7 @@ Pipeline:
 
 ### Layman's Terms
 
-Normal AI prediction is linear and greedy; if it makes one wrong assumption early on, the whole task fails. Phase 20.24 forces the AI to explore multiple logic trees concurrently (branching, backtracking, verifying) so the final generated code is the result of deep, rigorously verified logic. When a PR is blocked by a constraint violation (Phase 6), the PR comment includes the reasoning chain: *"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."* Developers stop hating constraint blocks because they understand *why*.
+Normal AI prediction is linear and greedy; if it makes one wrong assumption early on, the whole task fails. Phase 20.24 forces the AI to explore multiple logic trees concurrently (branching, backtracking, verifying) so the final generated code is the result of deep, rigorously verified logic. When a PR is blocked by a constraint violation (Phase 6), the PR comment includes the reasoning chain: _"here's the 4-step thought process Cortex went through, and here's specifically which step led to the block."_ Developers stop hating constraint blocks because they understand _why_.
 
 ### Technical Terms
 
@@ -11249,7 +12346,7 @@ interface ReasoningTrace {
     isRevision?: boolean;
     revisesThought?: number;
     branchFromThought?: number;
-    verified?: boolean;  // CoVe-style verification flag (see below)
+    verified?: boolean; // CoVe-style verification flag (see below)
     evidence?: string[]; // wikilink-style references the thought cites
   }>;
   conclusion: string;
@@ -11260,7 +12357,7 @@ interface ReasoningTrace {
 // Additive field on entity records
 interface EntityRecord {
   // ... existing fields ...
-  reasoningTrace?: ReasoningTrace[];  // last N traces, LRU eviction (default N=3)
+  reasoningTrace?: ReasoningTrace[]; // last N traces, LRU eviction (default N=3)
 }
 ```
 
@@ -11268,7 +12365,7 @@ Traces are bounded per entity (default 3 most recent; configurable via `CORTEX_R
 
 **Chain-of-Verification (CoVe) final step**:
 
-- Optional final thought is a verification step: *"did my conclusion above actually follow from the cited evidence? Are there any unsupported claims?"*
+- Optional final thought is a verification step: _"did my conclusion above actually follow from the cited evidence? Are there any unsupported claims?"_
 - The verification thought has `verified: true | false`. Unverified conclusions are flagged in the entity's quality scorecard.
 - Cheap quality gate that catches LLM hallucinations in the reasoning itself, not just in the final output.
 
@@ -11294,6 +12391,7 @@ When `cortex lint` or a fitness function (Phase 20.4) blocks a PR, the GitHub Ac
 **Rule violated**: `mustNotImport: src/auth/InternalTokenStore` on entity `[[PaymentService]]`
 
 **Cortex's reasoning** (4-step trace from the synthesis that detected this):
+
 1. The PR introduces `import { InternalTokenStore } from '../auth/InternalTokenStore'` in `src/payment/PaymentService.ts`.
 2. `[[PaymentService]]`'s declared constraint forbids imports from `src/auth/` to enforce the Payment-Auth bounded-context separation (established 2026-02-12 in commit a3f7b21).
 3. The import path bypasses the public `[[AuthFacade]]` interface (which exposes `validateToken()` and `refreshToken()` only) and reaches into internal token storage.
@@ -11351,6 +12449,7 @@ Standard LLM text is full of fluff, conversational noise, and repetitive syntact
 
 **Technical Terms**
 An advanced algorithmic compression layer over the knowledge graph. Cortex's synthesis engine acts as an information density maximizer: it strips non-semantic ASCII, pleasantries, and redundant syntax, flattening the architecture into a telegraphic representation.
+
 - **AST Flattening:** Directly translates source code AST patterns into deterministic hash structures rather than prose, ensuring every LLM token carries maximum semantic weight.
 - **Semantic Minification:** Removes all conversational filler ("It is important to note that...") automatically during the consolidation step.
 - **Outcome:** Doubles or triples the effective context window capacity when querying the `state.json` knowledge graph, cutting per-query token costs drastically without losing any architectural details.
@@ -11364,17 +12463,18 @@ An advanced algorithmic compression layer over the knowledge graph. Cortex's syn
 
 Phase 20.18 (Tree-of-Thoughts) is **breadth-first reasoning**: generate K parallel candidates, score them, pick the best. Phase 20.24 Sequential Thinking is **depth-first reasoning**: one chain that revises itself, with explicit verification. They are complementary patterns, not redundant — the slow path (Phase 20.15) can choose either or both depending on the problem shape.
 
-Phase 20.23 (Tool-Use) ships the tool *registry* and the 6 baseline tools. Phase 20.24 ships the Sequential Thinking tool integration + the persistent trace layer + the PR-comment integration. Folding 20.24 into 20.23 would conflate "tool registry exists" with "Sequential Thinking + trace persistence + PR integration is implemented" — different scopes, different DoR (20.23 requires no other phase; 20.24 requires 20.15 + 6 + 12), different test surfaces.
+Phase 20.23 (Tool-Use) ships the tool _registry_ and the 6 baseline tools. Phase 20.24 ships the Sequential Thinking tool integration + the persistent trace layer + the PR-comment integration. Folding 20.24 into 20.23 would conflate "tool registry exists" with "Sequential Thinking + trace persistence + PR integration is implemented" — different scopes, different DoR (20.23 requires no other phase; 20.24 requires 20.15 + 6 + 12), different test surfaces.
 
 ---
 
 ## 🕸️ Phase 20.28: Agentic Retrieval Loop — ⏳ Planned
 
 **Layman's Terms**
-Sometimes a simple search isn't enough. "How does the payment flow work end-to-end?" requires pulling facts from the auth module, the billing service, the webhook handler, and the ledger — each in a different part of the codebase. Phase 20.28 turns Cortex's retrieval into an *agent*: it doesn't just search once; it plans what to look up, searches, reads results, decides if it has enough, and searches again if not. Like a junior dev who knows when to go ask a follow-up question instead of guessing.
+Sometimes a simple search isn't enough. "How does the payment flow work end-to-end?" requires pulling facts from the auth module, the billing service, the webhook handler, and the ledger — each in a different part of the codebase. Phase 20.28 turns Cortex's retrieval into an _agent_: it doesn't just search once; it plans what to look up, searches, reads results, decides if it has enough, and searches again if not. Like a junior dev who knows when to go ask a follow-up question instead of guessing.
 
 **Technical Terms**
 Implements the Agentic RAG pattern (Singh et al., arXiv:2501.09136; Mishra et al., SoK arXiv:2603.07379, 2026). At query time, a reasoning LLM (the "retrieval agent") controls a loop:
+
 1. **Query decomposition**: the agent splits a complex query into sub-queries (e.g., "find auth entities" + "find billing entities" + "find ledger entities").
 2. **Tool routing**: per sub-query, the agent selects a retrieval tool — vector search, BM25 keyword search, entity name lookup, web search, or a data source tool (e.g., `git_blame`, `read_file`). Tools are registered via Phase 20.23's tool registry.
 3. **Multi-hop retrieval**: the agent iterates retrieve → reason → identify gaps → reformulate → re-retrieve until evidence sufficiency is met.
@@ -11382,23 +12482,26 @@ Implements the Agentic RAG pattern (Singh et al., arXiv:2501.09136; Mishra et al
 5. **Adaptive termination**: the loop ends when confidence exceeds a threshold (configurable per query type) or max iterations (default 5) is reached.
 
 **How this differs from Phase 20.11 (Reflexion-Style Self-Correcting Synthesis)**
-Phase 20.11 corrects the *generated output* after retrieval is done — it's a post-hoc critique. Phase 20.28 corrects the *retrieval process itself* mid-loop — the agent rewrites queries and re-retrieves before generation even starts. They compose: 20.28 produces high-quality context, then 20.11 verifies the output against that context.
+Phase 20.11 corrects the _generated output_ after retrieval is done — it's a post-hoc critique. Phase 20.28 corrects the _retrieval process itself_ mid-loop — the agent rewrites queries and re-retrieves before generation even starts. They compose: 20.28 produces high-quality context, then 20.11 verifies the output against that context.
 
 **Research grounding**: SoK: Agentic RAG (Mishra et al., arXiv:2603.07379, 2026); Agentic RAG Survey (Singh et al., arXiv:2501.09136); CoopRAG (Ko et al., NeurIPS 2025, arXiv:2512.10422).
 
 **Core Components**: new `src/retrieval/agent/planner.ts` (query decomposition → sub-query generation), `src/retrieval/agent/router.ts` (tool selection per sub-query), `src/retrieval/agent/loop.ts` (retrieve-reason-reformulate cycle with adaptive termination), `src/retrieval/agent/judge.ts` (faithfulness gate — reuses Phase 7.5 quality scoring infrastructure), integration with Phase 20.23 tool registry.
 
 **Definition of Ready (DoR)**
+
 - Phase 20.23 (tool registry) is shipped — the retrieval agent needs tools to call.
 - Phase 13.5 (vector/BM25 search) is shipped — baseline retrieval tools exist.
 
 **Definition of Done (DoD)**
+
 - A 3-hop query ("how does auth → billing → ledger work?") returns evidence from all three subsystems without manual rewrites, vs. Phase 13.5 baseline which misses ≥1 hop 60%+ of the time.
 - Faithfulness judge blocks hallucinated claims and triggers re-retrieval with ≥80% precision.
 - Adaptive termination: simple queries terminate in 1 iteration; complex ones use up to 5.
 - CLI flag `cortex query --agentic` activates the agentic loop (otherwise uses standard Phase 13.5 retrieval).
 
 **Pros & Cons**
+
 - ✅ **Pros**: Dramatically better multi-hop retrieval quality; self-correcting loop reduces hallucination at source; composable with Phase 20.11 and Phase 20.29 for layered reliability.
 - ❌ **Cons**: Higher latency (3-5x vs. single-pass retrieval) and token cost per query. Mitigated by adaptive termination (simple queries skip the loop).
 
@@ -11407,10 +12510,11 @@ Phase 20.11 corrects the *generated output* after retrieval is done — it's a p
 ## 🎯 Phase 20.29: Corrective RAG Module — ⏳ Planned
 
 **Layman's Terms**
-When Cortex searches for information, sometimes the results are bad — irrelevant pages, outdated docs, wrong module. Phase 20.29 adds a quality check *before* the LLM sees the results: if the search results are low quality, Cortex auto-falls back to a web search. And instead of dumping whole documents into context, it decomposes each document and only keeps the relevant parts. Like a research assistant who checks a source before handing it to you — and cuts out the irrelevant paragraphs.
+When Cortex searches for information, sometimes the results are bad — irrelevant pages, outdated docs, wrong module. Phase 20.29 adds a quality check _before_ the LLM sees the results: if the search results are low quality, Cortex auto-falls back to a web search. And instead of dumping whole documents into context, it decomposes each document and only keeps the relevant parts. Like a research assistant who checks a source before handing it to you — and cuts out the irrelevant paragraphs.
 
 **Technical Terms**
 Implements Corrective Retrieval Augmented Generation (CRAG) (Yan et al., arXiv:2401.15884, 2024). Three-stage pipeline:
+
 1. **Retrieval evaluator**: a lightweight T5-based or LLM-as-a-judge scorer assesses the overall relevance of retrieved documents for a query, returning a confidence score (0-1). Uses a single forward pass — no multi-step reasoning at evaluation time.
 2. **Action selection**: based on confidence:
    - **High** (≥0.7): proceed with retrieved docs, applying the decompose-then-recompose filter.
@@ -11419,23 +12523,26 @@ Implements Corrective Retrieval Augmented Generation (CRAG) (Yan et al., arXiv:2
 3. **Decompose-then-recompose**: each retrieved document is split into "knowledge strips" (paragraph-level). Irrelevant strips (scored by the evaluator per-strip) are discarded. Remaining strips are recomposed into a coherent, noise-free context window.
 
 **How this differs from Phase 20.28 (Agentic Retrieval Loop)**
-Phase 20.28 is an *agent* that plans and iterates — it handles complex queries that need multi-hop reasoning. Phase 20.29 is a *quality gate* for single-pass retrieval — it handles the common failure mode where a simple query returns bad results. They stack: 20.29 evaluates and cleans each retrieval step *within* the 20.28 agentic loop.
+Phase 20.28 is an _agent_ that plans and iterates — it handles complex queries that need multi-hop reasoning. Phase 20.29 is a _quality gate_ for single-pass retrieval — it handles the common failure mode where a simple query returns bad results. They stack: 20.29 evaluates and cleans each retrieval step _within_ the 20.28 agentic loop.
 
 **Research grounding**: CRAG (Yan et al., arXiv:2401.15884, 2024); Self-RAG reflection tokens (Asai et al., ICLR 2024, arXiv:2310.11511) — retrieval evaluator design borrows the relevance/support token concept.
 
 **Core Components**: new `src/retrieval/crag/evaluator.ts` (lightweight relevance scorer), `src/retrieval/crag/actions.ts` (confidence-based action router: proceed / web-fallback / discard-and-web), `src/retrieval/crag/decompose.ts` (document → knowledge strips + per-strip scoring + recomposition), integration with web search tool (reuses existing web fetch infrastructure).
 
 **Definition of Ready (DoR)**
+
 - Phase 13.5 (vector/BM25 search + RRF) is shipped.
 - Web fetch infrastructure exists (for web search fallback).
 
 **Definition of Done (DoD)**
+
 - When evaluated against a test set of 50 queries with intentionally poisoned retrieval (irrelevant docs inserted), CRAG detects low-relevance and falls back to web search with ≥90% accuracy.
 - Decompose-then-recompose reduces context window size by ≥40% vs. full-document retrieval while maintaining or improving answer quality (measured by LLM-as-a-judge).
 - Retrieval evaluator adds ≤50ms p99 latency per query (single forward pass design).
 - CLI flag `cortex query --correct` activates CRAG gating (enabled by default for Pro tier).
 
 **Pros & Cons**
+
 - ✅ **Pros**: Catches bad retrieval before it reaches the LLM; web fallback keeps answers grounded; decompose-then-recompose saves tokens and reduces noise.
 - ❌ **Cons**: Extra latency from evaluator pass; web fallback introduces variable latency. Mitigated by lightweight evaluator design and async web search that streams results.
 
@@ -11448,6 +12555,7 @@ Cortex retrieves some context, generates an answer, then checks: "is anything mi
 
 **Technical Terms**
 Implements Iterative RAG (Astaraki et al., arXiv:2601.19827, 2026; Lin et al., 2025), a multi-pass retrieve-reason-retrieve loop distinct from both Agentic RAG (which uses an agent) and CRAG (which uses an evaluator). The core loop:
+
 1. **Initial retrieval**: standard Phase 13.5 retrieval based on the user query.
 2. **Hypothesis generation**: the LLM generates a preliminary answer conditioned on the retrieved context.
 3. **Gap detection**: the LLM scores its own confidence (per-claim) and emits a list of specific missing information items ("I need to know what error handler middleware does when the DB connection fails").
@@ -11456,22 +12564,25 @@ Implements Iterative RAG (Astaraki et al., arXiv:2601.19827, 2026; Lin et al., 2
 6. **Evidence-aware stopping**: if all claims have confidence above threshold (default 0.8) or max iterations (default 3) reached, the final answer is generated. Otherwise, loop back to step 3.
 
 **How this differs from Phase 20.28 (Agentic Retrieval Loop)**
-Phase 20.28 uses an *agent* that explicitly plans sub-queries and selects tools — it's structured, controllable, and explainable. Phase 20.30 is a *simpler, softer* loop: generate → self-assess gaps → re-retrieve → regenerate. No explicit planning or tool selection — just iterative refinement. 20.30 is cheaper and easier to implement; 20.28 is more powerful but more expensive. They are alternatives (choose one based on complexity budget), not stackable.
+Phase 20.28 uses an _agent_ that explicitly plans sub-queries and selects tools — it's structured, controllable, and explainable. Phase 20.30 is a _simpler, softer_ loop: generate → self-assess gaps → re-retrieve → regenerate. No explicit planning or tool selection — just iterative refinement. 20.30 is cheaper and easier to implement; 20.28 is more powerful but more expensive. They are alternatives (choose one based on complexity budget), not stackable.
 
 **Research grounding**: When Iterative RAG Beats Ideal Evidence (Astaraki et al., arXiv:2601.19827, 2026); Iterative RAG Survey (Emergent Mind, 2026); Multi-cycle RAG (CLoaKY233, 2025).
 
 **Core Components**: new `src/retrieval/iterative/loop.ts` (gap detection prompt → query reformulation → re-retrieval → merge → retry), `src/retrieval/iterative/gap.ts` (per-claim confidence scoring and gap extraction), `src/retrieval/iterative/stop.ts` (evidence-aware termination policy), integration with Phase 13.5 RRF for evidence merging.
 
 **Definition of Ready (DoR)**
+
 - Phase 13.5 (vector/BM25 search + RRF) is shipped.
 
 **Definition of Done (DoD)**
+
 - On a test set of 30 multi-hop queries where initial retrieval is intentionally incomplete, iterative refinement closes ≥70% of evidence gaps (measured by human evaluators).
 - Iterations terminate early (≤2) on 60%+ of simple queries; complex queries use up to 3.
 - Per-iteration latency ≤ the original retrieval latency (since re-retrieval queries are narrower).
 - CLI flag `cortex query --iterative` activates iterative refinement.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Simple implementation (no agent, no tool routing); effective at closing evidence gaps; early termination saves cost on easy queries; composable with Phase 20.29 (CRAG as the per-iteration quality gate).
 - ❌ **Cons**: Can drift on very long loops (mitigated by max 3 iterations); gap detection quality depends on LLM calibration (mitigated by training-free confidence prompts).
 
@@ -11600,16 +12711,29 @@ When implementing Phase 22's auth middleware, adopt the `isLocalRequest()` patte
 function isLocalRequest(req: Request): boolean {
   // Tunnel headers (ngrok, Cloudflare, Tailscale) mean the request is external
   // even if the tunnel endpoint happens to be on a LAN IP. Check this FIRST.
-  if (req.headers['x-forwarded-for'] || req.headers['x-forwarded-host'] || req.headers['x-real-ip']) {
+  if (
+    req.headers["x-forwarded-for"] ||
+    req.headers["x-forwarded-host"] ||
+    req.headers["x-real-ip"]
+  ) {
     return false;
   }
-  const ip = req.ip || req.socket.remoteAddress || '';
-  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' ||
-         ip.startsWith('192.168.') || ip.startsWith('10.') ||
-         ip.startsWith('172.16.') || ip.startsWith('172.17.') ||
-         ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
-         ip.startsWith('172.2') || ip.startsWith('172.3') ||
-         ip.startsWith('::ffff:192.168.') || ip.startsWith('::ffff:10.');
+  const ip = req.ip || req.socket.remoteAddress || "";
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.") ||
+    ip.startsWith("172.16.") ||
+    ip.startsWith("172.17.") ||
+    ip.startsWith("172.18.") ||
+    ip.startsWith("172.19.") ||
+    ip.startsWith("172.2") ||
+    ip.startsWith("172.3") ||
+    ip.startsWith("::ffff:192.168.") ||
+    ip.startsWith("::ffff:10.")
+  );
 }
 ```
 
@@ -11625,16 +12749,18 @@ When `cortex server start` launches, check that security-sensitive env vars are 
 
 ```typescript
 const SESSION_SECRET = process.env.CORTEX_SESSION_SECRET;
-const KNOWN_INSECURE_DEFAULTS = ['cortex_default', 'change_me', 'secret', ''];
+const KNOWN_INSECURE_DEFAULTS = ["cortex_default", "change_me", "secret", ""];
 
 if (!SESSION_SECRET || KNOWN_INSECURE_DEFAULTS.includes(SESSION_SECRET)) {
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.CORTEX_PROD;
-  const msg = '⚠️  SECURITY: CORTEX_SESSION_SECRET is missing or insecure. Run: cortex server init';
+  const isProduction =
+    process.env.NODE_ENV === "production" || process.env.CORTEX_PROD;
+  const msg =
+    "⚠️  SECURITY: CORTEX_SESSION_SECRET is missing or insecure. Run: cortex server init";
   if (isProduction) {
-    console.error('\x1b[31m' + msg + '\x1b[0m');
+    console.error("\x1b[31m" + msg + "\x1b[0m");
     process.exit(1); // Hard fail in production
   } else {
-    console.warn('\x1b[33m' + msg + '\x1b[0m'); // Soft warn in dev
+    console.warn("\x1b[33m" + msg + "\x1b[0m"); // Soft warn in dev
   }
 }
 // Same pattern for CORTEX_API_TOKEN_SALT and CORTEX_ADMIN_PASSWORD
@@ -11649,24 +12775,28 @@ if (!SESSION_SECRET || KNOWN_INSECURE_DEFAULTS.includes(SESSION_SECRET)) {
 When `cortex server start` or `cortex remote enable` prints the dashboard URL, sort network interfaces to display the real home/office IP rather than a WSL2/Docker virtual adapter:
 
 ```typescript
-import { networkInterfaces } from 'os';
+import { networkInterfaces } from "os";
 
 function getDisplayIP(): string {
   const candidates: { address: string; priority: number }[] = [];
   for (const ifaces of Object.values(networkInterfaces())) {
     for (const iface of ifaces ?? []) {
-      if (iface.family === 'IPv4' && !iface.internal) {
+      if (iface.family === "IPv4" && !iface.internal) {
         candidates.push({
           address: iface.address,
-          priority: iface.address.startsWith('192.168.') ? 1 :
-                    iface.address.startsWith('10.')       ? 2 :
-                    iface.address.startsWith('172.')      ? 3 : 4
+          priority: iface.address.startsWith("192.168.")
+            ? 1
+            : iface.address.startsWith("10.")
+              ? 2
+              : iface.address.startsWith("172.")
+                ? 3
+                : 4,
         });
       }
     }
   }
   candidates.sort((a, b) => a.priority - b.priority);
-  return candidates[0]?.address ?? 'localhost';
+  return candidates[0]?.address ?? "localhost";
 }
 ```
 
@@ -11687,7 +12817,7 @@ class CacheWarmer {
   private cacheableMessages: Message[] = [];
 
   start(messages: Message[], pings = 4, intervalMs = 60_000) {
-    this.cacheableMessages = messages;  // stable prefix only (system + examples + repo)
+    this.cacheableMessages = messages; // stable prefix only (system + examples + repo)
     this.warmingPingsLeft = pings;
     this.interval = setInterval(async () => {
       if (this.warmingPingsLeft <= 0) return;
@@ -11696,10 +12826,12 @@ class CacheWarmer {
         await litellm.completion({
           model: currentModel,
           messages: this.cacheableMessages,
-          max_tokens: 1,   // minimal cost — only need the cache header
+          max_tokens: 1, // minimal cost — only need the cache header
           stream: false,
         });
-      } catch { /* cache warm is best-effort — ignore errors */ }
+      } catch {
+        /* cache warm is best-effort — ignore errors */
+      }
     }, intervalMs);
   }
 
@@ -11711,6 +12843,7 @@ class CacheWarmer {
 ```
 
 **Key rules** (from aider source):
+
 - Only send the **cacheable prefix** (system + few-shot examples + repo map / readonly files) — NOT the current turn or reminder. The volatile tail must not be cached.
 - 4 pings × 60s interval = 4-minute coverage → prevents expiry during a normal human pause
 - Gate the warmer behind an `okToWarmCache` boolean; set to `false` when handing off to a sub-coder to avoid double-pinging
@@ -11726,24 +12859,34 @@ class CacheWarmer {
 When a `save_synthesis` or entity generation call hits the model's output token limit (`finish_reason=length`), and the model supports `assistant_prefill`, chain responses rather than truncating:
 
 ```typescript
-async function* sendWithContinuation(messages: Message[], model: ModelInfo): AsyncIterable<string> {
-  let accumulated = '';
+async function* sendWithContinuation(
+  messages: Message[],
+  model: ModelInfo,
+): AsyncIterable<string> {
+  let accumulated = "";
   let continueLoop = true;
 
   while (continueLoop) {
     continueLoop = false;
-    const response = await litellm.completion({ model: model.name, messages, stream: true });
+    const response = await litellm.completion({
+      model: model.name,
+      messages,
+      stream: true,
+    });
     for await (const chunk of response) {
-      const delta = chunk.choices[0]?.delta?.content ?? '';
+      const delta = chunk.choices[0]?.delta?.content ?? "";
       accumulated += delta;
       yield delta;
     }
     const finishReason = response.choices?.[0]?.finish_reason;
-    if (finishReason === 'length' && model.info.supports_assistant_prefill) {
+    if (finishReason === "length" && model.info.supports_assistant_prefill) {
       // Append partial as assistant prefill and continue
-      messages = [...messages, { role: 'assistant', content: accumulated, prefix: true }];
+      messages = [
+        ...messages,
+        { role: "assistant", content: accumulated, prefix: true },
+      ];
       continueLoop = true;
-      accumulated = '';
+      accumulated = "";
     }
   }
 }
@@ -11760,26 +12903,38 @@ async function* sendWithContinuation(messages: Message[], model: ModelInfo): Asy
 When Phase 22's server or `cortex run` executes shell commands on Windows, detect the terminal type and wrap the command appropriately:
 
 ```typescript
-import { execSync } from 'child_process';
+import { execSync } from "child_process";
 
-function getWindowsShell(): 'powershell' | 'cmd' | 'other' {
+function getWindowsShell(): "powershell" | "cmd" | "other" {
   try {
     // Walk parent process names via wmic
-    const out = execSync('wmic process where ProcessId=%PPID% get Name /value', {
-      encoding: 'utf8', timeout: 2000
-    }).toLowerCase();
-    if (out.includes('powershell')) return 'powershell';
-    if (out.includes('cmd.exe')) return 'cmd';
-  } catch { /* ignore */ }
-  return 'other';
+    const out = execSync(
+      "wmic process where ProcessId=%PPID% get Name /value",
+      {
+        encoding: "utf8",
+        timeout: 2000,
+      },
+    ).toLowerCase();
+    if (out.includes("powershell")) return "powershell";
+    if (out.includes("cmd.exe")) return "cmd";
+  } catch {
+    /* ignore */
+  }
+  return "other";
 }
 
-function wrapForWindows(cmd: string, shell: ReturnType<typeof getWindowsShell>): string {
-  return shell === 'powershell' ? `powershell -Command "${cmd.replace(/"/g, '\\"')}"` : cmd;
+function wrapForWindows(
+  cmd: string,
+  shell: ReturnType<typeof getWindowsShell>,
+): string {
+  return shell === "powershell"
+    ? `powershell -Command "${cmd.replace(/"/g, '\\"')}"`
+    : cmd;
 }
 ```
 
 **Python reference** (for any Python subprocess callers in future CLI):
+
 ```python
 import psutil
 def get_windows_parent_process_name():
@@ -11828,7 +12983,11 @@ async function handleWebhook(req: Request, res: Response): Promise<void> {
   await ingestionQueue.push({
     repoUrl: repository.clone_url,
     branch: ref.replace("refs/heads/", ""),
-    changedFiles: commits.flatMap(c => [...c.added, ...c.modified, ...c.removed]),
+    changedFiles: commits.flatMap((c) => [
+      ...c.added,
+      ...c.modified,
+      ...c.removed,
+    ]),
     triggeredBy: "webhook",
   });
 
@@ -11844,6 +13003,7 @@ interface IngestionJob {
 ```
 
 **Tunnel / deployment options**:
+
 1. **Self-hosted server** (canonical): Central Knowledge Server deployed with a public hostname; webhook URL is `https://cortex.yourcompany.com/v1/webhook/github`.
 2. **ngrok / Cloudflare Tunnel** (dev/testing): `cortex server tunnel` wraps `ngrok http 3030` and prints the webhook URL. Not intended for production.
 3. **CI-triggered alternative**: a CI step calls `POST /v1/publish` directly (Phase 21 mechanism) instead of webhooks. No public endpoint required; trades real-time for CI latency.
@@ -11854,6 +13014,7 @@ Cortex's core design is **local-first** — the watcher runs on the developer's 
 **Implementation**: `src/server/webhook.ts`. Extends Phase 22's `src/server/` package. Uses the same Phase 33.5 ingestion pipeline. Signature verification via `crypto.timingSafeEqual`. Ingestion queue backed by the same SQLite store as Phase 22's publish event log.
 
 **DoD**:
+
 - `POST /v1/webhook/github` and `/v1/webhook/gitlab` accept HMAC-signed push payloads.
 - Valid push to a tracked branch queues ingestion; unified graph updates within 60 seconds of push.
 - Invalid/unsigned payloads return 401. Pushes to non-tracked branches return 200 + `"ignored"`.
@@ -12136,16 +13297,19 @@ Today anyone with Cortex access can read everything and edit everything. Phase 2
 Three layers of access control plus a cryptographically-anchored audit trail.
 
 **Role-Based Access Control (RBAC)**:
+
 - Pre-defined roles: `viewer`, `contributor`, `reviewer`, `architect`, `admin`, `auditor`.
 - Custom roles defined in `cortex.roles.yaml` as a set of (action, resource-pattern) pairs.
 - Permissions enforced at the Phase 22 server tier on every REST and MCP-HTTP call.
 
 **Attribute-Based Access Control (ABAC)**:
+
 - Policy expressions in `cortex.policy.yaml` using a safe DSL: `allow if user.team in entity.owning_teams AND user.clearance >= entity.classification`.
 - Attributes flow from SSO claims (department, clearance, manager), entity metadata (classification, owning_teams), and runtime context (time-of-day, IP range).
 - Per-entity classification levels: `public`, `internal`, `confidential`, `restricted`. Restricted requires explicit grant.
 
 **Immutable Audit Trail**:
+
 - Every action emits a structured audit event: `{ id, timestamp, actor, action, resource, before, after, ip, sessionId, signature }`.
 - Audit log is **append-only and hash-chained** — each entry's hash includes the previous entry's hash (Merkle-style), so tampering is detectable.
 - Log periodically anchored to an external timestamp authority (RFC 3161) or a public blockchain (optional) for legal-grade non-repudiation.
@@ -12154,6 +13318,7 @@ Three layers of access control plus a cryptographically-anchored audit trail.
 - Export: `cortex audit export --format <jsonl|csv|cef> --since <date>` for SIEM integration (Splunk, Datadog, Elastic).
 
 CLI:
+
 - `cortex role list / show / create / assign <user> <role>`
 - `cortex policy validate / test --user <email> --action <type> --resource <path>` (dry-run policy decisions)
 - `cortex audit query / export / verify` (verify validates the hash chain)
@@ -12304,23 +13469,23 @@ First-class OpenTelemetry instrumentation (traces + metrics + logs) exported via
 
 **Spans emitted** for every traced operation:
 
-| Span name | Triggered by | Key attributes |
-|---|---|---|
-| `cortex.synthesis.batch` | Phase 33 Tier 2 / Phase 14 cluster synthesis | `entity_count`, `model`, `provider`, `tokens_in`, `tokens_out`, `cost_usd`, `quality_score`, `duration_ms` |
-| `cortex.bootstrap.phase` | Phase 33 Phase A/B/C/D/E | `phase`, `domain`, `batch_id`, `parent_run_id` |
-| `cortex.bootstrap.run` | Top-level bootstrap invocation | `total_entities`, `total_cost_usd`, `quality_overall` |
-| `cortex.embeddings.batch` | Phase 18 embedding generation | `entity_count`, `model`, `tokens_in` |
-| `cortex.constraint.eval` | Phase 6 constraint check | `rule_id`, `entity`, `result` (allowed/denied) |
-| `cortex.policy.eval` | Phase 26.2 OPA/Cedar | `policy_id`, `engine`, `decision` |
-| `cortex.dlp.scan` | Phase 26.1 DLP pipeline | `detector_count`, `findings`, `action_taken` |
-| `cortex.tool.call` | Phase 20.23 tool invocation | `tool_id`, `duration_ms`, `result_size_bytes` |
-| `cortex.federation.publish` | Phase 21 publish | `entity_count`, `target_registry`, `bytes_pushed` |
-| `cortex.federation.pull` | Phase 21 pull | `upstream_repo`, `entities_materialized` |
-| `cortex.review.action` | Phase 23 review queue | `entity`, `action` (accept/reject/edit/skip), `reviewer` |
-| `cortex.compliance.report` | Phase 24 report generation | `framework`, `violations`, `format` |
-| `cortex.audit.write` | Phase 26 audit append | `event_type`, `actor` |
-| `cortex.predict.surprise` | Phase 20.20 active inference | `surprise_score`, `triggered_slow_path` |
-| `cortex.acp.approval` | Phase 43.3 action gate | `action_type`, `decision` (approved/denied/timeout) |
+| Span name                   | Triggered by                                 | Key attributes                                                                                             |
+| --------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `cortex.synthesis.batch`    | Phase 33 Tier 2 / Phase 14 cluster synthesis | `entity_count`, `model`, `provider`, `tokens_in`, `tokens_out`, `cost_usd`, `quality_score`, `duration_ms` |
+| `cortex.bootstrap.phase`    | Phase 33 Phase A/B/C/D/E                     | `phase`, `domain`, `batch_id`, `parent_run_id`                                                             |
+| `cortex.bootstrap.run`      | Top-level bootstrap invocation               | `total_entities`, `total_cost_usd`, `quality_overall`                                                      |
+| `cortex.embeddings.batch`   | Phase 18 embedding generation                | `entity_count`, `model`, `tokens_in`                                                                       |
+| `cortex.constraint.eval`    | Phase 6 constraint check                     | `rule_id`, `entity`, `result` (allowed/denied)                                                             |
+| `cortex.policy.eval`        | Phase 26.2 OPA/Cedar                         | `policy_id`, `engine`, `decision`                                                                          |
+| `cortex.dlp.scan`           | Phase 26.1 DLP pipeline                      | `detector_count`, `findings`, `action_taken`                                                               |
+| `cortex.tool.call`          | Phase 20.23 tool invocation                  | `tool_id`, `duration_ms`, `result_size_bytes`                                                              |
+| `cortex.federation.publish` | Phase 21 publish                             | `entity_count`, `target_registry`, `bytes_pushed`                                                          |
+| `cortex.federation.pull`    | Phase 21 pull                                | `upstream_repo`, `entities_materialized`                                                                   |
+| `cortex.review.action`      | Phase 23 review queue                        | `entity`, `action` (accept/reject/edit/skip), `reviewer`                                                   |
+| `cortex.compliance.report`  | Phase 24 report generation                   | `framework`, `violations`, `format`                                                                        |
+| `cortex.audit.write`        | Phase 26 audit append                        | `event_type`, `actor`                                                                                      |
+| `cortex.predict.surprise`   | Phase 20.20 active inference                 | `surprise_score`, `triggered_slow_path`                                                                    |
+| `cortex.acp.approval`       | Phase 43.3 action gate                       | `action_type`, `decision` (approved/denied/timeout)                                                        |
 
 **Trace context propagation**:
 
@@ -12402,7 +13567,7 @@ CORTEX_OTEL_VENDOR=datadog|honeycomb|tempo|jaeger|newrelic|splunk
 ## 🔏 Phase 26.4: Cryptographic Event Signing & Non-Repudiation — ⏳ Planned (enterprise)
 
 **Layman's Terms**
-Phase 26 hash-chains the audit log — the hashes prove no past entry was modified or deleted. That's **integrity**. But it doesn't prove **who authored** a given event. A compromised admin token could insert valid hash-chained entries that look perfectly authentic. For SOX, HIPAA, FedRAMP, and any environment where a regulator might ask *"prove this specific approval came from this specific person at this specific time and has not been forged"*, you need **non-repudiation** — cryptographic signatures that bind each event to an authenticated identity. Phase 26.4 adds Ed25519 per-event signing to the audit log. The hash chain still proves "no tampering"; signatures additionally prove "Alice authored this, signed by her key, at this time — even Cortex itself cannot have forged it."
+Phase 26 hash-chains the audit log — the hashes prove no past entry was modified or deleted. That's **integrity**. But it doesn't prove **who authored** a given event. A compromised admin token could insert valid hash-chained entries that look perfectly authentic. For SOX, HIPAA, FedRAMP, and any environment where a regulator might ask _"prove this specific approval came from this specific person at this specific time and has not been forged"_, you need **non-repudiation** — cryptographic signatures that bind each event to an authenticated identity. Phase 26.4 adds Ed25519 per-event signing to the audit log. The hash chain still proves "no tampering"; signatures additionally prove "Alice authored this, signed by her key, at this time — even Cortex itself cannot have forged it."
 
 **Technical Terms**
 Inspired by Nexus Phase 29.1 Cryptographic Signal Signing. Per-event Ed25519 signatures over the canonical JSON serialization of every audit event, layered on top of Phase 26's hash chain:
@@ -12419,21 +13584,21 @@ interface SignedAuditEvent {
   // Phase 26 fields
   id: string;
   timestamp: string;
-  actor: string;             // identity ID
+  actor: string; // identity ID
   action: string;
   resource: string;
   before?: any;
   after?: any;
-  prevHash: string;          // hash chain
+  prevHash: string; // hash chain
   hash: string;
-  
+
   // Phase 26.4 additions
   signature: {
     algorithm: "Ed25519";
-    actorSignature: string;  // signature by actor's identity key
+    actorSignature: string; // signature by actor's identity key
     systemSignature: string; // co-signature by Cortex system key
-    signedAt: string;        // timestamp inside the signed payload
-    keyId: string;           // identity key fingerprint for verification
+    signedAt: string; // timestamp inside the signed payload
+    keyId: string; // identity key fingerprint for verification
   };
 }
 ```
@@ -12541,6 +13706,7 @@ Some industries — defense, intelligence, tier-1 banking, regulated healthcare 
 Three deployment modes plus pluggable key management.
 
 **Air-Gapped Mode** (`CORTEX_AIRGAP=true`):
+
 - Zero outbound network calls. No telemetry, no update checks, no LLM API calls to public providers.
 - LLM provider restricted to: locally-hosted Ollama, vLLM, TGI, or any OpenAI-compatible endpoint inside the perimeter.
 - Distribution: signed offline installer bundle (`cortex-airgap-<version>.tar.gz`) containing all dependencies, Docker images, and SBOM. SHA-256 + Sigstore signature verification at install.
@@ -12548,12 +13714,14 @@ Three deployment modes plus pluggable key management.
 - Documentation, models, embeddings, and pack libraries bundled offline.
 
 **Sovereign Mode** (`CORTEX_RESIDENCY=<region>`):
+
 - Data and processing constrained to a specific geography (EU, US, UK, Australia, Canada, etc.).
 - For Phase 22 Central Knowledge Server: enforces region pinning for all stored data and forbids cross-region replication unless explicitly granted.
 - For SaaS Cortex (if/when offered): region-specific endpoints with hard data-residency guarantees.
 - Compliance: aligns with GDPR (EU), Schrems II (EU), Data Sovereignty Act (Australia), C-27 (Canada), etc.
 
 **BYO-Key (Bring Your Own Key)**:
+
 - Envelope encryption with customer-controlled KEKs (Key Encryption Keys).
 - Supported KMS: AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault, on-prem HSM via PKCS#11.
 - All persistent data (entity content, audit logs, SCIM data) encrypted with per-tenant DEKs (Data Encryption Keys) wrapped by the customer KEK.
@@ -12561,6 +13729,7 @@ Three deployment modes plus pluggable key management.
 - "Cryptographic shred" support: revoking the KEK renders all customer data unrecoverable instantly (regulatory deletion requirement).
 
 CLI:
+
 - `cortex deploy airgap-bundle --version <v>` — produce a signed offline installer.
 - `cortex deploy verify-bundle <path>` — verify signature and SBOM at the receiving end.
 - `cortex kms configure --provider <aws-kms|gcp-kms|azure-kv|vault|pkcs11> --key-id <id>`
@@ -12618,6 +13787,7 @@ Integrations (initial set):
 - **PagerDuty / Opsgenie**: on-call enrichment. When an alert fires on a service mapped to a Cortex entity, the on-call engineer's PD/Opsgenie alert is enriched with the Phase 9 impact analysis and Phase 20.20 active inference surprise score.
 
 CLI:
+
 - `cortex integration list / install <name> / configure <name>` — manage integrations.
 - `cortex integration test <name>` — fire a test event for setup verification.
 - `cortex integration logs <name> --since <duration>` — debug delivery failures.
@@ -12664,11 +13834,13 @@ Cortex burns LLM tokens. In an enterprise with 1,000 engineers, that bill become
 Per-team / per-repo / per-user cost attribution and governance, exposed via dashboards, alerts, and chargeback reports.
 
 Cost attribution:
+
 - Every LLM call records: caller (SSO identity), team (from SCIM groups), repo, operation type (synthesis, review, distill-train, etc.), model + provider, input tokens, output tokens, $ cost (derived from a provider pricing table).
 - Stored in a separate `cost.jsonl` event stream (Phase 7-style append-only).
 - Aggregated nightly into `cost-summary.json` keyed by (team, repo, model, day) for fast dashboard queries.
 
 Budget governance:
+
 - `cortex.budgets.yaml` declares per-team and per-repo monthly budgets:
   ```yaml
   budgets:
@@ -12676,23 +13848,26 @@ Budget governance:
       monthly_usd: 5000
       action_at_50pct: notify
       action_at_80pct: notify_and_warn_in_sync_output
-      action_at_100pct: throttle  # routes to distilled-only via Phase 19
-      action_at_120pct: hard_stop  # synthesis disabled until budget reset or override
+      action_at_100pct: throttle # routes to distilled-only via Phase 19
+      action_at_120pct: hard_stop # synthesis disabled until budget reset or override
   ```
 - Throttle action routes through Phase 19 distilled Librarian only (no frontier calls) — quality drops gracefully, spending stops growing.
 - Hard-stop action requires explicit admin override (`cortex budget override --team <name> --reason <text>` audit-logged via Phase 26).
 
 Chargeback:
+
 - `cortex finops chargeback --month <YYYY-MM> --format <csv|json|xero|netsuite>` produces a per-team billable line item report.
 - Configurable cost-allocation rules: shared infrastructure costs (server, storage) can be allocated by team headcount, weighted active usage, or a flat split.
 
 Dashboards (Phase 31 integration):
+
 - Per-team monthly burn vs budget (RAG color coding).
 - Per-model cost share over time (helps identify when to migrate workloads to cheaper models).
 - Operation-type breakdown (synthesis vs review vs distill-train vs context-pack export).
 - Forecast: linear-trend projection of monthly burn at current rate.
 
 Cost alerts:
+
 - Slack/Teams/email notification at 50%, 80%, 100% of monthly budget.
 - Anomaly alert: spend rate >2σ above 30-day rolling mean.
 
@@ -12739,11 +13914,12 @@ A regulated bank's CISO does not want their developers using random LLMs to synt
 A declarative allowlist policy enforced at every LLM call dispatch point, integrated with Phase 26 ABAC + Phase 29 FinOps:
 
 - **Allowlist schema** (`cortex.models.yaml`):
+
   ```yaml
   default_allowlist:
     - provider: anthropic
       model: claude-opus-4-7
-      versions: ["2026-04-15", "2026-05-01"]   # specific revisions only
+      versions: ["2026-04-15", "2026-05-01"] # specific revisions only
       regions: ["us-east-1", "eu-west-1"]
       deployment: "Anthropic Enterprise contract #AC-2026-447"
     - provider: openai
@@ -12756,10 +13932,11 @@ A declarative allowlist policy enforced at every LLM call dispatch point, integr
     "regulated/banking-core":
       strict: true
       additional_blocklist:
-        - { provider: "*", regions: ["us-east-2"] }  # no us-east-2 for any provider
+        - { provider: "*", regions: ["us-east-2"] } # no us-east-2 for any provider
     "internal/dev-sandbox":
-      strict: false  # allow exploration with non-approved models
+      strict: false # allow exploration with non-approved models
   ```
+
 - **Enforcement points**: every Phase 33 wave engine call, every Phase 20.15 dual-process route, every Phase 19 distill invocation, every Phase 20.18 ToT, every Phase 20.16 multi-agent dispatch. The model selection layer checks the allowlist; non-allowed models trigger `ModelNotApprovedError` with the workspace's approved alternatives listed.
 - **Per-region pinning**: `regions` field gates by inference region (Anthropic supports `us-east-1`, `eu-west-1`; OpenAI/Azure has region tags). Matches Phase 27 data-residency constraints.
 - **Version pinning**: `versions` array prevents auto-rollout of new model versions without security review — common requirement in regulated environments.
@@ -12882,6 +14059,7 @@ Import pipeline:
 5. **Provenance tagging**: every imported entity gets `importedFrom: { source: "confluence", url: "...", importedAt: "..." }` so origin is traceable.
 
 CLI:
+
 - `cortex import discover --source <type> --connect <url>` — connection test + size estimate.
 - `cortex import run --source <type> --since <date> --dry-run` — full or incremental import.
 - `cortex import reconcile [--auto-accept-similarity 0.95]` — merge wizard for duplicates.
@@ -12922,7 +14100,7 @@ CLI:
 ## 💬 Phase 30.1: External AI Conversation Import — ⏳ Planned (enterprise)
 
 **Layman's Terms**
-Phase 30 imports static documentation — Confluence pages, Notion databases, SharePoint docs. But the **most architecturally rich content in your organization is in AI chat histories**: the Claude.ai conversation where a senior engineer worked through the auth refactor, the ChatGPT debugging session that diagnosed a production incident, the Cursor chat where the team designed the new payment domain, the Antigravity session where the architecture was decided. These conversations contain the *reasoning* behind every architectural decision — and today they evaporate the moment the chat ends. Phase 30.1 imports them as first-class Cortex memory: decisions, rationale, alternatives considered, all preserved as evidence-anchored entities.
+Phase 30 imports static documentation — Confluence pages, Notion databases, SharePoint docs. But the **most architecturally rich content in your organization is in AI chat histories**: the Claude.ai conversation where a senior engineer worked through the auth refactor, the ChatGPT debugging session that diagnosed a production incident, the Cursor chat where the team designed the new payment domain, the Antigravity session where the architecture was decided. These conversations contain the _reasoning_ behind every architectural decision — and today they evaporate the moment the chat ends. Phase 30.1 imports them as first-class Cortex memory: decisions, rationale, alternatives considered, all preserved as evidence-anchored entities.
 
 **Technical Terms**
 A standardized format and adapter library for importing AI conversation transcripts as Cortex memory:
@@ -12941,7 +14119,11 @@ A standardized format and adapter library for importing AI conversation transcri
     "exportedAt": "2026-05-12T10:00:00Z"
   },
   "participants": [
-    { "role": "human", "identity": "alice@acme.com", "displayName": "Alice Chen" },
+    {
+      "role": "human",
+      "identity": "alice@acme.com",
+      "displayName": "Alice Chen"
+    },
     { "role": "assistant", "identity": "claude" }
   ],
   "messages": [
@@ -13049,11 +14231,13 @@ A structured merge engine operating on `state.json` graphs:
 5. **Idempotent**: running `cortex merge` twice on the same pair produces the same output (merge is a pure union function over the graph, modulo conflict labeling).
 
 **Definition of Ready (DoR)**
+
 - Phase 16 (Contradiction Detection) is shipped — needed for conflict labeling.
 - Phase 20.12 (Temporal KG) is shipped — needed for temporal field preservation.
 - Phase 23 (Human Review) is shipped — needed for conflict resolution workflow.
 
 **Definition of Done (DoD)**
+
 - `cortex merge <source-knowledge>` produces a unified `state.json` from two disjoint knowledge bases.
 - Entity identity resolution correctly matches same-file entities across the pair and flags cross-file fuzzy matches for review.
 - Conflict report lists all entity-level description contradictions with side-by-side sources.
@@ -13062,6 +14246,7 @@ A structured merge engine operating on `state.json` graphs:
 - Tests cover: identity resolution (exact + fuzzy), conflict detection, edge union, idempotency, GC boundary preservation.
 
 **Pros & Cons**
+
 - ✅ **Pros**: Fills a genuine write-side federation gap — current Phase 11/21 federation is read-only. Makes branch-level knowledge preservation possible (no more discarded knowledge on merge). Enterprise consolidation use case (acquisitions, org restructuring) is a concrete sales scenario.
 - ❌ **Cons**: Depends on Phase 16, 20.12, and 23 being shipped — merge can't ship without all three. Entity identity resolution is inherently heuristic (two knowledge bases may name the same thing differently). Conflicts require human review — fully automated merge is not the goal.
 
@@ -13078,6 +14263,7 @@ A read-side analytics surface aggregating Cortex's existing signals (Phase 7 log
 KPI categories:
 
 **Architectural Health**:
+
 - Mean quality score (Phase 7.5) per repo, team, org. Trend over time.
 - Open-contradiction count (Phase 16) per domain. Resolution rate.
 - Stale-entity count and stale-ratio. Trend.
@@ -13086,24 +14272,28 @@ KPI categories:
 - Causal-strength entropy (Phase 20.14) — proxy for architectural complexity.
 
 **Productivity**:
+
 - Mean time-to-context (MTTC) — how long from a new developer opening the repo to producing a meaningful PR. Measured indirectly by Phase 4.5 IDE usage telemetry + commit history.
 - Code-review cycle time — does Cortex's CURRENT CONTEXT injection reduce reviewer back-and-forth?
 - Onboarding ramp time — first-30-day commit velocity for new hires vs. historical baseline.
 - Refactor success rate — Phase 20.13 skill-library win rate.
 
 **Risk**:
+
 - High-hotspot-score entities (Phase 20.2) per domain. Trend.
 - Compliance-violation count (Phase 24) per framework. Trend.
 - Surprise-event count (Phase 20.20) per week. High surprise = architectural drift.
 - Open-contradiction backlog age.
 
 **ROI**:
+
 - Token spend (Phase 29) vs. estimated counterfactual: "what would this team have spent without Cortex?" (calibrated from baseline measurement at deployment).
 - Bug prevention $: high-hotspot entities × CI failure rate × industry-standard cost-of-incident.
 - Onboarding $: (historical ramp time - current ramp time) × loaded-engineer-cost × new-hire-count.
 - Net ROI: aggregated savings minus Cortex spend.
 
 Dashboard surfaces:
+
 - Web UI (extending Phase 22 dashboard) with role-aware views: developer view shows their team's metrics; manager view shows their org; CTO view shows everything.
 - PDF QBR report: `cortex qbr generate --quarter Q2-2026 --format pdf` produces a 20-page executive deck with charts, narrative, and per-team breakdowns.
 - Slack/Teams weekly digest: configurable per-channel "Cortex health weekly" post.
@@ -13150,6 +14340,7 @@ The average enterprise SaaS sale takes 6-9 months — not because of feature eva
 A coordinated bundle of artifacts, processes, and external certifications that compress enterprise procurement.
 
 **Pre-filled Security Questionnaires** (downloadable from `cortex.com/trust`):
+
 - SIG (Shared Assessments Standardized Information Gathering) — Lite + Full versions, pre-answered.
 - CAIQ (Cloud Security Alliance Consensus Assessments Initiative Questionnaire) v4.
 - VSAQ (Vendor Security Alliance Questionnaire).
@@ -13157,6 +14348,7 @@ A coordinated bundle of artifacts, processes, and external certifications that c
 - Each questionnaire shipped as both static PDF and dynamic JSON for upload to Vanta/Drata/Whistic/UpGuard.
 
 **Legal Document Templates**:
+
 - Master Service Agreement (MSA) template — both customer-friendly and Cortex-standard versions.
 - Data Processing Addendum (DPA) — GDPR-compliant, SCC-attached.
 - Business Associate Agreement (BAA) — HIPAA-compliant for healthcare customers.
@@ -13164,6 +14356,7 @@ A coordinated bundle of artifacts, processes, and external certifications that c
 - Acceptable Use Policy (AUP) and Service Level Agreement (SLA) templates.
 
 **Compliance Artifacts**:
+
 - SOC2 Type II report (annual, auditor: third-party CPA firm).
 - ISO 27001 certificate (annual recertification).
 - Penetration test report (annual, third-party).
@@ -13172,18 +14365,21 @@ A coordinated bundle of artifacts, processes, and external certifications that c
 - ASVS (OWASP Application Security Verification Standard) Level 2 attestation.
 
 **Certifications Roadmap** (multi-year):
+
 - Year 1: SOC2 Type I → Type II, ISO 27001.
 - Year 2: HIPAA, PCI-DSS Level 1, GDPR Article 42 certification (when scheme finalizes).
 - Year 3: FedRAMP Moderate (US federal), IL4 (US DoD), IRAP (Australia), G-Cloud (UK).
 - Roadmap is **public** at `cortex.com/trust/roadmap` so prospects can plan.
 
 **Vendor Risk Profile** (proactive disclosure):
+
 - Financial stability: audited annual financials (for late-stage customers' procurement).
 - Insurance: cyber liability + E&O + tech E&O coverage amounts disclosed.
 - Incident response: documented IR plan with named CSIRT.
 - Business continuity / disaster recovery plan with documented RPO/RTO.
 
 **Operational Surface**:
+
 - `cortex compliance pack download --version <date>` — pulls current procurement pack as a zip.
 - Trust portal at `cortex.com/trust` with live certificate links, sub-processor list, change notifications.
 - Customer-specific extensions: `cortex compliance attestation --customer <name> --requirements <file>` produces a customer-specific compliance pack tailored to their stated requirements.
@@ -13275,7 +14471,7 @@ Three parallel marketplace integrations with shared metering pipeline (reuses Ph
 ## 🔗 Phase 32.2: Supply Chain Security: SBOM & SLSA Provenance — ⏳ Planned (enterprise)
 
 **Layman's Terms**
-When a CIO buys Cortex, their security team asks: *"Can you prove this Docker image we're about to deploy was actually built by Cortex's pipeline, hasn't been tampered with since, and lists every open-source library it includes — including transitive dependencies — in a machine-readable format?"* Without verifiable answers, regulated customers (federal agencies, banks, healthcare, defense contractors) cannot legally procure Cortex. Phase 32.2 is the supply chain hardening track: every release artifact (Docker image, npm package, binary) ships with **CycloneDX/SPDX SBOMs** (Software Bill of Materials), **SLSA Build Level 2 provenance attestations**, and **Cosign signatures published to Rekor** transparency log. This is what unlocks US Executive Order 14028 compliance, FedRAMP High, EU Cyber Resilience Act, and increasingly default corporate procurement requirements.
+When a CIO buys Cortex, their security team asks: _"Can you prove this Docker image we're about to deploy was actually built by Cortex's pipeline, hasn't been tampered with since, and lists every open-source library it includes — including transitive dependencies — in a machine-readable format?"_ Without verifiable answers, regulated customers (federal agencies, banks, healthcare, defense contractors) cannot legally procure Cortex. Phase 32.2 is the supply chain hardening track: every release artifact (Docker image, npm package, binary) ships with **CycloneDX/SPDX SBOMs** (Software Bill of Materials), **SLSA Build Level 2 provenance attestations**, and **Cosign signatures published to Rekor** transparency log. This is what unlocks US Executive Order 14028 compliance, FedRAMP High, EU Cyber Resilience Act, and increasingly default corporate procurement requirements.
 
 **Technical Terms**
 Inspired by Nexus Phase 113. End-to-end supply chain integrity for every published Cortex artifact, conforming to OpenSSF / NIST / SLSA standards.
@@ -13288,11 +14484,13 @@ Every release artifact produces an SBOM in **both** standard formats:
 - **SPDX 2.3** (Linux Foundation standard, NIST-preferred) — `cortex-v<version>.sbom.spdx.json`
 
 SBOM generation toolchain:
+
 - **`syft`** (Anchore) for npm + Docker image SBOMs — primary generator
 - **`trivy`** for cross-validation (different scanner, same output) — catches generator bugs
 - Both run in CI; SBOMs cross-compared; mismatch fails the release
 
 SBOM contents per artifact:
+
 - Every direct dependency with name, version, license, SHA-256
 - Every transitive dependency (full closure)
 - Known vulnerabilities at build time (CVE references via `grype` integration)
@@ -13300,6 +14498,7 @@ SBOM contents per artifact:
 - Build environment fingerprint (Node version, OS, toolchain)
 
 Published to:
+
 - Trust Center (`cortex.com/trust/sbom`) — public, queryable, downloadable
 - Per-release GitHub release assets — alongside release notes
 - Phase 32 trust portal API — `GET /v1/trust/sbom?version=<v>` for automated procurement scanners
@@ -13309,6 +14508,7 @@ Published to:
 Every release artifact ships with **SLSA in-toto provenance attestation** following [SLSA Build Track v1.0](https://slsa.dev/spec/v1.0/levels) at **Build Level 2 minimum, Build Level 3 target**.
 
 Provenance attestation contents (in-toto Statement format):
+
 ```json
 {
   "_type": "https://in-toto.io/Statement/v1",
@@ -13323,24 +14523,33 @@ Provenance attestation contents (in-toto Statement format):
       },
       "internalParameters": { "runId": "8421341", "runAttempt": "1" },
       "resolvedDependencies": [
-        { "uri": "git+https://github.com/llm-cortex/cortex.git", "digest": { "sha1": "..." } }
+        {
+          "uri": "git+https://github.com/llm-cortex/cortex.git",
+          "digest": { "sha1": "..." }
+        }
       ]
     },
     "runDetails": {
       "builder": { "id": "https://github.com/actions/runner" },
-      "metadata": { "invocationId": "...", "startedOn": "...", "finishedOn": "..." }
+      "metadata": {
+        "invocationId": "...",
+        "startedOn": "...",
+        "finishedOn": "..."
+      }
     }
   }
 }
 ```
 
 Provenance answers the four SLSA questions verifiably:
+
 1. **What** — exact source git commit (SHA-1)
 2. **Who** — GitHub Actions builder identity (cryptographically attested)
 3. **How** — exact workflow file + parameters
 4. **When** — start and finish timestamps within builder logs
 
 Build Level 2 achieved via:
+
 - All builds run in GitHub-hosted runners (no self-hosted; attestation forgery harder)
 - Build process scripted in version-controlled YAML (`.github/workflows/release.yml`)
 - Provenance generated by `slsa-github-generator` (official SLSA tooling)
@@ -13351,6 +14560,7 @@ Build Level 3 (target for FedRAMP Moderate+): isolated, ephemeral, reproducible 
 ### 3. Cosign Signing + Rekor Transparency Log
 
 Every artifact signed with **Cosign** (Sigstore project):
+
 - **Docker images** (`cortex.azurecr.io/cortex:v1.4.2`, `ghcr.io/llm-cortex/cortex:v1.4.2`) signed via `cosign sign`
 - **npm packages** (`@llm-cortex/cli@1.4.2`) signed with attached signature manifest
 - **Standalone binaries** (Cortex CLI for macOS / Linux / Windows) signed with detached `.sig` files
@@ -13388,6 +14598,7 @@ Procurement teams' supply chain scanners (Snyk, Wiz, Aqua, Prisma, JFrog Xray) a
 ### 5. Trust Portal Integration
 
 Phase 32 trust portal extended with supply chain section:
+
 - `cortex.com/trust/supply-chain` — overview page
 - `cortex.com/trust/sbom?version=<v>` — SBOM downloads (CycloneDX + SPDX) per release
 - `cortex.com/trust/provenance?version=<v>` — provenance attestation downloads
@@ -13449,10 +14660,10 @@ Phase 32.2 directly maps to:
 
 On a real ~1800-file React project:
 
-| Bootstrap result | Entities | Concepts | Coverage |
-|---|---|---|---|
-| Auto (current) | 4 | 3 | ~0.2% of files mapped, ~10% of architectural domains |
-| After "deeper please" prompt × 3 | 5 | 5 | ~0.3% of files mapped, ~25% of architectural domains |
+| Bootstrap result                 | Entities  | Concepts | Coverage                                                            |
+| -------------------------------- | --------- | -------- | ------------------------------------------------------------------- |
+| Auto (current)                   | 4         | 3        | ~0.2% of files mapped, ~10% of architectural domains                |
+| After "deeper please" prompt × 3 | 5         | 5        | ~0.3% of files mapped, ~25% of architectural domains                |
 | **Phase 33 target (depth=deep)** | **40-80** | **8-15** | **>40% of significant files mapped, 100% of architectural domains** |
 
 ### Root Cause Analysis
@@ -13470,6 +14681,7 @@ Five compounding defects in the current bootstrap path ([Post-Launch Fix #3](#) 
 A five-phase pipeline replacing the current single-shot bootstrap. Each phase is independently testable, resumable, and budget-bounded.
 
 **Phase A — Skeleton Scan** (cheap, fast, no LLM)
+
 - Walk the **full** directory tree without the 500-cap. Build a per-directory profile: file count, total LOC, language mix, modification recency.
 - Build the **directory import graph** by parsing import statements across all files (regex-level, not full AST — fast and language-agnostic for the common languages). Edges weighted by import count.
 - Run community detection (Leiden, reused from Phase 20.9) on the directory import graph to identify **architectural domains** — e.g., `{ auth: src/auth/**, services: src/services/**, redux: src/redux/**, components.atoms: src/components/atoms/**, components.molecules: src/components/molecules/**, hooks: src/hooks/**, utils: src/utils/**, routes: src/routes/** }`.
@@ -13478,6 +14690,7 @@ A five-phase pipeline replacing the current single-shot bootstrap. Each phase is
 - Cost: **zero LLM calls**, completes in <5 seconds even on 1800 files.
 
 **Phase B — Per-Domain Deep Synthesis** (parallel, budget-controlled)
+
 - For each domain (in complexity order), do a focused LLM synthesis that **reads actual file contents**.
 - Per-domain context budget: top 10-20 most-central files in the domain (ranked by intra-domain import centrality), with **full file content** included up to a per-call token budget (default 30k input tokens).
 - For each domain, run a **domain-specialized prompt** — distinct from the general Librarian prompt. For example, the `redux/` domain prompt directs attention to slices, reducers, sagas, selectors, action creators; the `hooks/` domain prompt directs attention to `useQuery`/`useMutation`/custom hooks; the `components/` domain prompt directs attention to atomic-design layering.
@@ -13486,6 +14699,7 @@ A five-phase pipeline replacing the current single-shot bootstrap. Each phase is
 - Cost: bounded by `CORTEX_BOOTSTRAP_BUDGET_USD` (default $10). Per-domain cost surfaced live.
 
 **Phase C — Hot-Path Deepening** (drill into central entities)
+
 - Compute PageRank (reusing Phase 20.10's PPR implementation) on the partial entity graph from Phase B.
 - For top-N central entities (default 20), do another LLM pass that reads:
   - The entity's full source file content
@@ -13494,35 +14708,38 @@ A five-phase pipeline replacing the current single-shot bootstrap. Each phase is
 - This pass refines the central entities — adds missing relationships, evidence anchors, descriptions of complex behavior (e.g., the user's example: `AppRouter`'s "Keycloak token refresh, layout rendering, Redux bootstrapping" detail emerges naturally from reading the actual file content).
 
 **Phase D — Cross-Domain Relationship Synthesis**
+
 - Final pass that identifies cross-domain relationships missed by per-domain synthesis.
 - LLM reads the **entity index** from Phases B+C (text only, not file content) plus a sample of cross-domain import statements.
 - Produces additional `[[CrossDomainEntity]] depends_on [[OtherDomainEntity]]` edges and `supports`/`derived_from` cross-references.
 
 **Phase E — Quality Gate Check & Auto-Refine**
+
 - Verify against per-domain DoD criteria (minimum entity count per domain proportional to file count, minimum evidence-anchor coverage, minimum relationship density).
 - If quality is below threshold for any domain, **auto-trigger a second Phase B pass for that domain** (budget permitting).
 - User-visible quality scorecard at the end: per-domain entity count, evidence coverage, relationship density, quality score (Phase 7.5).
 - If overall quality score < 0.5, emit a warning recommending `cortex bootstrap refine --domain <weakest-domain>`.
 
 **Phase F — Self-Entity Generation**
+
 - Auto-generate a `[[Cortex Configuration]]` meta-entity in `.knowledge/entities/` describing Cortex's own configuration on this project: which phases are active, which constraints are declared, which domains were detected, quality score trends, provider configuration, bootstrap history (timestamp, entity count, total cost). Gives the Librarian self-awareness about its own setup — when asked "how is Cortex configured for this project?" it has a ground-truth answer.
 - Cost: zero LLM calls — computed entirely from existing config + state.json + bootstrap progress. Updated on every Phase 20.17 consolidation pass to keep quality trends current.
 
 ### The Output-Token Wall — Why Multi-Wave Processing Is Physically Required
 
-A frequent (and reasonable) question: *"why does the LLM need multiple deep dives? Can't it ingest the entire codebase in one shot?"*
+A frequent (and reasonable) question: _"why does the LLM need multiple deep dives? Can't it ingest the entire codebase in one shot?"_
 
 **The answer is no, and the reason is a hard physical constraint of LLM architectures: the output token window.**
 
-| Model | Input context | **Output context** | Max detailed entities per single call (~200 tok/entity) |
-|---|---|---|---|
-| GPT-4o | 128k | **16k** | ~80 |
-| GPT-4 Turbo | 128k | **4k** | ~20 |
-| Claude 4.7 Opus | 200k | **8k** | ~40 |
-| Claude 4.6 Sonnet | 200k | **8k** | ~40 |
-| Gemini 2.0 Pro | 2M | **8k** | ~40 |
-| Llama 3.1 405B | 128k | **4k** | ~20 |
-| Llama 3.3 70B | 128k | **4k** | ~20 |
+| Model             | Input context | **Output context** | Max detailed entities per single call (~200 tok/entity) |
+| ----------------- | ------------- | ------------------ | ------------------------------------------------------- |
+| GPT-4o            | 128k          | **16k**            | ~80                                                     |
+| GPT-4 Turbo       | 128k          | **4k**             | ~20                                                     |
+| Claude 4.7 Opus   | 200k          | **8k**             | ~40                                                     |
+| Claude 4.6 Sonnet | 200k          | **8k**             | ~40                                                     |
+| Gemini 2.0 Pro    | 2M            | **8k**             | ~40                                                     |
+| Llama 3.1 405B    | 128k          | **4k**             | ~20                                                     |
+| Llama 3.3 70B     | 128k          | **4k**             | ~20                                                     |
 
 Modern LLMs can **read** entire codebases (1M+ input tokens on Gemini, 200k on Claude/GPT) but cannot **emit** more than 4-16k tokens of structured JSON in a single response. At ~150-400 tokens per detailed entity record (with description + relationships + evidence anchors + behavior), that is a **hard ceiling of 20-80 entities per LLM call** regardless of how much input you provide.
 
@@ -13538,11 +14755,13 @@ The real architectural question is: **who orchestrates those calls?**
 The wave engine sizes batches by **output tokens**, not input tokens — inverting the traditional context-budgeting approach (most RAG systems budget by input because input is the typical bottleneck; for structured synthesis emitting JSON entities, **output is the bottleneck**).
 
 **Per-file output cost estimation**:
+
 - Calibrated per model from empirical measurement during a warmup batch on the user's own first few files. No fixed assumptions.
 - Default starting estimate: 300 tokens per file for detailed entity output.
 - Updated after every batch via exponential moving average (recent measurements weighted higher).
 
 **Batch sizing formula**:
+
 - `output_budget = model.max_output_tokens × CORTEX_OUTPUT_HEADROOM` (default 0.8 = 80% of cap, 20% margin against estimation error).
 - `batch_size = floor(output_budget / per_file_output_cost)`.
 - For Claude 4.7 Opus (8k × 0.8 = 6.4k budget, 300 tok/file): **~21 files per batch**.
@@ -13550,6 +14769,7 @@ The wave engine sizes batches by **output tokens**, not input tokens — inverti
 - For GPT-4o (16k × 0.8 = 12.8k budget): **~42 files per batch**.
 
 **Schema partitioning for huge domains**:
+
 - When a domain is too large for a single call even at maximum batch size, the daemon splits the output schema:
   - Call 1: emit `entities[]` only for the batch (lean records — name, sourceFile, one-line description).
   - Call 2: emit `relationships[]` only, given the entity list from call 1 as input.
@@ -13562,17 +14782,20 @@ The wave engine sizes batches by **output tokens**, not input tokens — inverti
 A two-pass strategy per domain that further compresses LLM cost and prevents the "ran out of budget halfway through a domain" failure mode:
 
 **Tier 1 — Enumeration Pass** (one cheap call per domain):
-- Lightweight prompt: *"list every architectural entity in these N files, one line each, with file path and one-sentence purpose."*
+
+- Lightweight prompt: _"list every architectural entity in these N files, one line each, with file path and one-sentence purpose."_
 - Output: ~50 entity stubs in ~3-4k tokens. Fast and cheap.
 - Result: Cortex has the **full entity inventory upfront**, before any expensive work begins.
 - Enables accurate cost estimation for Tier 2 (`tier2_cost = enumerated_entity_count × per_entity_cost`).
 
 **Tier 2 — Detail Pass** (parallel batches):
+
 - Group the stubs from Tier 1 into output-budget-aware batches (8-21 entities per batch, model-dependent).
-- Each Tier 2 call: *"for these N entities, emit full records with relationships, evidence anchors, behavior."*
+- Each Tier 2 call: _"for these N entities, emit full records with relationships, evidence anchors, behavior."_
 - Multiple Tier 2 calls run **in parallel**, rate-limit-aware (default 5 concurrent; respects `Retry-After` headers and exponential backoff on 429s).
 
 Benefits:
+
 - Tier 1 eliminates the "we discovered 80 entities after spending the full budget on 30" surprise — the inventory is known before the spend.
 - Tier 2 parallelism saturates provider concurrency, cutting wall-clock time on a 100-entity domain from ~10 minutes (serial) to ~2 minutes (5-way parallel).
 
@@ -13666,15 +14889,15 @@ The IDE renders a progress bar with per-domain status, current batch detail, cos
 
 For the same 1800-file React/Redux/Keycloak production case, with the output-budget-aware wave engine:
 
-| Stage | Calls | Wall time | LLM cost | Cumulative entities |
-|---|---|---|---|---|
-| A — Skeleton + clustering | 0 | <5s | $0 | 0 |
-| B — Tier 1 enumeration (14 domains × 1 call) | 14 | ~40s (parallel 5) | $0.30 | 60-80 (stubs) |
-| B — Tier 2 detail (5-21 files/batch, ~12 batches × 5 parallel) | ~12 | ~3 min | $1.50-2.50 | 60-80 (detailed) |
-| C — Hot-path deepening (top 20 entities × 1 call each, parallel) | 20 | ~2 min | $1.00-1.50 | 60-80 (refined) |
-| D — Cross-domain (1 call) | 1 | ~30s | $0.30 | 60-80 |
-| E — Quality gate + targeted refines (1-3 calls) | 1-3 | ~30s + retries | $0-0.50 | 60-90 |
-| **Total** | **~50 calls** | **~6-8 min** | **$3.10-5.10** | **60-90 entities, 12-18 concepts** |
+| Stage                                                            | Calls         | Wall time         | LLM cost       | Cumulative entities                |
+| ---------------------------------------------------------------- | ------------- | ----------------- | -------------- | ---------------------------------- |
+| A — Skeleton + clustering                                        | 0             | <5s               | $0             | 0                                  |
+| B — Tier 1 enumeration (14 domains × 1 call)                     | 14            | ~40s (parallel 5) | $0.30          | 60-80 (stubs)                      |
+| B — Tier 2 detail (5-21 files/batch, ~12 batches × 5 parallel)   | ~12           | ~3 min            | $1.50-2.50     | 60-80 (detailed)                   |
+| C — Hot-path deepening (top 20 entities × 1 call each, parallel) | 20            | ~2 min            | $1.00-1.50     | 60-80 (refined)                    |
+| D — Cross-domain (1 call)                                        | 1             | ~30s              | $0.30          | 60-80                              |
+| E — Quality gate + targeted refines (1-3 calls)                  | 1-3           | ~30s + retries    | $0-0.50        | 60-90                              |
+| **Total**                                                        | **~50 calls** | **~6-8 min**      | **$3.10-5.10** | **60-90 entities, 12-18 concepts** |
 
 The wave engine achieves the Phase 33 entity-count target **with no manual intervention** — the user runs `cortex bootstrap`, walks to get coffee, and returns to a fully-indexed codebase. The 50 LLM calls happen at machine speed in 6-8 minutes; under the chat-driven model that same depth would require **the user to type "deeper please" 50 times across hours of interactive sessions**.
 
@@ -13739,7 +14962,7 @@ Five parallel Tier 2 batches each calling `save_synthesis` concurrently means co
 
 Enterprise bootstraps may run for hours; provider-side failures are statistically certain over that window:
 
-- **Per-provider rate-limit handling**: respect `Retry-After` headers, X-RateLimit-* hints, exponential backoff capped at 60s, never busy-loop on 429s.
+- **Per-provider rate-limit handling**: respect `Retry-After` headers, X-RateLimit-\* hints, exponential backoff capped at 60s, never busy-loop on 429s.
 - **Provider-side outage detection**: 5xx errors trigger circuit breaker (open after 3 consecutive failures, half-open after 60s probe). Open circuit pauses batch dispatch for that provider, surfaces a clear "provider unavailable, waiting" message via the progress stream.
 - **Multi-provider failover** (opt-in via `CORTEX_MULTI_PROVIDER=true`): when primary provider circuit is open >5 minutes, the wave engine fails over to a configured backup provider. State carries `provider: <name>` on each entity record so post-hoc analysis can detect quality drift across providers.
 - **Quota-exhaustion graceful handling**: when the user's account hits hard quota (HTTP 402 / OpenAI `insufficient_quota`), bootstrap pauses with a clear "quota exhausted, resume after recharge" message. State checkpointed; resume picks up after user resolves.
@@ -13750,6 +14973,7 @@ Enterprise bootstraps may run for hours; provider-side failures are statisticall
 Users facing a $5-50 bootstrap on a huge codebase want to know what they're committing to before pressing enter:
 
 - `cortex bootstrap --dry-run` runs Phase A (free) + Tier 1 enumeration (cheap, ~$0.30) + cost projection — **no Tier 2 spend**. Produces a full plan:
+
   ```
   Bootstrap Plan
   ────────────────────────────────────────────────────
@@ -13774,6 +14998,7 @@ Users facing a $5-50 bootstrap on a huge codebase want to know what they're comm
 
   Run? [Y/n]
   ```
+
 - `cortex bootstrap --dry-run --json` for CI / scripted use.
 - `--budget` flag aborts at cap; `--dry-run` shows whether the configured budget is sufficient before spending.
 
@@ -13789,7 +15014,7 @@ budget_usd: 10.00
 output_headroom: 0.8
 
 exclude_directories:
-  - vendor/legacy-auth/   # too churny to bother
+  - vendor/legacy-auth/ # too churny to bother
   - src/__archived__/
 
 include_tests: true
@@ -13798,10 +15023,10 @@ detect_generated: true
 domain_overrides:
   redux/:
     prompt: redux-slices
-    parallelism: 3  # rate-limit-sensitive
+    parallelism: 3 # rate-limit-sensitive
   src/components/:
     prompt: react.components.atoms
-    max_batch_size: 8  # files are dense
+    max_batch_size: 8 # files are dense
 
 providers:
   primary: anthropic-claude-4-7-opus
@@ -13814,8 +15039,8 @@ quality_gate:
   max_refines_per_domain: 3
 
 post_bootstrap:
-  emit_arch_spec: true  # generate ARCH_SPEC.md (Phase 20.5)
-  notify_slack_channel: "#architecture"  # via Phase 28
+  emit_arch_spec: true # generate ARCH_SPEC.md (Phase 20.5)
+  notify_slack_channel: "#architecture" # via Phase 28
 ```
 
 Config is layered: project file → workspace config → CLI flags (CLI overrides). `cortex bootstrap config validate` lints the file before invocation.
@@ -13835,22 +15060,22 @@ All four modes respect `--budget` and `--dry-run`.
 
 Explicit handling per failure scenario, surfaced clearly in progress stream:
 
-| Failure | Detection | Handling |
-|---|---|---|
-| LLM returns malformed JSON | Streaming parser detects parse error | Retry once at half batch size; persistent failure → schema-partitioned mode |
-| LLM hallucinated `sourceFile` | Filesystem stat | Entity rejected; targeted regeneration request for the correct file |
-| LLM duplicated entity name within batch | Post-batch dedup pass | Merge if structurally compatible; else disambiguate with suffix |
-| Broken wikilink in output | Post-batch validation | Auto-fix from other-batch stubs; else strip wikilink with warning |
-| Evidence quote not found in source | Edit-distance check | Mark `evidenceDrift: true`; surface in quality report |
-| File deleted by developer mid-bootstrap | File-read errors during batch | Skip file with warning; remove pre-emitted stub for it |
-| Disk full during write | `ENOSPC` errno | Pause bootstrap, save checkpoint, surface clear error with cleanup hint |
-| Provider 5xx (3 consecutive) | Circuit breaker | Open circuit for 60s, fail over if multi-provider, else pause with status |
-| Provider quota exhausted (HTTP 402) | Status code | Pause bootstrap, checkpoint, surface "quota exhausted" message |
-| Daemon SIGKILL mid-batch | No clean shutdown | Resume: lock-file detection of stale daemon; in-flight batch re-run |
-| Two `cortex bootstrap` invocations on same project | Lock file collision | Second invocation refuses with clear "bootstrap already running" message |
-| LLM model deprecated mid-run | Provider error response | Pause, surface "model deprecated, configure replacement" message |
-| User SCM operation mid-bootstrap (git checkout) | File mtimes shift | Detect via skeleton-scan delta check on resume; offer to restart or proceed with stale targets |
-| Network partition (DNS resolution fails) | Connection error class | Treat as provider outage; circuit breaker engages |
+| Failure                                            | Detection                            | Handling                                                                                       |
+| -------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| LLM returns malformed JSON                         | Streaming parser detects parse error | Retry once at half batch size; persistent failure → schema-partitioned mode                    |
+| LLM hallucinated `sourceFile`                      | Filesystem stat                      | Entity rejected; targeted regeneration request for the correct file                            |
+| LLM duplicated entity name within batch            | Post-batch dedup pass                | Merge if structurally compatible; else disambiguate with suffix                                |
+| Broken wikilink in output                          | Post-batch validation                | Auto-fix from other-batch stubs; else strip wikilink with warning                              |
+| Evidence quote not found in source                 | Edit-distance check                  | Mark `evidenceDrift: true`; surface in quality report                                          |
+| File deleted by developer mid-bootstrap            | File-read errors during batch        | Skip file with warning; remove pre-emitted stub for it                                         |
+| Disk full during write                             | `ENOSPC` errno                       | Pause bootstrap, save checkpoint, surface clear error with cleanup hint                        |
+| Provider 5xx (3 consecutive)                       | Circuit breaker                      | Open circuit for 60s, fail over if multi-provider, else pause with status                      |
+| Provider quota exhausted (HTTP 402)                | Status code                          | Pause bootstrap, checkpoint, surface "quota exhausted" message                                 |
+| Daemon SIGKILL mid-batch                           | No clean shutdown                    | Resume: lock-file detection of stale daemon; in-flight batch re-run                            |
+| Two `cortex bootstrap` invocations on same project | Lock file collision                  | Second invocation refuses with clear "bootstrap already running" message                       |
+| LLM model deprecated mid-run                       | Provider error response              | Pause, surface "model deprecated, configure replacement" message                               |
+| User SCM operation mid-bootstrap (git checkout)    | File mtimes shift                    | Detect via skeleton-scan delta check on resume; offer to restart or proceed with stale targets |
+| Network partition (DNS resolution fails)           | Connection error class               | Treat as provider outage; circuit breaker engages                                              |
 
 Every failure produces a structured event in `bootstrap_progress` so the IDE can render an explicit error UI (not a silent stall).
 
@@ -13887,19 +15112,21 @@ Phase 33's performance claims (60-90 entities, $3-5, 6-10 minutes on a 1800-file
 
 **Public benchmark corpus** — 12 open-source codebases spanning size and shape:
 
-| Size class | Corpora |
-|---|---|
-| Small (200-500 files) | `create-react-app` starter, `fastapi` sample, `gin-gonic` Go template |
-| Medium (500-2000 files) | `vscode-languageserver`, Django blog tutorial, React component library |
-| Large (2000-10k files) | Apache Kafka client (Java), Rails monolith reference, NextJS commerce template |
-| Huge (>10k files) | `kubectl` (Go, ~50k LOC), TypeScript compiler self-host, Rust standard library |
+| Size class              | Corpora                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| Small (200-500 files)   | `create-react-app` starter, `fastapi` sample, `gin-gonic` Go template          |
+| Medium (500-2000 files) | `vscode-languageserver`, Django blog tutorial, React component library         |
+| Large (2000-10k files)  | Apache Kafka client (Java), Rails monolith reference, NextJS commerce template |
+| Huge (>10k files)       | `kubectl` (Go, ~50k LOC), TypeScript compiler self-host, Rust standard library |
 
 **Per-corpus reference baselines** committed in `bench/baselines/<corpus>.json`:
+
 - `cortex bootstrap --depth shallow` — entity count, cost, wall time
 - `cortex bootstrap --depth deep` — entity count, cost, wall time, quality scorecard
 - **Manual gold standard** — human-curated entity list for the corpus (one-time investment, ~4 hours per corpus)
 
 **CI regression gates**:
+
 - Every release must produce entity count within ±10% of baseline on each corpus.
 - Cost regression >15% on any corpus fails the build.
 - Quality scorecard regression >0.05 on any dimension fails the build.
@@ -13911,18 +15138,19 @@ Phase 33's performance claims (60-90 entities, $3-5, 6-10 minutes on a 1800-file
 
 Phase E's quality gate uses a **precise 6-dimensional rubric** with documented formulas, replacing vague "quality target":
 
-| Dimension | Formula | Default target |
-|---|---|---|
-| **Coverage** | `entities_created / significant_files_in_repo` (significant = LOC > 50 AND not generated AND not test) | ≥ 0.40 |
-| **Depth** | `mean(relationships per entity)` | ≥ 3.0 |
-| **Anchoring** | `entities_with_evidence / total_entities` | ≥ 0.80 |
-| **Connectivity** | `largest_connected_component / total_entities` | ≥ 0.70 |
-| **Diversity** | `distinct_relationship_kinds_used / 6 (kinds available)` | ≥ 0.67 |
-| **Domain coverage** | `domains_with_≥3_entities / total_domains` | ≥ 0.90 |
+| Dimension           | Formula                                                                                                | Default target |
+| ------------------- | ------------------------------------------------------------------------------------------------------ | -------------- |
+| **Coverage**        | `entities_created / significant_files_in_repo` (significant = LOC > 50 AND not generated AND not test) | ≥ 0.40         |
+| **Depth**           | `mean(relationships per entity)`                                                                       | ≥ 3.0          |
+| **Anchoring**       | `entities_with_evidence / total_entities`                                                              | ≥ 0.80         |
+| **Connectivity**    | `largest_connected_component / total_entities`                                                         | ≥ 0.70         |
+| **Diversity**       | `distinct_relationship_kinds_used / 6 (kinds available)`                                               | ≥ 0.67         |
+| **Domain coverage** | `domains_with_≥3_entities / total_domains`                                                             | ≥ 0.90         |
 
 **Overall score** = weighted average:
+
 ```
-quality = 0.25×coverage + 0.20×depth + 0.20×anchoring 
+quality = 0.25×coverage + 0.20×depth + 0.20×anchoring
         + 0.15×connectivity + 0.10×diversity + 0.10×domain_coverage
 ```
 
@@ -13984,7 +15212,7 @@ The `--dry-run` output extends with a **Pareto curve** showing the tradeoff betw
 ```
 Bootstrap Tradeoff Analysis (your 1823-file project)
 ─────────────────────────────────────────────────────────────────────
-Mode            Cost      Time     Entities    Quality    
+Mode            Cost      Time     Entities    Quality
 ─────────────────────────────────────────────────────────────────────
 shallow         $0.20     30s      ~4          0.15       ← current behavior
 skeleton+       $0.30     1m       ~30         0.35       ← Phase A + Tier 1
@@ -14013,33 +15241,38 @@ At the end of every bootstrap, generate an immutable audit artifact at `.knowled
 # Bootstrap Report — 2026-05-18T14:32:11Z
 
 ## Scanned
+
 - 1823 files, 47 directories
 - Languages: TypeScript (78%), Python (18%), HCL (4%)
 - LOC: 234,512 (excluding generated and tests)
 - Monorepo: detected pnpm workspaces (3 packages)
 
 ## Excluded
+
 - Generated: 312 files (Prisma client, GraphQL types, Tailwind output)
 - Test files: 287 files (mined for evidence enrichment)
 - Oversized files (>2000 LOC): 4 files (pre-split into 11 segments)
 
 ## Per-Domain Synthesis
-| Domain | Files | Tier 1 stubs | Tier 2 entities | Evidence anchors | Quality |
-| ------ | ----- | ------------ | --------------- | ---------------- | ------- |
-| auth/  | 18    | 6            | 6               | 22               | 0.84    |
-| services/ | 24 | 7            | 7               | 31               | 0.79    |
-| ... | ... | ... | ... | ... | ... |
+
+| Domain    | Files | Tier 1 stubs | Tier 2 entities | Evidence anchors | Quality |
+| --------- | ----- | ------------ | --------------- | ---------------- | ------- |
+| auth/     | 18    | 6            | 6               | 22               | 0.84    |
+| services/ | 24    | 7            | 7               | 31               | 0.79    |
+| ...       | ...   | ...          | ...             | ...              | ...     |
 
 ## Quality Scorecard
-- Coverage:        0.42 ✓ (target 0.40)
-- Depth:           3.4  ✓ (target 3.0)
-- Anchoring:       0.83 ✓ (target 0.80)
-- Connectivity:    0.74 ✓ (target 0.70)
-- Diversity:       0.83 ✓ (target 0.67)
+
+- Coverage: 0.42 ✓ (target 0.40)
+- Depth: 3.4 ✓ (target 3.0)
+- Anchoring: 0.83 ✓ (target 0.80)
+- Connectivity: 0.74 ✓ (target 0.70)
+- Diversity: 0.83 ✓ (target 0.67)
 - Domain coverage: 0.93 ✓ (target 0.90)
-- Overall:         0.78 ✓ (target 0.75)
+- Overall: 0.78 ✓ (target 0.75)
 
 ## Cost Breakdown
+
 - Phase A (skeleton): $0.00 (0 LLM calls)
 - Phase B Tier 1: $0.32 (14 calls)
 - Phase B Tier 2: $2.18 (47 calls, prompt cache hit rate 64%)
@@ -14049,11 +15282,13 @@ At the end of every bootstrap, generate an immutable audit artifact at `.knowled
 - **Total: $4.30**
 
 ## Failures Encountered
+
 - 2 batches truncated → schema-partitioned mode engaged → success
 - 1 entity rejected (hallucinated sourceFile) → regenerated successfully
 - 4 broken wikilinks → auto-fixed from cross-batch stubs
 
 ## Reproducibility
+
 - Cortex version: v1.4.2
 - Model: claude-opus-4-7 (revision 2026-04-15)
 - Config hash: sha256:8a3f...e2c1
@@ -14067,15 +15302,15 @@ Auditable trail required for compliance use cases (Phase 24 PCI/SOC2/HIPAA). Rep
 
 Phase 33 enters a market with adjacent tools; explicit positioning prevents the "isn't this just X?" question:
 
-| Tool | Approach | Strengths | Cortex's structural advantage |
-|---|---|---|---|
-| **Aider repo-map** | Tree-sitter symbol map | Free, fast, deterministic | Aider produces a symbol index for LLM prompts; Cortex produces a **synthesized semantic entity graph with relationships, evidence, contradictions, and architectural patterns** |
-| **Cursor codebase indexing** | Embedding-based chunk retrieval | Fast semantic search inside the IDE | Cursor returns matched code chunks per query; Cortex produces **persistent structured entities** queryable across sessions and tools |
-| **Continue context retrieval** | Embedding + symbol indexing | Multi-language, IDE-integrated | Same architectural shape as Cursor — no first-class architectural graph; no synthesized entity descriptions |
-| **GitHub Copilot Workspace** | LLM context selection per task | Tight GitHub PR/issue integration | Copilot Workspace context is **ephemeral per task**; Cortex's knowledge **persists and compounds** across PRs, sessions, and team members |
-| **Sourcegraph batch indexer** | LSIF symbol indexing | Enterprise-scale code search | Sourcegraph is **code search infrastructure**; Cortex is **architectural memory** — different layer of the stack |
-| **Sema** | LLM-based code analytics | KPI dashboards for engineering leaders | Sema produces **metrics for leadership**; Cortex produces **actionable architectural ground truth for developers and AI assistants** |
-| **CodeQL / Semgrep** | Static analysis rules | Find specific patterns | Pattern-matchers find known issues; Cortex **discovers and describes architecture**, then runs lint/fitness on top |
+| Tool                           | Approach                        | Strengths                              | Cortex's structural advantage                                                                                                                                                   |
+| ------------------------------ | ------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Aider repo-map**             | Tree-sitter symbol map          | Free, fast, deterministic              | Aider produces a symbol index for LLM prompts; Cortex produces a **synthesized semantic entity graph with relationships, evidence, contradictions, and architectural patterns** |
+| **Cursor codebase indexing**   | Embedding-based chunk retrieval | Fast semantic search inside the IDE    | Cursor returns matched code chunks per query; Cortex produces **persistent structured entities** queryable across sessions and tools                                            |
+| **Continue context retrieval** | Embedding + symbol indexing     | Multi-language, IDE-integrated         | Same architectural shape as Cursor — no first-class architectural graph; no synthesized entity descriptions                                                                     |
+| **GitHub Copilot Workspace**   | LLM context selection per task  | Tight GitHub PR/issue integration      | Copilot Workspace context is **ephemeral per task**; Cortex's knowledge **persists and compounds** across PRs, sessions, and team members                                       |
+| **Sourcegraph batch indexer**  | LSIF symbol indexing            | Enterprise-scale code search           | Sourcegraph is **code search infrastructure**; Cortex is **architectural memory** — different layer of the stack                                                                |
+| **Sema**                       | LLM-based code analytics        | KPI dashboards for engineering leaders | Sema produces **metrics for leadership**; Cortex produces **actionable architectural ground truth for developers and AI assistants**                                            |
+| **CodeQL / Semgrep**           | Static analysis rules           | Find specific patterns                 | Pattern-matchers find known issues; Cortex **discovers and describes architecture**, then runs lint/fitness on top                                                              |
 
 The structural difference at the category level: every other tool indexes for **search** (find me code like X); Cortex synthesizes for **understanding** (what is this codebase, how does it work, what does it depend on, where are its contradictions). The wave-engine bootstrap is what makes that synthesis feasible at scale — competitors cannot trivially add it because their core data model (vector chunks or symbol indexes) is not a knowledge graph.
 
@@ -14110,12 +15345,20 @@ Phase E quality gate doesn't just pass/fail — it **generates a structured feed
     }
   ],
   "weakEntities": [
-    { "name": "PaymentProcessor", "issues": ["only 1 relationship", "no evidence anchors", "description <50 chars"] }
+    {
+      "name": "PaymentProcessor",
+      "issues": [
+        "only 1 relationship",
+        "no evidence anchors",
+        "description <50 chars"
+      ]
+    }
   ]
 }
 ```
 
 Phase B2 (refinement pass) consumes this feedback:
+
 - **Different prompt** for re-synthesis: "your previous synthesis of `services/payment` produced thin entity descriptions and missed relationships; the following entities specifically need attention: [PaymentProcessor, RefundEngine]. Re-read these files with extra attention to interfaces, behavior, error paths, and external integrations."
 - **Larger per-entity budget** (target was 300 tok, allow 500 for refinement).
 - **Expanded context**: includes Phase E's identified weakly-connected entities as additional context for cross-referencing.
@@ -14129,12 +15372,14 @@ This closes the loop between Phase E (detection) and Phase B (generation) — Ph
 All commands run **autonomously in the daemon** — no chat agent required, no MCP roundtrips, no manual "deeper please" prompts. The user issues one command and the daemon runs the wave loop to completion.
 
 **Primary commands**:
+
 - `cortex bootstrap` — runs the full pipeline autonomously. Shows estimated cost + entity count, asks for Y/N confirmation, then executes. Default depth auto-selected from project size (≤500 files: standard; >500 files: deep; >5000 files: exhaustive with `--background` recommended).
 - `cortex bootstrap --yes` — skip confirmation prompt (for CI / scripted use).
 - `cortex bootstrap --background` — fork into daemon, return immediately. Recommended for huge codebases (>5000 files) where bootstrap may take 30+ minutes.
 - `cortex bootstrap --watch` — verbose live progress in terminal (every batch, every entity emitted, every cost increment).
 
 **Depth and budget controls**:
+
 - `cortex bootstrap --depth shallow|standard|deep|exhaustive`:
   - `shallow` — Phase A only (the legacy single-shot behavior, retained as the cheapest mode for tiny projects).
   - `standard` — Phases A+B (default for projects ≤500 files).
@@ -14144,11 +15389,13 @@ All commands run **autonomously in the daemon** — no chat agent required, no M
 - `cortex bootstrap --max-entities 200` — soft cap on entity count (Tier 1 enumeration above the cap triggers a warning + user confirmation).
 
 **Wave engine tuning** (advanced; defaults are auto-tuned per model):
+
 - `cortex bootstrap --parallelism 5` — concurrent batches (default 5; respects provider rate limits).
 - `cortex bootstrap --output-headroom 0.8` — fraction of model's max output tokens to use per batch (default 0.8 = 80%).
 - `cortex bootstrap --schema-partitioned` — force schema-partitioned mode (entities → relationships → evidence → concepts as separate calls). Default: auto-engaged when adaptive sizing detects truncation.
 
 **Status, resume, refine**:
+
 - `cortex bootstrap status` — query in-flight bootstrap state (phase, current domains, batches completed, cost, ETA). Works while bootstrap runs in background.
 - `cortex bootstrap progress --follow` — tail-style live event stream (useful with `--background`).
 - `cortex bootstrap resume` — continue from the last checkpoint (after crash, Ctrl+C, or budget abort).
@@ -14157,18 +15404,21 @@ All commands run **autonomously in the daemon** — no chat agent required, no M
 - `cortex bootstrap quality-report` — per-domain quality scorecard.
 
 **Inspect intermediate artifacts** (for debugging the wave engine):
+
 - `cortex bootstrap inspect skeleton` — show Phase A's domain map and complexity scores.
 - `cortex bootstrap inspect domain <name>` — show Tier 1 + Tier 2 outputs for one domain.
 - `cortex bootstrap inspect batch <id>` — show one batch's LLM input/output for debugging.
 - `cortex bootstrap inspect report <timestamp>` — render a past bootstrap report.
 
 **Benchmark & quality** (for validating the design's claims):
+
 - `cortex bootstrap bench --corpus <name>` — run against a published benchmark corpus, report deltas vs. baseline.
 - `cortex bootstrap bench --all` — full benchmark suite (12 corpora × current provider).
 - `cortex bootstrap quality-report [--domain <name>]` — render the 6-dimensional scorecard for the most recent bootstrap (or a specific domain).
 - `cortex bootstrap quality-report --history` — quality scorecard trend across recent bootstraps.
 
 **Compliance-grade modes** (for regulated environments):
+
 - `cortex bootstrap --deterministic` — enforce reproducibility (temperature=0, fixed ordering, pinned model, no adaptive sizing, no prompt cache). Slower and more expensive but byte-identical given same inputs.
 - `cortex bootstrap --allow-model-migration` — opt into running with a different model version than the previous bootstrap; mandatory in deterministic mode if the model has been updated.
 - `cortex bootstrap --report-only` — produce the bootstrap report from existing `.knowledge/` state without re-running synthesis (for compliance re-reporting cycles).
@@ -14177,19 +15427,20 @@ All commands run **autonomously in the daemon** — no chat agent required, no M
 
 A critical design decision: **who pays for the LLM tokens during bootstrap?** The wave engine must support both execution models, with auto-detection based on entry point.
 
-| Mode | Who runs the loop | LLM caller | Billed against | Best for |
-|---|---|---|---|---|
-| **daemon** | Cortex daemon process | Direct provider API calls (Anthropic/OpenAI/Google SDKs) | User's `*_API_KEY` env var | Headless CI, automation, users with API keys, air-gapped local LLMs |
-| **ide** | IDE's chat loop via MCP roundtrips | IDE's built-in LLM (Claude, GPT-4o, Gemini, etc.) | User's IDE subscription (Claude Code, Cursor Pro, Windsurf, Antigravity, Copilot) | Users without API keys, subscription users, IDE-first workflows |
-| **hybrid** | Daemon for Phase A+E, IDE for Phase B+C+D | Mixed | Mixed | Power users on metered IDE subscriptions who want skeleton/QA done locally and synthesis billed to subscription |
+| Mode       | Who runs the loop                         | LLM caller                                               | Billed against                                                                    | Best for                                                                                                        |
+| ---------- | ----------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **daemon** | Cortex daemon process                     | Direct provider API calls (Anthropic/OpenAI/Google SDKs) | User's `*_API_KEY` env var                                                        | Headless CI, automation, users with API keys, air-gapped local LLMs                                             |
+| **ide**    | IDE's chat loop via MCP roundtrips        | IDE's built-in LLM (Claude, GPT-4o, Gemini, etc.)        | User's IDE subscription (Claude Code, Cursor Pro, Windsurf, Antigravity, Copilot) | Users without API keys, subscription users, IDE-first workflows                                                 |
+| **hybrid** | Daemon for Phase A+E, IDE for Phase B+C+D | Mixed                                                    | Mixed                                                                             | Power users on metered IDE subscriptions who want skeleton/QA done locally and synthesis billed to subscription |
 
 **Auto-detection**:
+
 - `cortex bootstrap` invoked from CLI → defaults to `daemon` mode.
 - `/bootstrap` slash command invoked from IDE chat → defaults to `ide` mode.
 - `get_pending_changes` MCP call with empty `state.json` → returns `mode: "bootstrap-wave"` and lets the IDE drive (effectively `ide` mode).
 - Explicit override via `--execution daemon|ide|hybrid` flag on CLI, or via MCP tool argument.
 
-**Concurrent-invocation safety**: lock file at `.knowledge/.bootstrap.lock` carries `{ pid, mode, startedAt }`. A daemon-mode bootstrap blocks an IDE-mode invocation attempt (and vice versa) with a clear error: *"bootstrap already running in [mode] mode since [time]; use `cortex bootstrap status` to monitor or `cortex bootstrap abort` to cancel."*
+**Concurrent-invocation safety**: lock file at `.knowledge/.bootstrap.lock` carries `{ pid, mode, startedAt }`. A daemon-mode bootstrap blocks an IDE-mode invocation attempt (and vice versa) with a clear error: _"bootstrap already running in [mode] mode since [time]; use `cortex bootstrap status` to monitor or `cortex bootstrap abort` to cancel."_
 
 **Cost attribution clarity**: regardless of mode, every LLM call is recorded with `executionMode: "daemon" | "ide"` and `tokenSource: "api-key" | "ide-subscription"` in the bootstrap report (refinement #18). Users on metered IDE subscriptions can see exactly how many tokens were consumed against their subscription quota, even though Cortex didn't pay the bill.
 
@@ -14300,16 +15551,16 @@ All three tools are also accessible via the daemon-mode wave engine internally �
 
 Different IDEs have different MCP tool-call ergonomics, message rendering, and tool-call concurrency limits. Phase 33 ships per-IDE adapters that normalize the bootstrap experience:
 
-| IDE | Tool concurrency | Step rendering | Slash command | Quirk handling |
-|---|---|---|---|---|
-| **Claude Code** | Sequential (one tool at a time) | Markdown w/ code blocks renders cleanly | `/bootstrap` registered in `.claude/commands/bootstrap.md` | Long instructions truncated at ~8k chars → adapter chunks `step.instructions` |
-| **Cursor** | Sequential, with auto-run for trusted tools | MCP responses render in chat panel | `/bootstrap` via Cursor's slash command registry | Tool argument size cap (~16KB) → adapter pre-clips large `treeSitterFacts` |
-| **Antigravity (Gemini)** | Sequential, tools auto-execute by default | Renders MCP responses inline | `/bootstrap` via `.antigravity/commands/` | Gemini's structured output strict mode → adapter ensures `step` matches Gemini's structured response schema |
-| **VS Code (Copilot)** | Sequential, with manual approval for MCP tools | Tool output in side panel | `/bootstrap` via VS Code command palette | Copilot's MCP integration buffers full tool response before showing → adapter uses smaller per-step responses for perceived progress |
-| **Windsurf** | Sequential, auto-execute trusted tools | Inline rendering | `/bootstrap` via Cascade command | Similar to Cursor; same chunking strategy |
-| **Cline** | Sequential, auto-execute trusted tools | Markdown-heavy rendering | `/bootstrap` via Cline rules | Cline reads MCP server descriptions strictly → adapter ensures every step's `instructions` are self-explanatory standalone |
-| **Continue** | Parallel tool calls allowed | Code-focused rendering | `/bootstrap` via Continue config | Can parallelize Tier 2 batches across multiple tool calls → adapter sets `parallelizable: true` on Tier 2 steps when Continue is the client |
-| **Zed** | Sequential | Compact rendering | `/bootstrap` via Zed assistant | Newer MCP support; adapter follows Claude Code conventions for compatibility |
+| IDE                      | Tool concurrency                               | Step rendering                          | Slash command                                              | Quirk handling                                                                                                                              |
+| ------------------------ | ---------------------------------------------- | --------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Claude Code**          | Sequential (one tool at a time)                | Markdown w/ code blocks renders cleanly | `/bootstrap` registered in `.claude/commands/bootstrap.md` | Long instructions truncated at ~8k chars → adapter chunks `step.instructions`                                                               |
+| **Cursor**               | Sequential, with auto-run for trusted tools    | MCP responses render in chat panel      | `/bootstrap` via Cursor's slash command registry           | Tool argument size cap (~16KB) → adapter pre-clips large `treeSitterFacts`                                                                  |
+| **Antigravity (Gemini)** | Sequential, tools auto-execute by default      | Renders MCP responses inline            | `/bootstrap` via `.antigravity/commands/`                  | Gemini's structured output strict mode → adapter ensures `step` matches Gemini's structured response schema                                 |
+| **VS Code (Copilot)**    | Sequential, with manual approval for MCP tools | Tool output in side panel               | `/bootstrap` via VS Code command palette                   | Copilot's MCP integration buffers full tool response before showing → adapter uses smaller per-step responses for perceived progress        |
+| **Windsurf**             | Sequential, auto-execute trusted tools         | Inline rendering                        | `/bootstrap` via Cascade command                           | Similar to Cursor; same chunking strategy                                                                                                   |
+| **Cline**                | Sequential, auto-execute trusted tools         | Markdown-heavy rendering                | `/bootstrap` via Cline rules                               | Cline reads MCP server descriptions strictly → adapter ensures every step's `instructions` are self-explanatory standalone                  |
+| **Continue**             | Parallel tool calls allowed                    | Code-focused rendering                  | `/bootstrap` via Continue config                           | Can parallelize Tier 2 batches across multiple tool calls → adapter sets `parallelizable: true` on Tier 2 steps when Continue is the client |
+| **Zed**                  | Sequential                                     | Compact rendering                       | `/bootstrap` via Zed assistant                             | Newer MCP support; adapter follows Claude Code conventions for compatibility                                                                |
 
 Adapter selection is automatic based on the MCP client identifier (each IDE sends a distinct `clientInfo.name` in MCP handshake). Adapters are pure-data configuration files in `src/mcp/adapters/<ide>.yaml`:
 
@@ -14321,7 +15572,7 @@ max_tool_arg_bytes: 32768
 parallelizable_steps: false
 auto_execute_tools_default: true
 structured_output_strict: true
-preferred_step_size: medium  # adapter chunks to medium-size steps for Antigravity's UI
+preferred_step_size: medium # adapter chunks to medium-size steps for Antigravity's UI
 ```
 
 #### Slash Command Surface (Cross-IDE)
@@ -14370,12 +15621,14 @@ For organizations running the Phase 22 Central Knowledge Server, bootstrap can r
 The bootstrap docs (and `cortex bootstrap --help`) include explicit guidance:
 
 **Choose `--execution ide` when**:
+
 - You're already paying for an IDE subscription with included LLM tokens (Claude Code / Cursor Pro / Antigravity / Windsurf / Copilot Enterprise).
 - You don't have an LLM provider API key.
 - You want the bootstrap visible as a conversation in your IDE chat.
 - You're a single developer bootstrapping a personal project.
 
 **Choose `--execution daemon` when**:
+
 - You're running in CI/automation (no IDE available).
 - You have an API key and want the cheapest per-token pricing (direct API often cheaper than per-IDE subscription tokens).
 - You're using a local LLM (Ollama, vLLM, TGI) — no IDE intermediation needed.
@@ -14383,6 +15636,7 @@ The bootstrap docs (and `cortex bootstrap --help`) include explicit guidance:
 - You're bootstrapping a huge codebase (>5000 files) where IDE chat history would become unwieldy.
 
 **Choose `--execution hybrid` when**:
+
 - You want skeleton scan + quality gate to run locally (free, fast, deterministic) but synthesis billed to your IDE subscription.
 - You're on a metered subscription and want to control which expensive operations the subscription pays for.
 
@@ -14437,12 +15691,14 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 ### Definition of Done (DoD)
 
 **Autonomous single-command operation (daemon mode)**:
+
 - `cortex bootstrap` runs the **entire pipeline autonomously** from one CLI invocation — no chat agent, no MCP roundtrips, no manual "deeper please" prompts.
 - The daemon orchestrates the wave loop programmatically via direct LLM API calls.
 - `--background` and `--watch` modes work as specified.
 - `cortex bootstrap status` returns accurate state for in-flight bootstrap.
 
 **IDE-orchestrated wave bootstrap (MCP mode)**:
+
 - `/bootstrap` slash command works identically across all 9 supported IDEs (Claude Code, Cursor, Antigravity, VS Code, Windsurf, Cline, Continue, Zed, Claude Desktop).
 - `get_pending_changes` returns `mode: "bootstrap-wave"` when bootstrap is in progress, with per-step instructions for the IDE's LLM.
 - Multi-step MCP state machine drives the conversation: discover → confirm → tier1 → tier2 (loop) → hotpath → crossdomain → quality-gate → complete.
@@ -14454,17 +15710,20 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 - Mode upgrade/downgrade between daemon and IDE works via `--upgrade-to-ide` / explicit `--execution` flag with checkpoint preservation.
 
 **Dual execution model**:
+
 - Auto-detect entry point: CLI → daemon mode; MCP → IDE mode.
 - Explicit override via `--execution daemon|ide|hybrid` on CLI or `executionMode` arg in MCP calls.
 - Hybrid mode: Phase A + Phase E run in daemon (free/fast/deterministic); Phase B + C + D run via IDE chat (billed to subscription).
 - Bootstrap report renders `executionMode` and per-step `tokenSource` for full cost attribution.
 
 **MCP-over-HTTP for central server (Phase 22 integration)**:
+
 - Central server's MCP-over-HTTP endpoint exposes the same wave-bootstrap state machine.
 - Pre-bootstrap from CI job: `cortex bootstrap --execution daemon --target-server <url>` runs centrally; per-developer IDEs inherit via Phase 21 pull.
 - Bootstrap runs are first-class events in Phase 26 audit log and Phase 29 FinOps reporting; attributable to requesting user/team via Phase 25 SSO.
 
 **Output-budget-aware wave engine**:
+
 - Per-batch sizing derived from `model.max_output_tokens × CORTEX_OUTPUT_HEADROOM`, not from input size.
 - Adaptive sizing converges within first 2-3 batches per domain (measured via test on heterogeneous synthetic codebase).
 - Schema partitioning (entities → relationships → evidence → concepts) auto-engages on truncation.
@@ -14472,11 +15731,13 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 - Reusable `src/llm/wave.ts` engine consumable by Phases 17, 20.16, 20.18, 29.
 
 **Two-tier synthesis**:
+
 - Tier 1 enumeration pass produces entity stub inventory per domain in one cheap call.
 - Tier 2 detail pass batches enumerated stubs into output-budget-sized groups.
 - Tier 2 batches run in parallel (default 5 concurrent, rate-limit-aware with 429 backoff).
 
 **Quality targets on the 1800-file reference project**:
+
 - `cortex bootstrap` (no flags, depth auto = deep) produces **≥60 entities and ≥12 concepts in one autonomous run** (Phase 33's revised target with the wave engine).
 - All major architectural domains covered (auth, state, routing, services, hooks, components-atoms, components-molecules, utilities, config) — verified by per-domain entity count ≥ 1.
 - Each entity has ≥1 evidence anchor (Phase 7).
@@ -14484,25 +15745,30 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 - Wall-clock time ≤10 minutes; total LLM cost ≤$5.50 at default settings.
 
 **Reliability**:
+
 - Bootstrap is resumable across process restarts at sub-batch granularity (no >30s of work lost on crash).
 - `--budget` hard-cap is honored; bootstrap aborts cleanly at cap with checkpoint.
 - Mid-batch crash recovery: re-running `cortex bootstrap resume` picks up only unfinished calls within the in-flight batch.
 - Per-domain quality scorecard visible via `cortex bootstrap quality-report`.
 
 **MCP progress streaming**:
+
 - `bootstrap_progress` MCP resource emits real-time events (phase, current batch, cost, ETA, entity count).
 - IDE clients (Claude Code, Cursor, VS Code) render a live progress bar without controlling the loop.
 
 **Provider compatibility**:
+
 - Works against Anthropic, OpenAI, Google, and OpenAI-compatible local providers (Ollama, vLLM, TGI).
 - Per-provider output-token caps respected (4k for older models, 8k for Claude/Gemini, 16k for GPT-4o).
 - Per-provider continuation strategy auto-selected.
 
 **Domain-specialized prompts**:
+
 - ≥10 domain-specialized prompts shipped (React stack: components-atoms, components-molecules, hooks, redux-slices, redux-sagas, routing, services-api, services-auth, utilities, config) + 2-3 backend stacks (Express/Fastify, FastAPI, Spring Boot).
 - Unknown domains fall back to general Librarian prompt with no degradation.
 
 **Advanced refinements (research-grade additions)**:
+
 - Hybrid symbolic + LLM extraction (tree-sitter for 12+ languages) reduces Tier 2 cost by ≥30% on benchmark corpus.
 - Streaming entity emission — entities appear in `progress.json` before batch completes; mid-batch crash loses ≤1 entity.
 - Empirical benchmark suite covers 12 corpora; CI regression gates fail on >10% entity-count delta, >15% cost regression, or >0.05 quality regression on any dimension.
@@ -14516,9 +15782,11 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 - Multi-pass refinement: Phase E generates structured feedback consumed by targeted Phase B2; up to 3 refinement passes with early termination on diminishing returns.
 
 **Comparison & positioning**:
+
 - Documented comparison vs. Aider repo-map, Cursor indexing, Continue, Copilot Workspace, Sourcegraph, Sema, CodeQL — published in `docs/comparison.md`.
 
 **Tests**:
+
 - Skeleton scan correctness on synthetic 1000-file repo with monorepo structure + polyglot + dynamic imports + barrel files (Phase A edge cases).
 - Output-budget-aware batch sizing converges to optimal within 3 batches on synthetic heterogeneous corpus.
 - Schema partitioning correctness — split outputs reconstruct identically to single-shot.
@@ -14545,7 +15813,7 @@ For the same 1800-file production project: **Current bootstrap = 30 seconds, $0.
 ### Pros & Cons
 
 - ✅ **Pros**: **Directly fixes the most adoption-blocking issue in Cortex today** — observed in production on a real customer-grade project. Turns the first-impression experience from "this barely works" to "this understood my entire codebase in 6 minutes, autonomously." Architectural correctness: identifies and engineers around the **physical output-token wall** that no prompt engineering can bypass, then orchestrates the necessary multi-call wave loop at machine speed instead of chat-agent speed. **Dual execution model (daemon vs. IDE) means the bootstrap works equally well for API-key users (cheaper per-token, headless, parallel) and IDE-subscription users (no API key required, billed against existing subscription, visible in chat)** — both cohorts are first-class, not retrofitted. The reusable `src/llm/wave.ts` engine is consumable across Phases 17, 20.16, 20.18, and 29 — single investment, multiple payoffs. Production-hardening refinements (polyglot/monorepo awareness, prompt caching for 40% cost reduction, semantic validation pipeline, multi-provider failover, declarative config, dry-new mode, explicit failure taxonomy) ship Phase 33 as production-grade. Advanced research-grade refinements (hybrid symbolic+LLM extraction for 30-50% cost reduction, streaming entity emission, empirical benchmark suite with CI regression gates, 6-dimensional quality scorecard with documented formulas, provider-precise tokenization, smart 200k-window context utilization, robust import-graph parsing, Pareto cost-quality dry-run, auditable bootstrap report artifact, comparison vs. competitor tools, determinism for compliance, multi-pass refinement with feedback loop) ship Phase 33 as research-grade. Multi-step MCP protocol with per-IDE adapters (9 IDEs) means **`/bootstrap` works identically across Claude Code, Cursor, Antigravity, VS Code, Windsurf, Cline, Continue, Zed, Claude Desktop** — no per-IDE divergence. MCP-over-HTTP variant integrates with Phase 22 Central Knowledge Server so platform teams can pre-bootstrap repos centrally in CI and developers inherit via Phase 21 pull. Cost attribution flows through Phase 26 audit + Phase 29 FinOps so enterprise customers get bootstrap-as-a-FinOps-event. Domain-specialized prompts give Cortex a path to first-class support for any tech stack without core code changes. Quality gate + auto-refine loop means **self-correcting** bootstrap. Incremental + enrichment + refine-stale + refine-low-quality modes mean the investment compounds over a project's lifetime; bootstrap isn't a one-time event.
-- ❌ **Cons**: ~20× the raw LLM cost vs. the current shallow bootstrap ($3-5 vs. $0.20); mitigated by `--budget` cap, `--dry-run` cost preview, prompt-cache savings on warm runs (~40%), and `--depth shallow` retaining the legacy behavior for users who want cheap. The wave engine + production-hardening surfaces add real engineering surface area (~15-20 new TypeScript files) — significant compared to the current ~5-line bootstrap path. Mitigated by independent testability per refinement and reusability of `wave.ts` across other phases. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX in exchange for a dramatically better cold-start *outcome*; mitigated by the live progress UI showing per-domain ETA, by `--background` mode for huge codebases, and by the fact that bootstrap is one-shot (users don't pay this latency repeatedly). Per-domain specialized prompts are a permanent maintenance surface as ecosystems evolve; mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Multi-provider failover testing requires CI against multiple paid providers — real ongoing cost; mitigated by mocking the provider boundary in standard tests and gating live multi-provider tests behind a CI flag run only on release candidates.
+- ❌ **Cons**: ~20× the raw LLM cost vs. the current shallow bootstrap ($3-5 vs. $0.20); mitigated by `--budget` cap, `--dry-run` cost preview, prompt-cache savings on warm runs (~40%), and `--depth shallow` retaining the legacy behavior for users who want cheap. The wave engine + production-hardening surfaces add real engineering surface area (~15-20 new TypeScript files) — significant compared to the current ~5-line bootstrap path. Mitigated by independent testability per refinement and reusability of `wave.ts` across other phases. Bootstrap latency goes from 30s to ~6-10 minutes — a worse cold-start UX in exchange for a dramatically better cold-start _outcome_; mitigated by the live progress UI showing per-domain ETA, by `--background` mode for huge codebases, and by the fact that bootstrap is one-shot (users don't pay this latency repeatedly). Per-domain specialized prompts are a permanent maintenance surface as ecosystems evolve; mitigated by shipping prompts as data, accepting community contributions, and falling back to the general Librarian prompt on unknown domains. Multi-provider failover testing requires CI against multiple paid providers — real ongoing cost; mitigated by mocking the provider boundary in standard tests and gating live multi-provider tests behind a CI flag run only on release candidates.
 
 ---
 
@@ -14561,17 +15829,17 @@ A pluggable Provider Registry that decouples response generation from any specif
   ```yaml
   id: ollama
   displayName: "Ollama (Local)"
-  type: local                    # local | cloud | ide
-  costTier: free                 # free | economy | standard | premium
+  type: local # local | cloud | ide
+  costTier: free # free | economy | standard | premium
   transport: http
   http:
     baseUrl: http://localhost:11434
     chatEndpoint: /api/chat
-    modelsEndpoint: /api/tags    # auto-discovery
+    modelsEndpoint: /api/tags # auto-discovery
     streaming: true
   capabilities: [text, code, vision]
   latencyProfile: medium
-  autoDiscover: true             # scan models on startup
+  autoDiscover: true # scan models on startup
   ```
 - **Bundled provider plugins**: `anthropic`, `openai`, `google`, `ollama`, `azure-openai`, `bedrock`, `vertex-ai`, `ide-passthrough` (uses connected IDE's LLM via MCP). Customers can drop in custom provider plugins for proprietary/internal LLM gateways without core code changes.
 - **Ollama auto-discovery**: on startup, if `localhost:11434` (or `OLLAMA_HOST`) is reachable, the Ollama plugin enumerates pulled models via `GET /api/tags`. Each appears as a selectable provider+model in the registry. Install Ollama, pull a model, it appears in Cortex — zero config.
@@ -14587,15 +15855,15 @@ A pluggable Provider Registry that decouples response generation from any specif
   embeddings:
     primary: openai:text-embedding-3-small
     fallback: [google:text-embedding-004]
-  predictor:                     # Phase 20.20 active inference
+  predictor: # Phase 20.20 active inference
     primary: ollama:qwen2.5-coder-1.5b
-  tier1_enumeration:             # Phase 33 cheap pass
+  tier1_enumeration: # Phase 33 cheap pass
     primary: ollama:llama3.1-8b
     fallback: [anthropic:claude-haiku-4-5]
-  tier2_detail:                  # Phase 33 expensive pass
+  tier2_detail: # Phase 33 expensive pass
     primary: anthropic:claude-opus-4-7
     fallback: [openai:gpt-4o]
-  reasoning:                     # Phase 20.18 ToT
+  reasoning: # Phase 20.18 ToT
     primary: anthropic:claude-opus-4-7
   ```
 - **Cost-tier fallback**: when a primary fails (rate limit, outage, quota), the registry walks the fallback chain in order. Integrates smart rate limit detection (429s) and expired session tracking to trigger auto-recovery and fallback. Every fallback emits a Phase 26 audit event so customers see when degradation occurred.
@@ -14671,6 +15939,7 @@ GET  /v1/ops/<op-id>/stream        — Server-Sent Events stream of progress eve
 ```
 
 Operation types covered:
+
 - `bootstrap` (Phase 33) — deep recursive bootstrap
 - `consolidate` (Phase 20.17) — sleep consolidation
 - `distill-train` (Phase 19) — distilled Librarian fine-tune
@@ -14681,6 +15950,7 @@ Operation types covered:
 - `dlp-retroactive-scan` (Phase 26.1) — historical knowledge re-scan
 
 CLI mirror for terminal users:
+
 - `cortex op list [--active|--recent|--failed]`
 - `cortex op status <op-id>`
 - `cortex op stream <op-id>` (live progress in terminal)
@@ -14700,15 +15970,16 @@ Configurable notification channels delivered on operation lifecycle events (`sta
 - **Custom webhook** for arbitrary HTTP POST destinations
 
 Notification policies per operation type in `cortex.notifications.yaml`:
+
 ```yaml
 notifications:
   bootstrap:
     completed: [slack:#cortex-ops, mobile-push]
-    failed:    [slack:#cortex-ops, mobile-push, email:engineering-leads@acme.com]
+    failed: [slack:#cortex-ops, mobile-push, email:engineering-leads@acme.com]
     budget_breached: [slack:#cortex-ops, mobile-push, sms:+1-555-CTO]
   distill-train:
     completed: [email:ml-team@acme.com]
-    failed:    [pagerduty:ml-platform]
+    failed: [pagerduty:ml-platform]
   dlp-retroactive-scan:
     completed: [slack:#security]
     findings_exceed_threshold: [slack:#security-incidents, pagerduty:security]
@@ -14730,6 +16001,7 @@ PWA surfaces (intentionally narrow):
 - **Read-only by default**: PWA defaults to read-only mode; control surfaces are opt-in via Phase 25 SSO grant + biometric pairing
 
 What the PWA explicitly does **not** show (these belong to Nexus, not Cortex):
+
 - ❌ Real-time IDE mirroring (no Ghost Bridge)
 - ❌ Real-time agent chat / agent-to-agent event bus
 - ❌ Visual code editor / file manipulation
@@ -14778,10 +16050,10 @@ When `cortex remote enable` starts the tunnel and prints the public URL, also pr
 
 ```typescript
 // npm install qrcode (already available as a lightweight dep)
-import QRCode from 'qrcode';
+import QRCode from "qrcode";
 
 async function printQR(url: string): Promise<void> {
-  const qr = await QRCode.toString(url, { type: 'terminal', small: true });
+  const qr = await QRCode.toString(url, { type: "terminal", small: true });
   console.log(qr);
   console.log(`\nScan to connect, or visit: ${url}\n`);
 }
@@ -14804,18 +16076,18 @@ cortex remote enable --provider cloudflare --qr
 
 ### The Two Products Are Fundamentally Different
 
-| Dimension | **Cortex** | **Nexus-OS** |
-|---|---|---|
-| **Core thesis** | Persistent architectural memory for AI assistants | Real-time multi-agent orchestration with visual IDE awareness |
-| **Time horizon** | Months to years (memory compounds) | Milliseconds to seconds (real-time event loop) |
-| **Data model** | Knowledge graph (entities + relationships + evidence) | Event bus (signals + agent messages + visual snapshots) |
-| **Primary action** | Synthesize from code changes; surface insights on query | Coordinate agents acting on IDEs/files/browsers |
-| **State of the world** | Always-current architectural ground truth | Always-current snapshot of what every agent is doing |
-| **Primary user** | Developer + AI assistant (one user, one IDE typically) | Operator + agent fleet (one user, many agents, many devices) |
-| **Failure mode if absent** | AI assistants re-discover architecture every session | No mission control for distributed agents |
-| **What competitors look like** | CodeScene, Sourcegraph, Aider repo-map | Devin, Cline, AutoGen, MetaGPT |
-| **Sales motion** | Architecture-team / VP-Engineering champion | Platform-team / Head-of-AI champion |
-| **Pricing axis** | Per-developer-seat + LLM consumption | Per-orchestrator + per-agent-execution |
+| Dimension                      | **Cortex**                                              | **Nexus-OS**                                                  |
+| ------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------- |
+| **Core thesis**                | Persistent architectural memory for AI assistants       | Real-time multi-agent orchestration with visual IDE awareness |
+| **Time horizon**               | Months to years (memory compounds)                      | Milliseconds to seconds (real-time event loop)                |
+| **Data model**                 | Knowledge graph (entities + relationships + evidence)   | Event bus (signals + agent messages + visual snapshots)       |
+| **Primary action**             | Synthesize from code changes; surface insights on query | Coordinate agents acting on IDEs/files/browsers               |
+| **State of the world**         | Always-current architectural ground truth               | Always-current snapshot of what every agent is doing          |
+| **Primary user**               | Developer + AI assistant (one user, one IDE typically)  | Operator + agent fleet (one user, many agents, many devices)  |
+| **Failure mode if absent**     | AI assistants re-discover architecture every session    | No mission control for distributed agents                     |
+| **What competitors look like** | CodeScene, Sourcegraph, Aider repo-map                  | Devin, Cline, AutoGen, MetaGPT                                |
+| **Sales motion**               | Architecture-team / VP-Engineering champion             | Platform-team / Head-of-AI champion                           |
+| **Pricing axis**               | Per-developer-seat + LLM consumption                    | Per-orchestrator + per-agent-execution                        |
 
 ### The Moat
 
@@ -14829,14 +16101,15 @@ cortex remote enable --provider cloudflare --qr
 
 Sell each product separately for its standalone value; bundle them when the customer has both pains:
 
-| Customer profile | What they buy |
-|---|---|
-| Mid-market dev team, 50 engineers, struggling with codebase complexity | **Cortex Standard** ($X per seat) |
-| Large enterprise, 1000 engineers, regulated industry | **Cortex Enterprise** + Phases 25-32 add-ons |
-| AI-first startup running fleets of background agents | **Nexus-OS Standard** ($Y per orchestrator) |
+| Customer profile                                                                 | What they buy                                            |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Mid-market dev team, 50 engineers, struggling with codebase complexity           | **Cortex Standard** ($X per seat)                        |
+| Large enterprise, 1000 engineers, regulated industry                             | **Cortex Enterprise** + Phases 25-32 add-ons             |
+| AI-first startup running fleets of background agents                             | **Nexus-OS Standard** ($Y per orchestrator)              |
 | Enterprise with both pains: fleet of AI agents AND need for architectural memory | **Cortex + Nexus Bundle** with cross-product integration |
 
 **Integration at the bundle level**:
+
 - Nexus agents read Cortex's knowledge graph via MCP — they have architectural ground truth, not just real-time snapshots.
 - Cortex's Phase 33 deep bootstrap can use Nexus's headless agent runtime as a parallel execution backend.
 - Phase 41 (per-agent memory partitions) below makes Nexus agents first-class Cortex memory citizens — each Nexus agent has its own scoped Cortex memory plus access to shared workspace memory.
@@ -14852,7 +16125,7 @@ This is the most important boundary in the two-product strategy. Several Nexus f
 
 - **Real-time CDP visual scraping** (Nexus Block A) — sub-100ms IDE mirroring is action-time observability, not memory.
 - **IDE adapter pattern + per-IDE profile registry** (Nexus Block B) — Nexus's multi-IDE control plane is its core IP; Cortex's MCP integration in Phase 33 reaches IDEs for synthesis, not for live control.
-- **Real-time ephemeral agent event bus** (the *transport* layer of Nexus Phase 17.2) — sub-second, fire-and-forget, "FeatureDev start typing NOW" messages. Optimized for runtime action coordination at machine speed. Messages disappear after delivery — wrong shape for Cortex's persistent-memory model.
+- **Real-time ephemeral agent event bus** (the _transport_ layer of Nexus Phase 17.2) — sub-second, fire-and-forget, "FeatureDev start typing NOW" messages. Optimized for runtime action coordination at machine speed. Messages disappear after delivery — wrong shape for Cortex's persistent-memory model.
 - **Voice wake word / glassmorphism UI / visual mirror panel** (Nexus 33.x UX features) — these define Nexus's brand identity as a mission-control surface.
 - **Headless agent action runtime** (Nexus Phase 8.2) — long-running background agents performing actions on files / IDEs / browsers without human prompting. Cortex's daemon is observation-driven (it reacts to code changes); Nexus's headless runtime is goal-driven (it pursues objectives autonomously).
 
@@ -14862,21 +16135,21 @@ This is the most important boundary in the two-product strategy. Several Nexus f
 - **Multi-workspace knowledge graph unification** (Phase 42) — memory-side coordination of one developer's multiple projects. Cross-workspace queries with provenance. Different from Nexus's unified workspace view: Cortex's unification is semantic (entities correlated by meaning), not visual (Nexus shows the same IDE across workspaces).
 - **Memory federation protocol** (Phase 44) — formal protocol for how partitions combine, who can read what, conflict resolution. Different from Nexus's bus: Cortex's protocol is bilateral grants + signed envelopes, not a real-time message broker.
 - **Cognitive substrate observability** (Phase 45) — memory-side dashboard. Substrate map + partition inventory + conflict heatmap + federation grant map. Different from Nexus's mission control: Cortex's observatory shows knowledge state, not real-time event firehose.
-- **Persistent agent messaging substrate** (Phase 43.1) — agent-to-agent messaging *where every message is a first-class memory entity*. Messages live in partitions forever, queryable by sender/recipient/topic/timestamp/referenced-entity, audited via Phase 26, governable via Phase 25.1 grants. Different from Nexus's bus: Cortex's messaging is asynchronous (seconds-to-minutes latency), durable (never auto-deleted), and architecturally-anchored (messages can reference entities, partitions, syntheses).
+- **Persistent agent messaging substrate** (Phase 43.1) — agent-to-agent messaging _where every message is a first-class memory entity_. Messages live in partitions forever, queryable by sender/recipient/topic/timestamp/referenced-entity, audited via Phase 26, governable via Phase 25.1 grants. Different from Nexus's bus: Cortex's messaging is asynchronous (seconds-to-minutes latency), durable (never auto-deleted), and architecturally-anchored (messages can reference entities, partitions, syntheses).
 - **Long-running operation monitoring + mobile PWA** (Phase 33.2) — remote status surface for Cortex's long ops (bootstrap, consolidation, distillation, communities-build). Different from Nexus's mission-control PWA: Cortex's PWA is operation-status focused, not real-time agent activity focused. A bundled customer installs both PWAs and sees clear, non-overlapping value.
 
 #### The principle
 
-| Pattern in Nexus | Pattern in Cortex | Why both exist |
-|---|---|---|
-| Real-time event bus (ms latency, ephemeral, fire-and-forget) | Persistent messaging substrate (s-min latency, durable, queryable forever) | Action coordination vs. architectural coordination — different requirements, both legitimate |
-| Multi-IDE adapter control plane | Multi-workspace unified knowledge graph | Acting on many IDEs vs. remembering across many codebases — different axes |
-| Mission control PWA (live agent activity, IDE mirroring) | Operations status PWA (long-op progress, cost, reports) | Monitoring runtime activity vs. monitoring batch operations — different views into different systems |
-| Headless action runtime (background agents pursuing goals) | Daemon synthesis pipeline (background reaction to code changes) | Goal-driven autonomy vs. observation-driven memory — different intentions |
+| Pattern in Nexus                                             | Pattern in Cortex                                                          | Why both exist                                                                                       |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Real-time event bus (ms latency, ephemeral, fire-and-forget) | Persistent messaging substrate (s-min latency, durable, queryable forever) | Action coordination vs. architectural coordination — different requirements, both legitimate         |
+| Multi-IDE adapter control plane                              | Multi-workspace unified knowledge graph                                    | Acting on many IDEs vs. remembering across many codebases — different axes                           |
+| Mission control PWA (live agent activity, IDE mirroring)     | Operations status PWA (long-op progress, cost, reports)                    | Monitoring runtime activity vs. monitoring batch operations — different views into different systems |
+| Headless action runtime (background agents pursuing goals)   | Daemon synthesis pipeline (background reaction to code changes)            | Goal-driven autonomy vs. observation-driven memory — different intentions                            |
 
 The unifying principle: **anything where the primary artifact is a persistent memory entity → Cortex. Anything where the primary artifact is a transient event or action → Nexus.** Some capabilities have both faces (an agent message has both an event aspect and a memory aspect), and in those cases the two products provide complementary views — Nexus's event-aspect via its bus, Cortex's memory-aspect via its substrate. Customers running the bundle see both faces of the same underlying coordination.
 
-**One sentence rule of thumb**: *if you'd want to query it 6 months later, it's Cortex. If you'd want a sub-second alert, it's Nexus. If both, that's the bundle's job.*
+**One sentence rule of thumb**: _if you'd want to query it 6 months later, it's Cortex. If you'd want a sub-second alert, it's Nexus. If both, that's the bundle's job._
 
 ---
 
@@ -14921,7 +16194,7 @@ Cortex Standard ships Phases 1-32 + Phase 33 (bootstrap). Cortex Enterprise acti
 
 **For**: compliance officers and security engineers who don't want to learn Cortex's CLI — they want to ask questions in natural language.
 
-**What it does**: conversational interface to Phase 24 compliance packs + Phase 26 audit log + Phase 32 trust portal. Sample interactions: *"Which entities in our payment domain are missing human review per PCI 6.2?"* / *"Show me every constraint violation in the last quarter, grouped by team"* / *"Generate a HIPAA Phase 24 report for last month and attach it to ticket COMP-447."* Backed by a specialized Librarian persona (built using Module 1's Visual Librarian Designer architecture if available).
+**What it does**: conversational interface to Phase 24 compliance packs + Phase 26 audit log + Phase 32 trust portal. Sample interactions: _"Which entities in our payment domain are missing human review per PCI 6.2?"_ / _"Show me every constraint violation in the last quarter, grouped by team"_ / _"Generate a HIPAA Phase 24 report for last month and attach it to ticket COMP-447."_ Backed by a specialized Librarian persona (built using Module 1's Visual Librarian Designer architecture if available).
 
 **Why Pro**: compliance is a high-value, narrow audience; Pro pricing reflects the per-seat value to compliance professionals who would otherwise pay $200/hour for the same answers from a consultant.
 
@@ -14949,16 +16222,16 @@ Cortex Standard ships Phases 1-32 + Phase 33 (bootstrap). Cortex Enterprise acti
 
 ### Pro Module Summary
 
-| Module | Target buyer | Pricing axis | Activation gate |
-|---|---|---|---|
-| 1. Visual Librarian Designer | Architects, tech leads | Per-author seat | Cortex Standard |
-| 2. Governance Workflows | Compliance, security | Per-active-workflow + approver seats | Cortex Enterprise (Phase 23 + 26) |
-| 3. Private Skill Marketplace | Enterprises, consultancies | Per-tenant + transaction fee | Cortex Standard (Phase 20.13) |
-| 4. Compliance Copilot | Compliance officers | Per-compliance seat | Cortex Enterprise (Phase 24 + 26) |
-| 5. Librarian Observability | SLA-bound Enterprise | Per-workspace + retention tier | Cortex Enterprise (Phase 31) |
-| 6. Tool Marketplace | Power users, internal platforms | Per-tenant + revenue share | Cortex Standard (Phase 20.23) |
+| Module                       | Target buyer                    | Pricing axis                         | Activation gate                   |
+| ---------------------------- | ------------------------------- | ------------------------------------ | --------------------------------- |
+| 1. Visual Librarian Designer | Architects, tech leads          | Per-author seat                      | Cortex Standard                   |
+| 2. Governance Workflows      | Compliance, security            | Per-active-workflow + approver seats | Cortex Enterprise (Phase 23 + 26) |
+| 3. Private Skill Marketplace | Enterprises, consultancies      | Per-tenant + transaction fee         | Cortex Standard (Phase 20.13)     |
+| 4. Compliance Copilot        | Compliance officers             | Per-compliance seat                  | Cortex Enterprise (Phase 24 + 26) |
+| 5. Librarian Observability   | SLA-bound Enterprise            | Per-workspace + retention tier       | Cortex Enterprise (Phase 31)      |
+| 6. Tool Marketplace          | Power users, internal platforms | Per-tenant + revenue share           | Cortex Standard (Phase 20.23)     |
 
-Each Pro module has a clear activation gate (which base-platform phases it depends on) and a clear target buyer (which makes pricing conversations focused). The six together represent the natural high-value extensions that customers ask for *after* they've adopted Cortex — not features that need to ship before product-market fit, but the right monetization expansion vectors once it's reached.
+Each Pro module has a clear activation gate (which base-platform phases it depends on) and a clear target buyer (which makes pricing conversations focused). The six together represent the natural high-value extensions that customers ask for _after_ they've adopted Cortex — not features that need to ship before product-market fit, but the right monetization expansion vectors once it's reached.
 
 ---
 
@@ -14968,30 +16241,37 @@ Each Pro module has a clear activation gate (which base-platform phases it depen
 By adapting the most aggressive performance optimizations from 3D game engines (Doom, Unreal, Silent Hill) and modern ML inference (vLLM, Speculative Decoding), Project Cortex can achieve "infinite" scale on enterprise monorepos without token explosion or latency bottlenecks. These are pure software engineering translations of rendering pipeline hacks, repurposed for massive LLM context windows.
 
 ### Phase 34.1: Virtualized Context Streaming (Inspired by UE5 Nanite)
+
 **Technical Terms**: Cortex generates a dynamic "Level of Detail" hierarchy for every entity. LOD 0 (1,000 tokens) for immediate proximity (full AST, source code); LOD 1 (150 tokens) for 1-hop dependencies (interfaces only); LOD 2 (15 tokens) for distant graph clusters (name and summary only). As the LLM traverses the graph, Cortex streams in higher LODs for the "focal point" and instantly degrades the LOD for distant modules.
 **Engineering ROI**: Infinite Context Scaling. The LLM can reason about a 10,000-file monorepo within a strict 32k context window because 95% of the repo is rendered at LOD 2.
 
 ### Phase 34.2: Speculative Architectural Decoding (Inspired by ML Speculative Decoding)
-**Technical Terms**: Cortex uses a highly quantized local model (or a cheap API like Haiku/Llama-3-8B) to rapidly generate the "draft" architectural impact of a 50-file PR. The expensive reasoning model (Opus/Sonnet) is then called *once* to verify the draft, correct hallucinations, and approve the synthesis.
+
+**Technical Terms**: Cortex uses a highly quantized local model (or a cheap API like Haiku/Llama-3-8B) to rapidly generate the "draft" architectural impact of a 50-file PR. The expensive reasoning model (Opus/Sonnet) is then called _once_ to verify the draft, correct hallucinations, and approve the synthesis.
 **Engineering ROI**: 300% Speedup & 70% Cost Reduction. Massively accelerates CI/CD pipeline blocking and PR reviews by offloading token-generation to cheap infrastructure, using the expensive model solely as an auditor.
 
 ### Phase 34.3: Entity Visibility Partitioning (Inspired by Doom Engine BSP Trees)
+
 **Technical Terms**: When evaluating a change, Cortex pre-computes strict "Visibility Trees" based on Domain-Driven Design (DDD) boundaries and explicit graph edges. If a domain has no inbound or outbound edges to the active file, it is mathematically culled from the search space before the vector database is even queried.
 **Engineering ROI**: Eliminates 80% of Graph Traversal Overhead. Ensures zero context-window pollution by only rendering the architectural "rooms" connected by dependency doors.
 
 ### Phase 34.4: Cognitive Fog & Abstraction Masking (Inspired by Silent Hill)
-**Technical Terms**: Cortex enforces a strict "Cognitive Fog" at 2 graph hops away from the active file. Beyond this horizon, implementation details are intentionally masked out, and the AI is *only* allowed to see the public API interfaces of distant services.
+
+**Technical Terms**: Cortex enforces a strict "Cognitive Fog" at 2 graph hops away from the active file. Beyond this horizon, implementation details are intentionally masked out, and the AI is _only_ allowed to see the public API interfaces of distant services.
 **Engineering ROI**: Forced SOLID Compliance. Prevents the AI from writing tightly coupled spaghetti code based on deep implementation details.
 
 ### Phase 34.5: Data-Oriented Synthesis Pipeline (Inspired by Game Engine ECS)
+
 **Technical Terms**: Instead of representing the knowledge graph as nested JSON objects, Cortex pivots the graph into a columnar/ECS structure. All `Dependencies` live in one contiguous typed array; all `Invariants` in another.
 **Engineering ROI**: 10x-50x Faster Graph Validation. Lint checks operate on a flat array of integers (IDs) rather than deserializing thousands of JSON objects, executing in under 5 milliseconds.
 
 ### Phase 34.6: Heuristic Embedding Pruning (Inspired by Quake III Fast Inverse Square Root)
+
 **Technical Terms**: Cortex uses Locality Sensitive Hashing (LSH) and bitwise XOR operations to find "roughly similar" entities 100x faster using integer math, only doing the expensive floating-point cosine similarity on the top 1% of matches.
 **Engineering ROI**: Sub-millisecond Local Semantic Search without spinning up a heavy vector database like Pinecone.
 
 ### Phase 34.7: Paged Context Allocation (Inspired by ML PagedAttention)
+
 **Technical Terms**: Cortex pre-chunks the knowledge graph into exact, fixed-token-size pages (e.g., 256 tokens per block). When assembling the final prompt, it passes pointers to these pages to tightly pack the context window.
 **Engineering ROI**: 100% Context Window Utilization. Zero token waste and no risk of a JSON object being cleanly cut in half by a max-token limit.
 
@@ -15003,30 +16283,37 @@ By adapting the most aggressive performance optimizations from 3D game engines (
 This phase pulls extreme optimizations from Google's PageRank, mathematical Category Theory, Figma's multiplayer syncing, and kernel-level Anticheat software. It translates these wildly diverse concepts into strict software engineering implementations to solve Cortex's biggest bottlenecks around cost, multi-agent deadlocks, code duplication, and LLM hallucination.
 
 ### Phase 35.1: Architectural PageRank & Virtual Graph DOM (Inspired by Google & React)
+
 **Technical Terms**: Cortex calculates a "Virtual Graph Diff" in memory and applies a PageRank algorithm to the dependency graph. Changes to high-centrality nodes (e.g., `core/auth`) are prioritized, while low-centrality nodes are deferred or skipped.
 **Engineering ROI**: 90% Reduction in LLM API Costs & Ingest Time. Massively drops cost during CI/CD ingestion by intelligently skipping low-impact nodes.
 
 ### Phase 35.2: CRDT-Based Multi-Agent Graph Mutations (Inspired by Figma)
+
 **Technical Terms**: Migrates `.knowledge/state.json` from Mutex locking to Conflict-free Replicated Data Types (CRDTs). Allows completely lock-free, concurrent mutation of the architectural graph by fleets of autonomous agents.
 **Engineering ROI**: Infinite Agent Parallelism. Eliminates deadlock and wait-state IO blocking, allowing 100 agents to audit 100 microservices simultaneously.
 
 ### Phase 35.3: Categorical Isomorphism Detection (Inspired by Category Theory)
+
 **Technical Terms**: Uses Category Theory to detect structural isomorphism—proving mathematically that two sub-graphs behave identically even if written in different languages or paradigms (e.g., Python Flask vs. Go Gin).
 **Engineering ROI**: Enterprise Debt Eradication. Automatically identifies and flags systemic architectural duplication across massive polyglot monorepos.
 
 ### Phase 35.4: Ring-0 IDE Telemetry Hooks (Inspired by Vanguard Anticheat & eBPF)
+
 **Technical Terms**: Cortex deploys low-level memory hooks into the IDE's Language Server Protocol (LSP). It observes failed developer trajectories in real-time and silently records them as "Failed Paths" in the local state without needing a commit.
 **Engineering ROI**: Perfect Context Awareness. The AI knows exactly what the developer tried and failed to do, preventing it from suggesting a recently deleted approach.
 
 ### Phase 35.5: WebAssembly (WASM) Graph Vectorization (Inspired by SIMD & Assembly)
+
 **Technical Terms**: Rewrites the core `Substrate` graph traversal engine in bare-metal Rust/WASM, utilizing Single Instruction, Multiple Data (SIMD) for bitwise array operations, bypassing V8 Garbage Collection pauses.
 **Engineering ROI**: 100x Performance Boost. Traverses massive enterprise architectures in under 2 milliseconds with zero IDE lag.
 
 ### Phase 35.6: Architectural Write-Ahead Logging (Inspired by Oracle WAL & DNA)
+
 **Technical Terms**: Before an autonomous agent executes a multi-file refactor, Cortex writes the intended state changes to an append-only WAL. If the AI hallucinates or violates an invariant, Cortex instantly plays the WAL in reverse.
 **Engineering ROI**: Zero-Risk Autonomous Coding. Provides mathematical guarantees of state recovery, making autonomous AI agents safe for production codebases.
 
 ### Phase 35.7: Air-Gapped Autarky (Inspired by Luddite Philosophy)
+
 **Technical Terms**: An invariant "Zero-Dependency Mode." If the network is severed, Cortex instantly degrades gracefully, rips out telemetry, and falls back to a locally quantized model running purely on local silicon.
 **Engineering ROI**: Ultimate Reliability & Security. Cortex becomes immune to cloud outages and acceptable for extreme high-security (defense, finance) air-gapped environments.
 
@@ -15037,38 +16324,46 @@ This phase pulls extreme optimizations from Google's PageRank, mathematical Cate
 ## 🌀 Phase 36: Exotic Architecture Optimizations (Deep Tech Inspired) — ⏳ Planned (research-grade)
 
 **Layman's Terms**
-This phase implements cutting-edge optimizations adapted from Event Sourcing, Combinatorial Game Theory, Biology, Quantum Zeno mechanics, and Mathematical Logic. These optimizations target the ultimate limits of AI coordination, safety, correctness, and search latency. 
+This phase implements cutting-edge optimizations adapted from Event Sourcing, Combinatorial Game Theory, Biology, Quantum Zeno mechanics, and Mathematical Logic. These optimizations target the ultimate limits of AI coordination, safety, correctness, and search latency.
 
 ### Phase 36.1: Event-Sourced Ephemeral Graphs (Inspired by Kafka & Redux)
+
 **Technical Terms**: Cortex transitions `.knowledge/state.json` from state-based snapshots to an immutable, append-only event log (e.g., `[NODE_ADDED, EDGE_MUTATED]`). The current graph state is a dynamic projection of past events. For debugging, the agent time-travels and replays AST mutations frame-by-frame.
 **Engineering ROI**: **100% Deterministic AI Debugging.** Removes the need for the AI to guess the history or intent of code changes, dramatically reducing debugging hallucinations.
 
 ### Phase 36.2: God's Algorithm for Refactoring (Inspired by Rubik's Cube Solvers)
+
 **Technical Terms**: Applies a combinatorial game theory minimum-edit-path solver to the AST-diff graph when an LLM proposes changes. Cortex calculates the absolute minimum set of code mutations required to shift the codebase state, stripping out LLM-generated redundant changes.
 **Engineering ROI**: **Zero Bloat & Pixel-Perfect Refactors.** Restricts the AI from rewriting unchanged code or creating useless helper functions, simplifying review overhead.
 
 ### Phase 36.3: Vector-Symbolic Emulsification (VSE) (Inspired by Food Science & HDC)
+
 **Technical Terms**: Binds symbolic logical AST graphs directly into continuous vector space embeddings using Hyperdimensional Computing (HDC), rather than maintaining separate relational and vector indices.
-*Compatibility Note*: This acts as the direct implementation pathway for **Phase 18 (Hybrid Embeddings)**, resolving the immiscibility between semantic vector models and discrete AST schemas.
+_Compatibility Note_: This acts as the direct implementation pathway for **Phase 18 (Hybrid Embeddings)**, resolving the immiscibility between semantic vector models and discrete AST schemas.
 **Engineering ROI**: **50% Search Latency Reduction.** Solves vector-lexical merge bottlenecks by executing hybrid queries in a single hardware-accelerated pass.
 
 ### Phase 36.4: Mycorrhizal Telemetry Protocol (Inspired by Biology)
+
 **Technical Terms**: Implements a lightweight P2P graph syncing protocol. If an agent detects a critical vulnerability, deprecation, or invariant break in shared packages in Repo A, it transmits a signed warning to the local Cortex instances of Repo B and C.
 **Engineering ROI**: **Instant Org-Wide Security Updates.** Warns local developers of upstream breaks before they compile or run install steps, without a central server.
 
 ### Phase 36.5: Gödel-Aware Fallback Escapes (Inspired by Mathematical Logic)
+
 **Technical Terms**: Embeds a formal incompleteness threshold in the agent logic. When an agent hits an undecidable state or a circular reasoning loop, it triggers the Gödel Escape: it halts execution, rolls back its Write-Ahead Log state, and prompts the user.
 **Engineering ROI**: **Catastrophe Prevention.** Mathematically guarantees that autonomous agents fail safely and immediately alert human operators rather than looping infinitely.
 
 ### Phase 36.6: Zeno-Effect Test Pinning (Inspired by Quantum Zeno Effect)
+
 **Technical Terms**: Cortex runs an ultra-fast background Language Server Protocol (LSP) observer. By continuously monitoring the active file buffer as the developer types, it catches contract violations before the code is saved or committed.
 **Engineering ROI**: **0ms Real-Time Invariant Enforcement.** Eliminates wait times for pre-commit hooks, providing instantaneous feedback in the editor.
 
 ### Phase 36.7: Background Knowledge Fermentation (Inspired by Food Science)
+
 **Technical Terms**: Runs an off-hours background task that minifies ASTs, removes prose fluff, and consolidates related entity files in `.knowledge/entities` into highly compressed conceptual hashes.
 **Engineering ROI**: **Passive Token Cost Reduction.** Lowers the context window cost of the codebase passively over time without requiring active developer LLM calls.
 
 ### Phase 36.8: Sonoluminescent Prompt Collapse (Inspired by Physics)
+
 **Technical Terms**: An automated context-compaction routine that triggers when context window limits are reached. It collapses the prompt into a high-density Extractive Tree-of-Thoughts core, resetting the active token window size.
 **Engineering ROI**: **Zero "Context Window Exceeded" Crashes.** Gracefully degrades prompts under heavy load, ensuring the agent remains operational without hard API errors.
 
@@ -15080,14 +16375,17 @@ This phase implements cutting-edge optimizations adapted from Event Sourcing, Co
 This phase solves the ultimate compatibility problem in software: the constant contradiction between high-level System Architecture (the macro scale) and low-level Application Code (the micro scale). It compiles both models into a single, unified mathematical structure where architectural drift throws compiler errors, while mapping system traits onto multidimensional spaces and holographic boundaries.
 
 ### Phase 37.1: The Homotopic Graph Compiler (HoTT) (Inspired by Theory of Everything)
+
 **Technical Terms**: Cortex integrates a Homotopy Type Theory (HoTT) parser that compiles business logic contracts and micro-level AST nodes into a unified homotopic path. Relationships between architecture diagrams and AST nodes are enforced via mathematical equivalence proofs.
 **Engineering ROI**: **Zero Architectural Drift.** Any micro-level change violating a macro-level architectural constraint throws a compile-time compiler error, completely preventing technical debt.
 
 ### Phase 37.2: String-Theoretic Tensor Embeddings (Inspired by String Theory)
+
 **Technical Terms**: Cortex upgrades flat 1D semantic embeddings to Multidimensional Tensors. An entity is mapped across distinct orthogonal semantic axes (Security, Performance, Design Patterns, Database Schemes).
 **Engineering ROI**: **Infinite Perspective Scaling.** Allows specialized AI agents (Security, Performance) to query the exact same graph and receive context projected specifically for their target dimension, reducing database hosting footprint.
 
 ### Phase 37.3: API Boundary Holography (Inspired by Holographic Principle)
+
 **Technical Terms**: Cortex encodes the internal behavioral complexity of a microservice strictly onto the boundary states of its public API interface.
 **Engineering ROI**: **O(1) System Comprehension.** AI agents evaluate system behavior via the holographic boundary projection without parsing millions of lines of internal implementation details, slashing runtime token consumption.
 
@@ -15099,37 +16397,45 @@ This phase solves the ultimate compatibility problem in software: the constant c
 This phase turns Cortex into a living, high-fidelity codebase simulation, mapping physical, gaming, biological, and mathematical realities to software maintenance. It forces strict execution rules, measures attention fatigue, enables visual systems drafting, and dynamically propagates code refactors.
 
 ### Phase 38.1: Octonion-Bound Knowledge Primitives (Inspired by String Theory)
+
 **Technical Terms**: Cortex maps architectural dimensions to Octonions (8-dimensional hypercomplex numbers) to construct a non-commutative geometry graph.
-*Synergy Note*: This acts as the mathematical solver mechanism for the multi-dimensional projection layers built in **Phase 37.2 (String-Theoretic Tensor Embeddings)**.
+_Synergy Note_: This acts as the mathematical solver mechanism for the multi-dimensional projection layers built in **Phase 37.2 (String-Theoretic Tensor Embeddings)**.
 **Engineering ROI**: **Virtually Instant Search.** Drastically compresses multi-layered repository dependencies, reducing search complexity on 10,000+ files to single algebraic operations.
 
 ### Phase 38.2: Ring-0 Epistemological Anticheat (Inspired by TempleOS & Kernel Integrity)
+
 **Technical Terms**: Cortex implements a Rust-based ring-0 anticheat loop in the WebAssembly execution substrate. If an LLM suggests code that violates contract schemas, the engine immediately throws an validation panic and halts the agent process.
-*Integration Note*: This acts as the runtime enforcement engine for the constraints defined under **Phase 7.5 (Quality Governance)**.
+_Integration Note_: This acts as the runtime enforcement engine for the constraints defined under **Phase 7.5 (Quality Governance)**.
 **Engineering ROI**: **Hallucination Protection.** Guarantees that AI agents can never compile, write, or suggest invalid, out-of-bounds codebase mutations.
 
 ### Phase 38.3: Algorithmic Attention Fatigue (Inspired by RCT2 Mechanics)
+
 **Technical Terms**: Calculates a cognitive fatigue score representing prompt/context distance metrics. When fatigue thresholds are crossed, the query engine recalculates a Brachistochrone Curve path through the graph to bypass boilerplate.
-*Integration Note*: Works directly alongside **Phase 34.7 (Paged Context Allocation)** to decide which context blocks to load into the prompt space.
+_Integration Note_: Works directly alongside **Phase 34.7 (Paged Context Allocation)** to decide which context blocks to load into the prompt space.
 **Engineering ROI**: **Bypass Code Fluff.** Automatically cuts down on token waste and prevents search paths from getting lost in boilerplate directories.
 
 ### Phase 38.4: Alcubierre Sub-Graph Warping (Inspired by FTL & Wormholes)
+
 **Technical Terms**: Pre-computes structural shortcuts (Wormhole Edges) across isomorphic nodes, allowing graph traversals to bypass intermediate directory hierarchies. Incorporates a "False Vacuum Collapse" routine to drop high-entropy codebases into lower-complexity structures.
 **Engineering ROI**: **O(1) Domain Navigation.** Reduces graph traversal steps between matching design patterns to a single hop.
 
 ### Phase 38.5: Schrödinger’s Branching Contexts (Inspired by Quantum Mechanics)
+
 **Technical Terms**: Holds ambiguous contexts in a vector-state superposition. Upon developer query (the measurement), it collapses the context window to the specific verified branch, pruning unused paths.
 **Engineering ROI**: **80% Cost Reduction.** Lowers initial prompt token counts by only resolving and presenting context options that the developer is actively interacting with.
 
 ### Phase 38.6: Procedural Node-Based Sculpting (Inspired by Blender & Figma)
+
 **Technical Terms**: Implements a visual geometry-node style canvas editor, allowing users and agents to collaboratively model microservices and relationships, which procedurally generates AST code and deployment configs in the background.
 **Engineering ROI**: **Code-Free System Design.** Shifts system architecture management from manual markdown editing to visual, collaborative node mapping.
 
 ### Phase 38.7: Syntactic Prion Propagation (Inspired by Biology)
+
 **Technical Terms**: A background agent detects high-quality refactor patterns (prions) applied locally, extracts the abstract structure, and incrementally propagates the pattern throughout the codebase via automated PR creation.
 **Engineering ROI**: **Self-Healing Codebase.** Spreads structural code quality and optimization rules automatically across the monorepos without manual copy-paste work.
 
 ### Phase 38.8: Terry Davis RNGod Heuristics (Inspired by Esoteric Computing)
+
 **Technical Terms**: Dynamically modifies LLM generation temperatures and vector search parameters using entropy-based pseudorandom noise when agents reach local minima or deadlocks.
 **Engineering ROI**: **Creative Reasoning Breakthroughs.** Breaks agents out of repetitive logic loops by forcing out-of-the-box conceptual comparisons.
 
@@ -15141,30 +16447,37 @@ This phase turns Cortex into a living, high-fidelity codebase simulation, mappin
 This phase hardens Cortex for mission-critical enterprise environments. It introduces automated self-healing crash handlers for AI agents, multi-agent navigation markers that stop redundant code searches, asymmetric processors that drop API costs, and background pre-fetching that makes autocomplete instant.
 
 ### Phase 39.1: Cognitive Supervision Trees (Inspired by Erlang & Biology)
+
 **Technical Terms**: Cortex implements an Erlang-style Supervisor hierarchy for autonomous sub-agents. If an agent hangs, encounters a logic loop, or throws an unhandled error, the supervisor performs programmed cell death (Apoptosis) on the agent thread, rolls back the Write-Ahead Log state, and spawns a fresh agent with failure telemetry injected into its system prompt.
 **Engineering ROI**: **Bulletproof Autonomous Resilience.** Prevents runaway LLM API billing loops and locks down agent stability.
 
 ### Phase 39.2: Tectonic Migration Solvers (Inspired by Geology)
+
 **Technical Terms**: Cortex maps architectural shifts as tectonic plates, calculating topological fault lines (interface boundaries) and producing structured strangler-fig migration sequences to safely shift code modules in production.
 **Engineering ROI**: **Automates Enterprise Tech Debt.** Safely schedules and automates massive structural codebase refactors (such as framework or library migrations).
 
 ### Phase 39.3: Stigmergic Heatmap Routing (Inspired by Ant Colony Optimization)
+
 **Technical Terms**: Multi-agent graph searches leave decaying pheromone trails (numeric weights) on target AST nodes. Agents dynamically bias pathfinding heuristics away from negative trails (dead ends explored by other agents) and toward positive paths.
 **Engineering ROI**: **Zero Redundant Search.** Drastically reduces token usage and processing latency in parallel multi-agent workspaces.
 
 ### Phase 39.4: Asymmetric Dual-Processing Substrate (Inspired by Split-Brain Psychology)
+
 **Technical Terms**: Splits graph queries into parallel Left-Brain (10ms, fast deterministic AST parsing and graph lookup) and Right-Brain (expensive probabilistic LLM query) pipelines. The Left-Brain pipeline acts as a strict structural filter for the Right-Brain context window.
 **Engineering ROI**: **Optimized Accuracy & Cost.** Guarantees exact syntactic graph correctness while utilizing deep reasoning engines only on verified problem scopes.
 
 ### Phase 39.5: Cognitive Branch Prediction (Inspired by CPU Speculative Execution)
+
 **Technical Terms**: Evaluates real-time editor keystrokes to predict the developer's next two likely action paths, speculatively pre-fetching context buffers into hot RAM before a query is issued.
 **Engineering ROI**: **Zero-Latency IDE Assistance.** Serves context-rich AI completions and suggestions immediately when called, eliminating file retrieval wait times.
 
 ### Phase 39.6: Merkle-DAG Integrity Verification (Inspired by Cryptography)
+
 **Technical Terms**: Organizes `.knowledge` storage into a cryptographic Merkle Directed Acyclic Graph. Every file and constraint tracks its hash and its dependents' hashes.
 **Engineering ROI**: **O(1) Cache Invalidation & Tamper Detection.** Instantly flags manual file mutations or corruption across 100,000+ files without rescanning the disk.
 
 ### Phase 39.7: OODA Agent Runtime (Inspired by Cybernetics)
+
 **Technical Terms**: Implements a strict, deterministic four-tick clock cycle loop (Observe, Orient, Decide, Act) for all autonomous agents, tracing and logging state changes on every tick.
 **Engineering ROI**: **Predictable AI Execution.** Simplifies agent debugging and tracing by enforcing a rigid execution rhythm, preventing chaotic prompts.
 
@@ -15173,11 +16486,13 @@ This phase hardens Cortex for mission-critical enterprise environments. It intro
 ## ⚙️ Phase 40: The Reality Engine (Self-Optimization & Compilation) — ⏳ Planned (research-grade)
 
 ### The Vision
+
 To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codebase simulation engine, Cortex adopts game engine architecture (Entity Component System), intermediate representations (Semantic LLVM), and formal logic solvers (Z3 SMT). This enables infinite monorepo scaling, mathematically verified guardrail checking, and self-improving architectural governance rules.
 
 ---
 
 ### Phase 40.1: Semantic LLVM Compilation (Semantic IR)
+
 **Layman's Terms**: Just like code compilers simplify complex program source into intermediate versions to remove dead code before generating final output, Cortex compiles massive codebase contexts into a highly compressed, mathematical "Intermediate Reasoning Representation" (IR). This strips out boilerplate and fluff, leaving only semantic nodes.
 
 **Technical Terms**: Scans AST nodes and wikilink graph to emit a normalized, token-bounded intermediate representation. Runs graph-optimization passes (Semantic Dead-Code Elimination) to trim non-functional text and context dependencies.
@@ -15187,6 +16502,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.2: ECS Knowledge Architecture (Entity Component System)
+
 **Layman's Terms**: Game engines like Unreal Engine organize massive worlds by separating objects (entities) from their traits (components) and running fast, parallel loops (systems) over them. Cortex migrates the `.knowledge` folder from nested JSONs into an ECS layout on disk.
 
 **Technical Terms**: Rewrites the graph engine to treat files/entities as standard index IDs. Components are flat byte-arrays representing facets (dependencies, constraints, exports). Systems run as raw WebAssembly compilation loops that scan memory-contiguous component tables.
@@ -15196,17 +16512,20 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.3: Gödel Self-Optimizing Graph Rules
+
 **Layman's Terms**: Instead of humans manually maintaining the `cortex.yaml` rule book, the engine audits the project's evolution. If it finds that developers consistently follow patterns that bypass a rule safely, it auto-submits a PR to refine its own rules.
 
-**Technical Terms**: 
+**Technical Terms**:
+
 - **Adaptive Graph Restructuring**: Evaluates historical `log.jsonl` mutation rates and rule exception logs. Dynamically constructs updated schema constraint variations and validates them against the codebase using symbolic logic.
-- **Implicate Order / Invariant Extraction**: Employs statistical dependency mining to identify "negative invariants"—architectural relationships, dependency edges, or import paths that *never* exist or are never co-present across historical graph configurations (e.g., frontend components never directly querying DB models). These statistical exclusions represent the codebase's implicit or "implicate" structural order, allowing Cortex to proactively suggest highly tailored `cortex.yaml` constraint definitions to prevent future boundary erosion.
+- **Implicate Order / Invariant Extraction**: Employs statistical dependency mining to identify "negative invariants"—architectural relationships, dependency edges, or import paths that _never_ exist or are never co-present across historical graph configurations (e.g., frontend components never directly querying DB models). These statistical exclusions represent the codebase's implicit or "implicate" structural order, allowing Cortex to proactively suggest highly tailored `cortex.yaml` constraint definitions to prevent future boundary erosion.
 
 **Engineering ROI**: Zero-maintenance architectural governance. The system automatically adapts its boundaries as the team's styling and frameworks evolve.
 
 ---
 
 ### Phase 40.4: SMT-Assisted Constraint Verification
+
 **Layman's Terms**: LLMs are notoriously bad at strict mathematical logic. Cortex compiles architectural rules and AST edges into boolean logical problems, passing them to a local SAT/SMT theorem solver (like Z3). The LLM is only used to translate the solver's output into english.
 
 **Technical Terms**: Maps AST relations and `cortex.yaml` boundary rules directly to SMT-LIB language constraints. Solves using Z3 or CVC5 engines. If unsatisfiable, outputs the exact counterexample path.
@@ -15216,6 +16535,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.5: Knot-Theoretic Dependency Untangling
+
 **Layman's Terms**: Circular dependencies are architectural knots. Cortex applies knot theory mathematics to calculate the topological complexity of import graphs, pinpointing the single file or interface that must be decoupled to free the entire structure.
 
 **Technical Terms**: Models circular import cycles as mathematical links and calculates their Alexander-Conway polynomial invariants. Identifies topological bottleneck vertices that, when split, reduce the graph genus to zero.
@@ -15225,6 +16545,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.6: Architectural Fossilization (Cold Storage)
+
 **Layman's Terms**: Legacy code that hasn't changed in years doesn't need to load into active AI memory. Cortex "fossilizes" stable historical directories, compressing them into a secure cryptographic summary. It only unzips them if a developer changes them.
 
 **Technical Terms**: Computes deep Merkle-hashes of directories with zero change vectors over N months. Compresses target node attributes into a single, high-dimensional holographic tensor.
@@ -15234,6 +16555,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.7: Borges Exhaustive Design-Space Generation
+
 **Layman's Terms**: When generating code, instead of guessing a single structure, Cortex generates every mathematically possible structural variant for the task. It filters them against rules using the SMT solver and only shows you the winning options.
 
 **Technical Terms**: Procedurally expands the AST schema variations for target inputs, generating a closed library of all structural variations. Evaluates each candidate's boundaries via the Phase 40.4 Z3 engine.
@@ -15243,11 +16565,13 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Definition of Ready (DoR)
+
 - Phase 39 (Merkle-DAG Integrity) completed.
 - Z3 SMT solver binaries integrated into the local runner toolset.
 - Memory component schema registry established for the ECS layout.
 
 ### Definition of Done (DoD)
+
 - Intermediate representation (IR) parser passes unit tests for context compression.
 - Vector database benchmark shows 10,000x faster graph traversals on a 100,000-entity synthetic codebase.
 - SMT-LIB compiler correctly translates `cortex.yaml` rules.
@@ -15257,7 +16581,8 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.8: Gödel Self-Improving Synthesis Loop
-**Layman's Terms**: Phase 40.3 makes Cortex rewrite its own rule book. Phase 40.8 goes further: Cortex watches its own synthesis *quality over time*, detects where the Librarian consistently fails (missing service boundaries, under-extracting dependencies, producing stale facts), and automatically mutates its own Librarian prompts and extraction schemas to fix the patterns — then validates the fix against historical ground truth before promoting it.
+
+**Layman's Terms**: Phase 40.3 makes Cortex rewrite its own rule book. Phase 40.8 goes further: Cortex watches its own synthesis _quality over time_, detects where the Librarian consistently fails (missing service boundaries, under-extracting dependencies, producing stale facts), and automatically mutates its own Librarian prompts and extraction schemas to fix the patterns — then validates the fix against historical ground truth before promoting it.
 
 **Technical Terms**: Builds on `log.jsonl` quality trail and Phase 7.5 quality scores. A meta-synthesis pass computes per-entity-type quality trend vectors (e.g., "service boundary entities in this repo have 23% lower quality scores than the baseline"). Detects systematic under/over-extraction patterns. Generates candidate Librarian prompt mutations, scores them against a held-out golden corpus, and promotes winners via Phase 23 (human-in-loop gate). Mutation history stored in `.knowledge/meta/prompt_evolution.jsonl`.
 
@@ -15266,6 +16591,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 ---
 
 ### Phase 40.9: JIT-Compiled Synthesis Fast-Path (0-Token Deterministic Route)
+
 **Layman's Terms**: Currently, every synthesis goes through an LLM call. But many synthesis events are mechanical — file renames, import path updates, simple relationship changes — that don't need LLM judgment at all. Phase 40.9 observes repeated synthesis patterns (same graph mutation shape on same entity types), compiles them into deterministic TypeScript functions, and routes matching events through the function instead of the LLM. Zero tokens, zero latency, zero API cost for those operations.
 
 **Technical Terms**: Builds on the `log.jsonl` synthesis trail. A pattern-detection pass monitors synthesis events grouped by (mutation_type, entity_type, subgraph_shape). When a pattern exceeds `CORTEX_JIT_THRESHOLD` occurrences (default 5), the JIT compiler generates a deterministic function that applies the same graph mutation (add edge, rename node, update field) without invoking any model. Compiled functions are stored in `.knowledge/meta/jit_patterns/` and loaded at MCP server start. The synthesis router checks the JIT cache before any LLM call: JIT (0 tokens, µs) → Distilled model (Phase 19, cheap, ms) → Frontier model (expensive, s). A `cortex jit stats` CLI command shows hit rate, pattern inventory, and token savings.
@@ -15276,7 +16602,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 
 ## 🔁 Phase 41: Cognitive Cache Invalidation Engine — ⏳ Planned (research-grade)
 
-**Layman's Terms**: Cortex's stale detection currently notices *that* something changed. This phase makes it proactive: when `AuthService` changes, every entity that depends on it gets its confidence score automatically decayed — without waiting for a full re-synthesis. Cortex knows *why* a memory is no longer valid, not just *that* it might be.
+**Layman's Terms**: Cortex's stale detection currently notices _that_ something changed. This phase makes it proactive: when `AuthService` changes, every entity that depends on it gets its confidence score automatically decayed — without waiting for a full re-synthesis. Cortex knows _why_ a memory is no longer valid, not just _that_ it might be.
 
 **Technical Terms**: Cascade invalidation through the wikilink dependency graph. Every edge carries a propagation weight; on ingest, changed entities trigger a BFS invalidation wave capped at configurable depth. Confidence scores decay proportionally to graph distance from the changed node. TTL-based decay: entities with no recent evidence signal have confidence reduced by a sigmoid function over time. Version-bump triggers: when `package.json` dependency versions change, all entities referencing that dependency's API patterns get flagged.
 
@@ -15291,6 +16617,7 @@ To move from an LLM-reliant descriptive knowledge tool to a high-fidelity codeba
 **Layman's Terms**: Cortex currently stores one level of knowledge — per-entity pages. A 5,000-entity enterprise monorepo is overwhelming. This phase adds automatic multi-level compression: raw entities compress into domain summaries, which compress into a workspace overview. Context pack assembly pulls from the right level depending on the question — surgical detail for specific functions, high-level overview for architectural questions.
 
 **Technical Terms**: Three-tier storage hierarchy:
+
 - **L0** — per-entity pages (current `.knowledge/entities/*.md`)
 - **L1** — per-domain summaries (`.knowledge/domains/<domain>.md`, one per top-level directory grouping, regenerated when any entity in the domain changes)
 - **L2** — workspace meta-summary (`.knowledge/meta/overview.md`, 1-2 page architectural overview, regenerated on major structural changes)
@@ -15332,6 +16659,7 @@ Context pack assembly selects the minimum sufficient level: entity-scoped querie
 **Layman's Terms**: Not all Cortex entities are equally important. A core service used by 30 other modules is more authoritative than a utility function used by one. This phase gives every entity a dynamic authority score combining: how many entities link to it, how often it surfaces in successful AI coding sessions, how stable its synthesis has been, and whether a human has reviewed and validated it.
 
 **Technical Terms**: Extends Phase 35.1 (Architectural PageRank) with three additional signal layers:
+
 1. **Usage signal**: tracks entity appearances in context packs accessed during AI coding sessions (via Phase 4 MCP hooks)
 2. **Stability signal**: entities whose synthesis has not changed despite surrounding code changes accumulate authority through consistency
 3. **Human review boost**: Phase 23 (human-in-loop review) explicitly increments `authority_score` on approval
@@ -15349,6 +16677,7 @@ Context pack assembly selects the minimum sufficient level: entity-scoped querie
 **Layman's Terms**: Cortex's knowledge base can be poisoned by bad syntheses — LLM hallucinations inventing non-existent classes, prompt injections hiding in code comments, or a single bad diff causing cascading false dependencies. This phase adds a pre-commit immune layer: before any synthesis is committed to `.knowledge/`, it passes through an anomaly detector that quarantines suspicious outputs for review.
 
 **Technical Terms**: Three-layer immune stack:
+
 1. **Hallucination antibodies (Boltzmann Entity Detection)**: pattern-match synthesis outputs against known hallucination signatures. This includes the dedicated **Boltzmann Entity Detection** class, which statistically catches hallucinations that are syntactically coherent and stylistically perfect, but completely lack any underlying source-file backing or import-graph grounding, ensuring false entities never contaminate the canonical knowledge base.
 2. **Prompt injection resistance**: scan synthesis inputs (code diffs, file content) for adversarial patterns before they reach the Librarian
 3. **Anomaly quarantine**: statistical anomaly detection on synthesis outputs. If a single diff claims to add 40 new dependency edges to an entity that historically has 3, it is held for human review rather than auto-committed
@@ -15379,6 +16708,7 @@ Quarantine queue surfaced via `cortex audit --quarantine`. Auto-released after h
 Cortex keeps a fingerprint of how your codebase's architectural graph looks every time you ingest changes. If you are about to structure a new service or database connection in a way that resembles a past setup that caused major incidents or bugs (like the "PaymentService Incident" three months ago), Cortex will proactively warn you before you even write the code. It is retrospective pattern matching for your architecture's mistakes.
 
 **Technical Terms**
+
 - **Graph Fingerprinting**: During each ingest, Cortex computes a serialized topological fingerprint of the active sub-graph using graph embedding similarity (Phase 18) and PageRank centrality vectors.
 - **Problematic Configuration Registry**: Leverages Phase 26 audit logs and historical git commit metadata to associate specific historic graph states with incident keywords (e.g., "incident", "hotfix", "regression").
 - **Pattern Matching & Warning Engine**: On new ingests, computes the cosine similarity between the current sub-graph topology and states in the registry. If similarity crosses a configurable threshold (e.g., > 0.85), triggers a warning indicating matching past states, the files/entities involved in that historic incident, and links to the relevant retrospectives.
@@ -15394,6 +16724,7 @@ Architectural safety through hindsight. Prevents teams from repeating the same s
 Sometimes, changing a file in one part of your app unexpectedly breaks a file in a completely different part, even though they don't seem to import or call each other. Phase 48 mines your Git commit history to find files that constantly change together in the same PRs or commits. It maps these hidden "entanglement" links so you are warned of invisible side effects: "I only changed X, why did Y break?"
 
 **Technical Terms**
+
 - **Git Commit Co-Change Mining**: A background miner scans the git repository's commit graph. It calculates the co-change frequency matrix of all source files over a rolling sliding window (e.g., last 6 months).
 - **Entanglement Edge Synthesis**: If two files A and B co-change in more than N% of commits (and share no explicit imports or wikilinks in the knowledge base), Cortex synthesizes a virtual `entangled_with` relationship between their respective entities.
 - **Impact Warning Hook**: Extends the `cortex before_change` command. When querying the blast-radius of entity A, the engine automatically resolves and prints its entangled dependents, presenting the developer with the exact historical co-change correlation percentage.
@@ -15409,6 +16740,7 @@ Eliminates silent dependency failures and "mystery bugs." Developers get instant
 If your team uses Cortex across multiple separate codebases or departments, they all individually learn how to write better documentation and rules. Phase 49 lets these separate deployments securely share their best-performing Librarian extraction patterns and rule modifications. If a TypeScript team in one department discovers a highly effective way to document API boundaries, other TypeScript teams across the company automatically inherit that wisdom.
 
 **Technical Terms**
+
 - **Federated Pattern Extraction**: An opt-in synchronization layer that extracts generalized metadata of successful prompt mutations from Phase 40.8 (Gödel loop) while stripping all proprietary code, strings, and domain-specific references.
 - **Anonymized Schema Exchange**: Transmits structural performance metrics (e.g., "this updated extraction prompt yielded a 14% increase in evidence quality scores for TypeScript interface blocks") to a central corporate or public schema registry.
 - **Global Wisdom Injection**: Local Cortex instances query the registry during background maintenance, pulling and applying top-performing generalized extraction schemas and prompt improvements that match the local repository's tech stack.
@@ -15458,8 +16790,9 @@ A meta-architecture release that introduces the Substrate model: every memory pa
 When multiple AI agents work on the same codebase, each one needs its own scratch space — private working memory, hypotheses, intermediate observations — while still sharing the team's canonical architectural knowledge. Phase 41 makes this explicit: every agent gets its own `.knowledge/agents/<agent-id>/` private partition, plus read access to the shared workspace partition at `.knowledge/`. Writes to the shared partition require explicit promotion ("this hypothesis is now confirmed, promote to shared knowledge").
 
 **Technical Terms**
+
 > 🔬 **Scientific Foundation: Stigmergy (Swarm Intelligence / Pheromone Decay)**
-> *Source Domain:* Biology (Ant Colony Optimization).
+> _Source Domain:_ Biology (Ant Colony Optimization).
 > Ants coordinate complex tasks without central command by leaving temporary chemical trails (pheromones) that evaporate over time. In a multi-agent environment (Phase 40+), passing massive JSON state payloads between agents is extremely inefficient. Instead, Cortex uses Stigmergy: when an agent interacts with a file or entity, it leaves a digital "pheromone" tag (e.g., `_active_reasoning_weight`). This weight dynamically decays. If another agent visits that entity, it detects the high pheromone concentration, immediately knowing a teammate is currently reasoning about it, allowing implicit, zero-overhead coordination.
 
 Three-tier memory model per workspace:
@@ -15510,7 +16843,7 @@ A meta-graph layer above per-workspace knowledge graphs that supports cross-work
 ### Phase 43: Agent Mesh Runtime Orchestration — ⏳ Planned (extended vision)
 
 **Layman's Terms**
-Phase 20.16 (Multi-Agent Librarian Collaboration) defined specialist agents at *synthesis time* — Security + Performance + Domain Librarians all weighing in on the same synthesis. Phase 43 promotes the same pattern to *runtime orchestration*: multiple Cortex Librarian agents run continuously, each specialized to a domain, each managing its own partition (Phase 41), with an orchestrator routing incoming synthesis requests to the right agent (or composition of agents) based on the change's content.
+Phase 20.16 (Multi-Agent Librarian Collaboration) defined specialist agents at _synthesis time_ — Security + Performance + Domain Librarians all weighing in on the same synthesis. Phase 43 promotes the same pattern to _runtime orchestration_: multiple Cortex Librarian agents run continuously, each specialized to a domain, each managing its own partition (Phase 41), with an orchestrator routing incoming synthesis requests to the right agent (or composition of agents) based on the change's content.
 
 **Technical Terms**
 A runtime orchestrator that dispatches synthesis requests to specialized Librarian instances:
@@ -15529,7 +16862,7 @@ A runtime orchestrator that dispatches synthesis requests to specialized Librari
       activation_paths: [src/services/**, src/db/**]
       partition: agents/performance-librarian
       provider: anthropic:claude-sonnet-4-6
-    - id: general-librarian   # default fallback
+    - id: general-librarian # default fallback
       specialization: general
       activation_paths: ["**"]
       partition: agents/general-librarian
@@ -15556,16 +16889,16 @@ Phase 41 gives agents private + shared memory. Phase 43 lets multiple specialize
 
 ### The Key Distinction (Why Cortex Needs This Even With Nexus's Bus)
 
-| Property | **Nexus real-time event bus** | **Cortex persistent messaging substrate** |
-|---|---|---|
-| Latency | Sub-second | Seconds to minutes |
-| Lifetime | Ephemeral — disappears after delivery | Durable — persists forever unless archived |
+| Property            | **Nexus real-time event bus**            | **Cortex persistent messaging substrate**                            |
+| ------------------- | ---------------------------------------- | -------------------------------------------------------------------- |
+| Latency             | Sub-second                               | Seconds to minutes                                                   |
+| Lifetime            | Ephemeral — disappears after delivery    | Durable — persists forever unless archived                           |
 | Optimization target | Action coordination ("start typing NOW") | Architectural coordination ("what's your take on this auth design?") |
-| Queryability | Limited to recent window | Full history, by sender/recipient/topic/timestamp/referenced-entity |
-| Audit | Best-effort | First-class Phase 26 audit on every send/read |
-| Governance | Network-level | Per-partition Phase 25.1 federation grants |
-| Threading | None (flat event stream) | Conversation threads as queryable graphs |
-| Entity references | None | Messages can `[[reference]]` Cortex entities, partitions, syntheses |
+| Queryability        | Limited to recent window                 | Full history, by sender/recipient/topic/timestamp/referenced-entity  |
+| Audit               | Best-effort                              | First-class Phase 26 audit on every send/read                        |
+| Governance          | Network-level                            | Per-partition Phase 25.1 federation grants                           |
+| Threading           | None (flat event stream)                 | Conversation threads as queryable graphs                             |
+| Entity references   | None                                     | Messages can `[[reference]]` Cortex entities, partitions, syntheses  |
 
 A customer running the bundle gets **both**: Nexus's bus for ephemeral runtime signals, Cortex's messaging for architectural conversations that matter long-term. Neither replaces the other.
 
@@ -15578,23 +16911,24 @@ A messaging layer that lives entirely inside the substrate's partition model:
   ```typescript
   interface MessageRecord {
     id: string;
-    threadId: string;          // for conversation threading
-    from: AgentIdentity;       // sender agent ID (or 'human:user@example.com')
-    to: AgentIdentity[];       // primary recipients (inbox writes)
-    cc: AgentIdentity[];       // copies (read-only awareness)
+    threadId: string; // for conversation threading
+    from: AgentIdentity; // sender agent ID (or 'human:user@example.com')
+    to: AgentIdentity[]; // primary recipients (inbox writes)
+    cc: AgentIdentity[]; // copies (read-only awareness)
     mentions: AgentIdentity[]; // @mentions in body trigger notifications
     subject: string;
-    body: string;              // markdown; can contain [[entity-refs]] and [[partition-refs]]
-    refs: {                    // structured references parsed from body
-      entities: string[];      // entity names referenced
-      partitions: string[];    // partition addresses referenced
-      syntheses: string[];     // synthesis event IDs referenced
-      messages: string[];      // other messages (for explicit reply chains)
+    body: string; // markdown; can contain [[entity-refs]] and [[partition-refs]]
+    refs: {
+      // structured references parsed from body
+      entities: string[]; // entity names referenced
+      partitions: string[]; // partition addresses referenced
+      syntheses: string[]; // synthesis event IDs referenced
+      messages: string[]; // other messages (for explicit reply chains)
     };
-    replyTo?: string;          // message ID this is a reply to
+    replyTo?: string; // message ID this is a reply to
     sentAt: string;
-    readBy: { agentId, timestamp }[];  // read receipts
-    priority: "normal" | "high" | "urgent";  // affects notification routing
+    readBy: { agentId; timestamp }[]; // read receipts
+    priority: "normal" | "high" | "urgent"; // affects notification routing
     archived: boolean;
   }
   ```
@@ -15618,32 +16952,34 @@ A messaging layer that lives entirely inside the substrate's partition model:
 ### Examples — What This Actually Looks Like
 
 **Cross-agent specialist consult** (during synthesis):
+
 ```
 @SecurityLibrarian (synthesizing PaymentService auth integration) →
    @PerformanceLibrarian:
    "Subject: Token refresh debounce strategy
-   Body: I'm synthesizing the new auth integration in [[PaymentService]]. 
-   The current pattern calls refreshToken() per request — looks expensive 
-   to me. Did you analyze this in your last [[BillingService]] pass? 
+   Body: I'm synthesizing the new auth integration in [[PaymentService]].
+   The current pattern calls refreshToken() per request — looks expensive
+   to me. Did you analyze this in your last [[BillingService]] pass?
    Any pattern I should encode in the synthesis?"
-   
+
 @PerformanceLibrarian → @SecurityLibrarian (reply, ~30 seconds later):
-   "Subject: Re: Token refresh debounce strategy  
-   Body: Yes — I synthesized this exact concern in [[BillingService]] 
-   last week. The pattern is debounced refresh via shared promise 
-   (see [[TokenRefreshDebouncer]] entity). Recommend the same pattern 
+   "Subject: Re: Token refresh debounce strategy
+   Body: Yes — I synthesized this exact concern in [[BillingService]]
+   last week. The pattern is debounced refresh via shared promise
+   (see [[TokenRefreshDebouncer]] entity). Recommend the same pattern
    for [[PaymentService]]. Reference: synthesis event 2026-05-12-1430-7f3a."
 ```
 
 Six months later, a new engineer queries `[[PaymentService]]`. Among the entity's "discussed-in" links, this conversation surfaces — they understand why the debounce pattern exists, who suggested it, what previous service it came from.
 
 **Human consult** (Phase 23 review escalation):
+
 ```
 @SecurityLibrarian → @human:cto@acme.com:
    "Subject: Need decision on auth-payment coupling
-   Body: My synthesis of PR #4471 would re-introduce coupling between 
-   auth and payment domains that ADR-0019 explicitly resolved. 
-   Author has provided justification (see PR comments). I'm not 
+   Body: My synthesis of PR #4471 would re-introduce coupling between
+   auth and payment domains that ADR-0019 explicitly resolved.
+   Author has provided justification (see PR comments). I'm not
    confident this overrides ADR-0019. Need your call.
    Refs: [[AuthFacade]], [[PaymentService]], ADR-0019, PR #4471
    Priority: high"
@@ -15698,13 +17034,13 @@ Extend the `experience.jsonl` audit entry schema (Stage 4 fix) to:
 
 ```typescript
 interface AuditEntry {
-  event_id: string;          // UUID, unique per event
-  correlation_id?: string;   // links response back to originating MCP request
-  source: string;            // "@Human" | "@Claude" | "@Cortex"
-  target?: string;           // target agent if routed
-  tool: string;              // e.g. "save_concept"
+  event_id: string; // UUID, unique per event
+  correlation_id?: string; // links response back to originating MCP request
+  source: string; // "@Human" | "@Claude" | "@Cortex"
+  target?: string; // target agent if routed
+  tool: string; // e.g. "save_concept"
   args: Record<string, unknown>;
-  caller: string;            // MCP session ID or CLI invocation context
+  caller: string; // MCP session ID or CLI invocation context
   timestamp: string;
 }
 ```
@@ -15732,7 +17068,7 @@ function persistEvent(event: AuditEntry): void {
 
 Benefits: no schema mismatch possible (reader and writer share a type), session isolation means a corrupt entry in one session doesn't break queries for another, replay and audit of individual sessions is trivial.
 
-**Counter-case**: Cortex already has `experience.jsonl` and `log.jsonl` — adding session-scoped files increases storage fragmentation (flaw #55). Mitigate by making session-scoped files the *replacement* for `log.jsonl`, not an addition.
+**Counter-case**: Cortex already has `experience.jsonl` and `log.jsonl` — adding session-scoped files increases storage fragmentation (flaw #55). Mitigate by making session-scoped files the _replacement_ for `log.jsonl`, not an addition.
 
 **Source**: nexus-os `api/bus.py:52` — `_persist_event()`
 
@@ -15747,6 +17083,7 @@ Phase 43 lets you declare specialized Librarians (`security-librarian`, `perform
 A formal portable schema for Librarian persona definitions with publish/install/sign/verify lifecycle:
 
 **Schema**:
+
 ```yaml
 schema: cortex-librarian-v1
 version: 1
@@ -15770,7 +17107,7 @@ specialization:
       entities: ["AuthService", "TokenStore", "PermissionResolver"]
       threshold: 0.78
     keyword_triggers: ["auth", "token", "permission", "secret", "credential"]
-    activation_threshold: 0.6   # composite score
+    activation_threshold: 0.6 # composite score
 
 prompts:
   system: |
@@ -15781,12 +17118,12 @@ prompts:
     - Secret handling (key rotation, vault integration, env var hygiene)
     - Input validation (sanitization, injection prevention)
     - Access control contracts between entities
-    
+
     Format expectations:
     - Every entity in your synthesis must declare its security posture
     - Every cross-domain dependency must be flagged with auth implications
     - Constraints emitted should reference OWASP Top 10 categories where applicable
-  
+
   refinement: |
     [Used when called as part of Phase 33 hot-path deepening or Phase 20.18 refinement]
     ...
@@ -15794,31 +17131,31 @@ prompts:
 provider:
   primary: anthropic:claude-opus-4-7
   fallback: [openai:gpt-4o, ide-passthrough]
-  reasoning_provider: anthropic:claude-opus-4-7  # ToT/Self-Ask routing
-  
+  reasoning_provider: anthropic:claude-opus-4-7 # ToT/Self-Ask routing
+
 memory:
   partition: agents/security-librarian
   private_retention: unlimited
-  shared_promotion_policy: quorum_2_of_3   # other agents must agree before promotion
-  reflexion_retention: 10                  # Phase 20.11 reflexions per entity
+  shared_promotion_policy: quorum_2_of_3 # other agents must agree before promotion
+  reflexion_retention: 10 # Phase 20.11 reflexions per entity
 
 permissions:
   can_read_partitions:
     - "shared"
-    - "agents/compliance-librarian"      # explicit cross-agent read access
+    - "agents/compliance-librarian" # explicit cross-agent read access
   can_write_partitions:
     - "agents/security-librarian"
   can_promote_to: ["shared"]
   can_message_agents: ["compliance-librarian", "performance-librarian", "human"]
-  can_be_messaged_by: ["*"]              # any agent can ask security questions
+  can_be_messaged_by: ["*"] # any agent can ask security questions
   can_call_tools: ["grep", "git_blame", "ts_lookup_symbol", "ast_query"]
   forbidden_tools: ["shell.exec"]
 
 quality_contract:
   required_dimensions:
     coverage: 0.45
-    anchoring: 0.85       # security claims MUST have evidence
-    constraint_density: 2.0  # average 2+ constraints per security entity
+    anchoring: 0.85 # security claims MUST have evidence
+    constraint_density: 2.0 # average 2+ constraints per security entity
   on_quality_breach: pause_and_alert
 
 audit_requirements:
@@ -15831,8 +17168,12 @@ provenance:
   created_by: "alice@acme.com"
   version_history:
     - { version: "1.0.0", date: "2026-04-01", changes: "initial release" }
-    - { version: "1.1.0", date: "2026-05-12", changes: "added OWASP constraint awareness" }
-  signature: "sha256:abc123...def456"   # signed librarian-definition hash
+    - {
+        version: "1.1.0",
+        date: "2026-05-12",
+        changes: "added OWASP constraint awareness",
+      }
+  signature: "sha256:abc123...def456" # signed librarian-definition hash
   signature_algorithm: "Ed25519"
   signer_public_key_url: "https://acme-platform-team.example.com/keys/cortex-librarians.pub"
 ```
@@ -15941,32 +17282,32 @@ approval_policies:
     timeout: 4h
     on_timeout: deny
     notification_channels: ["slack:#cortex-approvals", "mobile-push"]
-  
+
   - action_type: cross_partition_write
     when:
       target_partition: "agents/security-librarian"
     requires: agent_approval
-    approving_agent: "security-librarian"  # the partition owner agrees automatically
+    approving_agent: "security-librarian" # the partition owner agrees automatically
     fallback_on_unavailable: human_approval
     fallback_approvers: ["@security-team"]
-  
+
   - action_type: federation_grant
     when:
-      to_tenant: "*"  # any cross-tenant grant
+      to_tenant: "*" # any cross-tenant grant
     requires: two_approvals
     approvers: ["@security-team", "@cto"]
     timeout: 24h
     on_timeout: deny
     notification_channels: ["slack:#security", "email:cto@acme.com"]
-  
+
   - action_type: high_cost
     when:
       single_op_usd: ">50"
     requires: human_approval
-    approvers: ["@team-lead", "@author"]   # author can self-approve
+    approvers: ["@team-lead", "@author"] # author can self-approve
     timeout: 1h
     on_timeout: deny
-  
+
   - action_type: tool_call
     when:
       tool_id: "shell.exec"
@@ -15974,14 +17315,14 @@ approval_policies:
     approvers: ["@author"]
     timeout: 5m
     on_timeout: deny
-  
+
   - action_type: tool_call
     when:
       tool_id: "marketplace.jira_post_comment"
     requires: human_approval
     approvers: ["@author"]
     timeout: 10m
-  
+
   - action_type: compliance_attestation
     requires: two_approvals
     approvers: ["@compliance", "@cto"]
@@ -16076,21 +17417,23 @@ Hierarchical sub-agent spawning inspired by Nexus Phase 18 (Agent Spawn Context 
 
 **Spawn modes**:
 
-| Mode | Child memory | Child sees | Use case |
-|---|---|---|---|
-| **Fork** | Read-only mirror of parent's partition + last N turns of conversation | Full parent context | Sub-tasks needing architectural surround (e.g., "drill into JWT validation while keeping the auth refactor picture") |
-| **Isolated** | Fresh ephemeral partition | Only the explicit task brief | Sub-tasks where parent context is noise (e.g., "scan codebase for SQL injection patterns" — doesn't need the auth refactor context) |
+| Mode         | Child memory                                                          | Child sees                   | Use case                                                                                                                            |
+| ------------ | --------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Fork**     | Read-only mirror of parent's partition + last N turns of conversation | Full parent context          | Sub-tasks needing architectural surround (e.g., "drill into JWT validation while keeping the auth refactor picture")                |
+| **Isolated** | Fresh ephemeral partition                                             | Only the explicit task brief | Sub-tasks where parent context is noise (e.g., "scan codebase for SQL injection patterns" — doesn't need the auth refactor context) |
 
 **Spawn API** (called by parent Librarian during reasoning):
+
 ```typescript
 const childResult = await spawn({
-  parent: 'security-librarian',
-  taskBrief: 'Identify JWT validation patterns in src/auth/JwtValidator.ts and rank them by risk',
-  contextMode: 'isolated',
-  childLibrarianId: 'security-librarian.jwt-deep-dive',  // ephemeral child name
+  parent: "security-librarian",
+  taskBrief:
+    "Identify JWT validation patterns in src/auth/JwtValidator.ts and rank them by risk",
+  contextMode: "isolated",
+  childLibrarianId: "security-librarian.jwt-deep-dive", // ephemeral child name
   budget: { maxTokens: 5000, maxDurationSeconds: 120, maxLLMCalls: 5 },
-  expectedReturnShape: 'JwtValidationFinding[]',
-  inheritProvider: true   // child uses parent's provider chain
+  expectedReturnShape: "JwtValidationFinding[]",
+  inheritProvider: true, // child uses parent's provider chain
 });
 ```
 
@@ -16112,6 +17455,7 @@ const childResult = await spawn({
 - All caps enforced by Phase 43.5 coordination safety
 
 **Spawn rollback** (from OpenClaw's `ContextEngine.prepareSubagentSpawn` rollback pattern):
+
 - If spawn fails mid-initialization (partition collision, permission denied, provider unavailable, budget validation failure), parent state is restored exactly as it was before the spawn attempt
 - No half-spawned children remain; no partial partitions left orphaned; parent's reasoning state preserved
 - Failure recorded in Phase 26 audit + Phase 20.11 reflexion ("attempted spawn for X, failed because Y — try different approach next time")
@@ -16172,6 +17516,7 @@ Phase 43.1 messaging mentions "rate limiting" informally but never specifies how
 Six coordination-safety primitives enforced by the substrate, configurable via `cortex.coordination.yaml`:
 
 ### 0. Atomic File-State Locking (Collision Prevention)
+
 If you have 5 autonomous agents working in the same repo, Agent A might overwrite a file Agent B just fixed, causing an infinite loop or a recursion bomb that crashes the system. This provides a strict distributed mathematical lock: two AI agents cannot occupy the exact same state (file edit) simultaneously. When agent trajectories collide, the substrate forces one agent to yield and shift to a different task branch, allowing you to safely unleash massive swarms of agents in parallel.
 
 ### 1. Message Depth Limit (Recursion Bomb Prevention)
@@ -16197,7 +17542,7 @@ rate_limits:
   on_exceed:
     outbound: throttle_500ms + log_warning
     inbound: queue_up_to_500 + drop_with_alert_beyond
-  burst_window: 10s          # short-window burst allowance: 60/min during a 10s burst
+  burst_window: 10s # short-window burst allowance: 60/min during a 10s burst
 ```
 
 Persistent overshoot beyond burst allowance escalates to pause-and-alert; Phase 33.2 notification fires.
@@ -16213,7 +17558,7 @@ deadlock_detection:
     break_with: DeadlockError
     notify_all_agents_in_cycle: true
     audit_severity: high
-    surface_to_dashboard: true   # render cycle graph
+    surface_to_dashboard: true # render cycle graph
 ```
 
 All agents in the cycle receive `DeadlockError` simultaneously; each can recover by either timing out, retrying with different awaitee, or escalating to `@human`.
@@ -16241,8 +17586,8 @@ Total in-flight agent operations across the entire mesh capped at a workspace-wi
 
 ```yaml
 resource_guards:
-  max_concurrent_agent_ops: 50    # all agents combined
-  max_concurrent_llm_calls: 20    # respects provider rate limits
+  max_concurrent_agent_ops: 50 # all agents combined
+  max_concurrent_llm_calls: 20 # respects provider rate limits
   max_queued_signals: 1000
   on_exceed:
     agent_ops: queue_with_backpressure + dashboard_warning
@@ -16278,8 +17623,8 @@ Specific agents can declare in their `cortex-librarian-v1` definition (Phase 43.
 ```yaml
 # cortex-librarian-v1
 coordination_overrides:
-  outbound_messages_per_minute: 60   # this agent is a coordinator; needs higher
-  max_spawns_per_hour: 50            # this agent decomposes heavily
+  outbound_messages_per_minute: 60 # this agent is a coordinator; needs higher
+  max_spawns_per_hour: 50 # this agent decomposes heavily
 ```
 
 Overrides cannot exceed workspace-level caps; substrate enforces the more restrictive of overlay limits.
@@ -16366,7 +17711,7 @@ fields:
   slug_from: filename
   display_name_from: "first H1 (# Role: ...) or first H1"
   system_prompt_from: full_content_after_first_heading
-  capabilities_from: yaml_frontmatter.capabilities  # optional
+  capabilities_from: yaml_frontmatter.capabilities # optional
 ```
 
 ```yaml
@@ -16387,7 +17732,7 @@ fields:
 ide_id: windsurf
 strategy: single-file
 path: ".windsurfrules"
-parser: section-headings   # ## SectionName → one librarian per section
+parser: section-headings # ## SectionName → one librarian per section
 fields:
   slug_from: heading_text
   display_name_from: heading_text
@@ -16399,7 +17744,7 @@ fields:
 ide_id: copilot
 strategy: single-file
 path: ".github/copilot-instructions.md"
-parser: monolithic        # entire file = one librarian
+parser: monolithic # entire file = one librarian
 fields:
   slug: copilot-default
   display_name: "GitHub Copilot Instructions"
@@ -16407,6 +17752,7 @@ fields:
 ```
 
 Parser library (per `parser` type):
+
 - **`yaml-frontmatter`** — extract YAML block between `---` delimiters; map known keys to `cortex-librarian-v1` schema
 - **`heading-role`** — first `# Role: X` heading → `displayName`; filename stem → `slug`; remainder → `systemPrompt`
 - **`section-headings`** — split on `## <heading>` boundaries; each section becomes a separate Librarian
@@ -16421,8 +17767,8 @@ For each registered IDE convention, an `IDELibrarianExporter` writes the IDE-nat
 ```typescript
 class IDELibrarianExporter {
   ideId: string;
-  export(librarian: CortexLibrarianV1): string;  // pure function
-  targetPath(librarian: CortexLibrarianV1): string;  // where to write
+  export(librarian: CortexLibrarianV1): string; // pure function
+  targetPath(librarian: CortexLibrarianV1): string; // where to write
 }
 ```
 
@@ -16453,9 +17799,9 @@ ${lib.prompts.system}`,
 // windsurf.ts (single-file, multi-section)
 export const windsurfExporter: IDELibrarianExporter = {
   ideId: "windsurf",
-  export: (lib) => `## ${lib.displayName}\n\n${lib.prompts.system}`,  // appended to .windsurfrules
+  export: (lib) => `## ${lib.displayName}\n\n${lib.prompts.system}`, // appended to .windsurfrules
   targetPath: () => ".windsurfrules",
-  appendMode: true,  // exporter merges with existing sections
+  appendMode: true, // exporter merges with existing sections
 };
 ```
 
@@ -16498,10 +17844,10 @@ sync_targets:
       enabled: true
       conflict_policy: prompt
     - id: windsurf
-      enabled: false  # this Librarian not synced to Windsurf
-  on_create: auto_export        # automatically export when a new Librarian is created
-  on_update: auto_export        # propagate updates
-  on_delete: prompt             # confirm before removing IDE files
+      enabled: false # this Librarian not synced to Windsurf
+  on_create: auto_export # automatically export when a new Librarian is created
+  on_update: auto_export # propagate updates
+  on_delete: prompt # confirm before removing IDE files
 ```
 
 ### Adoption migration command
@@ -16515,6 +17861,7 @@ sync_targets:
 5. Optional: enable continuous sync for imported Librarians
 
 Example session:
+
 ```
 $ cortex librarian adopt
 🔍 Scanning IDE conventions...
@@ -16579,7 +17926,7 @@ Enable continuous bidirectional sync for imported Librarians? [Y/n]
 ### Phase 44: Cross-Agent Memory Federation Protocol — ⏳ Planned (extended vision)
 
 **Layman's Terms**
-When agents share memory (Phase 41) or workspaces unify (Phase 42), there has to be a rigorous protocol for *how* memories combine, who's allowed to read what, what counts as a conflict, and how conflicts resolve. Phase 44 specifies the federation protocol — the rules of memory exchange — so that the substrate behaves predictably under any combination of agents, workspaces, and tenants.
+When agents share memory (Phase 41) or workspaces unify (Phase 42), there has to be a rigorous protocol for _how_ memories combine, who's allowed to read what, what counts as a conflict, and how conflicts resolve. Phase 44 specifies the federation protocol — the rules of memory exchange — so that the substrate behaves predictably under any combination of agents, workspaces, and tenants.
 
 **Technical Terms**
 A formal protocol covering partition addressing, access negotiation, read/write semantics, conflict detection, and conflict resolution:
@@ -16643,6 +17990,7 @@ A dedicated observability layer for the substrate:
 Cortex already has all the raw ingredients — knowledge graph, typed relationships, constraints, quality scores, agent mesh, MCP tools, substrate observatory — but lacks a unified operational ontology layer that fuses them into a single executable digital twin of the codebase. What Palantir calls "ontology" — semantic objects + kinetic actions + dynamic security/governance as one coherent model — is exactly the missing meta-layer between Cortex's many subsystems.
 
 **Technical Terms**
+
 - **59.1: Semantic Object Registry**: Every entity, concept, constraint, and agent is registered as a strongly-typed ontology object with classification, capabilities, and governance metadata in `.knowledge/ontology/registry.json`.
 - **59.2: Kinetic Action Bindings**: Each ontology object declares available kinetic actions (e.g., triggering specific MCP tools, synthesis operations, constraint enforcement checks, and automated code-fixes), transforming the knowledge graph from a static queryable index into an executable runtime substrate.
 - **59.3: Common Operating Picture (COP)**: A real-time, fused user interface that merges the Phase 8 visual graph, Phase 31 analytics, and Phase 45 substrate routing metrics into a single actionable "god-view" dashboard for developers and architects.
@@ -16663,6 +18011,7 @@ Registry enforces schemas on all objects; kinetic actions execute successfully; 
 While traditional knowledge bases represent concepts as a flat list or standard nodes with arrows, Phase 60 introduces a physical composition metaphor inspired by "circlons" (mechanical ring primitives). Think of your codebase as chainmail: every piece of code is a mechanical ring that physically links with other rings through specific ports. Removing a ring propagates physical tension through the chainmail, giving you a physically intuitive sense of what will break.
 
 **Technical Terms**
+
 - **Topological Ring Primitives**: Knowledge primitives are modeled as virtual circlons/rings with explicit, addressable interface ports rather than key-value slots.
 - **Chainmail Composition Meshes**: Rings connect by locking ports, building a contiguous topological mesh.
 - **Mechanical Stress Propagation**: Instead of standard breadth-first-search (BFS) for calculating blast-radius, the system simulates mechanical stress propagation through the linked rings. Removing or modifying a high-centrality ring propagates physical tension to all connected rings, highlighting high-stress regions.
@@ -16683,6 +18032,7 @@ Primitives support port-based connections; stress propagation algorithm accurate
 High-traffic parts of your codebase are like busy highways. Instead of searching through every file one by one, Phase 61 creates high-speed "plasma current channels" through your knowledge graph. When code changes, the updates flow along these currents like electricity. If multiple currents collide at a single file, that file is identified as a critical architectural crossroads that needs special care.
 
 **Technical Terms**
+
 - **Birkeland Current Highways**: High-frequency query and execution paths through the graph generate self-reinforcing, low-latency "plasma filaments" (optimized hot-paths in the database memory layout).
 - **Stellar Pinch Points (Z-Pinch)**: Identifies nodes where multiple distinct filaments converge. These represent major architectural bottlenecks or hubs that are automatically flagged for strict governance.
 - **Electromagnetic Wave Propagation**: Ingest changes propagate via wave-like equations through current channels rather than standard graph traversals. Nearby nodes along the same filament update almost instantly, while nodes on unrelated branches are updated in a lower-priority lazy queue.
@@ -16702,6 +18052,7 @@ Filaments dynamically form and reinforce based on query telemetry; S-pinch hubs 
 Sometimes to solve a difficult problem, you have to look at the world inside-out. Phase 62 introduces an "Inverted Reality" view: instead of showing you what a file depends on, it warps the universe so that the file is at the center, and the entire outer codebase is pulled in towards it. It also bends your navigation paths so that the shortest path between two distant services is a curved line of abstract concepts, revealing non-obvious ways they are connected.
 
 **Technical Terms**
+
 - **Inside-Out View Toggle**: Re-projects the graph coordinate space using a conformal mapping where a single selected entity acts as the center (origin), and the entire rest of the workspace is inverted around it to visualize dependency pull and structural gravity.
 - **Curved Abstraction Paths**: Computes shortest paths between entities using a non-Euclidean metric weighted by semantic abstraction level, allowing developers to trace deep, non-obvious conceptual connections.
 - **Rotating Abstraction Shells**: Abstractions are partitioned into concentric, independently-rotating spherical layers representing different update frequencies (e.g., stable core interfaces on the outer shell, volatile local changes in the core).
@@ -16720,6 +18071,7 @@ Toggle swaps coordinate mapping; curved pathfinding calculates abstract links; c
 Mainstream linters and tools enforce standard, rigid rules, but every codebase has its own unique, successful quirks. Phase 63 is the "lone-wolf" mode: it actively looks for non-standard design patterns that actually work beautifully in your codebase, even if they violate generic textbook rules (like a circular dependency that is actually perfectly safe and performance-optimized). It prevents generic AI tools from breaking these highly specialized, successful designs.
 
 **Technical Terms**
+
 - **Forbidden Knowledge Paths**: Scans and catalogs custom architectural patterns that violate standard static-analysis rules but exhibit high stability and low regression rates in Git history.
 - **Contrarian Analysis Engine**: A reasoning pass that challenges conventional rules: "What if this god-module is the optimal design for this specific engine?" or "What if this circular dependency is structurally load-bearing for high-throughput messaging?"
 - **Lone-Wolf Theory Registry**: Stores registered "contrarian" architectural theories in `.knowledge/ontology/lone_wolf_patterns.json`, exempting them from standard linting rules and protecting them from destructive generic AI refactoring attempts.
@@ -16811,12 +18163,12 @@ To elevate Project Cortex from a prototype to a **Viable Product**, the followin
 
 Three classes of issues surfaced after the first public release. v0.3.3 addresses the **root causes**, not just symptoms.
 
-| #   | Issue                                                   | Root Cause                                                                                                                                                                                                                                                                                                                    | Fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| --- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **STDOUT pollution — `invalid character 'â'`**          | `dotenv@17` (the version this project depends on) prints a "tip" message to STDOUT on every `config()` call. The MCP STDIO transport requires STDOUT to contain only JSON-RPC frames, so the tip line breaks every IDE that parses the stream.                                                                                | Added `quiet: true` to both `dotenv.config()` calls in [src/core/env.ts](src/core/env.ts). `pino-pretty` was also routed to STDERR (`destination: 2`) in [src/core/logger.ts](src/core/logger.ts) as defense-in-depth.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 2   | **Antigravity setup not portable across projects**      | Antigravity prioritizes the global `~/.gemini/antigravity/mcp_config.json` over per-project `.antigravity/mcp_config.json`, so the previous per-project setup was silently ignored. Even when local won, every new project required a fresh setup, and entries with hardcoded `node_modules` paths broke on project switches. | [src/cli/setup.ts](src/cli/setup.ts) antigravity target now defaults to writing the **global** config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`, `env: { DOTENV_CONFIG_QUIET: "1" }`). `findProjectRoot()` resolves the active project from CWD at runtime — one global entry serves every project. A `--local` flag on `cortex setup` writes the per-project file instead. Pre-flight check verifies `cortex` is on PATH; aborts with an install hint if not.                                                                                                                                                                                       |
-| 3   | **Bootstrap ingestion documents Project Cortex itself** | Prompt-level guidance ("if index is empty, scan src/") was too weak — `get_pending_changes` still returned a git diff in the user prompt, and LLMs follow what's in front of them. The first diff is invariably "the user installed Cortex," so the first synthesis described Cortex's footprint instead of the user's app.   | Tool-level enforcement: `get_pending_changes` now calls `KnowledgeManager.isEmpty()` and branches. On empty: returns `mode: "bootstrap"` with a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) and `BOOTSTRAP_PROMPT_TEMPLATE` — **the git diff is intentionally absent from the payload**. The file list excludes the Cortex/IDE footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, `.cursor/`, `.vscode/`, etc.), test files (`tests/`, `*.test.*`, `*.spec.*`), and `node_modules`-class noise; includes `docs/`. Capped at 500 entries with a footer. Both ingest prompt files now branch on the `mode` field. |
-| 4   | **Bootstrap is too shallow on large codebases — produces ~5 entities on 1800-file projects** | Fix #3 prevents Cortex-self-documentation but doesn't make bootstrap deep. Three compounding issues remain: (a) the 500-file cap silently truncates large repos (1800 files → 1300 invisible); (b) the prompt receives a *file list*, not *file contents*, so the LLM pattern-matches on filenames instead of reading code; (c) it is a single-shot synthesis — one LLM call summarizing the entire repo naturally compresses to ~5 entities regardless of input size. Observed in production on a real ~1800-file React/Redux/Keycloak project: 4 entities, 3 concepts; user had to manually re-prompt 3+ times to extract any depth, and the result was still ~5 entities. | **Tactical (v0.3.4):** raise the 500-file cap to 2000, group the file list by top-level directory so the LLM at least sees structural hints, and tweak `BOOTSTRAP_PROMPT_TEMPLATE` to explicitly require ≥15 entities and ≥5 concepts as a minimum bar. **Strategic (Phase 33):** the proper fix is multi-phase recursive bootstrap with per-domain deep synthesis, hot-path deepening, cross-domain relationship pass, and quality-gate auto-refine — see [Phase 33: Deep Recursive Bootstrap Ingest](#-phase-33-deep-recursive-graph-bootstrap-ingest----planned-p0--fixes-production-issue) for the full design. Phase 33 produces 40-80 entities and 10-15 concepts on the same 1800-file project in one run (~$2.50-6.50, ~6-10 minutes) vs. the current 4 entities for $0.20 in 30 seconds. |
+| #   | Issue                                                                                        | Root Cause                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **STDOUT pollution — `invalid character 'â'`**                                               | `dotenv@17` (the version this project depends on) prints a "tip" message to STDOUT on every `config()` call. The MCP STDIO transport requires STDOUT to contain only JSON-RPC frames, so the tip line breaks every IDE that parses the stream.                                                                                                                                                                                                                                                                                                                                                                                                                               | Added `quiet: true` to both `dotenv.config()` calls in [src/core/env.ts](src/core/env.ts). `pino-pretty` was also routed to STDERR (`destination: 2`) in [src/core/logger.ts](src/core/logger.ts) as defense-in-depth.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2   | **Antigravity setup not portable across projects**                                           | Antigravity prioritizes the global `~/.gemini/antigravity/mcp_config.json` over per-project `.antigravity/mcp_config.json`, so the previous per-project setup was silently ignored. Even when local won, every new project required a fresh setup, and entries with hardcoded `node_modules` paths broke on project switches.                                                                                                                                                                                                                                                                                                                                                | [src/cli/setup.ts](src/cli/setup.ts) antigravity target now defaults to writing the **global** config with a project-agnostic entry (`command: "cortex"`, `args: ["mcp"]`, `env: { DOTENV_CONFIG_QUIET: "1" }`). `findProjectRoot()` resolves the active project from CWD at runtime — one global entry serves every project. A `--local` flag on `cortex setup` writes the per-project file instead. Pre-flight check verifies `cortex` is on PATH; aborts with an install hint if not.                                                                                                                                                                                                                                                                                                          |
+| 3   | **Bootstrap ingestion documents Project Cortex itself**                                      | Prompt-level guidance ("if index is empty, scan src/") was too weak — `get_pending_changes` still returned a git diff in the user prompt, and LLMs follow what's in front of them. The first diff is invariably "the user installed Cortex," so the first synthesis described Cortex's footprint instead of the user's app.                                                                                                                                                                                                                                                                                                                                                  | Tool-level enforcement: `get_pending_changes` now calls `KnowledgeManager.isEmpty()` and branches. On empty: returns `mode: "bootstrap"` with a curated source-file list (via `listSourceFiles()` in [src/core/scan.ts](src/core/scan.ts)) and `BOOTSTRAP_PROMPT_TEMPLATE` — **the git diff is intentionally absent from the payload**. The file list excludes the Cortex/IDE footprint (`.knowledge/`, `.claude/`, `.agents/`, `.antigravity/`, `.cursor/`, `.vscode/`, etc.), test files (`tests/`, `*.test.*`, `*.spec.*`), and `node_modules`-class noise; includes `docs/`. Capped at 500 entries with a footer. Both ingest prompt files now branch on the `mode` field.                                                                                                                    |
+| 4   | **Bootstrap is too shallow on large codebases — produces ~5 entities on 1800-file projects** | Fix #3 prevents Cortex-self-documentation but doesn't make bootstrap deep. Three compounding issues remain: (a) the 500-file cap silently truncates large repos (1800 files → 1300 invisible); (b) the prompt receives a _file list_, not _file contents_, so the LLM pattern-matches on filenames instead of reading code; (c) it is a single-shot synthesis — one LLM call summarizing the entire repo naturally compresses to ~5 entities regardless of input size. Observed in production on a real ~1800-file React/Redux/Keycloak project: 4 entities, 3 concepts; user had to manually re-prompt 3+ times to extract any depth, and the result was still ~5 entities. | **Tactical (v0.3.4):** raise the 500-file cap to 2000, group the file list by top-level directory so the LLM at least sees structural hints, and tweak `BOOTSTRAP_PROMPT_TEMPLATE` to explicitly require ≥15 entities and ≥5 concepts as a minimum bar. **Strategic (Phase 33):** the proper fix is multi-phase recursive bootstrap with per-domain deep synthesis, hot-path deepening, cross-domain relationship pass, and quality-gate auto-refine — see [Phase 33: Deep Recursive Bootstrap Ingest](#-phase-33-deep-recursive-graph-bootstrap-ingest----planned-p0--fixes-production-issue) for the full design. Phase 33 produces 40-80 entities and 10-15 concepts on the same 1800-file project in one run (~$2.50-6.50, ~6-10 minutes) vs. the current 4 entities for $0.20 in 30 seconds. |
 
 ---
 
@@ -16833,6 +18185,7 @@ A family of biologically-inspired knowledge dynamics that make the architectural
 **Metaphor**: In neuroscience, synapses that are repeatedly activated undergo long-term potentiation (LTP) — the connection strengthens, making future signal transmission more efficient. The classic Hebbian rule: "cells that fire together, wire together."
 
 **Cortex Analog**: Entities and relationships that are frequently queried together (co-accessed in the same MCP read, co-mentioned in synthesis output, co-traversed in impact analysis) develop a **potentiation weight**. This weight:
+
 - Elevates the pair in proximity-reranking (Phase 13.6)
 - Shortens the retrieval path — they're pre-joined in the index summary
 - Triggers proactive deep-synthesis on the potentiated pair when either changes (even if the other file was untouched)
@@ -16845,6 +18198,7 @@ A family of biologically-inspired knowledge dynamics that make the architectural
 **Metaphor**: The adult mammalian brain continues to generate new neurons throughout life, primarily in the hippocampus and olfactory bulb. These newborn neurons are highly plastic and integrate into existing circuits.
 
 **Cortex Analog**: When a new source file appears (or a fundamentally new module structure emerges), Cortex creates **juvenile entities** — placeholder entity pages with high plasticity (low confidence, wide `## Role` descriptions, tentative `## Wiring` sections). Juvenile entities:
+
 - Are tagged `stage: juvenile` in `state.json` with a birth timestamp
 - Receive more frequent re-synthesis passes (every N synths vs. the standard every 5N)
 - Have a lower threshold for merge/rename — the system actively proposes consolidating overlapping juveniles
@@ -16857,6 +18211,7 @@ A family of biologically-inspired knowledge dynamics that make the architectural
 **Metaphor**: In sensory systems (vision, touch), when one neuron fires strongly, it inhibits its immediate neighbors via lateral connections. This sharpens contrast — the "edge" between active and inactive regions becomes crisp.
 
 **Cortex Analog**: When an entity is the direct subject of a synthesis pass (just modified, just read, just impact-analyzed), laterally adjacent entities (its direct `## Wiring` neighbors) receive a **temporary suppression signal**:
+
 - Their `lastRefined` age does not advance during this window — they're not flagged as stale just because they weren't refined alongside the hot entity
 - Synthesis bandwidth is diverted: while entity A is hot, entities A±1 (direct neighbors) get lower synthesis priority
 - Edge cases between the hot entity and its suppressed neighbors are flagged for explicit attention — "A changed but B (depended by A) was not refined" is a deliberate decision, not an oversight
@@ -16868,6 +18223,7 @@ A family of biologically-inspired knowledge dynamics that make the architectural
 **Metaphor**: After a pathogen infection, the immune system retains memory B and T cells that recognize the same antigen years later, enabling a faster and stronger secondary response.
 
 **Cortex Analog**: When an architectural smell, pattern violation, or regression is detected and resolved, Cortex stores an **immunological signature** — a hash of the relevant code context, entity topology, and the fix applied. On future code changes, if a similar signature is detected:
+
 - A `memory recall` event fires ("you fixed this same pattern in PaymentService 3 months ago — same fix pattern applies to AuthService")
 - The previous synthesis output, review notes, and `failedApproaches` are surfaced as context
 - The system proactively suggests the prior fix pattern as a template
@@ -16879,6 +18235,7 @@ A family of biologically-inspired knowledge dynamics that make the architectural
 **Metaphor**: In the adaptive immune system, B cells whose antibodies bind an antigen undergo clonal expansion — they proliferate rapidly, amplifying the successful binding pattern.
 
 **Cortex Analog**: When an entity or architectural pattern consistently passes quality gates, receives positive human review feedback, and survives multiple regression cycles without issues, it enters a **clonal selection** phase:
+
 - The pattern is extracted as a reusable **architectural antibody** — encoded as a structured template in `.knowledge/patterns/`
 - When the synthesis engine detects similar structural prerequisites in other parts of the codebase, it proactively proposes the same pattern
 - Amplified patterns get higher `## Wiring` priority — they're surfaced first in `read_entity` results
@@ -16900,6 +18257,7 @@ Metallurgical principles applied to software architecture — compositional hard
 **Metaphor**: Pure metals are soft. Adding alloying elements (carbon to iron → steel, copper to gold → 18k) introduces lattice distortions that impede dislocation movement, dramatically increasing strength.
 
 **Cortex Analog**: Pure architectural patterns (a generic REST API, a plain event bus) are soft — they flex under load but offer little resistance to degradation. When complementary **alloying elements** are added — validation middleware, rate limiting, structured logging, circuit breakers — the composition becomes harder:
+
 - The composite entity (e.g., "AuthenticatedAPIGateway") receives a higher **hardness score** in quality metrics
 - Hardened compositions are tagged with their constituent elements as `alloyedFrom: [MiddleAuth, RateLimiter, StructuredLogger]`
 - When an alloying element changes, all entities `alloyedFrom` it receive elevated synthesis priority
@@ -16911,11 +18269,13 @@ Metallurgical principles applied to software architecture — compositional hard
 **Metaphor**: Annealing heats metal to a specific temperature then cools slowly, relieving internal stresses and reducing hardness. Tempering reheats hardened steel to a lower temperature, trading some hardness for increased toughness.
 
 **Cortex Analog**: After intensive refactoring (heating), the codebase has internal stresses — circular dependencies, inconsistent naming, duplicated logic that hasn't settled. **Annealing** is a scheduled, low-priority synthesis pass that:
+
 - Identifies stress concentration points (high cyclomatic complexity + high change frequency)
 - Proposes non-functional refactoring candidates (rename, extract, consolidate) without changing behavior
 - Generates "cooling period" recommendations — "wait 3 more commits before merging this module to allow stress to settle"
 
 **Tempering** trades brittleness (perfect purity of abstraction) for toughness (pragmatic tolerance):
+
 - Identifies overly-abstracted interfaces with zero concrete implementations — "this abstraction is too hard, it will shatter under first real use"
 - Flags purity-at-all-costs refactorings that removed necessary duplication or pragmatic shortcuts
 
@@ -16926,6 +18286,7 @@ Metallurgical principles applied to software architecture — compositional hard
 **Metaphor**: Metals under repeated cyclic loading develop micro-cracks that grow incrementally with each cycle until catastrophic failure. The crack grows slowly at first, then accelerates — most of the component's life is spent with an undetected crack already present.
 
 **Cortex Analog**: Architectural debt that accumulates under repeated, small changes follows the same pattern:
+
 - Each commit to a high-churn module applies a **stress cycle** — tiny structural deformation that doesn't fail on its own
 - Cortex tracks cycle count per entity (`stressCycleCount` in state.json)
 - When cycle count crosses a material-specific threshold (configurable per module complexity tier), the entity enters `fatigue_warning` state
@@ -16939,6 +18300,7 @@ Metallurgical principles applied to software architecture — compositional hard
 **Metaphor**: Materials under constant load below their yield strength still gradually deform over time — called creep. It's imperceptible day-to-day but over months causes significant distortion, especially at elevated temperatures.
 
 **Cortex Analog**: Under constant development load, even well-structured modules slowly drift from their original architecture:
+
 - API surfaces accumulate optional parameters
 - Single-responsibility classes grow additional concerns
 - Interface contracts silently expand beyond their original scope
@@ -16962,6 +18324,7 @@ Structural engineering heuristics for dependency topology, load-bearing capacity
 **Metaphor**: In structural engineering, triangles are the strongest shape. A truss made of triangles distributes loads efficiently — any single member failure redistributes the load without collapse.
 
 **Cortex Analog**: Dependency graphs with triangular structures (A depends on B, B depends on C, C depends on A) are not necessarily bad — they can be load-bearing trusses. Cortex distinguishes **pathological cycles** (fragile, tightly-coupled death spirals) from **triangulated trusses** (stable, load-distributing patterns with clear interfaces):
+
 - Analyzes each cyclic component in the dependency graph and classifies it as `truss` (stable, load-bearing) or `tangle` (fragile, needs refactoring)
 - Truss classification criteria: clear interface contracts between each pair, single responsibility per member, reversible dependencies
 - Tangle criteria: implicit coupling, shared mutable state, bidirectional knowledge of internals
@@ -16973,6 +18336,7 @@ Structural engineering heuristics for dependency topology, load-bearing capacity
 **Metaphor**: A slender column under compression doesn't fail by crushing — it fails by buckling at a critical load far below its material strength. Euler's formula predicts exactly when: P_cr = π²EI / (KL)².
 
 **Cortex Analog**: Modules that depend on many interfaces (compression) don't fail by "crushing" (too many dependencies) — they fail by buckling (the abstraction bends unpredictably under load). Cortex computes a **critical-load score**:
+
 - I = interface complexity (number of exported functions/classes/types)
 - L = dependency chain length to root module
 - K = end-condition factor (1.0 for leaf modules, 0.5 for core infrastructure, 2.0 for utility modules)
@@ -16986,6 +18350,7 @@ When a module's actual dependency count approaches its critical load, it's flagg
 **Metaphor**: Every mechanical system has natural frequencies. When driven at those frequencies, resonance causes runaway oscillation amplitude — Tacoma Narrows Bridge collapse. Damping elements absorb energy and prevent resonance.
 
 **Cortex Analog**: Software systems with feedback loops (build triggers, CI pipelines, auto-scaling, reconciliation loops) can exhibit resonance — small changes amplified into cascading failures:
+
 - Cortex detects **oscillating dependency patterns**: A triggers B, B triggers C, C triggers A (not just cycle — timed feedback)
 - Flags entities that form **positive feedback loops** — where a change in entity X propagates and returns amplified
 - Recommends **damping elements**: idempotency keys, rate limiters, exponential backoff, dead-letter queues, circuit breakers
@@ -16998,6 +18363,7 @@ When a module's actual dependency count approaches its critical load, it's flagg
 **Metaphor**: Every engineered structure includes a factor of safety — the structure is designed to handle 2×, 5×, or 10× the expected maximum load. This accounts for material defects, construction tolerances, and unknown unknowns.
 
 **Cortex Analog**: Architectural decisions should include a factor of safety — known as **engineering margin**. Cortex tracks:
+
 - **Load margin**: current dependency load vs. estimated capacity of the module's interface
 - **Degradation margin**: current quality score vs. minimum acceptable quality for the entity's tier (core infrastructure gets higher margin)
 - **Complexity margin**: current cyclomatic complexity vs. team's historical failure threshold
@@ -17022,6 +18388,7 @@ Statistical learning principles for knowledge management — feature extraction,
 **Metaphor**: High-dimensional data (1000+ features per point) is impossible to visualize or cluster meaningfully. Techniques like PCA, t-SNE, and UMAP project data into 2-3 dimensions while preserving relative distances.
 
 **Cortex Analog**: As entity counts grow, the relationship graph becomes high-dimensional — each entity is a point in N-dimensional space where dimensions are its relationships, quality scores, churn rates, and interface signatures. Dimensionality reduction projects this into a **latent entity map**:
+
 - Similar entities cluster together in the projection — revealing groups the synthesis engine might not have explicitly named
 - Outliers in the projection are candidates for `cortex lint` — either misclassified entities or genuinely unique modules needing attention
 - The projection is used as a secondary index — read_entity returns "similar entities" based on latent-space proximity
@@ -17033,6 +18400,7 @@ Statistical learning principles for knowledge management — feature extraction,
 **Metaphor**: No single model is reliable. Random forests combine hundreds of weak decision trees; gradient boosting iteratively corrects previous errors. The ensemble nearly always outperforms any individual member.
 
 **Cortex Analog**: No single quality signal is reliable. A module with high churn might be volatile — or it might be the most actively maintained. A module with many dependencies might be coupled — or it might be a well-factored hub. Ensemble methods combine multiple weak architectural signals into a **convergence score**:
+
 - Signals: churn rate, dependency fan-in/out, interface stability, test coverage (if available), review frequency, comment density, cyclomatic complexity, entity age, `staleSince` recency
 - Each signal is a weak classifier — on its own, noisy and unreliable
 - Combined via weighted ensemble (signal weights tuned per project via historical accuracy on `cortex lint` violations)
@@ -17045,6 +18413,7 @@ Statistical learning principles for knowledge management — feature extraction,
 **Metaphor**: In medical statistics, survival analysis models time-to-event data: how long until a patient relapses, a machine fails, or a customer churns. Kaplan-Meier curves estimate the survival function from observed lifetimes.
 
 **Cortex Analog**: Architectural entities have lifetimes — from birth (first synthesis) to death (file deleted, module deprecated). Survival analysis models:
+
 - **Entity survival curve**: probability that an entity survives (is not deleted or fundamentally rewritten) past N days
 - **Risk factors**: high cyclomatic complexity, low quality score, high churn, high dependency count — each contributes a hazard ratio
 - **Cohort effects**: entities born in the same synthesis batch share survival characteristics (a badly-synthesized batch produces short-lived entities)
@@ -17059,6 +18428,7 @@ Used to flag entities with unexpectedly high hazard ratios — "this entity has 
 **Metaphor**: Bayes' theorem describes how to update the probability of a hypothesis as new evidence arrives. The prior belief is combined with the likelihood of the observed data to produce a posterior belief. This is how science works — not binary true/false, but continuously refined probabilities.
 
 **Cortex Analog**: Every entity and relationship in Cortex has a **belief** — not a binary "this is correct" but a probability distribution over possible states:
+
 - **Prior**: initial confidence from the first synthesis (always relatively low — the LLM could be wrong)
 - **Evidence**: subsequent synthesis passes, human reviews, manual edits, `--force` re-synths, impact analysis results
 - **Likelihood**: how much each evidence type shifts the belief (a human editor's change is high-likelihood; an automated re-synthesis is lower)
@@ -17080,6 +18450,7 @@ Medical diagnostic techniques repurposed for architecture: monitoring the archit
 **Metaphor**: The heart's electrical activity produces a characteristic ECG waveform — P wave, QRS complex, T wave. Cardiologists detect arrhythmias (atrial fibrillation, ventricular tachycardia) from deviations in this pattern.
 
 **Cortex Analog**: The codebase has a **development pulse** — a characteristic rhythm of commits, syntheses, and architectural changes. Cortex tracks:
+
 - **Heart rate**: commits per day, syntheses per day — normal range varies by project phase
 - **P-R interval**: time between a file change and its synthesis — too long suggests queue build-up
 - **QRS complex**: rapid burst of changes across related files — indicates coordinated refactoring or reactive hotfix
@@ -17095,6 +18466,7 @@ Arrhythmias are surfaced in `cortex status` as health warnings: "⚠️ Sinus ar
 **Metaphor**: Cognitive behavioral therapy identifies systematic thinking distortions: black-and-white thinking, catastrophizing, overgeneralization, mind reading, emotional reasoning. These biases distort perception of reality.
 
 **Cortex Analog**: Architectural decision-making exhibits systematic biases that degrade knowledge quality:
+
 - **Anchoring bias**: the first architectural decision about a module anchors all subsequent descriptions, even as the module evolves away — entity pages describe "what it was" not "what it is"
 - **Confirmation bias**: the synthesis engine selectively retains evidence that confirms its initial interpretation and discards contradictory signals
 - **Dunning-Kruger effect**: low-complexity modules receive overconfident descriptions; high-complexity modules receive overly cautious, vague descriptions
@@ -17111,6 +18483,7 @@ Cortex detects these patterns by analyzing synthesis history across time and sur
 **Metaphor**: Infectious diseases spread through populations according to SIR models — Susceptible, Infected, Recovered. The basic reproduction number R₀ determines whether an outbreak grows or dies out.
 
 **Cortex Analog**: Architectural smells (god objects, circular dependencies, leaky abstractions, inconsistent naming) spread through the codebase like infections:
+
 - **Susceptible**: modules that follow clean patterns but are adjacent to infected modules
 - **Exposed**: modules adjacent to infected modules that share dependencies — they're at risk of "catching" the smell through copy-paste, shared authorship, or dependency-driven scope creep
 - **Infected**: modules exhibiting the smell
@@ -17127,6 +18500,7 @@ Cortex computes R₀ for each known smell type — how many new infections each 
 **Metaphor**: CT scans and MRIs take multiple cross-sectional slices of the body and reconstruct a 3D model. Different tissue types have different radiodensity, revealing tumors, fractures, and abnormalities invisible from the surface.
 
 **Cortex Analog**: Cortex takes **architectural tomographic slices** — cross-sectional views of the codebase along different axes:
+
 - **Horizontal slice**: all entities at one layer of abstraction (e.g., all controllers, all repositories) — reveals layer-wide consistency issues
 - **Vertical slice**: all entities involved in one feature end-to-end — reveals cross-cutting coupling
 - **Depth slice**: entities at a specific dependency depth from root — reveals architectural layering violations
@@ -17142,6 +18516,7 @@ Each slice is rendered as a Mermaid diagram (Phase 8 overlay) with density color
 **Metaphor**: In neurology, lesion studies correlate damaged brain regions with lost functions — damage to Broca's area impairs speech production, not comprehension. This reveals which regions are necessary for which functions.
 
 **Cortex Analog**: When a module is deleted, deprecated, or fundamentally broken (failing tests, compilation errors), Cortex performs a **lesion study**:
+
 - Identifies which remaining modules exhibit functional deficits after the lesion — failing transitive dependencies, broken imports, unhandled edge cases
 - Maps each deficit to a specific **necessary region** — demonstrating that the removed module was essential for that function
 - Builds a **functional deficit map**: which entities are necessary for which capabilities
@@ -17163,6 +18538,7 @@ Detective work for software architecture: tracing the chain of evidence from a b
 **Metaphor**: Forensic investigators collect trace evidence (fibers, hair, fingerprints, DNA) at a crime scene and establish a chain of custody — documenting every transfer from collection to courtroom. Each transfer is logged and verified.
 
 **Cortex Analog**: When a regression is detected (test failure, lint violation, behavior change), Cortex establishes a **regression provenance chain**:
+
 - **Primary evidence**: the diff that introduced the regression (from git bisect or test-mapped commit)
 - **Secondary evidence**: the synthesis record closest to the regression commit — what did the Librarian say about the affected entities at that time?
 - **Tertiary evidence**: dependency topology at the regression point — what else changed in related entities?
@@ -17177,6 +18553,7 @@ The provenance chain is surfaced as a structured report: "Regression in PaymentS
 **Metaphor**: Criminal profilers analyze patterns of behavior — crime locations, times, methods, victimology — to build a profile of an unknown offender. Each crime is a data point revealing the offender's operational style.
 
 **Cortex Analog**: Each module has a **behavioral profile** built from its git history — a pattern-of-life analysis:
+
 - **Temporal pattern**: commits at specific times of day, days of week — reveals if this module is maintained by a specific team with specific working hours
 - **Modus operandi**: typical change patterns — does this module accumulate small fixes (maintenance pattern) or bulk structural rewrites (refactoring pattern)?
 - **Signature**: author name patterns, commit message style, test coverage patterns — uniquely identifies the maintainer's engineering fingerprint
@@ -17191,6 +18568,7 @@ When anomalous behavior occurs — an unfamiliar author makes a structural chang
 **Metaphor**: After a crime, forensic investigators reconstruct the sequence of events — establishing a timeline, identifying entry and exit points, determining cause and manner of death. The reconstruction answers: "what happened, in what order, and why?"
 
 **Cortex Analog**: After a production incident or architectural failure, Cortex performs **post-mortem reconstruction**:
+
 - **Timeline construction**: orders all relevant events (commits, deploys, config changes, synthesis runs) in a coherent timeline
 - **Entry point identification**: pinpoints the first deviation from normal state — the "entry wound"
 - **Causal chain mapping**: traces how the initial deviation propagated through the dependency graph, amplifying at each step
@@ -17206,6 +18584,7 @@ The reconstruction is saved as a structured forensic report in `.knowledge/foren
 **Metaphor**: In criminal justice, recidivism prediction models estimate the likelihood that a convicted individual will re-offend. Factors include criminal history, age, employment status, and social connections.
 
 **Cortex Analog**: Entities that have experienced a regression, quality degradation, or architectural violation have a **recidivism risk** — the probability they will experience the same class of issue again:
+
 - **Criminal history**: number of past regressions/violations of the same type
 - **Time since last incident**: recent incidents are stronger predictors
 - **Environmental factors**: module churn rate, team size, test coverage, dependency stability
@@ -17227,10 +18606,12 @@ Legal and governance principles applied to architecture: which component has aut
 **Metaphor**: Courts have subject-matter jurisdiction — a family court cannot hear a criminal case, a federal court cannot hear most divorce cases. Jurisdiction defines which court has authority over which type of dispute.
 
 **Cortex Analog**: Every entity has a **jurisdiction** — the domain of architectural concerns it has authority over:
+
 - **AuthService**: jurisdiction over authentication, authorization, session management — but NOT over payment processing, data storage, or UI rendering
 - **PaymentService**: jurisdiction over transactions, refunds, billing — but NOT over user profiles or notifications
 
 When an entity's synthesis or behavior violates its jurisdiction (an entity describes payment logic inside AuthService's page, or a library function accesses a database it shouldn't), Cortex flags a **jurisdictional overreach**:
+
 - "AuthService's ## Wiring lists a 'createBillingProfile' relationship — this is outside AuthService's jurisdiction (authentication). Recommend moving to PaymentService or creating a dedicated entity."
 
 Jurisdiction boundaries are defined in entity metadata (`jurisdiction: string[]`) and enforced by a cross-reference check during synthesis and lint passes.
@@ -17242,6 +18623,7 @@ Jurisdiction boundaries are defined in entity metadata (`jurisdiction: string[]`
 **Metaphor**: Stare decisis (Latin: "to stand by things decided") is the common law principle that courts should follow precedents established in previous rulings. Lower courts are bound by higher courts; same-level courts follow persuasive precedent.
 
 **Cortex Analog**: Architectural decisions create **binding precedent** for future decisions:
+
 - **Vertical precedent**: core infrastructure entities (libraries, frameworks, platform services) set binding precedent — all consuming entities must conform to their patterns
 - **Horizontal precedent**: peer entities create persuasive precedent — if three microservices all use the same error-handling pattern, a fourth should follow unless there's a compelling reason
 - **Overruling**: an entity can be explicitly overruled by a higher-authority entity (core library changes its API — downstream entities must update)
@@ -17256,6 +18638,7 @@ Cortex tracks precedent links in entity metadata: `precedent: { source: "EntityN
 **Metaphor**: Due process requires that legal proceedings be fair — notice of the charges, an opportunity to be heard, an impartial tribunal, and a decision based on evidence. No one can be deprived of rights without due process.
 
 **Cortex Analog**: Before Cortex enforces any constraint, flags a violation, or modifies an entity's status, it must follow **architectural due process**:
+
 - **Notice**: the entity is notified (via MCP read response footer, `cortex status`, or lint output) that a constraint is being evaluated against it — before any enforcement action
 - **Hearing**: the developer has an opportunity to respond — override the constraint with a reasoned justification, request an extension, or acknowledge the issue and plan a fix
 - **Evidence basis**: every enforcement action cites the evidence — which entity, which constraint, which specific code or synthesis output triggered it
@@ -17269,6 +18652,7 @@ Cortex tracks precedent links in entity metadata: `precedent: { source: "EntityN
 **Metaphor**: Habeas corpus (Latin: "you shall have the body") requires a person under arrest to be brought before a judge — the state must justify the deprivation of liberty. It prevents arbitrary detention.
 
 **Cortex Analog**: Every automated enforcement action — constraint flagging, entity demotion, synthesis rejection, write-prevention — must be accompanied by a **writ of architectural habeas corpus**:
+
 - What is the specific action being taken?
 - What rule/constraint/precedent authorizes this action?
 - What evidence supports this action?
@@ -17348,7 +18732,10 @@ interface FastPathResult {
   reason?: string;
 }
 
-async function fastPathCheck(projectRoot: string, meta: CortexMeta): Promise<FastPathResult> {
+async function fastPathCheck(
+  projectRoot: string,
+  meta: CortexMeta,
+): Promise<FastPathResult> {
   const headCommit = await git.revparse(["HEAD"]).catch(() => null);
   if (!headCommit) return { status: "changes-detected", reason: "no git HEAD" };
 
@@ -17358,13 +18745,14 @@ async function fastPathCheck(projectRoot: string, meta: CortexMeta): Promise<Fas
     if (status.files.length === 0) {
       return { status: "up-to-date" };
     }
-    const changedFiles = status.files.map(f => f.path);
+    const changedFiles = status.files.map((f) => f.path);
     return { status: "changes-detected", changedFiles };
   }
 
   // HEAD advanced — get changed files since lastCommit
-  const changedFiles = await git.diff([`${meta.lastCommit}..HEAD`, "--name-only"])
-    .then(out => out.split("\n").filter(Boolean));
+  const changedFiles = await git
+    .diff([`${meta.lastCommit}..HEAD`, "--name-only"])
+    .then((out) => out.split("\n").filter(Boolean));
   return { status: "changes-detected", changedFiles };
 }
 ```
@@ -17389,7 +18777,9 @@ interface WorkerPool {
   terminate(): void;
 }
 
-function createExtractionPool(concurrency = Math.max(1, os.cpus().length - 1)): WorkerPool {
+function createExtractionPool(
+  concurrency = Math.max(1, os.cpus().length - 1),
+): WorkerPool {
   // Each worker: reads file, SHA-256 hashes content, checks cache,
   // calls LanguageProvider.getParser() + extract(), applies confidence floors,
   // writes result to content-addressed cache.
@@ -17401,9 +18791,9 @@ async function runStage1(
   pool: WorkerPool,
   cache: ContentAddressedCache,
 ): Promise<GraphExtractionReport> {
-  const results = await Promise.all(changedFiles.map(f => pool.submit(f)));
-  const nodes = results.flatMap(r => r.nodes);
-  const edges = results.flatMap(r => r.edges);
+  const results = await Promise.all(changedFiles.map((f) => pool.submit(f)));
+  const nodes = results.flatMap((r) => r.nodes);
+  const edges = results.flatMap((r) => r.edges);
   // Dedup nodes by canonical ID, resolve cross-file symbol references
   return { nodes: dedup(nodes), edges: applyConfidenceFloors(edges) };
 }
@@ -17413,8 +18803,13 @@ async function runStage1(
 
 ```typescript
 const CONFIDENCE_FLOORS: Record<string, number> = {
-  CALLS: 0.90, IMPORTS: 0.90, HAS_METHOD: 0.95,
-  INHERITS: 0.95, ACCESSES: 0.80, DEPENDS_ON: 0.75, RELATED_TO: 0.60,
+  CALLS: 0.9,
+  IMPORTS: 0.9,
+  HAS_METHOD: 0.95,
+  INHERITS: 0.95,
+  ACCESSES: 0.8,
+  DEPENDS_ON: 0.75,
+  RELATED_TO: 0.6,
 };
 ```
 
@@ -17438,7 +18833,7 @@ async function runStage2(
   llmClient: LlmClient,
 ): Promise<SynthesisResult[]> {
   const communities = detectLeidenCommunities(report.nodes, report.edges);
-  const chunks = communities.map(c => buildChunk(c, TARGET_CHUNK_TOKENS));
+  const chunks = communities.map((c) => buildChunk(c, TARGET_CHUNK_TOKENS));
   const results: SynthesisResult[] = [];
 
   for (const chunk of chunks) {
@@ -17447,15 +18842,12 @@ async function runStage2(
       continue; // resume: skip already-synthesised chunks
     }
 
-    const result = await withRetry(
-      () => llmClient.synthesize(chunk),
-      {
-        maxAttempts: 3,
-        baseDelayMs: 200,
-        capDelayMs: 10_000,
-        retryIf: (err) => !(err instanceof AbortError),
-      }
-    );
+    const result = await withRetry(() => llmClient.synthesize(chunk), {
+      maxAttempts: 3,
+      baseDelayMs: 200,
+      capDelayMs: 10_000,
+      retryIf: (err) => !(err instanceof AbortError),
+    });
 
     // Adaptive context-overflow: halve chunk and retry once
     if (result.stopReason === "context_length_exceeded") {
@@ -17505,7 +18897,9 @@ async function runStage3(
   for (const r of results) validateEntity(r.entity);
 
   // Write entities (existing KnowledgeManager.saveSynthesis)
-  await Promise.all(results.map(r => km.saveSynthesis(r.entity, r.synthesis)));
+  await Promise.all(
+    results.map((r) => km.saveSynthesis(r.entity, r.synthesis)),
+  );
 
   // Seal the fast-path: next run will see HEAD == meta.lastCommit
   await km.updateMeta({ lastCommit: headCommit, lastSync: Date.now() });
@@ -17517,36 +18911,41 @@ async function runStage3(
 
 ### 33.5.6 Three Flows Mapped to the Pipeline
 
-| Flow | Stage 0 | Stage 1 | Stage 2 | Stage 3 |
-|------|---------|---------|---------|---------|
-| **Bootstrap (cold start)** | skip (no meta) | all repo files, parallel pool | all communities, checkpoint-per-chunk | write all, set lastCommit |
-| **Automatic (watch cycle)** | fast-path check | changed files only | changed communities only | incremental write |
-| **Manual (`cortex ingest`)** | optional `--force` flag | scope = CLI args or changed files | targeted communities | write + report |
+| Flow                         | Stage 0                 | Stage 1                           | Stage 2                               | Stage 3                   |
+| ---------------------------- | ----------------------- | --------------------------------- | ------------------------------------- | ------------------------- |
+| **Bootstrap (cold start)**   | skip (no meta)          | all repo files, parallel pool     | all communities, checkpoint-per-chunk | write all, set lastCommit |
+| **Automatic (watch cycle)**  | fast-path check         | changed files only                | changed communities only              | incremental write         |
+| **Manual (`cortex ingest`)** | optional `--force` flag | scope = CLI args or changed files | targeted communities                  | write + report            |
 
 ### 33.5.7 Implementation Phasing (Ordered by ROI)
 
 **Phase A — Fast-path check** (1 day, zero risk)
+
 - Add `fastPathCheck()` to `src/core/diff.ts`
 - Guard the watch loop with it
 - Result: eliminates wasteful no-op re-ingestion on clean worktrees
 
 **Phase B — Content-addressed cache** (1 day, zero risk)
+
 - Implement `ContentAddressedCache` at `src/core/content-cache.ts`
 - Wire into existing `synthesizeChanges()` as a pre-check
 - Result: unchanged files are never re-synthesised, even if the watcher fires
 
 **Phase C — Worker pool Stage 1 extraction** (2 days, low risk)
+
 - Add `src/core/extractor.ts` with `WorkerPool` and `LanguageProvider` wiring
 - Run Stage 1 for changed files before calling the LLM
 - Result: parallel deterministic extraction, per-relation confidence floors applied early
 
 **Phase D — Chunked Stage 2 synthesis** (2 days, medium risk — touches LLM call path)
+
 - Add Leiden community detection (`src/core/communities.ts`)
 - Wrap `synthesizeChanges()` with chunked loop + adaptive retry
 - Add checkpoint file write/read
 - Result: bootstrap works on large repos without context overflow
 
 **Phase E — Bootstrap flow** (1 day, low risk)
+
 - Wire all stages into `cortex ingest --bootstrap` CLI command
 - Auto-detect cold start (missing `.knowledge/state.json`) and run full bootstrap
 - Result: first-run experience goes from "LLM context overflow" to "resumable chunked bootstrap"
@@ -17555,46 +18954,58 @@ async function runStage3(
 
 This pipeline is **strictly additive**. The existing components it touches:
 
-| Existing Component | Touch Type | What Changes |
-|---|---|---|
-| `src/cli/watch.ts` CortexDaemon | **call site** | `fastPathCheck()` guard added before `performSync()` |
-| `src/core/diff.ts` `getFileDiff()` | **prepend** | early return when fast-path is clean |
-| `src/llm/client.ts` `synthesizeChanges()` | **wrapped** | called inside Stage 2 loop, not replaced |
-| `src/knowledge/writer.ts` `saveSynthesis()` | **call site** | called inside Stage 3 loop, signature unchanged |
-| `.knowledge/state.json` | **read + additive write** | `meta.lastCommit` field added, no existing fields removed |
+| Existing Component                          | Touch Type                | What Changes                                              |
+| ------------------------------------------- | ------------------------- | --------------------------------------------------------- |
+| `src/cli/watch.ts` CortexDaemon             | **call site**             | `fastPathCheck()` guard added before `performSync()`      |
+| `src/core/diff.ts` `getFileDiff()`          | **prepend**               | early return when fast-path is clean                      |
+| `src/llm/client.ts` `synthesizeChanges()`   | **wrapped**               | called inside Stage 2 loop, not replaced                  |
+| `src/knowledge/writer.ts` `saveSynthesis()` | **call site**             | called inside Stage 3 loop, signature unchanged           |
+| `.knowledge/state.json`                     | **read + additive write** | `meta.lastCommit` field added, no existing fields removed |
 
 No existing code paths are deleted. The pipeline can be feature-flagged with `CORTEX_TWO_STAGE=1` during rollout so the old single-call path remains the default until Phase D is validated in CI.
 
 ### Phase 33.5 Refinement — Shadow Candidate Resolution on File Rename (GitNexus)
 
-Phase 3.3 handles entity ID stability when an entity is *renamed* (emits a `RENAME` evolution edge). Phase 33.5 Stage 0 detects which files changed via git. Neither handles import *resolution path* staleness when a file is renamed.
+Phase 3.3 handles entity ID stability when an entity is _renamed_ (emits a `RENAME` evolution edge). Phase 33.5 Stage 0 detects which files changed via git. Neither handles import _resolution path_ staleness when a file is renamed.
 
-**Problem**: When `src/auth.js` is renamed to `src/auth.ts`, existing CALLS edges from other files that imported `"./auth"` still reference the old entity ID (`auth.js`). The import `"./auth"` now resolves to `auth.ts` — but the Stage 1 incremental pass doesn't know to invalidate edges that came from files *not* in the changed-file list. The stale edges persist silently.
+**Problem**: When `src/auth.js` is renamed to `src/auth.ts`, existing CALLS edges from other files that imported `"./auth"` still reference the old entity ID (`auth.js`). The import `"./auth"` now resolves to `auth.ts` — but the Stage 1 incremental pass doesn't know to invalidate edges that came from files _not_ in the changed-file list. The stale edges persist silently.
 
 ```typescript
 // src/core/shadow-candidates.ts
 
 // File extensions that Node/TypeScript resolution considers for "./auth" with no extension
-const SHADOW_EXTS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", "/index.ts", "/index.js"];
+const SHADOW_EXTS = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  "/index.ts",
+  "/index.js",
+];
 
 function shadowCandidatesFor(addedFile: string): string[] {
   const base = addedFile.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, "");
-  return SHADOW_EXTS
-    .map(ext => base + ext)
-    .filter(candidate => candidate !== addedFile);
+  return SHADOW_EXTS.map((ext) => base + ext).filter(
+    (candidate) => candidate !== addedFile,
+  );
 }
 
 async function invalidateShadowEdges(
   addedFiles: string[],
-  state: CortexState
+  state: CortexState,
 ): Promise<string[]> {
   const invalidatedEntityIds: string[] = [];
   for (const added of addedFiles) {
     const shadows = shadowCandidatesFor(added);
     for (const shadow of shadows) {
       // Find entities whose sourceFile matches a shadow candidate
-      const staleEntities = Object.values(state.entities)
-        .filter(e => e.sourceFile && path.normalize(e.sourceFile) === path.normalize(shadow));
+      const staleEntities = Object.values(state.entities).filter(
+        (e) =>
+          e.sourceFile &&
+          path.normalize(e.sourceFile) === path.normalize(shadow),
+      );
       for (const entity of staleEntities) {
         // Mark all CALLS/IMPORTS edges pointing TO this entity as needing re-resolution
         invalidatedEntityIds.push(entity.id);
@@ -17620,11 +19031,11 @@ Phase 33.5 Stage 3 validates entities against constraint checks but has no hard 
 ```typescript
 // src/core/fragment-validator.ts
 const FRAGMENT_LIMITS = {
-  MAX_NODES_PER_SYNTHESIS:  10_000,
+  MAX_NODES_PER_SYNTHESIS: 10_000,
   MAX_EDGES_PER_SYNTHESIS: 100_000,
-  MAX_ID_LENGTH:              256,
-  MAX_DESCRIPTION_LENGTH:   5_000,
-  MAX_ENTITY_NAME_LENGTH:     200,
+  MAX_ID_LENGTH: 256,
+  MAX_DESCRIPTION_LENGTH: 5_000,
+  MAX_ENTITY_NAME_LENGTH: 200,
 };
 
 interface FragmentValidationResult {
@@ -17632,19 +19043,31 @@ interface FragmentValidationResult {
   violations: string[];
 }
 
-function validateSynthesisFragment(entities: EntityRecord[], edges: GraphEdge[]): FragmentValidationResult {
+function validateSynthesisFragment(
+  entities: EntityRecord[],
+  edges: GraphEdge[],
+): FragmentValidationResult {
   const violations: string[] = [];
 
   if (entities.length > FRAGMENT_LIMITS.MAX_NODES_PER_SYNTHESIS)
-    violations.push(`Entity count ${entities.length} exceeds MAX_NODES_PER_SYNTHESIS=${FRAGMENT_LIMITS.MAX_NODES_PER_SYNTHESIS}`);
+    violations.push(
+      `Entity count ${entities.length} exceeds MAX_NODES_PER_SYNTHESIS=${FRAGMENT_LIMITS.MAX_NODES_PER_SYNTHESIS}`,
+    );
 
   if (edges.length > FRAGMENT_LIMITS.MAX_EDGES_PER_SYNTHESIS)
-    violations.push(`Edge count ${edges.length} exceeds MAX_EDGES_PER_SYNTHESIS=${FRAGMENT_LIMITS.MAX_EDGES_PER_SYNTHESIS}`);
+    violations.push(
+      `Edge count ${edges.length} exceeds MAX_EDGES_PER_SYNTHESIS=${FRAGMENT_LIMITS.MAX_EDGES_PER_SYNTHESIS}`,
+    );
 
   for (const entity of entities) {
     if (entity.id.length > FRAGMENT_LIMITS.MAX_ID_LENGTH)
-      violations.push(`Entity ID too long: "${entity.id.slice(0, 60)}..." (${entity.id.length} chars)`);
-    if (entity.name && entity.name.length > FRAGMENT_LIMITS.MAX_ENTITY_NAME_LENGTH)
+      violations.push(
+        `Entity ID too long: "${entity.id.slice(0, 60)}..." (${entity.id.length} chars)`,
+      );
+    if (
+      entity.name &&
+      entity.name.length > FRAGMENT_LIMITS.MAX_ENTITY_NAME_LENGTH
+    )
       violations.push(`Entity name too long: "${entity.name.slice(0, 60)}..."`);
   }
 
@@ -17652,7 +19075,7 @@ function validateSynthesisFragment(entities: EntityRecord[], edges: GraphEdge[])
 }
 ```
 
-**Integration**: Called in Stage 3 *before* `KnowledgeManager.saveSynthesis()`. If `valid === false`, the synthesis is rejected, violations are logged to `log.jsonl` as a `SYNTHESIS_REJECTED` event, and the synthesis chunk is skipped (not written). Does not abort the whole pipeline — other chunks continue.
+**Integration**: Called in Stage 3 _before_ `KnowledgeManager.saveSynthesis()`. If `valid === false`, the synthesis is rejected, violations are logged to `log.jsonl` as a `SYNTHESIS_REJECTED` event, and the synthesis chunk is skipped (not written). Does not abort the whole pipeline — other chunks continue.
 
 **Limits are configurable** via `.cortex/config.json` overrides for teams with legitimately large graphs. Defaults are designed to catch runaway LLM output, not typical synthesis.
 
@@ -17666,7 +19089,7 @@ function validateSynthesisFragment(entities: EntityRecord[], edges: GraphEdge[])
 
 **Source**: Graphify (`--update` flag) | **Cross-references**: Phase 33.5 (Two-Stage Pipeline), Phase 1 (Ingestion), Phase 5.6 (Daemon Watchdog)
 
-**Problem**: Every watch cycle — even for a one-word comment change — currently triggers a full LLM synthesis call. On an active codebase, developers commit dozens of times per day. 80% of those commits change comments, rename variables, tweak string literals, or adjust imports: changes where the *structural graph* (Phase 33.5 Stage 1) changes but the *semantic synthesis* is still valid. These trigger unnecessary LLM calls costing tokens and adding latency.
+**Problem**: Every watch cycle — even for a one-word comment change — currently triggers a full LLM synthesis call. On an active codebase, developers commit dozens of times per day. 80% of those commits change comments, rename variables, tweak string literals, or adjust imports: changes where the _structural graph_ (Phase 33.5 Stage 1) changes but the _semantic synthesis_ is still valid. These trigger unnecessary LLM calls costing tokens and adding latency.
 
 **Design**: Before invoking Stage 2 (LLM synthesis), run a fast semantic-drift check. If the AST-level graph diff between the current and previous extraction is below a configurable threshold, skip the LLM and only update the structural graph.
 
@@ -17676,28 +19099,53 @@ interface AstDriftReport {
   removedNodes: number;
   addedEdges: number;
   removedEdges: number;
-  synthesisChangedEntities: string[];   // entities whose AST signature changed enough to need re-synthesis
+  synthesisChangedEntities: string[]; // entities whose AST signature changed enough to need re-synthesis
   skipLlm: boolean;
 }
 
-function computeAstDrift(prev: GraphExtractionReport, curr: GraphExtractionReport): AstDriftReport {
-  const addedNodes = curr.nodes.filter(n => !prev.nodes.some(p => p.id === n.id)).length;
-  const removedNodes = prev.nodes.filter(p => !curr.nodes.some(n => n.id === p.id)).length;
-  const addedEdges = curr.edges.filter(e => !prev.edges.some(p => edgeEquals(p, e))).length;
-  const removedEdges = prev.edges.filter(p => !curr.edges.some(e => edgeEquals(e, p))).length;
+function computeAstDrift(
+  prev: GraphExtractionReport,
+  curr: GraphExtractionReport,
+): AstDriftReport {
+  const addedNodes = curr.nodes.filter(
+    (n) => !prev.nodes.some((p) => p.id === n.id),
+  ).length;
+  const removedNodes = prev.nodes.filter(
+    (p) => !curr.nodes.some((n) => n.id === p.id),
+  ).length;
+  const addedEdges = curr.edges.filter(
+    (e) => !prev.edges.some((p) => edgeEquals(p, e)),
+  ).length;
+  const removedEdges = prev.edges.filter(
+    (p) => !curr.edges.some((e) => edgeEquals(e, p)),
+  ).length;
 
   // Entities whose signature changed: same ID but different outEdge set or different file hash
   const synthesisChangedEntities = curr.nodes
-    .filter(n => {
-      const prevNode = prev.nodes.find(p => p.id === n.id);
-      return prevNode && (prevNode.contentHash !== n.contentHash || edgeSetChanged(n.id, prev, curr));
+    .filter((n) => {
+      const prevNode = prev.nodes.find((p) => p.id === n.id);
+      return (
+        prevNode &&
+        (prevNode.contentHash !== n.contentHash ||
+          edgeSetChanged(n.id, prev, curr))
+      );
     })
-    .map(n => n.id);
+    .map((n) => n.id);
 
   // Skip LLM if: no structural changes AND no entity signatures changed significantly
-  const skipLlm = addedNodes === 0 && removedNodes === 0 && synthesisChangedEntities.length === 0;
+  const skipLlm =
+    addedNodes === 0 &&
+    removedNodes === 0 &&
+    synthesisChangedEntities.length === 0;
 
-  return { addedNodes, removedNodes, addedEdges, removedEdges, synthesisChangedEntities, skipLlm };
+  return {
+    addedNodes,
+    removedNodes,
+    addedEdges,
+    removedEdges,
+    synthesisChangedEntities,
+    skipLlm,
+  };
 }
 ```
 
@@ -17710,16 +19158,17 @@ if (drift.skipLlm) {
   // Write updated structural graph (edges/nodes), mark existing synthesis valid
   await updateStructuralGraphOnly(stage1Graph, km);
   log.info(`[AST-only] Skipped LLM — 0 structural changes detected.`);
-  return existingEntities;   // return current synthesis unchanged
+  return existingEntities; // return current synthesis unchanged
 }
 
 // Only synthesize entities whose signatures actually changed
-const entitiesToSynthesize = stage1Graph.nodes.filter(
-  n => drift.synthesisChangedEntities.includes(n.id)
+const entitiesToSynthesize = stage1Graph.nodes.filter((n) =>
+  drift.synthesisChangedEntities.includes(n.id),
 );
 ```
 
 **Environment control**:
+
 - `CORTEX_AST_ONLY=1` — force AST-only mode for all cycles (useful for performance-first setups)
 - `CORTEX_AST_ONLY=auto` (default) — use drift detection to decide per-cycle
 - `CORTEX_AST_ONLY=0` — always run LLM (current behaviour, useful for debugging)
@@ -17738,37 +19187,37 @@ const entitiesToSynthesize = stage1Graph.nodes.filter(
 
 This phase is a **cross-reference index**. All 29 items identified from Graphify and GitNexus gap analysis have been implemented as dedicated phase sections in their proper ideological locations. This section exists for quick lookup.
 
-| Item | Promoted to | Location in plan |
-|---|---|---|
-| AST-only incremental update | Phase 33.6 | After Phase 33.5 |
-| Lazy CLI module loading | Phase 5 refinement | Phase 5 body |
-| Entity ID stability tags | Phase 3.3 | After Phase 3.1 |
-| Memory limit on watcher | Phase 5.6 refinement | Phase 5.6 body |
-| Structured confidence reasons | Phase 0.3 refinement | Phase 0.3 body |
-| Rationale node extraction | Phase 0.18 | Before Phase 1 |
-| PR blast-radius dashboard | Phase 12.16 | After Phase 12.15 |
-| PR conflict detection | Phase 12.16 | After Phase 12.15 |
-| Shortest-path query | Phase 9.1 refinement | Phase 9.1 body |
-| `cortex explain <symbol>` | Phase 10.8 | After Phase 10.7 |
-| Suggested questions per corpus | Phase 10.9 | After Phase 10.8 |
-| Execution flow tracing | Phase 9.4 | After Phase 9.3 |
-| API route handler analysis | Phase 9.5 | After Phase 9.4 |
-| Repository groups with contracts | Phase 11.5 | After Phase 11 |
-| Cross-repo RRF query merging | Phase 11.6 | After Phase 11.5 |
-| Skill file generation per community | Phase 10.10 | After Phase 10.9 |
-| Wiki generation / GitHub Wiki push | Phase 20.5 refinement | Phase 20.5 body |
-| Mermaid auto-regenerate on commit | Phase 0.10 refinement | Phase 0.10 body |
-| Neo4j / GraphML export | Phase 8.5 | After Phase 8.4 |
-| SCIP ingest | Phase 0.19 | Before Phase 1 |
-| Global cross-project registry | Phase 52 body | Phase 52 section |
-| Semantic dedup 3-pass LLM tiebreaker | Phase 0.6 refinement | Phase 0.6 body |
-| Dated backup snapshots | Phase 0.12 refinement | Phase 0.12 body |
-| Auto-detection wizard | Phase 0.15 refinement | Phase 0.15 body |
-| God node detection | Phase 7.21 | After Phase 7.20 |
-| LLM-free micro-diff synthesis | Phase 2.1 | After Phase 2 |
-| Semantic versioning of graph | Phase 3.2 | After Phase 3.1 |
-| Test coverage as entity metadata | Phase 12.17 | After Phase 12.16 |
-| Hallucination cross-check | Phase 2.2 | After Phase 2.1 |
+| Item                                 | Promoted to           | Location in plan  |
+| ------------------------------------ | --------------------- | ----------------- |
+| AST-only incremental update          | Phase 33.6            | After Phase 33.5  |
+| Lazy CLI module loading              | Phase 5 refinement    | Phase 5 body      |
+| Entity ID stability tags             | Phase 3.3             | After Phase 3.1   |
+| Memory limit on watcher              | Phase 5.6 refinement  | Phase 5.6 body    |
+| Structured confidence reasons        | Phase 0.3 refinement  | Phase 0.3 body    |
+| Rationale node extraction            | Phase 0.18            | Before Phase 1    |
+| PR blast-radius dashboard            | Phase 12.16           | After Phase 12.15 |
+| PR conflict detection                | Phase 12.16           | After Phase 12.15 |
+| Shortest-path query                  | Phase 9.1 refinement  | Phase 9.1 body    |
+| `cortex explain <symbol>`            | Phase 10.8            | After Phase 10.7  |
+| Suggested questions per corpus       | Phase 10.9            | After Phase 10.8  |
+| Execution flow tracing               | Phase 9.4             | After Phase 9.3   |
+| API route handler analysis           | Phase 9.5             | After Phase 9.4   |
+| Repository groups with contracts     | Phase 11.5            | After Phase 11    |
+| Cross-repo RRF query merging         | Phase 11.6            | After Phase 11.5  |
+| Skill file generation per community  | Phase 10.10           | After Phase 10.9  |
+| Wiki generation / GitHub Wiki push   | Phase 20.5 refinement | Phase 20.5 body   |
+| Mermaid auto-regenerate on commit    | Phase 0.10 refinement | Phase 0.10 body   |
+| Neo4j / GraphML export               | Phase 8.5             | After Phase 8.4   |
+| SCIP ingest                          | Phase 0.19            | Before Phase 1    |
+| Global cross-project registry        | Phase 52 body         | Phase 52 section  |
+| Semantic dedup 3-pass LLM tiebreaker | Phase 0.6 refinement  | Phase 0.6 body    |
+| Dated backup snapshots               | Phase 0.12 refinement | Phase 0.12 body   |
+| Auto-detection wizard                | Phase 0.15 refinement | Phase 0.15 body   |
+| God node detection                   | Phase 7.21            | After Phase 7.20  |
+| LLM-free micro-diff synthesis        | Phase 2.1             | After Phase 2     |
+| Semantic versioning of graph         | Phase 3.2             | After Phase 3.1   |
+| Test coverage as entity metadata     | Phase 12.17           | After Phase 12.16 |
+| Hallucination cross-check            | Phase 2.2             | After Phase 2.1   |
 
 ### 71.1 Tier 1 — High ROI, Low Effort (Foundation & Performance)
 
@@ -17848,16 +19297,16 @@ Support ingesting SCIP (Sourcegraph Code Intelligence Protocol) indexes as an al
 ### 71.4 Tier 4 — Refinements to Existing Cortex Ideas
 
 **22. Semantic dedup with LLM tiebreaker (Graphify)**
-*(Enhances Phase 0.6)* Graphify does a 3-pass approach: Pass 1 = exact filename merge, Pass 2 = Jaro-Winkler fuzzy string match, Pass 3 = LLM tiebreaker only when fuzzy score is in the ambiguous range (0.7–0.85). Better than pure MinHash for small repos; more precise than pure LLM for large ones.
+_(Enhances Phase 0.6)_ Graphify does a 3-pass approach: Pass 1 = exact filename merge, Pass 2 = Jaro-Winkler fuzzy string match, Pass 3 = LLM tiebreaker only when fuzzy score is in the ambiguous range (0.7–0.85). Better than pure MinHash for small repos; more precise than pure LLM for large ones.
 
 **23. Dated backup snapshots for graph artifacts (Graphify)**
-*(Enhances Phase 0.12)* Before any synthesis that costs significant tokens (detected via diff size), automatically backup the current `.knowledge/` state to `.knowledge/snapshots/YYYY-MM-DD/`. Phase 33.5 has checkpoint files but no named historical snapshots. Enables `cortex restore 2025-05-01` without git.
+_(Enhances Phase 0.12)_ Before any synthesis that costs significant tokens (detected via diff size), automatically backup the current `.knowledge/` state to `.knowledge/snapshots/YYYY-MM-DD/`. Phase 33.5 has checkpoint files but no named historical snapshots. Enables `cortex restore 2025-05-01` without git.
 
 **24. gitnexus setup style auto-detection wizard (GitNexus)**
-*(Enhances Phase 0.15)* `cortex install` currently writes MCP config but requires the user to know what IDE they're using. GitNexus detects installed editors by checking config file locations and executable presence, then writes the correct config per IDE automatically. Combine with Phase 0.15's McpConfigTarget registry — this makes it a true one-command install.
+_(Enhances Phase 0.15)_ `cortex install` currently writes MCP config but requires the user to know what IDE they're using. GitNexus detects installed editors by checking config file locations and executable presence, then writes the correct config per IDE automatically. Combine with Phase 0.15's McpConfigTarget registry — this makes it a true one-command install.
 
 **25. God node detection (Graphify)**
-*(Enhances Phase 7.17)* Rank entities by (in-degree + out-degree) weighted by cross-community edges. Flag top-N as "god nodes" — entities so central they're implicit coupling points. Surface in `cortex lint` with a specific warning class. Different from Phase 7.17 Keystone Index (which is impact/size ratio) — god nodes are specifically about unexpected high degree, not just centrality.
+_(Enhances Phase 7.17)_ Rank entities by (in-degree + out-degree) weighted by cross-community edges. Flag top-N as "god nodes" — entities so central they're implicit coupling points. Surface in `cortex lint` with a specific warning class. Different from Phase 7.17 Keystone Index (which is impact/size ratio) — god nodes are specifically about unexpected high degree, not just centrality.
 
 ### 71.5 Genuinely New (Synthesized Expansions)
 
@@ -17889,18 +19338,23 @@ Every skill in `.claude/skills/` that is invoked on a schedule (cron, git hook, 
 ## Standing Order
 
 ### Scope
+
 What programs and resources this authority covers. What it explicitly does NOT cover.
 
 ### Triggers
+
 Events or schedules that activate execution (cron expression, hook event, manual invocation).
 
 ### Approval Gates
+
 Actions that require human sign-off before proceeding. List each decision point explicitly.
 
 ### Escalation
+
 After 3 consecutive failures: stop, emit a structured error to the operator, and wait for human intervention. Never retry indefinitely.
 
 ### Execute-Verify-Report Discipline
+
 After every execution: (1) Execute the action, (2) Verify the outcome against the expected state, (3) Report the result with evidence — not just "done."
 ```
 
@@ -17917,11 +19371,12 @@ After every execution: (1) Execute the action, (2) Verify the outcome against th
 Top-of-hour cron expressions (e.g., `0 * * * *`) auto-stagger by `Math.floor(Math.random() * 600) - 300` seconds (±5 minutes) on first fire. Prevents synchronized IO + LLM-cost spikes when multiple Cortex-monitored repos or multiple Phase 5.7 jobs all share the same default schedule.
 
 **Implementation** (≤30 lines in `src/scheduler/cron.ts`):
+
 ```typescript
 function maybeJitterCronTime(expr: string, jitterMs: number = 300_000): number {
   // Only jitter top-of-hour (minute field = 0)
-  const parts = expr.trim().split(' ');
-  if (parts[0] !== '0') return 0;
+  const parts = expr.trim().split(" ");
+  if (parts[0] !== "0") return 0;
   return Math.floor(Math.random() * jitterMs * 2) - jitterMs;
 }
 ```
@@ -17938,12 +19393,12 @@ When Phase 5.7 (Scheduled Operations) ships, define a **typed event bus** for Co
 
 ```typescript
 type CortexHookEvent =
-  | { type: 'server:start' }
-  | { type: 'server:stop' }
-  | { type: 'ingest:before'; files: string[] }
-  | { type: 'ingest:after'; entitiesAdded: number; durationMs: number }
-  | { type: 'entity:evicted'; entityId: string }
-  | { type: 'knowledge:stale'; entityId: string; sourceFile: string };
+  | { type: "server:start" }
+  | { type: "server:stop" }
+  | { type: "ingest:before"; files: string[] }
+  | { type: "ingest:after"; entitiesAdded: number; durationMs: number }
+  | { type: "entity:evicted"; entityId: string }
+  | { type: "knowledge:stale"; entityId: string; sourceFile: string };
 ```
 
 **Hook discovery order**: bundled hooks → `.cortex/hooks/` workspace dir. A hook file exports `default async function(event: CortexHookEvent): Promise<void>`. Unknown event types are passed through without error (forward-compatibility).
@@ -17960,19 +19415,59 @@ type CortexHookEvent =
 
 All code paths that assemble LLM payloads must serialize collections in deterministic order:
 
-| Call site | Required ordering |
-|-----------|------------------|
-| `build_context_pack` entity list | Sort by `entity_id` ascending |
-| `cortex_find` results | Sort by `score DESC`, then `name ASC` as tie-break |
-| Plugin/extension registry serialized to prompts | Sort by `pluginId` ascending |
-| File list in context pack | Sort by `sourceFile` path ascending |
+| Call site                                       | Required ordering                                  |
+| ----------------------------------------------- | -------------------------------------------------- |
+| `build_context_pack` entity list                | Sort by `entity_id` ascending                      |
+| `cortex_find` results                           | Sort by `score DESC`, then `name ASC` as tie-break |
+| Plugin/extension registry serialized to prompts | Sort by `pluginId` ascending                       |
+| File list in context pack                       | Sort by `sourceFile` path ascending                |
 
 **Audit checklist** — grep these patterns and verify sort is applied before serialization:
+
 - `Object.entries(state.entities)` — must sort before map
 - `Array.from(pluginRegistry.values())` — must sort before JSON.stringify
 - `results.map(...)` in find.ts — must have `.sort()` before `.map()`
 
 Non-deterministic iteration order (JS `Map`/`Set`, object key insertion) silently invalidates the Anthropic prompt cache on every call even when context is logically identical. The rule is also encoded in `CLAUDE.md` under `## ⚡ Token Economics`.
+
+---
+
+### Phase 13 Refinement — Temporal Decay Scoring for `audit_quality` (openclaw audit, score: 24, partially closes Flaw #13)
+
+**Source**: openclaw `extensions/memory-core/src/memory/temporal-decay.ts:4`
+
+**What**: `audit_quality` currently returns near-identical scores across all entities because all five dimensions default to 1.0. Adding a temporal decay dimension gives the scorer real variance: entity pages whose source file hasn't been touched in >90 days get a mild freshness penalty; concept pages and undated topic files are "evergreen" and never decay.
+
+```typescript
+const LN2 = Math.LN2;
+
+interface DecayOptions {
+  ageInDays: number;
+  halfLifeDays: number; // 30 for session logs, 90 for entity pages, Infinity for evergreen
+}
+
+function calculateTemporalDecayMultiplier({ ageInDays, halfLifeDays }: DecayOptions): number {
+  if (!isFinite(halfLifeDays)) return 1.0; // evergreen — no decay
+  return Math.exp((-LN2 / halfLifeDays) * ageInDays);
+}
+
+// Evergreen = concept pages and undated topic files; dated = YYYY-MM-DD session logs
+function isEvergreenEntityPath(filePath: string): boolean {
+  return !/\d{4}-\d{2}-\d{2}/.test(path.basename(filePath));
+}
+
+function decayScore(entityFilePath: string, lastModifiedMs: number): number {
+  if (isEvergreenEntityPath(entityFilePath)) return 1.0;
+  const ageInDays = (Date.now() - lastModifiedMs) / (1000 * 60 * 60 * 24);
+  return calculateTemporalDecayMultiplier({ ageInDays, halfLifeDays: 90 });
+}
+
+// Wire into audit_quality score assembly — multiply final score by decay factor
+const freshnessFactor = decayScore(entity.filePath, entity.lastModifiedMs);
+const qualityScore = rawScore * freshnessFactor;
+```
+
+**Counter-case**: Temporal decay penalises stable, well-written entities that simply haven't changed because they don't need to. A `CortexMCPServer.md` that was perfect 6 months ago shouldn't score lower than a freshly-written but shallow entity. Gate behind a config flag: `CORTEX_QUALITY_DECAY=enabled` (default off).
 
 ---
 
@@ -17987,6 +19482,7 @@ Non-deterministic iteration order (JS `Map`/`Set`, object key insertion) silentl
 **Stage 1** (parent directory check): any parent directory component matches a frozenset of known secrets directories: `.ssh`, `.gnupg`, `.aws`, `.gcloud`, `secrets`, `.secrets`, `credentials`. Files inside these dirs are always skipped regardless of filename.
 
 **Stage 2** (filename regex): 8 patterns using lookarounds (not `\b` — underscore is a word char, so `api_token.txt` would not match `\btoken\b`):
+
 - `.env` / `.envrc` files
 - TLS cert/key files (`.pem`, `.key`, `.p12`, `.pfx`, `.cert`, `.crt`)
 - Secret keywords: `credential`, `secret`, `passwd`, `password`, `private_key`
@@ -18006,18 +19502,30 @@ Non-deterministic iteration order (JS `Map`/`Set`, object key insertion) silentl
 **What**: Add a process-lifetime stat index for file hash caching. Maps `absPath → {size, mtimeNs, hash}`. `fileHash(path)` checks `size + mtime_ns` first — skips full SHA256 read if unchanged (same trade-off as `make`). Flush index atomically at process exit via `atexit` + temp-file rename.
 
 ```typescript
-interface StatEntry { size: number; mtimeNs: bigint; hash: string; }
+interface StatEntry {
+  size: number;
+  mtimeNs: bigint;
+  hash: string;
+}
 const _statIndex = new Map<string, StatEntry>();
 
 async function fileHash(path: string): Promise<string> {
   const stat = await fs.stat(path);
   const key = normalizePath(path);
   const cached = _statIndex.get(key);
-  if (cached && cached.size === stat.size && cached.mtimeNs === stat.mtimeMs * 1_000_000n) {
+  if (
+    cached &&
+    cached.size === stat.size &&
+    cached.mtimeNs === stat.mtimeMs * 1_000_000n
+  ) {
     return cached.hash;
   }
   const hash = await sha256(await fs.readFile(path));
-  _statIndex.set(key, { size: stat.size, mtimeNs: stat.mtimeMs * 1_000_000n, hash });
+  _statIndex.set(key, {
+    size: stat.size,
+    mtimeNs: stat.mtimeMs * 1_000_000n,
+    hash,
+  });
   return hash;
 }
 ```
@@ -18037,17 +19545,19 @@ Also: `bodyContent(content: string): string` — strips YAML frontmatter before 
 function isVariantPair(a: string, b: string): boolean {
   if (a === b || Math.max(a.length, b.length) >= 12) return false;
   const VARIANT = /^(.*[a-z])([0-9]+[a-z]*|[a-z]{2,})$/;
-  const ma = VARIANT.exec(a), mb = VARIANT.exec(b);
+  const ma = VARIANT.exec(a),
+    mb = VARIANT.exec(b);
   if (!ma || !mb) return false;
-  return ma[1] === mb[1] && ma[2] !== mb[2];  // same stem, different suffix
+  return ma[1] === mb[1] && ma[2] !== mb[2]; // same stem, different suffix
 }
 
 // Blocks short-label fuzzy merge unless same-length single-char substitution
 function isShortLabelBlocked(a: string, b: string, jwScore: number): boolean {
   if (Math.max(a.length, b.length) >= 12) return false;
   // Allow only true typos: same length + Damerau-Levenshtein distance 1
-  if (jwScore >= 0.97 && a.length === b.length && damerauLevenshtein(a, b) <= 1) return false;
-  return true;  // block all other short-label merges
+  if (jwScore >= 0.97 && a.length === b.length && damerauLevenshtein(a, b) <= 1)
+    return false;
+  return true; // block all other short-label merges
 }
 ```
 
@@ -18062,7 +19572,11 @@ Apply in the Jaro-Winkler verification step: skip merge if `isVariantPair(a, b)`
 **What**: In `cortex_find` BFS traversal, after IDF scoring, select seed nodes using a gap threshold instead of always taking top-K:
 
 ```typescript
-function pickSeeds(scored: [number, string][], maxK = 3, gapRatio = 0.2): string[] {
+function pickSeeds(
+  scored: [number, string][],
+  maxK = 3,
+  gapRatio = 0.2,
+): string[] {
   if (!scored.length) return [];
   const topScore = scored[0][0];
   const seeds: string[] = [];
@@ -18092,15 +19606,21 @@ function resolveSeed(graph: Graph, query: string): string | null {
   if (graph.hasNode(query)) return query;
   const q = query.toLowerCase();
   // 2. Exact label match (case-insensitive)
-  const exactLabel = [...graph.nodes()].filter(n => graph.getNodeAttribute(n, 'label')?.toLowerCase() === q);
+  const exactLabel = [...graph.nodes()].filter(
+    (n) => graph.getNodeAttribute(n, "label")?.toLowerCase() === q,
+  );
   if (exactLabel.length === 1) return exactLabel[0];
   // 3. Exact source_file match
-  const exactFile = [...graph.nodes()].filter(n => graph.getNodeAttribute(n, 'source_file')?.toLowerCase() === q);
+  const exactFile = [...graph.nodes()].filter(
+    (n) => graph.getNodeAttribute(n, "source_file")?.toLowerCase() === q,
+  );
   if (exactFile.length === 1) return exactFile[0];
   // 4. Label-contains match (returns null if ambiguous — conservative)
-  const containsMatch = [...graph.nodes()].filter(n => graph.getNodeAttribute(n, 'label')?.toLowerCase().includes(q));
+  const containsMatch = [...graph.nodes()].filter((n) =>
+    graph.getNodeAttribute(n, "label")?.toLowerCase().includes(q),
+  );
   if (containsMatch.length === 1) return containsMatch[0];
-  return null;  // not found or ambiguous — caller emits "entity not found" error
+  return null; // not found or ambiguous — caller emits "entity not found" error
 }
 ```
 
@@ -18120,10 +19640,11 @@ Wire into `impact_analysis` tool before BFS: if `resolveSeed(graph, entityName) 
 **2. Hub exclusion before partitioning**: `excludeHubsPercentile` (0-100) parameter: compute degree percentile, exclude super-hubs from Leiden, reattach by majority-vote neighbour community. Prevents files with edges to every node from pulling unrelated subsystems into the same community.
 
 **3. Community ID stability via greedy overlap matching**:
+
 ```typescript
 function remapCommunitiesToPrevious(
   communities: Map<number, string[]>,
-  previousNodeCommunity: Map<string, number>
+  previousNodeCommunity: Map<string, number>,
 ): Map<number, string[]> {
   // compute all (overlap, oldCid, newCid) triples
   // sort desc by overlap, then asc by oldCid, newCid
@@ -18145,6 +19666,7 @@ Enables user-edited community label files to persist across rebuilds without dri
 **What**: Add `--project` flag to `cortex install` that writes skill files to `.claude/skills/cortex/` (project-local) instead of `~/.claude/skills/cortex/` (global). Enables per-repo MCP or skill customization.
 
 **Implementation**: `cortex install [--project] [--project-dir <path>]`
+
 - Without flag: writes to `~/.claude/skills/cortex/SKILL.md` (global)
 - With `--project`: writes to `.claude/skills/cortex/SKILL.md` (project-local, gitignored or checked in)
 - `CLAUDE_CONFIG_DIR` env var overrides `~/.claude/` as base for both scopes
@@ -18161,11 +19683,15 @@ Enables user-edited community label files to persist across rebuilds without dri
 
 ```typescript
 function assertSafePath(root: string, rawPath: string): string {
-  if (!rawPath || rawPath.includes('\0')) throw new SecurityError('Invalid path');
+  if (!rawPath || rawPath.includes("\0"))
+    throw new SecurityError("Invalid path");
   const resolvedRoot = path.resolve(root);
   const fullPath = path.resolve(resolvedRoot, rawPath);
-  if (fullPath !== resolvedRoot && !fullPath.startsWith(resolvedRoot + path.sep)) {
-    throw new SecurityError('Path traversal denied');
+  if (
+    fullPath !== resolvedRoot &&
+    !fullPath.startsWith(resolvedRoot + path.sep)
+  ) {
+    throw new SecurityError("Path traversal denied");
   }
   return fullPath;
 }
@@ -18185,10 +19711,14 @@ function assertSafePath(root: string, rawPath: string): string {
 ```typescript
 function assertString(value: unknown, paramName: string): string {
   if (Array.isArray(value)) {
-    throw new ValidationError(`${paramName}: expected string, got array (duplicate parameter?)`);
+    throw new ValidationError(
+      `${paramName}: expected string, got array (duplicate parameter?)`,
+    );
   }
-  if (typeof value !== 'string') {
-    throw new ValidationError(`${paramName}: expected string, got ${typeof value}`);
+  if (typeof value !== "string") {
+    throw new ValidationError(
+      `${paramName}: expected string, got ${typeof value}`,
+    );
   }
   return value;
 }
@@ -18206,14 +19736,14 @@ function assertString(value: unknown, paramName: string): string {
 **What**: For each embeddable entity, compute `sha1(EMBEDDING_TEXT_VERSION + '\n' + embeddingText)` and store alongside the vector. On incremental embedding runs, skip entities whose hash matches the stored value.
 
 ```typescript
-const EMBEDDING_TEXT_VERSION = 'v1';  // bump to invalidate all embeddings on template change
+const EMBEDDING_TEXT_VERSION = "v1"; // bump to invalidate all embeddings on template change
 
 function contentHashForEntity(entity: EmbeddableEntity): string {
   const text = generateEmbeddingText(entity);
-  return createHash('sha1')
-    .update(EMBEDDING_TEXT_VERSION + '\n')
+  return createHash("sha1")
+    .update(EMBEDDING_TEXT_VERSION + "\n")
     .update(text)
-    .digest('hex');
+    .digest("hex");
 }
 ```
 
@@ -18230,9 +19760,9 @@ Version bump on template change → all embeddings invalidated and regenerated. 
 ```typescript
 function canonicalizePath(p: string): string {
   try {
-    return fs.realpathSync.native(p);  // resolves symlinks, Windows 8.3 short names, macOS /var→/private/var
+    return fs.realpathSync.native(p); // resolves symlinks, Windows 8.3 short names, macOS /var→/private/var
   } catch {
-    return path.resolve(p);  // graceful fallback for paths that don't exist yet
+    return path.resolve(p); // graceful fallback for paths that don't exist yet
   }
 }
 ```
@@ -18248,12 +19778,14 @@ Apply at: project root resolution, entity source_file storage, registry lookup (
 **What**: Add `INCREMENTAL_SCHEMA_VERSION = 1` constant to `src/state.ts`. On every cortex analyze/ingest, compare stored `state.json.version` against the constant. If mismatch → log warning + force full rebuild.
 
 ```typescript
-const INCREMENTAL_SCHEMA_VERSION = 1;  // bump when incremental invariants change
+const INCREMENTAL_SCHEMA_VERSION = 1; // bump when incremental invariants change
 
 function checkSchemaVersion(stored: number | undefined): boolean {
   if (stored === undefined || stored !== INCREMENTAL_SCHEMA_VERSION) {
-    logger.warn(`Schema version mismatch (stored=${stored}, expected=${INCREMENTAL_SCHEMA_VERSION}). Forcing full rebuild.`);
-    return false;  // caller should run full ingest
+    logger.warn(
+      `Schema version mismatch (stored=${stored}, expected=${INCREMENTAL_SCHEMA_VERSION}). Forcing full rebuild.`,
+    );
+    return false; // caller should run full ingest
   }
   return true;
 }
@@ -18305,7 +19837,7 @@ let activeConcurrency = maxConcurrency;
 async function withAdaptiveConcurrency<T>(
   items: T[],
   worker: (item: T) => Promise<void>,
-  maxC = 5
+  maxC = 5,
 ): Promise<void> {
   let c = maxC;
   const queue = [...items];
@@ -18313,10 +19845,10 @@ async function withAdaptiveConcurrency<T>(
     const batch = queue.splice(0, c);
     const results = await Promise.allSettled(batch.map(worker));
     for (const r of results) {
-      if (r.status === 'rejected' && isRateLimitError(r.reason)) {
-        c = Math.max(1, c - 1);  // reduce concurrency
-        await sleep(5000);        // backoff
-        queue.unshift(/* failed item */);  // re-queue
+      if (r.status === "rejected" && isRateLimitError(r.reason)) {
+        c = Math.max(1, c - 1); // reduce concurrency
+        await sleep(5000); // backoff
+        queue.unshift(/* failed item */); // re-queue
       }
     }
   }
@@ -18333,9 +19865,9 @@ async function withAdaptiveConcurrency<T>(
 
 ```typescript
 function ipKeyGenerator(req: Request): string {
-  const ip = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
   // Normalize IPv6 to /56 subnet (first 7 bytes)
-  if (ip.includes(':')) {
+  if (ip.includes(":")) {
     const parsed = new Address6(ip);
     return parsed.isValid() ? parsed.getBitsBase2().slice(0, 56) : ip;
   }
@@ -18352,13 +19884,15 @@ function ipKeyGenerator(req: Request): string {
 **What**: Add a configurable exclusion list to the contract matcher to suppress infrastructure-level routes that produce N×M false cross-repo dependencies.
 
 **Two filter categories**:
+
 1. **Exact path exclusions**: `/health`, `/ready`, `/liveness`, `/metrics` — every service has these, and cross-linking them is meaningless.
 2. **Param-only paths**: paths that collapse to `/{param}` or `/{param}/{param}` after normalization — they match any route in any service after normalization.
 
 **Config**: `.cortex/groups.yaml`
+
 ```yaml
 matching:
-  exclude_links_paths: ['/health', '/ready', '/liveness', '/metrics']
+  exclude_links_paths: ["/health", "/ready", "/liveness", "/metrics"]
   exclude_links_param_only_paths: true
 ```
 
@@ -18372,10 +19906,11 @@ matching:
 
 ```typescript
 function computeRetryDelay(attempt: number, retryAfterMs?: number): number {
-  const BASE = 1000, CAP = 30_000;
+  const BASE = 1000,
+    CAP = 30_000;
   const jittered = Math.random() * Math.min(CAP, BASE * Math.pow(2, attempt));
   if (retryAfterMs !== undefined) {
-    return Math.min(retryAfterMs, CAP);  // honor server hint but cap it
+    return Math.min(retryAfterMs, CAP); // honor server hint but cap it
   }
   return jittered;
 }
@@ -18394,14 +19929,22 @@ const deadline = Date.now() + timeoutMs;
 
 for (const neighbor of neighbors) {
   const remainingMs = deadline - Date.now();
-  if (remainingMs <= 0) { truncatedRepos.push(neighbor.repo); continue; }
+  if (remainingMs <= 0) {
+    truncatedRepos.push(neighbor.repo);
+    continue;
+  }
 
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), remainingMs);
   const { result, timedOut } = await Promise.race([
-    neighborImpact(neighbor, ac.signal).then(r => ({ result: r, timedOut: false })),
-    new Promise<{ result: null; timedOut: true }>(res =>
-      ac.signal.addEventListener('abort', () => res({ result: null, timedOut: true }))
+    neighborImpact(neighbor, ac.signal).then((r) => ({
+      result: r,
+      timedOut: false,
+    })),
+    new Promise<{ result: null; timedOut: true }>((res) =>
+      ac.signal.addEventListener("abort", () =>
+        res({ result: null, timedOut: true }),
+      ),
     ),
   ]).finally(() => clearTimeout(timer));
 
@@ -18424,21 +19967,32 @@ const RRF_K = 60;
 function mergeWithRRF(
   keywordResults: Array<{ entityId: string; score: number }>,
   semanticResults: Array<{ entityId: string; distance: number }>,
-  limit = 10
+  limit = 10,
 ): RRFResult[] {
   const merged = new Map<string, RRFResult>();
 
   for (let i = 0; i < (keywordResults ?? []).length; i++) {
     const r = keywordResults[i];
     const rrfScore = 1 / (RRF_K + i + 1);
-    merged.set(r.entityId, { entityId: r.entityId, score: rrfScore, sources: ['keyword'] });
+    merged.set(r.entityId, {
+      entityId: r.entityId,
+      score: rrfScore,
+      sources: ["keyword"],
+    });
   }
   for (let i = 0; i < (semanticResults ?? []).length; i++) {
     const r = semanticResults[i];
     const rrfScore = 1 / (RRF_K + i + 1);
     const existing = merged.get(r.entityId);
-    if (existing) { existing.score += rrfScore; existing.sources.push('semantic'); }
-    else merged.set(r.entityId, { entityId: r.entityId, score: rrfScore, sources: ['semantic'] });
+    if (existing) {
+      existing.score += rrfScore;
+      existing.sources.push("semantic");
+    } else
+      merged.set(r.entityId, {
+        entityId: r.entityId,
+        score: rrfScore,
+        sources: ["semantic"],
+      });
   }
   return [...merged.values()].sort((a, b) => b.score - a.score).slice(0, limit);
 }
@@ -18457,10 +20011,10 @@ Also: **BM25 top-3 aggregation**: when multiple entities come from the same file
 
 ```typescript
 async function safeIncrementalIngest(options: IngestOptions): Promise<void> {
-  await setIncrementalFlag(true);     // write to disk FIRST
+  await setIncrementalFlag(true); // write to disk FIRST
   try {
     await runIncrementalIngest(options);
-    await setIncrementalFlag(false);  // clear ONLY on success
+    await setIncrementalFlag(false); // clear ONLY on success
   } catch (err) {
     // flag stays set → next run forces full rebuild
     throw err;
@@ -18478,11 +20032,12 @@ async function safeIncrementalIngest(options: IngestOptions): Promise<void> {
 **What**: Add a `<!-- cortex:keep -->` marker to `CLAUDE.md` / `AGENTS.md` auto-generated sections. When the marker is present on its own line, `cortex onboard` only updates the stats line (entity counts, last indexed date) rather than re-generating the entire section — preserves team-customized CLAUDE.md layouts across re-indexing.
 
 **Line detection** (strict — reject inline prose references):
+
 ```typescript
 function hasKeepMarker(content: string): boolean {
-  return content.split('\n').some(line => {
-    const trimmed = line.replace(/\r$/, '');
-    return trimmed === '<!-- cortex:keep -->';
+  return content.split("\n").some((line) => {
+    const trimmed = line.replace(/\r$/, "");
+    return trimmed === "<!-- cortex:keep -->";
   });
 }
 ```
@@ -18530,7 +20085,7 @@ function generateEmbeddingText(entity: EmbeddableEntity): string {
     entity.isExported !== undefined ? `Export: ${entity.isExported}` : null,
     entity.description ? truncateAtWordBoundary(entity.description, 200) : null,
   ].filter(Boolean);
-  return lines.join('\n') + '\n\n' + cleanCode(entity.content ?? '');
+  return lines.join("\n") + "\n\n" + cleanCode(entity.content ?? "");
 }
 ```
 
@@ -18548,20 +20103,20 @@ function generateEmbeddingText(entity: EmbeddableEntity): string {
 interface IncrementalState {
   version: number;
   incrementalInProgress: boolean;
-  fileHashes: Record<string, string>;  // path → sha256
+  fileHashes: Record<string, string>; // path → sha256
   entityCache: Record<string, CachedEntity>;
 }
 
 async function computeChangedFiles(
   projectRoot: string,
-  stored: Record<string, string>
+  stored: Record<string, string>,
 ): Promise<{ changed: string[]; deleted: string[] }> {
   const current: Record<string, string> = {};
-  for (const file of await glob('**/*', { cwd: projectRoot, nodir: true })) {
+  for (const file of await glob("**/*", { cwd: projectRoot, nodir: true })) {
     current[file] = await sha256File(path.join(projectRoot, file));
   }
-  const changed = Object.keys(current).filter(f => current[f] !== stored[f]);
-  const deleted = Object.keys(stored).filter(f => !(f in current));
+  const changed = Object.keys(current).filter((f) => current[f] !== stored[f]);
+  const deleted = Object.keys(stored).filter((f) => !(f in current));
   return { changed, deleted };
 }
 ```
@@ -18577,21 +20132,23 @@ async function computeChangedFiles(
 **What**: When building a custom MCP transport (or auditing the SDK's transport), probe framing on the first byte rather than assuming a fixed protocol — auto-detects Content-Length vs newline-delimited JSON framing. Use an iterative loop (not recursive) to prevent stack overflow on malformed/split input.
 
 ```typescript
-const MAX_BUFFER_SIZE = 10 * 1024 * 1024;  // 10 MB hard cap
+const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10 MB hard cap
 
-type FramingMode = 'content-length' | 'newline';
+type FramingMode = "content-length" | "newline";
 
 function detectFraming(firstChunk: Buffer): FramingMode {
   // 0x7b = '{', 0x5b = '[' → JSON starts immediately → newline-delimited
-  if (firstChunk[0] === 0x7b || firstChunk[0] === 0x5b) return 'newline';
+  if (firstChunk[0] === 0x7b || firstChunk[0] === 0x5b) return "newline";
   // "Content-Length:" header → HTTP-like framing
-  if (firstChunk.slice(0, 14).toString('ascii').startsWith('Content-Length')) return 'content-length';
-  return 'newline';  // safe default
+  if (firstChunk.slice(0, 14).toString("ascii").startsWith("Content-Length"))
+    return "content-length";
+  return "newline"; // safe default
 }
 
 // Validate BEFORE allocating — prevents OOM pre-allocation DoS
 function safeAllocate(contentLength: number): Buffer {
-  if (contentLength > MAX_BUFFER_SIZE) throw new ProtocolError(`Content-Length ${contentLength} exceeds cap`);
+  if (contentLength > MAX_BUFFER_SIZE)
+    throw new ProtocolError(`Content-Length ${contentLength} exceeds cap`);
   return Buffer.allocUnsafe(contentLength);
 }
 ```
@@ -18607,7 +20164,7 @@ function safeAllocate(contentLength: number): Buffer {
 **What**: Tag all legitimate MCP stdout writes with `AsyncLocalStorage`; any write that lands outside that context (from a dependency's `console.log`, a debug statement, etc.) is redirected to stderr with a `[mcp:stdout-redirect]` prefix — prevents a stray log line from corrupting the JSON-RPC stream and hanging the handshake.
 
 ```typescript
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage } from "node:async_hooks";
 
 const mcpWriteContext = new AsyncLocalStorage<boolean>();
 
@@ -18637,24 +20194,26 @@ export function mcpWrite(data: string): void {
 
 ### Phase 5.6 Refinement — Sibling-Clone Staleness Detection (score: 24)
 
-**What**: When Cortex is invoked, check whether a repo with the same `remoteUrl` is registered at a *different* on-disk path (sibling clone or worktree). If the sibling's HEAD differs from the indexed commit, emit a warning — prevents silent stale answers when a developer switches between two local clones.
+**What**: When Cortex is invoked, check whether a repo with the same `remoteUrl` is registered at a _different_ on-disk path (sibling clone or worktree). If the sibling's HEAD differs from the indexed commit, emit a warning — prevents silent stale answers when a developer switches between two local clones.
 
 ```typescript
 function checkSiblingClones(
   registry: RepoRegistry,
   currentRoot: string,
   currentRemoteUrl: string,
-  indexedCommit: string
+  indexedCommit: string,
 ): void {
   for (const [registeredPath, meta] of registry.entries()) {
     if (registeredPath === currentRoot) continue;
     if (meta.remoteUrl !== currentRemoteUrl) continue;
-    const siblingHead = execSync(`git -C "${registeredPath}" rev-parse HEAD`).toString().trim();
+    const siblingHead = execSync(`git -C "${registeredPath}" rev-parse HEAD`)
+      .toString()
+      .trim();
     if (siblingHead !== indexedCommit) {
       logger.warn(
         `Cortex index was built from a sibling clone at ${registeredPath} ` +
-        `(indexed: ${indexedCommit.slice(0,7)}, sibling HEAD: ${siblingHead.slice(0,7)}). ` +
-        `Run cortex analyze to re-index from this directory.`
+          `(indexed: ${indexedCommit.slice(0, 7)}, sibling HEAD: ${siblingHead.slice(0, 7)}). ` +
+          `Run cortex analyze to re-index from this directory.`,
       );
     }
   }
@@ -18672,6 +20231,7 @@ function checkSiblingClones(
 **What**: Install a post-commit hook that launches `cortex analyze` as a background process (`nohup` + disown) so `git commit` returns immediately. Skip hook execution during rebase/merge/cherry-pick to avoid interfering with in-progress operations.
 
 **Implementation details**:
+
 - **Skip conditions**: check `.git/rebase-merge`, `.git/rebase-apply`, `.git/MERGE_HEAD`, `.git/CHERRY_PICK_HEAD` before invoking
 - **Hooks path safety**: read `git config core.hooksPath`; validate resolved path stays within repo root (prevent hooks-path redirect attacks)
 - **Linked worktrees**: use `git rev-parse --git-path hooks` (not `--path-format=absolute` — fails on git < 2.31) to find the hooks dir for the current worktree
@@ -18701,17 +20261,32 @@ disown
 **What**: Before invoking LLM synthesis on a batch of files, check whether all files are code (`.ts`, `.js`, `.py`, `.go`, `.rs`, etc.). If yes, skip the LLM pass entirely — AST extraction via tree-sitter produces the full structural graph for free. Reserve LLM calls for docs (`.md`, `.txt`, `.pdf`), architecture diagrams, and README files where AST gives nothing.
 
 ```typescript
-const CODE_EXTENSIONS = new Set(['.ts', '.js', '.tsx', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.cs']);
-const DOC_EXTENSIONS  = new Set(['.md', '.txt', '.pdf', '.rst', '.adoc']);
+const CODE_EXTENSIONS = new Set([
+  ".ts",
+  ".js",
+  ".tsx",
+  ".jsx",
+  ".py",
+  ".go",
+  ".rs",
+  ".java",
+  ".cpp",
+  ".c",
+  ".cs",
+]);
+const DOC_EXTENSIONS = new Set([".md", ".txt", ".pdf", ".rst", ".adoc"]);
 
 function batchNeedsLLM(files: string[]): boolean {
-  return files.some(f => {
+  return files.some((f) => {
     const ext = path.extname(f).toLowerCase();
-    return DOC_EXTENSIONS.has(ext) || (!CODE_EXTENSIONS.has(ext));
+    return DOC_EXTENSIONS.has(ext) || !CODE_EXTENSIONS.has(ext);
   });
 }
 
-async function synthesizeBatch(files: string[], options: SynthesisOptions): Promise<void> {
+async function synthesizeBatch(
+  files: string[],
+  options: SynthesisOptions,
+): Promise<void> {
   // Run AST extraction for all files unconditionally (free)
   await runASTExtraction(files, options);
 
@@ -18733,15 +20308,21 @@ async function synthesizeBatch(files: string[], options: SynthesisOptions): Prom
 ```typescript
 function clusterWithHubExclusion(
   graph: Graph,
-  excludeHubsPercentile = 95
+  excludeHubsPercentile = 95,
 ): Map<string, number> {
   // Identify hubs by degree percentile
-  const degrees = [...graph.nodes()].map(n => graph.degree(n)).sort((a, b) => a - b);
+  const degrees = [...graph.nodes()]
+    .map((n) => graph.degree(n))
+    .sort((a, b) => a - b);
   const threshold = percentile(degrees, excludeHubsPercentile);
-  const hubs = new Set([...graph.nodes()].filter(n => graph.degree(n) > threshold));
+  const hubs = new Set(
+    [...graph.nodes()].filter((n) => graph.degree(n) > threshold),
+  );
 
   // Leiden on non-hub subgraph
-  const subgraph = graph.subgraph([...graph.nodes()].filter(n => !hubs.has(n)));
+  const subgraph = graph.subgraph(
+    [...graph.nodes()].filter((n) => !hubs.has(n)),
+  );
   const communities = leiden(subgraph);
 
   // Majority-vote reattachment for each hub
@@ -18752,7 +20333,9 @@ function clusterWithHubExclusion(
       if (c !== undefined) votes.set(c, (votes.get(c) ?? 0) + 1);
     }
     // Pick highest-vote community; use min(c) as tiebreak for determinism
-    const best = [...votes.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+    const best = [...votes.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0] - b[0],
+    )[0];
     communities.set(hub, best ? best[0] : 0);
   }
   return communities;
@@ -18778,15 +20361,18 @@ function cohesionScore(graph: Graph, communityNodes: string[]): number {
       if (nodeSet.has(neighbor)) intraEdges++;
     }
   }
-  intraEdges /= 2;  // undirected: each edge counted twice
+  intraEdges /= 2; // undirected: each edge counted twice
   const maxPossible = (n * (n - 1)) / 2;
   return intraEdges / maxPossible;
 }
 
 const COHESION_SPLIT_THRESHOLD = 0.05;
-const COHESION_SPLIT_MIN_SIZE  = 50;
+const COHESION_SPLIT_MIN_SIZE = 50;
 
-function secondPassReSplit(graph: Graph, communities: Map<string, number>): Map<string, number> {
+function secondPassReSplit(
+  graph: Graph,
+  communities: Map<string, number>,
+): Map<string, number> {
   for (const [communityId, members] of groupByValue(communities)) {
     if (members.length < COHESION_SPLIT_MIN_SIZE) continue;
     if (cohesionScore(graph, members) >= COHESION_SPLIT_THRESHOLD) continue;
@@ -18810,33 +20396,48 @@ function secondPassReSplit(graph: Graph, communities: Map<string, number>): Map<
 **What**: Before inserting any LLM-returned JSON fragment into the knowledge graph, validate structure and size. Rejection happens BEFORE path sanitization — malformed agent output never touches the graph.
 
 ```typescript
-const MAX_FRAGMENT_BYTES  = 25 * 1024 * 1024;  // 25 MB
-const MAX_FRAGMENT_NODES  = 10_000;
-const MAX_FRAGMENT_EDGES  = 100_000;
+const MAX_FRAGMENT_BYTES = 25 * 1024 * 1024; // 25 MB
+const MAX_FRAGMENT_NODES = 10_000;
+const MAX_FRAGMENT_EDGES = 100_000;
 const MAX_HYPEREDGE_MEMBERS = 256;
-const NODE_ID_PATTERN     = /^[A-Za-z0-9._:-]{1,256}$/;
-const VALID_FILE_TYPES    = new Set(['ts', 'js', 'py', 'go', 'rs', 'java', 'md', 'txt']);
+const NODE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,256}$/;
+const VALID_FILE_TYPES = new Set([
+  "ts",
+  "js",
+  "py",
+  "go",
+  "rs",
+  "java",
+  "md",
+  "txt",
+]);
 
 function validateSemanticFragment(raw: unknown): string[] {
   const errors: string[] = [];
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return ['fragment must be a JSON object'];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return ["fragment must be a JSON object"];
   }
   const bytes = Buffer.byteLength(JSON.stringify(raw));
-  if (bytes > MAX_FRAGMENT_BYTES)  errors.push(`payload ${bytes} bytes exceeds ${MAX_FRAGMENT_BYTES}`);
+  if (bytes > MAX_FRAGMENT_BYTES)
+    errors.push(`payload ${bytes} bytes exceeds ${MAX_FRAGMENT_BYTES}`);
 
   const f = raw as any;
-  if (f.nodes?.length  > MAX_FRAGMENT_NODES)  errors.push(`${f.nodes.length} nodes exceeds ${MAX_FRAGMENT_NODES}`);
-  if (f.edges?.length  > MAX_FRAGMENT_EDGES)  errors.push(`${f.edges.length} edges exceeds ${MAX_FRAGMENT_EDGES}`);
+  if (f.nodes?.length > MAX_FRAGMENT_NODES)
+    errors.push(`${f.nodes.length} nodes exceeds ${MAX_FRAGMENT_NODES}`);
+  if (f.edges?.length > MAX_FRAGMENT_EDGES)
+    errors.push(`${f.edges.length} edges exceeds ${MAX_FRAGMENT_EDGES}`);
 
   for (const node of f.nodes ?? []) {
-    if (!NODE_ID_PATTERN.test(node.id)) errors.push(`invalid node id: ${node.id}`);
-    if (node.file_type && !VALID_FILE_TYPES.has(node.file_type)) errors.push(`unknown file_type: ${node.file_type}`);
+    if (!NODE_ID_PATTERN.test(node.id))
+      errors.push(`invalid node id: ${node.id}`);
+    if (node.file_type && !VALID_FILE_TYPES.has(node.file_type))
+      errors.push(`unknown file_type: ${node.file_type}`);
   }
   for (const he of f.hyperedges ?? []) {
-    if (he.members?.length > MAX_HYPEREDGE_MEMBERS) errors.push(`hyperedge has ${he.members.length} members`);
+    if (he.members?.length > MAX_HYPEREDGE_MEMBERS)
+      errors.push(`hyperedge has ${he.members.length} members`);
   }
-  return errors;  // empty = valid
+  return errors; // empty = valid
 }
 ```
 
@@ -18852,8 +20453,8 @@ function validateSemanticFragment(raw: unknown): string[] {
 
 ```typescript
 interface SymbolIndex {
-  byLabel: Map<string, string[]>;              // label → [nodeId, ...]
-  byModuleAndSymbol: Map<string, string[]>;    // `${moduleStem}::${symbol}` → [nodeId, ...]
+  byLabel: Map<string, string[]>; // label → [nodeId, ...]
+  byModuleAndSymbol: Map<string, string[]>; // `${moduleStem}::${symbol}` → [nodeId, ...]
 }
 
 function buildSymbolIndex(entities: Entity[]): SymbolIndex {
@@ -18871,11 +20472,12 @@ function buildSymbolIndex(entities: Entity[]): SymbolIndex {
 
 function findUniqueSymbol(
   index: SymbolIndex,
-  importedFrom: string,   // module stem from import statement
-  symbolName: string
+  importedFrom: string, // module stem from import statement
+  symbolName: string,
 ): string | null {
-  const candidates = index.byModuleAndSymbol.get(`${importedFrom}::${symbolName}`) ?? [];
-  return candidates.length === 1 ? candidates[0] : null;  // conservative: null if ambiguous
+  const candidates =
+    index.byModuleAndSymbol.get(`${importedFrom}::${symbolName}`) ?? [];
+  return candidates.length === 1 ? candidates[0] : null; // conservative: null if ambiguous
 }
 ```
 
@@ -18889,14 +20491,14 @@ Also: `existingEdgePairs()` returns `(source, target, relation)` triples so a `c
 
 **What**: Extend Cortex's binary `EXTRACTED`/`INFERRED` confidence to a discrete 6-level numeric rubric for `INFERRED` edges, enabling structured ranking and filtering of inferred relationships.
 
-| Score | Condition |
-|-------|-----------|
-| `1.0` | `EXTRACTED` — deterministic AST/parser evidence |
+| Score  | Condition                                                       |
+| ------ | --------------------------------------------------------------- |
+| `1.0`  | `EXTRACTED` — deterministic AST/parser evidence                 |
 | `0.95` | Explicit cross-file reference with exactly one plausible target |
-| `0.85` | Naming + contextual signals align |
-| `0.75` | Contextual but not explicit (co-location, pattern similarity) |
-| `0.65` | Naming similarity only, no contextual corroboration |
-| `0.55` | Speculative — flag for `AMBIGUOUS` human review queue |
+| `0.85` | Naming + contextual signals align                               |
+| `0.75` | Contextual but not explicit (co-location, pattern similarity)   |
+| `0.65` | Naming similarity only, no contextual corroboration             |
+| `0.55` | Speculative — flag for `AMBIGUOUS` human review queue           |
 
 ```typescript
 type ConfidenceScore = 1.0 | 0.95 | 0.85 | 0.75 | 0.65 | 0.55;
@@ -18906,7 +20508,7 @@ interface Edge {
   target: string;
   relation: string;
   confidence: ConfidenceScore;
-  extracted: boolean;  // true → confidence always 1.0
+  extracted: boolean; // true → confidence always 1.0
 }
 ```
 
@@ -18922,7 +20524,7 @@ LLM synthesis prompts must explicitly output a `confidence` field using these va
 
 ```typescript
 function resolveOutputDir(projectRoot: string): string {
-  const envVal = process.env.CORTEX_OUT ?? '.knowledge';
+  const envVal = process.env.CORTEX_OUT ?? ".knowledge";
   const p = path.parse(envVal);
   // Absolute path → use as-is. Relative → resolve from project root.
   return path.isAbsolute(envVal) ? envVal : path.join(projectRoot, envVal);
@@ -18930,6 +20532,7 @@ function resolveOutputDir(projectRoot: string): string {
 ```
 
 **Usage**:
+
 ```bash
 # Per-branch isolation in worktrees:
 CORTEX_OUT=.knowledge-feature-auth cortex analyze
@@ -18952,29 +20555,40 @@ CORTEX_OUT=/shared/cortex-knowledge cortex analyze
 ```typescript
 interface ConfidenceBreakdown {
   extracted: { count: number; pct: number };
-  inferred:  { count: number; pct: number };
+  inferred: { count: number; pct: number };
   ambiguous: { count: number; pct: number };
 }
 
 function computeConfidenceBreakdown(edges: Edge[]): ConfidenceBreakdown {
   const counts = { extracted: 0, inferred: 0, ambiguous: 0 };
   for (const e of edges) {
-    if (e.extracted)          counts.extracted++;
+    if (e.extracted) counts.extracted++;
     else if (e.confidence >= 0.75) counts.inferred++;
-    else                           counts.ambiguous++;
+    else counts.ambiguous++;
   }
   const total = edges.length || 1;
   return {
-    extracted: { count: counts.extracted, pct: Math.round(counts.extracted / total * 100) },
-    inferred:  { count: counts.inferred,  pct: Math.round(counts.inferred  / total * 100) },
-    ambiguous: { count: counts.ambiguous, pct: Math.round(counts.ambiguous / total * 100) },
+    extracted: {
+      count: counts.extracted,
+      pct: Math.round((counts.extracted / total) * 100),
+    },
+    inferred: {
+      count: counts.inferred,
+      pct: Math.round((counts.inferred / total) * 100),
+    },
+    ambiguous: {
+      count: counts.ambiguous,
+      pct: Math.round((counts.ambiguous / total) * 100),
+    },
   };
 }
 ```
 
 Wiki output:
+
 ```markdown
 ## Audit Trail
+
 EXTRACTED: 142 (71%) | INFERRED: 52 (26%) | AMBIGUOUS: 6 (3%)
 ```
 
@@ -18988,20 +20602,24 @@ EXTRACTED: 142 (71%) | INFERRED: 52 (26%) | AMBIGUOUS: 6 (3%)
 **What**: Add structured diagnostics to `cortex doctor` that classify knowledge graph edges by defect type, exposing extraction quality issues before they silently degrade query results.
 
 **Edge defect categories**:
+
 ```typescript
 interface ExtractionDiagnostics {
-  nonObject: number;              // edges where source/target is not a node object
-  missingEndpoint: number;        // source or target field absent
-  danglingEndpoint: number;       // endpoint node ID not in graph
-  selfLoop: number;               // source === target
-  exactDuplicate: number;         // identical (src, tgt, relation) tuple
-  directedSameEndpointCollapsed: number;  // pre- vs post-build edge count loss
-  relationVariantGroups: Map<string, string[]>;  // 'calls' vs 'call' vs 'CALLS' variants
+  nonObject: number; // edges where source/target is not a node object
+  missingEndpoint: number; // source or target field absent
+  danglingEndpoint: number; // endpoint node ID not in graph
+  selfLoop: number; // source === target
+  exactDuplicate: number; // identical (src, tgt, relation) tuple
+  directedSameEndpointCollapsed: number; // pre- vs post-build edge count loss
+  relationVariantGroups: Map<string, string[]>; // 'calls' vs 'call' vs 'CALLS' variants
 }
 
-function diagnoseExtraction(entities: Entity[], edges: Edge[]): ExtractionDiagnostics;
-function formatDiagnosticReport(d: ExtractionDiagnostics): string;   // human-readable
-function formatDiagnosticJSON(d: ExtractionDiagnostics): object;     // machine-readable
+function diagnoseExtraction(
+  entities: Entity[],
+  edges: Edge[],
+): ExtractionDiagnostics;
+function formatDiagnosticReport(d: ExtractionDiagnostics): string; // human-readable
+function formatDiagnosticJSON(d: ExtractionDiagnostics): object; // machine-readable
 ```
 
 **Where**: Surface in `cortex doctor --verbose` output. Non-zero `danglingEndpoint` or `relationVariantGroups` entries indicate extraction prompt drift or normalization gaps.
@@ -19045,7 +20663,7 @@ Phase 33.5 introduces a two-stage ingestion pipeline replacing the existing sing
 
 ```typescript
 const localObj = local as Record<string, unknown> | null;
-if (localObj?.error && typeof localObj.error === 'string') {
+if (localObj?.error && typeof localObj.error === "string") {
   // Fail closed — do NOT return { cross: [], risk: 'LOW' }
   return { error: `Local impact failed for ${entityName}: ${localObj.error}` };
 }
@@ -19062,9 +20680,13 @@ Callers branch on top-level `error`; returning zero-hit success on the failure p
 **What**: Wrap `fs.rename()` in a bounded retry loop for Windows. When an AV scanner or a concurrent reader holds a file open, `rename` throws `EBUSY`, `EPERM`, or `EACCES` — not permanent failures. Three attempts with exponential backoff (100ms, 200ms) recovers these races silently.
 
 ```typescript
-const RETRY_RENAME_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
+const RETRY_RENAME_CODES = new Set(["EBUSY", "EPERM", "EACCES"]);
 
-async function retryRename(src: string, dst: string, attempts = 3): Promise<void> {
+async function retryRename(
+  src: string,
+  dst: string,
+  attempts = 3,
+): Promise<void> {
   for (let i = 1; i <= attempts; i++) {
     try {
       await fs.promises.rename(src, dst);
@@ -19072,7 +20694,7 @@ async function retryRename(src: string, dst: string, attempts = 3): Promise<void
     } catch (err: unknown) {
       const code = (err as NodeJS.ErrnoException).code;
       if (!code || !RETRY_RENAME_CODES.has(code) || i === attempts) throw err;
-      await new Promise(r => setTimeout(r, 100 * Math.pow(2, i - 1)));
+      await new Promise((r) => setTimeout(r, 100 * Math.pow(2, i - 1)));
     }
   }
 }
@@ -19089,15 +20711,15 @@ Apply to every write-to-tmp-then-rename pattern in Cortex (knowledge files, stat
 **What**: When writing any file atomically (tmp → rename), create the temp file with both a cryptographically random suffix AND explicit security flags to close the symlink/pre-create attack window and CodeQL's `js/insecure-temporary-file` taint path.
 
 ```typescript
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
 async function atomicWriteJSON(target: string, data: unknown): Promise<void> {
-  const tmp = `${target}.tmp.${randomBytes(8).toString('hex')}`;
+  const tmp = `${target}.tmp.${randomBytes(8).toString("hex")}`;
   // 'wx' = O_CREAT | O_EXCL (fails if file exists → closes symlink-race)
   // 0o600 = user-only read/write (closes CodeQL insecure-temporary-file: checks mode bits)
-  const handle = await fs.promises.open(tmp, 'wx', 0o600);
+  const handle = await fs.promises.open(tmp, "wx", 0o600);
   try {
-    await handle.writeFile(JSON.stringify(data, null, 2), 'utf-8');
+    await handle.writeFile(JSON.stringify(data, null, 2), "utf-8");
   } finally {
     await handle.close();
   }
@@ -19116,12 +20738,15 @@ Both are required: `'wx'` closes the runtime symlink race; `0o600` is what CodeQ
 **What**: When a tool accepts `timeoutMs` from MCP params, clamp it to a sane range in the validation layer — before it's used anywhere. Previous code with an outer cap and inner cap that differed (1hr outer / 5min inner) created a window where the outer deadline budgeted farther than the inner safeguard.
 
 ```typescript
-export const IMPACT_TIMEOUT_MIN_MS = 100;          // preserves tight test-suite scenarios
-export const IMPACT_TIMEOUT_MAX_MS = 5 * 60_000;   // 5 min upper bound
+export const IMPACT_TIMEOUT_MIN_MS = 100; // preserves tight test-suite scenarios
+export const IMPACT_TIMEOUT_MAX_MS = 5 * 60_000; // 5 min upper bound
 
 export function clampTimeout(raw: number): number {
   if (!Number.isFinite(raw) || raw <= 0) return IMPACT_TIMEOUT_MIN_MS;
-  return Math.min(IMPACT_TIMEOUT_MAX_MS, Math.max(IMPACT_TIMEOUT_MIN_MS, Math.trunc(raw)));
+  return Math.min(
+    IMPACT_TIMEOUT_MAX_MS,
+    Math.max(IMPACT_TIMEOUT_MIN_MS, Math.trunc(raw)),
+  );
 }
 
 // In validate:
@@ -19148,7 +20773,7 @@ try {
 } catch (err) {
   logger.warn(
     { err: err instanceof Error ? err.message : String(err), groupDir },
-    '⚠️ Secondary index write failed; primary registry is intact. Re-run sync to retry.'
+    "⚠️ Secondary index write failed; primary registry is intact. Re-run sync to retry.",
   );
   // do NOT rethrow — caller gets the full result from the primary
 }
@@ -19165,14 +20790,15 @@ Apply wherever Cortex writes a canonical file (e.g. `index.md`, `state.json`) pl
 **What**: When aggregating local and cross-repo impact results into a single risk tier, apply escalation rules that prevent local LOW from masking significant cross-repo blast radius.
 
 ```typescript
-type RiskTier = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+type RiskTier = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 
 function mergeRisk(localRisk: RiskTier, cross: CrossRepoImpact[]): RiskTier {
-  const highConf = cross.some(c => c.contract.confidence >= 0.85);
-  if (localRisk === 'CRITICAL') return 'CRITICAL';       // never demote CRITICAL
-  if (cross.length >= 3)        return 'CRITICAL';       // 3+ affected repos = critical blast radius
-  if (highConf)                 return 'HIGH';           // high-confidence cross-repo link
-  if (cross.length > 0 && (localRisk === 'LOW' || localRisk === 'UNKNOWN')) return 'MEDIUM';
+  const highConf = cross.some((c) => c.contract.confidence >= 0.85);
+  if (localRisk === "CRITICAL") return "CRITICAL"; // never demote CRITICAL
+  if (cross.length >= 3) return "CRITICAL"; // 3+ affected repos = critical blast radius
+  if (highConf) return "HIGH"; // high-confidence cross-repo link
+  if (cross.length > 0 && (localRisk === "LOW" || localRisk === "UNKNOWN"))
+    return "MEDIUM";
   return localRisk;
 }
 ```
@@ -19192,7 +20818,7 @@ for (const item of items) {
   const id = computeId(item);
   try {
     await db.insert(item, id);
-    lookupIndex.set(itemKey(item), id);   // ← index ONLY on success
+    lookupIndex.set(itemKey(item), id); // ← index ONLY on success
   } catch (err) {
     report.failed++;
     recordError(id, err);
@@ -19203,8 +20829,11 @@ for (const item of items) {
 // Cross-link phase uses lookupIndex — zero DB round-trips, no dangling refs
 for (const link of crossLinks) {
   const fromId = lookupIndex.get(linkFromKey(link));
-  const toId   = lookupIndex.get(linkToKey(link));
-  if (!fromId || !toId) { report.droppedMissingNode++; continue; }
+  const toId = lookupIndex.get(linkToKey(link));
+  if (!fromId || !toId) {
+    report.droppedMissingNode++;
+    continue;
+  }
   await db.insertLink(fromId, toId, link);
 }
 ```
@@ -19220,21 +20849,27 @@ for (const link of crossLinks) {
 ```typescript
 function contractRichness(c: StoredContract): number {
   let score = 0;
-  if (c.symbolUid)                                           score += 3; // tier-1 lookup anchor
-  if (c.symbolRef.filePath)                                  score += 2; // tier-2 lookup
+  if (c.symbolUid) score += 3; // tier-1 lookup anchor
+  if (c.symbolRef.filePath) score += 2; // tier-2 lookup
   if (c.symbolRef.name && c.symbolRef.name !== c.contractId) score += 2; // specific name
-  if (c.symbolName && c.symbolName !== c.contractId)         score += 2;
-  if (c.service)                                             score += 1; // monorepo attribution
-  if (c.meta.source !== 'manifest')                          score += 1; // grounded in real source
+  if (c.symbolName && c.symbolName !== c.contractId) score += 2;
+  if (c.service) score += 1; // monorepo attribution
+  if (c.meta.source !== "manifest") score += 1; // grounded in real source
   return score;
 }
 
-function mergeContracts(existing: StoredContract, incoming: StoredContract): StoredContract {
-  const [primary, secondary] = contractRichness(incoming) > contractRichness(existing)
-    ? [incoming, existing] : [existing, incoming];
+function mergeContracts(
+  existing: StoredContract,
+  incoming: StoredContract,
+): StoredContract {
+  const [primary, secondary] =
+    contractRichness(incoming) > contractRichness(existing)
+      ? [incoming, existing]
+      : [existing, incoming];
   return {
-    ...secondary, ...primary,
-    symbolUid: primary.symbolUid || secondary.symbolUid,   // OR-merge: take whichever has it
+    ...secondary,
+    ...primary,
+    symbolUid: primary.symbolUid || secondary.symbolUid, // OR-merge: take whichever has it
     confidence: Math.max(existing.confidence, incoming.confidence),
     service: primary.service ?? secondary.service,
     meta: { ...secondary.meta, ...primary.meta },
@@ -19251,9 +20886,11 @@ function mergeContracts(existing: StoredContract, incoming: StoredContract): Sto
 **What**: When opening a secondary index (e.g. BM25 index, bridge DB) for reading, check the stored schema version against the current expected version BEFORE allocating any resources. On mismatch, return `null` (fall back to the canonical source of truth) rather than crashing or serving stale data.
 
 ```typescript
-const BRIDGE_SCHEMA_VERSION = 2;  // bump when schema changes
+const BRIDGE_SCHEMA_VERSION = 2; // bump when schema changes
 
-async function openIndexReadOnly(indexDir: string): Promise<IndexHandle | null> {
+async function openIndexReadOnly(
+  indexDir: string,
+): Promise<IndexHandle | null> {
   const meta = await readMeta(indexDir);
   if (meta.version > 0 && meta.version !== BRIDGE_SCHEMA_VERSION) {
     // Graceful degradation — caller falls back to full scan / canonical file
@@ -19282,10 +20919,10 @@ async function ensureFileAvailable(filePath: string): Promise<boolean> {
     const bakPath = `${filePath}.bak`;
     try {
       await fs.promises.access(bakPath);
-      await retryRename(bakPath, filePath);   // recover interrupted writer
+      await retryRename(bakPath, filePath); // recover interrupted writer
       return true;
     } catch {
-      return false;   // neither main nor bak exists — truly absent
+      return false; // neither main nor bak exists — truly absent
     }
   }
 }
@@ -19304,25 +20941,30 @@ Apply to any Cortex write that uses a tmp→rename pattern for state.json, index
 ```typescript
 // Provider-side: normalize route definitions
 export function normalizeHttpPath(p: string): string {
-  let s = p.trim().split('?')[0].toLowerCase().replace(/\/+$/, '');
-  s = s.replace(/:\w+/g, '{param}');       // Express :id
-  s = s.replace(/\{[^}]+\}/g, '{param}'); // FastAPI {id}
-  s = s.replace(/\[[^\]]+\]/g, '{param}'); // Next.js [id]
-  return s === '' ? '/' : s;               // preserve root "/"
+  let s = p.trim().split("?")[0].toLowerCase().replace(/\/+$/, "");
+  s = s.replace(/:\w+/g, "{param}"); // Express :id
+  s = s.replace(/\{[^}]+\}/g, "{param}"); // FastAPI {id}
+  s = s.replace(/\[[^\]]+\]/g, "{param}"); // Next.js [id]
+  return s === "" ? "/" : s; // preserve root "/"
 }
 
 // Consumer-side: normalize call sites (more aggressive)
 function normalizeConsumerPath(url: string): string {
-  const templated = url.replace(/\$\{[^}]+\}/g, '{param}');  // template literals
+  const templated = url.replace(/\$\{[^}]+\}/g, "{param}"); // template literals
   let pathOnly = templated;
   if (/^https?:\/\//i.test(templated)) {
-    try { pathOnly = new URL(templated).pathname; }
-    catch { pathOnly = templated.replace(/^https?:\/\/[^/]+/i, ''); }
+    try {
+      pathOnly = new URL(templated).pathname;
+    } catch {
+      pathOnly = templated.replace(/^https?:\/\/[^/]+/i, "");
+    }
   }
-  const normalized = normalizeHttpPath(pathOnly || '/');
-  const segments = normalized.split('/').filter(Boolean)
-    .map(seg => /^\d+$/.test(seg) ? '{param}' : seg);  // numeric segments
-  return `/${segments.join('/')}`.replace(/\/+$/, '') || '/';
+  const normalized = normalizeHttpPath(pathOnly || "/");
+  const segments = normalized
+    .split("/")
+    .filter(Boolean)
+    .map((seg) => (/^\d+$/.test(seg) ? "{param}" : seg)); // numeric segments
+  return `/${segments.join("/")}`.replace(/\/+$/, "") || "/";
 }
 ```
 
@@ -19336,14 +20978,14 @@ function normalizeConsumerPath(url: string): string {
 
 ```typescript
 const candidates = providerDetections.filter(
-  d => normalizeHttpPath(d.path) === normalizedRoute
+  (d) => normalizeHttpPath(d.path) === normalizedRoute,
 );
-let match: typeof candidates[number] | undefined;
+let match: (typeof candidates)[number] | undefined;
 
 if (method) {
-  match = candidates.find(d => d.method === method);     // exact match when method known
+  match = candidates.find((d) => d.method === method); // exact match when method known
 } else if (candidates.length === 1) {
-  match = candidates[0];                                 // unambiguous — safe to use
+  match = candidates[0]; // unambiguous — safe to use
 }
 // else: multiple candidates + unknown discriminator → leave match undefined
 // Callers check `if (match)` before using symbol enrichment
@@ -19361,13 +21003,13 @@ Applies anywhere Cortex resolves an entity from multiple candidates (e.g. `corte
 
 ```typescript
 function safeForLog(value: unknown): string {
-  return String(value ?? '').replace(/[\r\n]/g, ' ');
+  return String(value ?? "").replace(/[\r\n]/g, " ");
 }
 
 // Usage:
 logger.warn(
   { groupDir: safeForLog(groupDir), error: safeForLog(err?.message) },
-  'Operation failed'
+  "Operation failed",
 );
 ```
 
@@ -19382,16 +21024,22 @@ Apply to: file paths from user input, entity names, search queries, repo paths i
 **What**: When two registered repos share the same name (possible in large monorepo setups), append a 6-char base64url hash of the repo path to produce a unique, stable pool ID. Without this, two repos named `backend` in different org namespaces collide and share a single DB connection pool.
 
 ```typescript
-function stableRepoPoolId(entry: RegistryEntry, allEntries: RegistryEntry[]): string {
+function stableRepoPoolId(
+  entry: RegistryEntry,
+  allEntries: RegistryEntry[],
+): string {
   const base = entry.name.toLowerCase();
   const resolved = path.resolve(entry.path);
   for (const other of allEntries) {
-    if (other.name.toLowerCase() === base && path.resolve(other.path) !== resolved) {
-      const hash = Buffer.from(entry.path).toString('base64url').slice(0, 6);
-      return `${base}-${hash}`;  // e.g. "backend-aGVsbG"
+    if (
+      other.name.toLowerCase() === base &&
+      path.resolve(other.path) !== resolved
+    ) {
+      const hash = Buffer.from(entry.path).toString("base64url").slice(0, 6);
+      return `${base}-${hash}`; // e.g. "backend-aGVsbG"
     }
   }
-  return base;  // no collision — use plain name
+  return base; // no collision — use plain name
 }
 ```
 
@@ -19405,7 +21053,7 @@ function stableRepoPoolId(entry: RegistryEntry, allEntries: RegistryEntry[]): st
 
 ```typescript
 interface OutOfScopeLink {
-  from: string;       // repo path
+  from: string; // repo path
   to: string;
   contractId: string;
   confidence: number;
@@ -19414,12 +21062,12 @@ interface OutOfScopeLink {
 // In impact fanout loop:
 if (!repoInSubgroup(neighbor.repo, subgroup)) {
   outOfScope.push({
-    from: direction === 'upstream' ? neighbor.repo : localRepo,
-    to:   direction === 'upstream' ? localRepo : neighbor.repo,
+    from: direction === "upstream" ? neighbor.repo : localRepo,
+    to: direction === "upstream" ? localRepo : neighbor.repo,
     contractId: neighbor.contractId,
     confidence: neighbor.confidence,
   });
-  continue;  // don't follow — but don't silently discard either
+  continue; // don't follow — but don't silently discard either
 }
 ```
 
@@ -19434,7 +21082,7 @@ if (!repoInSubgroup(neighbor.repo, subgroup)) {
 ```typescript
 async function closeDb(conn: DbConnection): Promise<void> {
   try {
-    await conn.query('CHECKPOINT');  // flush WAL; no-op if nothing pending
+    await conn.query("CHECKPOINT"); // flush WAL; no-op if nothing pending
   } catch {
     // ignore — older DB versions or schemaless DBs may not accept it
   }
@@ -19455,27 +21103,30 @@ Apply when Cortex adopts SQLite (Phase 3.1) as the backing store for its entity 
 **What**: Append a short actionable next-step instruction to every MCP tool response. Agents often stop after one tool call; a hint at the end of the response guides them to the logical continuation without requiring client-side hooks or prompt engineering.
 
 ```typescript
-function getNextStepHint(toolName: string, args: Record<string, unknown> | undefined): string {
-  const repo = String(args?.repo ?? '');
+function getNextStepHint(
+  toolName: string,
+  args: Record<string, unknown> | undefined,
+): string {
+  const repo = String(args?.repo ?? "");
   switch (toolName) {
-    case 'cortex_find':
+    case "cortex_find":
       return `\n\n---\n**Next:** Use \`read_entity\` on any result above to get full interface, behavior, and wiring detail.`;
-    case 'read_entity':
-      return `\n\n---\n**Next:** If planning changes, use \`impact_analysis({target: "${args?.name ?? '<name>'}"})\` to check blast radius before editing.`;
-    case 'impact_analysis':
+    case "read_entity":
+      return `\n\n---\n**Next:** If planning changes, use \`impact_analysis({target: "${args?.name ?? "<name>"}"})\` to check blast radius before editing.`;
+    case "impact_analysis":
       return `\n\n---\n**Next:** Review depth=1 items first (direct callers WILL break). Use \`before_change\` to snapshot the current state before editing.`;
-    case 'source':
-      return `\n\n---\n**Next:** To understand how this symbol is used across the codebase, use \`cortex_find({query: "${args?.entity_name ?? '<name>'}"})\`.`;
-    case 'save_concept':
+    case "source":
+      return `\n\n---\n**Next:** To understand how this symbol is used across the codebase, use \`cortex_find({query: "${args?.entity_name ?? "<name>"}"})\`.`;
+    case "save_concept":
       return `\n\n---\n**Next:** Run \`audit_quality\` to verify the concept integrates cleanly with the existing knowledge graph.`;
     default:
-      return '';
+      return "";
   }
 }
 
 // Append in tool response handler:
 const hint = getNextStepHint(toolName, args);
-return { content: [{ type: 'text', text: result + hint }] };
+return { content: [{ type: "text", text: result + hint }] };
 ```
 
 **Design**: Each hint is a short, actionable instruction (not a suggestion). It references the specific next tool/resource. Hints create a self-guiding workflow without requiring client hooks or special agent prompting.
@@ -19509,24 +21160,79 @@ return { content: [{ type: 'text', text: result + hint }] };
 
 ```typescript
 const CHUNKING_RULES: Record<string, ChunkingRule> = {
-  Function: { mode: 'ast_function',     includePrefix: true,  includeSuffix: true,  groupFields: false },
-  Method:   { mode: 'ast_function',     includePrefix: true,  includeSuffix: true,  groupFields: false },
-  Class:    { mode: 'ast_declaration',  includePrefix: true,  includeSuffix: true,  groupFields: true  },
-  Interface:{ mode: 'ast_declaration',  includePrefix: true,  includeSuffix: true,  groupFields: true  },
+  Function: {
+    mode: "ast_function",
+    includePrefix: true,
+    includeSuffix: true,
+    groupFields: false,
+  },
+  Method: {
+    mode: "ast_function",
+    includePrefix: true,
+    includeSuffix: true,
+    groupFields: false,
+  },
+  Class: {
+    mode: "ast_declaration",
+    includePrefix: true,
+    includeSuffix: true,
+    groupFields: true,
+  },
+  Interface: {
+    mode: "ast_declaration",
+    includePrefix: true,
+    includeSuffix: true,
+    groupFields: true,
+  },
 };
 
 export async function chunkNode(
-  label: string, content: string, filePath: string,
-  startLine: number, endLine: number,
-  chunkSize = 1200, overlap = 120
+  label: string,
+  content: string,
+  filePath: string,
+  startLine: number,
+  endLine: number,
+  chunkSize = 1200,
+  overlap = 120,
 ): Promise<Chunk[]> {
-  if (content.length <= chunkSize) return [{ text: content, chunkIndex: 0, startOffset: 0, endOffset: content.length, startLine, endLine }];
+  if (content.length <= chunkSize)
+    return [
+      {
+        text: content,
+        chunkIndex: 0,
+        startOffset: 0,
+        endOffset: content.length,
+        startLine,
+        endLine,
+      },
+    ];
   const rule = CHUNKING_RULES[label];
-  if (!rule) return characterChunk(content, startLine, endLine, chunkSize, overlap);
+  if (!rule)
+    return characterChunk(content, startLine, endLine, chunkSize, overlap);
   try {
-    if (rule.mode === 'ast_function')     return await astFunctionChunk(content, filePath, startLine, endLine, chunkSize, overlap, rule);
-    if (rule.mode === 'ast_declaration')  return await astDeclarationChunk(content, filePath, startLine, endLine, chunkSize, overlap, rule);
-  } catch { /* AST parse failed */ }
+    if (rule.mode === "ast_function")
+      return await astFunctionChunk(
+        content,
+        filePath,
+        startLine,
+        endLine,
+        chunkSize,
+        overlap,
+        rule,
+      );
+    if (rule.mode === "ast_declaration")
+      return await astDeclarationChunk(
+        content,
+        filePath,
+        startLine,
+        endLine,
+        chunkSize,
+        overlap,
+        rule,
+      );
+  } catch {
+    /* AST parse failed */
+  }
   return characterChunk(content, startLine, endLine, chunkSize, overlap);
 }
 ```
@@ -19543,7 +21249,7 @@ export async function chunkNode(
 
 ```typescript
 interface ParseCacheEntry {
-  hash: string;          // sha256 of chunk content
+  hash: string; // sha256 of chunk content
   results: ParseWorkerResult[];
 }
 
@@ -19559,11 +21265,11 @@ async function dispatchChunk(
   const hash = sha256(chunk.content);
   if (cache) {
     const hit = cache.entries.get(hash);
-    if (hit) return hit.results;   // cache hit — no worker dispatch
+    if (hit) return hit.results; // cache hit — no worker dispatch
   }
   const results = await pool.dispatch(chunk);
   if (cache) {
-    cache.entries.set(hash, { hash, results });  // store for next run
+    cache.entries.set(hash, { hash, results }); // store for next run
   }
   return results;
 }
@@ -19587,13 +21293,13 @@ async function dispatchChunk(
 const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---\r?\n/;
 
 function bodyContent(content: string): string {
-  return content.replace(FRONTMATTER_RE, '');
+  return content.replace(FRONTMATTER_RE, "");
 }
 
 async function entityHash(filePath: string): Promise<string> {
-  const raw = await fs.promises.readFile(filePath, 'utf-8');
-  const body = bodyContent(raw);           // strip frontmatter first
-  return sha256(body);                     // hash body only
+  const raw = await fs.promises.readFile(filePath, "utf-8");
+  const body = bodyContent(raw); // strip frontmatter first
+  return sha256(body); // hash body only
 }
 ```
 
@@ -19611,17 +21317,17 @@ async function entityHash(filePath: string): Promise<string> {
 
 ```typescript
 const DEFAULT_AFFECTED_RELATIONS = new Set([
-  'calls',
-  'references',
-  'imports',
-  'imports_from',
-  're_exports',
-  'inherits',
-  'extends',
-  'implements',
-  'uses',
-  'mixes_in',
-  'embeds',
+  "calls",
+  "references",
+  "imports",
+  "imports_from",
+  "re_exports",
+  "inherits",
+  "extends",
+  "implements",
+  "uses",
+  "mixes_in",
+  "embeds",
 ]);
 
 interface AffectedHit {
@@ -19636,11 +21342,14 @@ function affectedNodes(
   options: {
     relations?: Set<string>;
     depth?: number;
-  } = {}
+  } = {},
 ): AffectedHit[] {
-  const { relations = DEFAULT_AFFECTED_RELATIONS, depth: maxDepth = 2 } = options;
+  const { relations = DEFAULT_AFFECTED_RELATIONS, depth: maxDepth = 2 } =
+    options;
   const visited = new Map<string, AffectedHit>();
-  const queue: Array<{ id: string; depth: number; via: string }> = [{ id: seedId, depth: 0, via: '' }];
+  const queue: Array<{ id: string; depth: number; via: string }> = [
+    { id: seedId, depth: 0, via: "" },
+  ];
 
   while (queue.length > 0) {
     const { id, depth, via } = queue.shift()!;
@@ -19654,7 +21363,9 @@ function affectedNodes(
     }
   }
 
-  return [...visited.values()].sort((a, b) => a.depth - b.depth || a.nodeId.localeCompare(b.nodeId));
+  return [...visited.values()].sort(
+    (a, b) => a.depth - b.depth || a.nodeId.localeCompare(b.nodeId),
+  );
 }
 ```
 
@@ -19680,7 +21391,7 @@ When Phase 0.13 (Multi-Language Tree-sitter Extractors) ships, use `web-tree-sit
 4. **Performance**: WASM overhead (~10-20ms cold-start) is acceptable for batch extraction; amortized to near-zero for a long-running MCP server.
 
 ```typescript
-import Parser from 'web-tree-sitter';
+import Parser from "web-tree-sitter";
 
 // Init WASM runtime once before parsing any file
 await Parser.init();
@@ -19689,7 +21400,9 @@ await Parser.init();
 let languageParserSingleton: LanguageParser | null = null;
 
 export const parseFile = async (fileContent: string, filePath: string) => {
-  const languageParser = languageParserSingleton ?? (languageParserSingleton = await initLanguageParser());
+  const languageParser =
+    languageParserSingleton ??
+    (languageParserSingleton = await initLanguageParser());
   // ...
 };
 
@@ -19712,7 +21425,7 @@ export const cleanupLanguageParser = async (): Promise<void> => {
 When Phase 0.13 emits skeleton output for compressed source files, apply two cleanup passes and use the `⋮----` separator between non-adjacent chunks:
 
 ```typescript
-export const CHUNK_SEPARATOR = '⋮----';
+export const CHUNK_SEPARATOR = "⋮----";
 
 // Pass 1: when multiple AST captures start at the same line, keep the one with the most content
 function filterDuplicatedChunks(chunks: CapturedChunk[]): CapturedChunk[] {
@@ -19735,24 +21448,26 @@ function filterDuplicatedChunks(chunks: CapturedChunk[]): CapturedChunk[] {
 function mergeAdjacentChunks(chunks: CapturedChunk[]): CapturedChunk[] {
   const merged: CapturedChunk[] = [];
   let parts: string[] = [chunks[0].content];
-  let start = chunks[0].startRow, end = chunks[0].endRow;
+  let start = chunks[0].startRow,
+    end = chunks[0].endRow;
   for (let i = 1; i < chunks.length; i++) {
     if (end + 1 === chunks[i].startRow) {
       parts.push(chunks[i].content);
       end = chunks[i].endRow;
     } else {
-      merged.push({ content: parts.join('\n'), startRow: start, endRow: end });
+      merged.push({ content: parts.join("\n"), startRow: start, endRow: end });
       parts = [chunks[i].content];
-      start = chunks[i].startRow; end = chunks[i].endRow;
+      start = chunks[i].startRow;
+      end = chunks[i].endRow;
     }
   }
-  merged.push({ content: parts.join('\n'), startRow: start, endRow: end });
+  merged.push({ content: parts.join("\n"), startRow: start, endRow: end });
   return merged;
 }
 
 // Final output — join with gap marker between non-adjacent sections
 return mergeAdjacentChunks(filterDuplicatedChunks(captures))
-  .map(c => c.content)
+  .map((c) => c.content)
   .join(`\n${CHUNK_SEPARATOR}\n`)
   .trim();
 ```
@@ -19769,28 +21484,55 @@ Phase 7.10 (Sensitive Data Sanitization Guardrail) must scan four content stream
 
 ```typescript
 const allItems: SecurityCheckItem[] = [
-  ...rawFiles.map(f => ({ filePath: f.path, content: f.content, type: 'file' as const })),
-  ...(gitDiffResult?.workTreeDiffContent ? [{
-    filePath: 'Working tree changes', content: gitDiffResult.workTreeDiffContent, type: 'gitDiff' as const,
-  }] : []),
-  ...(gitDiffResult?.stagedDiffContent ? [{
-    filePath: 'Staged changes', content: gitDiffResult.stagedDiffContent, type: 'gitDiff' as const,
-  }] : []),
-  ...(gitLogResult?.logContent ? [{
-    filePath: 'Git log history', content: gitLogResult.logContent, type: 'gitLog' as const,
-  }] : []),
+  ...rawFiles.map((f) => ({
+    filePath: f.path,
+    content: f.content,
+    type: "file" as const,
+  })),
+  ...(gitDiffResult?.workTreeDiffContent
+    ? [
+        {
+          filePath: "Working tree changes",
+          content: gitDiffResult.workTreeDiffContent,
+          type: "gitDiff" as const,
+        },
+      ]
+    : []),
+  ...(gitDiffResult?.stagedDiffContent
+    ? [
+        {
+          filePath: "Staged changes",
+          content: gitDiffResult.stagedDiffContent,
+          type: "gitDiff" as const,
+        },
+      ]
+    : []),
+  ...(gitLogResult?.logContent
+    ? [
+        {
+          filePath: "Git log history",
+          content: gitLogResult.logContent,
+          type: "gitLog" as const,
+        },
+      ]
+    : []),
 ];
 ```
 
 **Also apply the secretlint O(n²) profiler fix** (Flaw #125) in any worker thread that runs secretlint:
+
 ```typescript
 // At worker thread module load time — before any lintSource calls
 if (!isMainThread) {
   try {
-    Object.defineProperty(perf_hooks.performance, 'mark', {
-      value: () => undefined, writable: true, configurable: true,
+    Object.defineProperty(perf_hooks.performance, "mark", {
+      value: () => undefined,
+      writable: true,
+      configurable: true,
     });
-  } catch { /* Non-configurable in future Node.js — optimization silently skipped */ }
+  } catch {
+    /* Non-configurable in future Node.js — optimization silently skipped */
+  }
 }
 ```
 
@@ -19805,10 +21547,12 @@ if (!isMainThread) {
 After `build_context_pack` runs, optionally emit a hierarchical tree of token counts per directory and file. Agents can read this to understand where the token budget is going and which directories to drop:
 
 ```typescript
-function buildTokenCountTree(fileTokenCounts: Record<string, number>): TreeNode {
+function buildTokenCountTree(
+  fileTokenCounts: Record<string, number>,
+): TreeNode {
   const root: TreeNode = { _files: [], _tokenSum: 0 };
   for (const [filePath, tokens] of Object.entries(fileTokenCounts)) {
-    const parts = filePath.split('/');
+    const parts = filePath.split("/");
     let node = root;
     for (let i = 0; i < parts.length - 1; i++) {
       node[parts[i]] ??= { _files: [], _tokenSum: 0 };
@@ -19844,12 +21588,12 @@ For context packs over large repos, cache token counts by content hash across ru
 // Key: encoding:byteLength:md5_16chars — byte length guards against MD5 collisions on same-size inputs
 export const contentCacheKey = (encoding: string, content: string): string => {
   const byteLength = Buffer.byteLength(content);
-  const digest = createHash('md5').update(content).digest('hex').slice(0, 16);
+  const digest = createHash("md5").update(content).digest("hex").slice(0, 16);
   return `${encoding}:${byteLength}:${digest}`;
 };
 
 // FIFO eviction via Map insertion order — no sorted structure needed
-const MAX_CACHE_ENTRIES = 100_000;  // ~3 MB on disk, ~10 MB in memory
+const MAX_CACHE_ENTRIES = 100_000; // ~3 MB on disk, ~10 MB in memory
 export const setCached = (key: string, count: number): void => {
   if (!cache.has(key) && cache.size >= MAX_CACHE_ENTRIES) {
     const oldest = cache.keys().next().value;
@@ -19860,13 +21604,13 @@ export const setCached = (key: string, count: number): void => {
 
 // Atomic persistence — prevents torn JSON on crash or concurrent writes
 // pid+random suffix: concurrent pack() calls in MCP server don't collide on tmp path
-const tmpFile = `${cacheFile}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`;
+const tmpFile = `${cacheFile}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
 await fs.writeFile(tmpFile, JSON.stringify(data), { mode: 0o600 });
-await fs.rename(tmpFile, cacheFile);  // atomic on POSIX; near-atomic on Windows NTFS
+await fs.rename(tmpFile, cacheFile); // atomic on POSIX; near-atomic on Windows NTFS
 
 // Use for...in not Object.entries to load large JSON — avoids materializing 100k-entry tuple array
 for (const key in data.entries) {
-  if (typeof data.entries[key] === 'number') cache.set(key, data.entries[key]);
+  if (typeof data.entries[key] === "number") cache.set(key, data.entries[key]);
 }
 ```
 
@@ -19894,7 +21638,7 @@ async function sortByGitChurn(
 // Pre-fetch in background at pack() start — overlaps with file collection so no critical path cost
 const sortDataPromise = prefetchSortData(config).catch(() => {});
 // later...
-await sortDataPromise;  // already resolved by the time sort runs
+await sortDataPromise; // already resolved by the time sort runs
 const sortedFiles = await sortByGitChurn(filePaths, cwd);
 ```
 
@@ -19910,12 +21654,12 @@ Gate behind `contextPack.sortByChanges: true` in `cortex.json` (default: false).
 
 When Cortex generates markdown output (context packs, synthesis reports), compute the minimum code fence delimiter to avoid conflicts with file content that contains triple backticks:
 
-```typescript
+``````typescript
 function calculateMarkdownDelimiter(files: ProcessedFile[]): string {
   const maxBackticks = files
-    .flatMap(f => f.content.match(/`+/g) ?? [])
+    .flatMap((f) => f.content.match(/`+/g) ?? [])
     .reduce((max, m) => Math.max(max, m.length), 0);
-  return '`'.repeat(Math.max(3, maxBackticks + 1));
+  return "`".repeat(Math.max(3, maxBackticks + 1));
 }
 
 // Template usage:
@@ -19923,7 +21667,7 @@ function calculateMarkdownDelimiter(files: ProcessedFile[]): string {
 // ${fileContent}
 // ${delimiter}
 // If file contains ``` → delimiter becomes ````; if ```` → delimiter becomes `````
-```
+``````
 
 **Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
 
@@ -19940,13 +21684,13 @@ async function loadProjectConfig(
   rootDir: string,
   options: { remoteMode?: boolean; trustRemoteConfig?: boolean } = {},
 ): Promise<CortexConfig> {
-  const localConfig = path.join(rootDir, 'cortex.json');
+  const localConfig = path.join(rootDir, "cortex.json");
 
   if (options.remoteMode && !options.trustRemoteConfig) {
     if (await fileExists(localConfig)) {
       logger.warn(
         `Skipping cortex.json found in remote repository: ${rootDir}\n` +
-        'Use --remote-trust-config to load it.',
+          "Use --remote-trust-config to load it.",
       );
     }
     return defaultConfig();
@@ -19969,9 +21713,9 @@ Support `cortex.json5` alongside `cortex.json` for project config. JSON5 allows 
 ```typescript
 // Config file search priority (local → global → defaults)
 const CONFIG_PATHS = [
-  'cortex.json5',   // comments + trailing commas
-  'cortex.jsonc',   // comments only (VSCode-friendly)
-  'cortex.json',    // strict JSON
+  "cortex.json5", // comments + trailing commas
+  "cortex.jsonc", // comments only (VSCode-friendly)
+  "cortex.json", // strict JSON
 ];
 ```
 
@@ -19988,27 +21732,38 @@ Parse with the `json5` npm package (zero transitive dependencies). The search pr
 Add a `grep_context_pack` tool to Cortex's MCP server. Fills the gap when `cortex_find` returns nothing (un-indexed entities) and CLAUDE.md bans native grep: agents can search the built context pack with grep-like semantics.
 
 ```typescript
-mcpServer.registerTool('grep_context_pack', {
-  title: 'Grep Context Pack',
+mcpServer.registerTool("grep_context_pack", {
+  title: "Grep Context Pack",
   description:
-    'Search the built context pack with grep-like semantics. Returns matching lines with surrounding context. ' +
-    'Use when cortex_find returns no results for un-synthesized source — this searches raw file content directly.',
+    "Search the built context pack with grep-like semantics. Returns matching lines with surrounding context. " +
+    "Use when cortex_find returns no results for un-synthesized source — this searches raw file content directly.",
   inputSchema: z.object({
-    pattern:      z.string().describe('Search pattern (regex supported)'),
-    contextLines: z.number().default(0).describe('Lines of context around each match (before + after)'),
-    beforeLines:  z.number().optional().describe('Lines before each match (overrides contextLines)'),
-    afterLines:   z.number().optional().describe('Lines after each match (overrides contextLines)'),
-    ignoreCase:   z.boolean().default(false),
+    pattern: z.string().describe("Search pattern (regex supported)"),
+    contextLines: z
+      .number()
+      .default(0)
+      .describe("Lines of context around each match (before + after)"),
+    beforeLines: z
+      .number()
+      .optional()
+      .describe("Lines before each match (overrides contextLines)"),
+    afterLines: z
+      .number()
+      .optional()
+      .describe("Lines after each match (overrides contextLines)"),
+    ignoreCase: z.boolean().default(false),
   }),
   outputSchema: z.object({
-    matches: z.array(z.object({
-      lineNumber: z.number(),
-      line:       z.string(),
-      before:     z.array(z.string()).optional(),
-      after:      z.array(z.string()).optional(),
-    })),
+    matches: z.array(
+      z.object({
+        lineNumber: z.number(),
+        line: z.string(),
+        before: z.array(z.string()).optional(),
+        after: z.array(z.string()).optional(),
+      }),
+    ),
     totalMatches: z.number(),
-    packId:       z.string().describe('ID of the context pack that was searched'),
+    packId: z.string().describe("ID of the context pack that was searched"),
   }),
   annotations: { readOnlyHint: true, idempotentHint: true },
 });
@@ -20031,12 +21786,12 @@ Two additive improvements to every `mcpServer.registerTool()` call, requiring ze
 **1. Typed Zod `outputSchema`**: Declare the response shape alongside the input schema. MCP clients can parse responses structurally instead of guessing field names:
 
 ```typescript
-mcpServer.registerTool('build_context_pack', {
-  inputSchema:  buildContextPackInputSchema,
+mcpServer.registerTool("build_context_pack", {
+  inputSchema: buildContextPackInputSchema,
   outputSchema: z.object({
-    packId:             z.string(),
-    totalFiles:         z.number(),
-    totalTokens:        z.number(),
+    packId: z.string(),
+    totalFiles: z.number(),
+    totalTokens: z.number(),
     directoryStructure: z.string(),
     // ...
   }),
@@ -20060,8 +21815,6 @@ Apply to all read-class tools (`read_entity`, `cortex_find`, `source`, `build_co
 **Counter-case**: `outputSchema` validation adds a small overhead on every tool response. For Cortex's current response sizes this is negligible, but worth profiling if tool responses grow large.
 
 **Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
-
-
 
 ## 🔒 REPOHYPER AUDIT — Refinements
 
@@ -20128,7 +21881,7 @@ Replace the current DFS traversal in `impact_analysis` with a k-hop BFS frontier
 function kHopNeighborhood(
   graph: KnowledgeGraph,
   sourceNodes: string[],
-  k: number
+  k: number,
 ): Set<string> {
   let frontier = new Set(sourceNodes);
   const visited = new Set(sourceNodes);
@@ -20167,7 +21920,7 @@ function bfsExpand(
   initialNodes: string[],
   graph: KnowledgeGraph,
   radius: number,
-  maxSize: number
+  maxSize: number,
 ): string[] {
   const visited = new Set(initialNodes);
   let frontier = [...initialNodes];
@@ -20207,13 +21960,13 @@ function personalizedPageRank(
   sourceNodes: string[],
   alpha = 0.15,
   maxIter = 20,
-  topK = 10
+  topK = 10,
 ): Array<{ node: string; score: number }> {
   const nodes = graph.nodes();
   const n = nodes.length;
-  let ppr = new Map<string, number>(nodes.map(nd => [nd, 1 / n]));
+  let ppr = new Map<string, number>(nodes.map((nd) => [nd, 1 / n]));
   const personal = new Map<string, number>(
-    sourceNodes.map(s => [s, 1 / sourceNodes.length])
+    sourceNodes.map((s) => [s, 1 / sourceNodes.length]),
   );
 
   for (let i = 0; i < maxIter; i++) {
@@ -20250,15 +22003,15 @@ When the `cortex_find` exact-name match fails, fall back to scanning the calling
 ```typescript
 function findReferencedEntities(
   codeText: string,
-  entityIndex: Map<string, string[]>  // entityId → [fullName, shortName]
+  entityIndex: Map<string, string[]>, // entityId → [fullName, shortName]
 ): Array<{ entityId: string; weight: number }> {
   const hits = new Map<string, number>();
 
   for (const [entityId, names] of entityIndex) {
-    const shortName = names[names.length - 1];  // last dotted component
-    if (shortName.length < 3) continue;         // skip trivially common names
+    const shortName = names[names.length - 1]; // last dotted component
+    if (shortName.length < 3) continue; // skip trivially common names
 
-    const pattern = new RegExp(`\\b${shortName}\\b`, 'g');
+    const pattern = new RegExp(`\\b${shortName}\\b`, "g");
     const count = (codeText.match(pattern) ?? []).length;
     if (count > 0) hits.set(entityId, count);
   }
@@ -20287,14 +22040,14 @@ async function loadOrBuildEntityGraph(
   entityId: string,
   cacheDir: string,
   sourceMtime: number,
-  buildFn: () => Promise<EntityGraph>
+  buildFn: () => Promise<EntityGraph>,
 ): Promise<EntityGraph> {
   const cachePath = path.join(cacheDir, `${entityId}.graph.json`);
 
   try {
     const stat = await fs.stat(cachePath);
     if (stat.mtimeMs >= sourceMtime) {
-      return JSON.parse(await fs.readFile(cachePath, 'utf8')) as EntityGraph;
+      return JSON.parse(await fs.readFile(cachePath, "utf8")) as EntityGraph;
     }
   } catch {
     // cache miss — fall through
@@ -20302,7 +22055,7 @@ async function loadOrBuildEntityGraph(
 
   const graph = await buildFn();
   await fs.mkdir(cacheDir, { recursive: true });
-  await fs.writeFile(cachePath, JSON.stringify(graph), 'utf8');
+  await fs.writeFile(cachePath, JSON.stringify(graph), "utf8");
   return graph;
 }
 ```
@@ -20322,33 +22075,50 @@ Wire into the ingest pipeline: before calling the LLM extractor for an entity, c
 RepoHyper uses PyCG for Python call graphs. For Cortex's TypeScript target, **dependency-cruiser** (`depcruise`) produces typed JSON import/call graphs without requiring custom tree-sitter post-processing. It runs as a CLI subprocess and emits structured JSON with source/resolved paths, dependency types, and cycle detection built in.
 
 ```typescript
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { execFile } from "child_process";
+import { promisify } from "util";
 const execFileAsync = promisify(execFile);
 
 interface DepEdge {
   source: string;
   resolved: string;
-  dependencyTypes: Array<'import' | 'require' | 'dynamic-import' | 're-export'>;
+  dependencyTypes: Array<"import" | "require" | "dynamic-import" | "re-export">;
   circular: boolean;
 }
 
 async function extractTypeScriptDependencyGraph(
   projectRoot: string,
-  includePattern = '^src'
+  includePattern = "^src",
 ): Promise<DepEdge[]> {
   const { stdout } = await execFileAsync(
-    'npx', ['depcruise', '--output-type', 'json', '--include-only', includePattern, 'src'],
-    { cwd: projectRoot, maxBuffer: 10 * 1024 * 1024 }
+    "npx",
+    [
+      "depcruise",
+      "--output-type",
+      "json",
+      "--include-only",
+      includePattern,
+      "src",
+    ],
+    { cwd: projectRoot, maxBuffer: 10 * 1024 * 1024 },
   );
-  const result = JSON.parse(stdout) as { modules: Array<{ source: string; dependencies: Array<{ resolved: string; dependencyTypes: string[]; circular: boolean }> }> };
-  return result.modules.flatMap(mod =>
-    mod.dependencies.map(dep => ({
+  const result = JSON.parse(stdout) as {
+    modules: Array<{
+      source: string;
+      dependencies: Array<{
+        resolved: string;
+        dependencyTypes: string[];
+        circular: boolean;
+      }>;
+    }>;
+  };
+  return result.modules.flatMap((mod) =>
+    mod.dependencies.map((dep) => ({
       source: mod.source,
       resolved: dep.resolved,
-      dependencyTypes: dep.dependencyTypes as DepEdge['dependencyTypes'],
+      dependencyTypes: dep.dependencyTypes as DepEdge["dependencyTypes"],
       circular: dep.circular,
-    }))
+    })),
   );
 }
 ```
@@ -20356,6 +22126,7 @@ async function extractTypeScriptDependencyGraph(
 Use in Phase 7 graph builder: call `extractTypeScriptDependencyGraph` once per project, then convert the flat edge list into typed graph edges (`import`, `re-export`, `dynamic-import`). Typed edges let `impact_analysis` distinguish "this entity is re-exported here" (high blast radius) from "this entity is dynamically imported" (conditional blast radius).
 
 **Alternatives considered**:
+
 - A) dependency-cruiser (recommended) — JSON output, maintained, handles monorepos, no custom parser
 - B) tree-sitter + regex call-site detection — already used in Phase 0.13; sufficient for function-call edges but misses re-exports and barrel files
 - C) Skip call graphs — entity-level graph captures most dependencies without call-site granularity
@@ -20376,22 +22147,31 @@ Wire the `personalizedPageRank` function (already defined in the Phase 26 Refine
 async function rankedImpactAnalysis(
   changedEntityId: string,
   graph: KnowledgeGraph,
-  opts: { topK?: number; alpha?: number } = {}
+  opts: { topK?: number; alpha?: number } = {},
 ): Promise<Array<{ entityId: string; pprScore: number; bfsDepth: number }>> {
   // Step 1: BFS to get the complete affected set with depths
   const bfsResults = new Map<string, number>(); // entityId → depth
-  const queue: Array<{ id: string; depth: number }> = [{ id: changedEntityId, depth: 0 }];
+  const queue: Array<{ id: string; depth: number }> = [
+    { id: changedEntityId, depth: 0 },
+  ];
   while (queue.length) {
     const { id, depth } = queue.shift()!;
     if (bfsResults.has(id)) continue;
     bfsResults.set(id, depth);
     for (const neighbor of graph.neighbors(id)) {
-      if (!bfsResults.has(neighbor)) queue.push({ id: neighbor, depth: depth + 1 });
+      if (!bfsResults.has(neighbor))
+        queue.push({ id: neighbor, depth: depth + 1 });
     }
   }
 
   // Step 2: PPR over the full graph, personalized to the changed node
-  const ranked = personalizedPageRank(graph, [changedEntityId], opts.alpha ?? 0.15, 20, opts.topK ?? 20);
+  const ranked = personalizedPageRank(
+    graph,
+    [changedEntityId],
+    opts.alpha ?? 0.15,
+    20,
+    opts.topK ?? 20,
+  );
 
   // Step 3: Intersect — only return entities that are both affected (BFS) and ranked (PPR)
   return ranked
@@ -20408,7 +22188,6 @@ The intersection of BFS (completeness) and PPR (relevance) gives a ranked blast-
 
 **Counter-case**: PPR convergence over the full knowledge graph (potentially 500+ entities) adds ~5-10ms per `impact_analysis` call. For an interactive tool call this is acceptable; for batch pre-computation it may need memoization. Add `--no-rank` flag to skip PPR and return raw BFS order for scripted use.
 
-
 ## 🔒 MCP-CODE-GRAPH AUDIT — Refinements
 
 ---
@@ -20421,35 +22200,40 @@ When Cortex grows to support multiple deployment modes (multi-lens, multi-projec
 
 ```typescript
 // src/mcp/tool-schema.ts
-import { z, ZodRawShape } from 'zod';
-import { CortexConfig } from '../config.js';
+import { z, ZodRawShape } from "zod";
+import { CortexConfig } from "../config.js";
 
 export function createToolSchema<T extends ZodRawShape>(
   baseSchema: T,
-  config: CortexConfig
+  config: CortexConfig,
 ): ZodRawShape {
   let schema: ZodRawShape = { ...baseSchema };
 
   // Add lens selector only when multiple lenses are configured
   if (config.lenses && config.lenses.length > 1) {
-    const lensOptions = config.lenses.map(l => l.id) as [string, ...string[]];
+    const lensOptions = config.lenses.map((l) => l.id) as [string, ...string[]];
     schema = {
       ...schema,
       lens: z
         .enum(lensOptions)
         .optional()
-        .describe(`Lens to query. Available: ${lensOptions.join(', ')}. Defaults to active lens.`),
+        .describe(
+          `Lens to query. Available: ${lensOptions.join(", ")}. Defaults to active lens.`,
+        ),
     };
   }
 
   // Add project selector only when multi-project is configured
   if (config.projects && config.projects.length > 1) {
-    const projectIds = config.projects.map(p => p.id) as [string, ...string[]];
+    const projectIds = config.projects.map((p) => p.id) as [
+      string,
+      ...string[],
+    ];
     schema = {
       ...schema,
       project: z
         .enum(projectIds)
-        .describe(`Project to query. Available: ${projectIds.join(', ')}.`),
+        .describe(`Project to query. Available: ${projectIds.join(", ")}.`),
     };
   }
 
@@ -20477,11 +22261,11 @@ interface CortexConfig {
 }
 
 // CLI arg parsing: --project=myapp:./apps/myapp  --project=api:./apps/api
-const projectArgs = args.filter(arg => arg.startsWith('--project='));
+const projectArgs = args.filter((arg) => arg.startsWith("--project="));
 if (projectArgs.length > 1) {
   config.IS_MULTI_PROJECT = true;
-  config.PROJECT_LIST = projectArgs.map(arg => {
-    const [id, root] = arg.replace('--project=', '').split(':');
+  config.PROJECT_LIST = projectArgs.map((arg) => {
+    const [id, root] = arg.replace("--project=", "").split(":");
     return { id, root, knowledgeDir: `${root}/.knowledge` };
   });
 }
@@ -20489,15 +22273,15 @@ if (projectArgs.length > 1) {
 // Per-tool project resolver
 function resolveProject(
   projectId: string | undefined,
-  config: CortexConfig
+  config: CortexConfig,
 ): { root: string; knowledgeDir: string } {
   if (!config.IS_MULTI_PROJECT) {
     return { root: config.PROJECT_ROOT, knowledgeDir: config.KNOWLEDGE_DIR };
   }
-  const project = config.PROJECT_LIST.find(p => p.id === projectId);
+  const project = config.PROJECT_LIST.find((p) => p.id === projectId);
   if (!project) {
     throw new Error(
-      `Unknown project: "${projectId}". Available: ${config.PROJECT_LIST.map(p => p.id).join(', ')}`
+      `Unknown project: "${projectId}". Available: ${config.PROJECT_LIST.map((p) => p.id).join(", ")}`,
     );
   }
   return project;
@@ -20513,13 +22297,13 @@ function resolveProject(
 **Closes:** Flaw #18 (`cortex_find` returns "No matches" instead of fuzzy suggestions)
 **Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/code_finder.py:29-244`
 
-Min-of-raw-vs-normalized Levenshtein prevents style-inflation when matching camelCase identifiers against snake_case names. The normalized form strips `_` and spaces and lowercases, so `my_functon` vs `myFunction` is edit-distance 1 (a single typo) instead of 3 (underscore + case inflation).
+Min-of-raw-vs-normalized Levenshtein prevents style-inflation when matching camelCase identifiers against snake*case names. The normalized form strips `*`and spaces and lowercases, so`my_functon`vs`myFunction` is edit-distance 1 (a single typo) instead of 3 (underscore + case inflation).
 
 ```typescript
 // src/search/fuzzy.ts
 
 function normalizeIdentifier(s: string): string {
-  return s.toLowerCase().replace(/[_\s]/g, '');
+  return s.toLowerCase().replace(/[_\s]/g, "");
 }
 
 function levenshtein(a: string, b: string): number {
@@ -20529,7 +22313,13 @@ function levenshtein(a: string, b: string): number {
   for (let i = 0; i < a.length; i++) {
     const curr = [i + 1];
     for (let j = 0; j < b.length; j++) {
-      curr.push(Math.min(prev[j + 1] + 1, curr[j] + 1, prev[j] + (a[i] !== b[j] ? 1 : 0)));
+      curr.push(
+        Math.min(
+          prev[j + 1] + 1,
+          curr[j] + 1,
+          prev[j] + (a[i] !== b[j] ? 1 : 0),
+        ),
+      );
     }
     prev = curr;
   }
@@ -20545,7 +22335,10 @@ export function fuzzyMatchIdentifiers(
   const qNorm = normalizeIdentifier(query);
   const scored: Array<{ name: string; distance: number }> = [];
   for (const name of names) {
-    const d = Math.min(levenshtein(qRaw, name.toLowerCase()), levenshtein(qNorm, normalizeIdentifier(name)));
+    const d = Math.min(
+      levenshtein(qRaw, name.toLowerCase()),
+      levenshtein(qNorm, normalizeIdentifier(name)),
+    );
     if (d <= maxDist) scored.push({ name, distance: d });
   }
   return scored.sort((a, b) => a.distance - b.distance);
@@ -20568,23 +22361,42 @@ Config and infrastructure files (`.toml`, `.yaml`, `Dockerfile`, `Makefile`, etc
 // src/ingestion/parser-registry.ts
 
 const GENERIC_EXTENSIONS = new Set([
-  '.toml', '.sh', '.yaml', '.yml', '.json', '.ini', '.cfg', '.env',
-  '.bat', '.ps1', '.dockerignore', '.gitignore', '.md', '.txt',
+  ".toml",
+  ".sh",
+  ".yaml",
+  ".yml",
+  ".json",
+  ".ini",
+  ".cfg",
+  ".env",
+  ".bat",
+  ".ps1",
+  ".dockerignore",
+  ".gitignore",
+  ".md",
+  ".txt",
 ]);
-const GENERIC_FILENAMES = new Set(['Dockerfile', 'Makefile', 'docker-compose.yml']);
+const GENERIC_FILENAMES = new Set([
+  "Dockerfile",
+  "Makefile",
+  "docker-compose.yml",
+]);
 
 export function isGenericFile(filePath: string): boolean {
   const p = path.parse(filePath);
   return GENERIC_EXTENSIONS.has(p.ext) || GENERIC_FILENAMES.has(p.base);
 }
 
-export function buildGenericFileNode(filePath: string, repoPath: string): FileNode {
+export function buildGenericFileNode(
+  filePath: string,
+  repoPath: string,
+): FileNode {
   return {
     id: `file:${filePath}`,
     path: filePath,
     relativePath: path.relative(repoPath, filePath),
     name: path.basename(filePath),
-    lang: 'generic',
+    lang: "generic",
     isParsed: false,
   };
 }
@@ -20631,10 +22443,14 @@ export function generateGraphReport(db: GraphDB): GraphReport {
     RETURN e.name AS entity, 'no_callers' AS reason LIMIT 20
   `);
   const cypherPlaybook = [
-    { title: 'Entities with most cross-module dependencies',
-      query: `MATCH (a)-[:RELATES_TO]->(b) WHERE a.sourceFile <> b.sourceFile RETURN a.name, count(*) ORDER BY count(*) DESC LIMIT 10` },
-    { title: 'Entities never referenced (dead knowledge?)',
-      query: `MATCH (e:Entity) WHERE NOT ()-[:RELATES_TO]->(e) RETURN e.name, e.sourceFile` },
+    {
+      title: "Entities with most cross-module dependencies",
+      query: `MATCH (a)-[:RELATES_TO]->(b) WHERE a.sourceFile <> b.sourceFile RETURN a.name, count(*) ORDER BY count(*) DESC LIMIT 10`,
+    },
+    {
+      title: "Entities never referenced (dead knowledge?)",
+      query: `MATCH (e:Entity) WHERE NOT ()-[:RELATES_TO]->(e) RETURN e.name, e.sourceFile`,
+    },
   ];
   return { godNodes, crossModuleLinks, deadEntities, cypherPlaybook };
 }
@@ -20661,22 +22477,37 @@ export async function incrementalFileUpdate(
   repoPath: string,
   ingestor: FileIngestor,
 ): Promise<void> {
-  const callerPaths = await db.query<string[]>(`
+  const callerPaths = await db.query<string[]>(
+    `
     MATCH (caller:Function)-[:CALLS]->(fn:Function {path: $path})
     RETURN DISTINCT caller.path AS callerPath
-  `, { path: changedFilePath });
+  `,
+    { path: changedFilePath },
+  );
 
-  const inheritorPaths = await db.query<string[]>(`
+  const inheritorPaths = await db.query<string[]>(
+    `
     MATCH (cls:Class {path: $path})<-[:INHERITS]-(child:Class)
     RETURN DISTINCT child.path AS childPath
-  `, { path: changedFilePath });
+  `,
+    { path: changedFilePath },
+  );
 
-  const affectedPaths = new Set([changedFilePath, ...callerPaths, ...inheritorPaths]);
+  const affectedPaths = new Set([
+    changedFilePath,
+    ...callerPaths,
+    ...inheritorPaths,
+  ]);
 
-  await db.run(`MATCH (n {path: $path}) DETACH DELETE n`, { path: changedFilePath });
+  await db.run(`MATCH (n {path: $path}) DETACH DELETE n`, {
+    path: changedFilePath,
+  });
 
   for (const callerPath of callerPaths) {
-    await db.run(`MATCH (caller:Function {path: $path})-[c:CALLS]->() DELETE c`, { path: callerPath });
+    await db.run(
+      `MATCH (caller:Function {path: $path})-[c:CALLS]->() DELETE c`,
+      { path: callerPath },
+    );
   }
 
   const subsetData = await ingestor.parseFiles([...affectedPaths]);
@@ -20705,16 +22536,20 @@ export class JobManager {
   private jobs = new Map<string, JobInfo>();
 
   etaSeconds(job: JobInfo): number | null {
-    if (job.status !== 'running' || job.processedFiles === 0) return null;
+    if (job.status !== "running" || job.processedFiles === 0) return null;
     const elapsed = (Date.now() - job.startTime.getTime()) / 1000;
-    return (elapsed / job.processedFiles) * (job.totalFiles - job.processedFiles);
+    return (
+      (elapsed / job.processedFiles) * (job.totalFiles - job.processedFiles)
+    );
   }
 
   findActiveJobByPath(path: string): JobInfo | null {
     const resolved = normalizePath(path);
     for (const job of this.jobs.values()) {
-      if (normalizePath(job.path) === resolved &&
-          (job.status === 'pending' || job.status === 'running')) {
+      if (
+        normalizePath(job.path) === resolved &&
+        (job.status === "pending" || job.status === "running")
+      ) {
         return job;
       }
     }
@@ -20744,15 +22579,20 @@ Prevents false-negative CALLS edges when a `.kt` function calls a `.java` functi
 // src/ingestion/language-compat.ts
 
 const LANGUAGE_FAMILIES: Set<string>[] = [
-  new Set(['java', 'kotlin']),
-  new Set(['c', 'cpp']),
-  new Set(['javascript', 'typescript']),
+  new Set(["java", "kotlin"]),
+  new Set(["c", "cpp"]),
+  new Set(["javascript", "typescript"]),
 ];
 
-export function languagesAreCompatible(lang1: string | null, lang2: string | null): boolean {
+export function languagesAreCompatible(
+  lang1: string | null,
+  lang2: string | null,
+): boolean {
   if (!lang1 || !lang2) return true;
   if (lang1 === lang2) return true;
-  return LANGUAGE_FAMILIES.some(family => family.has(lang1) && family.has(lang2));
+  return LANGUAGE_FAMILIES.some(
+    (family) => family.has(lang1) && family.has(lang2),
+  );
 }
 ```
 
@@ -20772,27 +22612,47 @@ export function languagesAreCompatible(lang1: string | null, lang2: string | nul
 // src/schema/contract.ts
 
 export const NODE_LABELS = new Set([
-  'Repository', 'Directory', 'File',
-  'Function', 'Class', 'Module', 'Variable',
-  'Interface', 'Trait', 'Struct', 'Enum', 'Union',
-  'Record', 'Property', 'Annotation', 'Parameter', 'Macro',
+  "Repository",
+  "Directory",
+  "File",
+  "Function",
+  "Class",
+  "Module",
+  "Variable",
+  "Interface",
+  "Trait",
+  "Struct",
+  "Enum",
+  "Union",
+  "Record",
+  "Property",
+  "Annotation",
+  "Parameter",
+  "Macro",
 ] as const);
 
 export const RELATIONSHIP_TYPES = new Set([
-  'CONTAINS', 'CALLS', 'IMPORTS', 'INHERITS', 'IMPLEMENTS',
-  'HAS_PARAMETER', 'INCLUDES',
+  "CONTAINS",
+  "CALLS",
+  "IMPORTS",
+  "INHERITS",
+  "IMPLEMENTS",
+  "HAS_PARAMETER",
+  "INCLUDES",
 ] as const);
 
 export const MERGE_KEYS = {
-  Function:   ['name', 'path', 'lineNumber'] as const,
-  Class:      ['name', 'path', 'lineNumber'] as const,
-  File:       ['path'] as const,
-  Repository: ['path'] as const,
+  Function: ["name", "path", "lineNumber"] as const,
+  Class: ["name", "path", "lineNumber"] as const,
+  File: ["path"] as const,
+  Repository: ["path"] as const,
 } as const;
 
 export function assertKnownLabel(label: string): void {
   if (!NODE_LABELS.has(label as any)) {
-    console.warn(`[schema-contract] Unknown node label emitted: "${label}". Add to NODE_LABELS if intentional.`);
+    console.warn(
+      `[schema-contract] Unknown node label emitted: "${label}". Add to NODE_LABELS if intentional.`,
+    );
   }
 }
 ```
@@ -20815,49 +22675,85 @@ export async function runInheritanceReresolve(
   repoPath: string,
   vectorResolver?: VectorResolver,
 ): Promise<number> {
-  const repoPrefix = repoPath.replace(/\/?$/, '/');
+  const repoPrefix = repoPath.replace(/\/?$/, "/");
 
-  const lowConfidence = await db.query(`
+  const lowConfidence = await db.query(
+    `
     MATCH (caller)-[c:CALLS]->(called)
     WHERE (caller.path STARTS WITH $repoPrefix OR called.path STARTS WITH $repoPrefix)
       AND c.resolutionTier IN [8, 9]
     RETURN caller.name, caller.path, called.name AS calledName, c.lineNumber
-  `, { repoPrefix });
+  `,
+    { repoPrefix },
+  );
 
   if (!lowConfidence.length) return 0;
 
-  const uniqueNames = [...new Set(lowConfidence.map(r => r.calledName).filter(Boolean))];
-  const implementations = await db.query(`
+  const uniqueNames = [
+    ...new Set(lowConfidence.map((r) => r.calledName).filter(Boolean)),
+  ];
+  const implementations = await db.query(
+    `
     UNWIND $names AS name
     MATCH (cls:Class)-[:CONTAINS]->(fn:Function {name: name})
     WHERE fn.path STARTS WITH $repoPrefix
     OPTIONAL MATCH (cls)-[:INHERITS]->(parent:Class)
     RETURN fn.name AS queriedName, fn.path, cls.name, parent.name AS parentName
-  `, { names: uniqueNames, repoPrefix });
+  `,
+    { names: uniqueNames, repoPrefix },
+  );
 
-  const nameToImpls = groupBy(implementations, r => r.queriedName);
-  const improvements: Array<{ callerPath: string; calledName: string; newCalledPath: string; confidence: number; tier: number }> = [];
+  const nameToImpls = groupBy(implementations, (r) => r.queriedName);
+  const improvements: Array<{
+    callerPath: string;
+    calledName: string;
+    newCalledPath: string;
+    confidence: number;
+    tier: number;
+  }> = [];
 
   for (const row of lowConfidence) {
-    const candidates = (nameToImpls[row.calledName] ?? []).filter(i => i.path !== row.callerPath);
+    const candidates = (nameToImpls[row.calledName] ?? []).filter(
+      (i) => i.path !== row.callerPath,
+    );
     if (!candidates.length) continue;
     let bestPath: string | null = null;
-    let confidence = 0.78; let tier = 10;
+    let confidence = 0.78;
+    let tier = 10;
     if (candidates.length === 1) {
       bestPath = candidates[0].path;
     } else {
-      const pool = candidates.filter(c => c.parentName).length ? candidates.filter(c => c.parentName) : candidates;
-      if (pool.length === 1) { bestPath = pool[0].path; }
-      else if (vectorResolver) {
-        bestPath = await vectorResolver.resolve(row.calledName, null, pool.map(p => p.path), repoPath);
-        if (bestPath) { confidence = 0.82; tier = 11; }
+      const pool = candidates.filter((c) => c.parentName).length
+        ? candidates.filter((c) => c.parentName)
+        : candidates;
+      if (pool.length === 1) {
+        bestPath = pool[0].path;
+      } else if (vectorResolver) {
+        bestPath = await vectorResolver.resolve(
+          row.calledName,
+          null,
+          pool.map((p) => p.path),
+          repoPath,
+        );
+        if (bestPath) {
+          confidence = 0.82;
+          tier = 11;
+        }
       }
     }
-    if (bestPath) improvements.push({ callerPath: row.callerPath, calledName: row.calledName, newCalledPath: bestPath, confidence, tier });
+    if (bestPath)
+      improvements.push({
+        callerPath: row.callerPath,
+        calledName: row.calledName,
+        newCalledPath: bestPath,
+        confidence,
+        tier,
+      });
   }
 
   if (improvements.length) {
-    await db.run(`
+    await db.run(
+      `
       UNWIND $batch AS row
       MATCH (caller {path: row.callerPath})-[old:CALLS {calledName: row.calledName}]->()
         WHERE old.resolutionTier IN [8, 9]
@@ -20866,7 +22762,9 @@ export async function runInheritanceReresolve(
       MATCH (newCalled:Function {name: row.calledName, path: row.newCalledPath})
       MERGE (caller)-[c:CALLS {calledName: row.calledName}]->(newCalled)
       SET c.confidence = row.confidence, c.resolutionTier = row.tier
-    `, { batch: improvements });
+    `,
+      { batch: improvements },
+    );
   }
 
   return improvements.length;
@@ -20896,32 +22794,64 @@ export function extractFrameworkEdges(parsedFile: ParsedFile): FrameworkEdge[] {
   for (const cls of parsedFile.classes) {
     // @Autowired / @Inject → INJECTS
     for (const field of cls.fields ?? []) {
-      if (field.decorators?.some(d => ['Autowired', 'Inject'].includes(d))) {
-        edges.push({ type: 'INJECTS', from: cls.name, to: field.type, fromPath: parsedFile.path });
+      if (field.decorators?.some((d) => ["Autowired", "Inject"].includes(d))) {
+        edges.push({
+          type: "INJECTS",
+          from: cls.name,
+          to: field.type,
+          fromPath: parsedFile.path,
+        });
       }
     }
 
     for (const method of cls.methods ?? []) {
       // @GetMapping / @PostMapping / etc → EXPOSES_ENDPOINT
-      const endpointAnnotation = method.decorators?.find(d =>
-        ['GetMapping', 'PostMapping', 'PutMapping', 'DeleteMapping', 'RequestMapping'].includes(d)
+      const endpointAnnotation = method.decorators?.find((d) =>
+        [
+          "GetMapping",
+          "PostMapping",
+          "PutMapping",
+          "DeleteMapping",
+          "RequestMapping",
+        ].includes(d),
       );
       if (endpointAnnotation) {
-        edges.push({ type: 'EXPOSES_ENDPOINT', from: cls.name, to: method.name, fromPath: parsedFile.path });
+        edges.push({
+          type: "EXPOSES_ENDPOINT",
+          from: cls.name,
+          to: method.name,
+          fromPath: parsedFile.path,
+        });
       }
       // @Bean → PROVIDES_BEAN
-      if (method.decorators?.includes('Bean')) {
-        edges.push({ type: 'PROVIDES_BEAN', from: cls.name, to: method.returnType ?? method.name, fromPath: parsedFile.path });
+      if (method.decorators?.includes("Bean")) {
+        edges.push({
+          type: "PROVIDES_BEAN",
+          from: cls.name,
+          to: method.returnType ?? method.name,
+          fromPath: parsedFile.path,
+        });
       }
       // Spring Data derived queries (findByXxx, existsByXxx) → QUERIES
       if (/^(findBy|existsBy|countBy|deleteBy)/.test(method.name)) {
-        edges.push({ type: 'QUERIES', from: cls.name, to: method.name, fromPath: parsedFile.path });
+        edges.push({
+          type: "QUERIES",
+          from: cls.name,
+          to: method.name,
+          fromPath: parsedFile.path,
+        });
       }
     }
 
     // @Entity / @Table → data model node tag
-    if (cls.decorators?.some(d => ['Entity', 'Table'].includes(d))) {
-      edges.push({ type: 'MAPS_TO', from: cls.name, to: cls.name, fromPath: parsedFile.path, isOrmEntity: true });
+    if (cls.decorators?.some((d) => ["Entity", "Table"].includes(d))) {
+      edges.push({
+        type: "MAPS_TO",
+        from: cls.name,
+        to: cls.name,
+        fromPath: parsedFile.path,
+        isOrmEntity: true,
+      });
     }
   }
 
@@ -20949,7 +22879,7 @@ Without a trailing slash, `WHERE path STARTS WITH '/opt/repos/myapp'` silently m
  *  Appends a trailing slash so '/opt/repos/myapp' cannot match '/opt/repos/myapp_extra'.
  */
 export function toRepoPrefix(repoPath: string): string {
-  return repoPath.replace(/\/?$/, '/');
+  return repoPath.replace(/\/?$/, "/");
 }
 ```
 
@@ -21022,9 +22952,9 @@ The fix: create one synthetic `<module>` entity per file (line 1, spanning the w
 // src/ingestion/module-frame.ts
 
 export interface ModuleFrameEntity {
-  name: '<module>';
+  name: "<module>";
   qualifiedName: string;
-  kind: 'module-frame';
+  kind: "module-frame";
   path: string;
   lineStart: number;
   lineEnd: number;
@@ -21035,11 +22965,14 @@ export interface ModuleFrameEntity {
  * Without this, calls at the top level of a file have no source entity
  * and produce orphaned CALLS edges.
  */
-export function createModuleFrame(filePath: string, totalLines: number): ModuleFrameEntity {
+export function createModuleFrame(
+  filePath: string,
+  totalLines: number,
+): ModuleFrameEntity {
   return {
-    name: '<module>',
+    name: "<module>",
     qualifiedName: `${filePath}:<module>`,
-    kind: 'module-frame',
+    kind: "module-frame",
     path: filePath,
     lineStart: 1,
     lineEnd: totalLines,
@@ -21054,7 +22987,7 @@ export function attachOrphanedCalls(
   calls: Array<{ callerName: string | null; calledName: string; line: number }>,
   moduleFrame: ModuleFrameEntity,
 ): Array<{ callerName: string; calledName: string; line: number }> {
-  return calls.map(c => ({
+  return calls.map((c) => ({
     ...c,
     callerName: c.callerName ?? moduleFrame.qualifiedName,
   }));
@@ -21086,50 +23019,56 @@ Custom redirect handler re-calls `validate_url()` on every 3xx target before fol
 ```typescript
 // src/security/ssrf-guard.ts
 
-import { isIP } from 'net';
-import dns from 'dns/promises';
+import { isIP } from "net";
+import dns from "dns/promises";
 
 const PRIVATE_CIDRS = [
   // RFC 1918
-  [0x0A000000, 0xFF000000],  // 10.0.0.0/8
-  [0xAC100000, 0xFFF00000],  // 172.16.0.0/12
-  [0xC0A80000, 0xFFFF0000],  // 192.168.0.0/16
+  [0x0a000000, 0xff000000], // 10.0.0.0/8
+  [0xac100000, 0xfff00000], // 172.16.0.0/12
+  [0xc0a80000, 0xffff0000], // 192.168.0.0/16
   // RFC 6598 CGN (missed by most libraries)
-  [0x64400000, 0xFFC00000],  // 100.64.0.0/10
+  [0x64400000, 0xffc00000], // 100.64.0.0/10
   // Loopback, link-local, reserved
-  [0x7F000000, 0xFF000000],  // 127.0.0.0/8
-  [0xA9FE0000, 0xFFFF0000],  // 169.254.0.0/16
-  [0xE0000000, 0xF0000000],  // 224.0.0.0/4 (multicast)
+  [0x7f000000, 0xff000000], // 127.0.0.0/8
+  [0xa9fe0000, 0xffff0000], // 169.254.0.0/16
+  [0xe0000000, 0xf0000000], // 224.0.0.0/4 (multicast)
 ] as const;
 
 function isPrivateIp(ip: string): boolean {
   if (!isIP(ip)) return false;
-  const n = ip.split('.').reduce((acc, oct) => (acc << 8) | parseInt(oct, 10), 0) >>> 0;
+  const n =
+    ip.split(".").reduce((acc, oct) => (acc << 8) | parseInt(oct, 10), 0) >>> 0;
   return PRIVATE_CIDRS.some(([net, mask]) => (n & mask) === net);
 }
 
 export async function validateUrl(url: string): Promise<void> {
-  const parsed = new URL(url);  // throws on malformed
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
+  const parsed = new URL(url); // throws on malformed
+  if (!["http:", "https:"].includes(parsed.protocol)) {
     throw new Error(`Disallowed scheme: ${parsed.protocol}`);
   }
   // DNS-resolve and check every returned IP (Layer 1 + 2 combined)
   const addresses = await dns.lookup(parsed.hostname, { all: true });
   for (const { address } of addresses) {
     if (isPrivateIp(address)) {
-      throw new Error(`Blocked: ${parsed.hostname} resolves to private IP ${address}`);
+      throw new Error(
+        `Blocked: ${parsed.hostname} resolves to private IP ${address}`,
+      );
     }
   }
 }
 
 /** Fetch wrapper that re-validates redirects (Layer 3). */
-export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+export async function safeFetch(
+  url: string,
+  options?: RequestInit,
+): Promise<Response> {
   await validateUrl(url);
-  const res = await fetch(url, { ...options, redirect: 'manual' });
+  const res = await fetch(url, { ...options, redirect: "manual" });
   if (res.status >= 300 && res.status < 400) {
-    const location = res.headers.get('location');
-    if (!location) throw new Error('Redirect with no Location header');
-    await validateUrl(location);  // re-validate before following
+    const location = res.headers.get("location");
+    if (!location) throw new Error("Redirect with no Location header");
+    await validateUrl(location); // re-validate before following
     return safeFetch(location, options);
   }
   return res;
@@ -21139,3 +23078,659 @@ export async function safeFetch(url: string, options?: RequestInit): Promise<Res
 **Wire into any URL-fetching code:** Replace bare `fetch(url, ...)` with `safeFetch(url, ...)`. Call `validateUrl(url)` at the MCP tool handler boundary before passing URLs deeper into the stack.
 
 **Counter-case:** Cortex is local-first — core tools read the local filesystem and do not fetch user-provided URLs. This guard applies only when URL-fetching phases ship (Phase 22+). Adding it prematurely to non-fetching code adds latency for zero security benefit. Gate with `if (CORTEX_ENABLES_URL_FETCH)` until the fetching phase exists.
+
+---
+
+### Phase 0.2 Refinement — Multi-Strategy Entity-to-Source Matching Pipeline (aider audit, score: 32)
+
+**Source-of-lesson:** aider `aider/coders/editblock_coder.py:157-274`
+
+When Cortex validates an entity against its source file (e.g., `before_change`, staleness checks), exact matching fails any time the code was refactored. Aider solves this with a tiered fallback chain — each tier tries a looser match and records its confidence. Apply the same pattern to entity-to-source verification.
+
+```typescript
+// src/validation/entity-matcher.ts
+
+export type MatchTier = "exact" | "normalized" | "ast-signature" | "fuzzy";
+
+export interface MatchResult {
+  tier: MatchTier;
+  confidence: number;
+  lineStart: number;
+  lineEnd: number;
+}
+
+/**
+ * Try to locate an entity in its source file using progressively looser strategies.
+ * Returns the highest-confidence match found, or null if all tiers fail.
+ *
+ * Tier 1 (exact): entity signature matches source verbatim
+ * Tier 2 (normalized): whitespace/comment stripped match
+ * Tier 3 (ast-signature): name + param count + return type match (ignores body)
+ * Tier 4 (fuzzy): SequenceMatcher similarity > 0.8 threshold
+ */
+export async function matchEntityToSource(
+  entity: EntityPage,
+  sourceLines: string[],
+): Promise<MatchResult | null> {
+  // Tier 1: exact match on entity signature line
+  const exactIdx = sourceLines.findIndex((l) => l.includes(entity.signature));
+  if (exactIdx >= 0)
+    return {
+      tier: "exact",
+      confidence: 1.0,
+      lineStart: exactIdx + 1,
+      lineEnd: exactIdx + 1,
+    };
+
+  // Tier 2: whitespace-normalized match
+  const normSig = entity.signature.replace(/\s+/g, " ").trim();
+  const normIdx = sourceLines.findIndex((l) =>
+    l.replace(/\s+/g, " ").trim().includes(normSig),
+  );
+  if (normIdx >= 0)
+    return {
+      tier: "normalized",
+      confidence: 0.92,
+      lineStart: normIdx + 1,
+      lineEnd: normIdx + 1,
+    };
+
+  // Tier 3: AST-level signature (name + params only, body-agnostic)
+  const astIdx = await matchByAstSignature(entity, sourceLines);
+  if (astIdx >= 0)
+    return {
+      tier: "ast-signature",
+      confidence: 0.8,
+      lineStart: astIdx + 1,
+      lineEnd: astIdx + 1,
+    };
+
+  // Tier 4: fuzzy similarity over a sliding window
+  const fuzzyResult = fuzzyWindowMatch(entity.signature, sourceLines, 0.8);
+  if (fuzzyResult)
+    return {
+      tier: "fuzzy",
+      confidence: fuzzyResult.score * 0.7,
+      ...fuzzyResult,
+    };
+
+  return null;
+}
+```
+
+**Wire into `before_change` and staleness checks:** Replace hard "entity not found → stale" with `matchEntityToSource()`. If tier is `fuzzy` or `ast-signature`, flag the entity as `confidence < 1.0` rather than stale — it may have moved, not been deleted.
+
+**Counter-case:** Four-tier matching adds latency to every staleness check. Gate tier 3 (AST parse) and tier 4 (fuzzy) behind a `thoroughMatch` flag — default to tiers 1–2 only for hot paths.
+
+---
+
+### Phase 1 Refinement — 3-Layer Config Merge with Conflict Validation (repomix audit, score: 30)
+
+**Source-of-lesson:** repomix `src/cli/actions/defaultAction.ts:29-87`
+
+Cortex currently has a flat config loaded from one source. Repomix's three-layer merge pattern (defaults → project file → CLI/MCP params) with explicit conflict detection prevents silent misconfiguration and allows per-project customization without touching global settings.
+
+```typescript
+// src/config/merge.ts
+
+export interface CortexConfig {
+  maxCostPerSync: number;
+  maxEntitiesPerRun: number;
+  synthesisModel: string;
+  autoIngest: boolean;
+  humanReviewOnly: boolean;
+  knowledgeDir: string;
+}
+
+const DEFAULTS: CortexConfig = {
+  maxCostPerSync: 0.5,
+  maxEntitiesPerRun: 100,
+  synthesisModel: "claude-sonnet-4-6",
+  autoIngest: false,
+  humanReviewOnly: false,
+  knowledgeDir: ".knowledge",
+};
+
+/** Merge three config layers: hardcoded defaults → project file → runtime params.
+ *  Later layers win. Throws on explicit conflicts. */
+export function mergeConfigs(
+  projectConfig: Partial<CortexConfig>,
+  runtimeParams: Partial<CortexConfig>,
+): CortexConfig {
+  validateConflicts(runtimeParams);
+  return { ...DEFAULTS, ...projectConfig, ...runtimeParams };
+}
+
+function validateConflicts(cfg: Partial<CortexConfig>): void {
+  if (cfg.autoIngest === true && cfg.humanReviewOnly === true) {
+    throw new Error(
+      "Config conflict: autoIngest and humanReviewOnly cannot both be true. Set one explicitly to false.",
+    );
+  }
+  if (cfg.maxCostPerSync !== undefined && cfg.maxEntitiesPerRun !== undefined) {
+    // both gates active — require explicit priority field
+    if (!(cfg as any).costGatePriority) {
+      throw new Error(
+        'Config conflict: both maxCostPerSync and maxEntitiesPerRun set. Add costGatePriority: "cost"|"entities" to resolve.',
+      );
+    }
+  }
+}
+```
+
+**Wire into startup:** Load `~/.cortex/config.json` (user layer) and `.knowledge/cortex.json` (project layer) at startup. Merge via `mergeConfigs(projectConfig, runtimeParams)` where `runtimeParams` comes from MCP client request or CLI args.
+
+**Counter-case:** Three-layer merging adds startup complexity. Keep it opt-in — if neither `~/.cortex/config.json` nor `.knowledge/cortex.json` exists, skip the merge and use defaults directly.
+
+---
+
+### Phase 1 Refinement — Parallel I/O Prefetch During Ingest (repomix audit, score: 24)
+
+**Source-of-lesson:** repomix `src/core/packager.ts:68-151`
+
+Repomix starts expensive I/O operations (token cache load, git sort prefetch) at the very beginning of the pipeline as floating Promises, then awaits them only when the downstream phase actually needs them. This overlaps I/O with CPU work and cuts perceived latency.
+
+```typescript
+// src/ingestion/ingest-orchestrator.ts
+
+export async function runIngest(
+  repoPath: string,
+  config: CortexConfig,
+): Promise<void> {
+  // Kick off all expensive I/O immediately — don't await yet.
+  const existingKnowledgePromise = loadExistingKnowledge(config.knowledgeDir);
+  const gitHistoryPromise = fetchGitHistory(repoPath, {
+    since: "6 months ago",
+  });
+  const embeddingCachePromise = warmEmbeddingCache(config.synthesisModel);
+
+  // Phase 1: file collection (CPU-bound, runs while I/O is in-flight)
+  const sourceFiles = await collectSourceFiles(repoPath, config);
+
+  // Phase 2: diff computation — now we need git history
+  const gitHistory = await gitHistoryPromise;
+  const changedFiles = computeChangedFiles(sourceFiles, gitHistory);
+
+  // Phase 3: synthesis — now we need existing knowledge + embeddings
+  const [existingKnowledge, embeddingCache] = await Promise.all([
+    existingKnowledgePromise,
+    embeddingCachePromise,
+  ]);
+  await synthesizeEntities(
+    changedFiles,
+    existingKnowledge,
+    embeddingCache,
+    config,
+  );
+}
+```
+
+**Counter-case:** Prefetching git history and embeddings unconditionally wastes I/O if the ingest is aborted early (e.g., config validation fails). Wrap prefetch in a flag: `if (!config.lazyPrefetch) { start prefetches; }`.
+
+---
+
+### Phase 6 Refinement — Radius-Based BFS with Node Cap for impact_analysis (RepoHyper audit, score: 24)
+
+**Source-of-lesson:** RepoHyper `inspect.ipynb` ablation study — ProximitySearchRadius with `max_size=150` cap
+
+Cortex's `impact_analysis` currently returns all transitive dependents. For large codebases this can return hundreds of entities and overflow MCP response budgets. RepoHyper's solution: BFS expansion capped at a maximum node count, filling the budget with highest-quality nodes first.
+
+```typescript
+// src/graph/bfs-bounded.ts
+
+/**
+ * BFS from a root entity, expanding up to maxHops hops but capping at maxNodes total.
+ * Fills the budget with highest-quality nodes (by quality score, then by hop distance).
+ *
+ * Returns the subgraph within budget — never explodes on large repos.
+ */
+export function boundedBfs(
+  graph: KnowledgeGraph,
+  rootEntityId: string,
+  options: { maxHops?: number; maxNodes?: number } = {},
+): EntityPage[] {
+  const { maxHops = 4, maxNodes = 150 } = options;
+  const visited = new Set<string>([rootEntityId]);
+  const queue: Array<{ id: string; hop: number }> = [
+    { id: rootEntityId, hop: 0 },
+  ];
+  const results: Array<{ entity: EntityPage; hop: number }> = [];
+
+  while (queue.length > 0 && results.length < maxNodes) {
+    const { id, hop } = queue.shift()!;
+    const entity = graph.getEntity(id);
+    if (!entity) continue;
+
+    results.push({ entity, hop });
+
+    if (hop < maxHops) {
+      for (const neighborId of graph.getNeighbors(id)) {
+        if (!visited.has(neighborId)) {
+          visited.add(neighborId);
+          queue.push({ id: neighborId, hop: hop + 1 });
+        }
+      }
+    }
+  }
+
+  // Sort by quality desc within each hop tier, so budget is filled with best nodes first.
+  return results
+    .sort(
+      (a, b) =>
+        a.hop - b.hop ||
+        (b.entity.qualityScore ?? 0) - (a.entity.qualityScore ?? 0),
+    )
+    .map((r) => r.entity);
+}
+```
+
+**Wire into `impact_analysis` and `build_context_pack`:** Replace unbounded traversal with `boundedBfs(graph, entityId, { maxHops: 4, maxNodes: 150 })`. Expose `maxNodes` as a config param so power users can expand the budget.
+
+**Counter-case:** Hard node cap means large blast radii are silently truncated. Add a `truncated: true` flag to the response when the cap was hit, so the caller knows the result is incomplete.
+
+---
+
+### G1 — Should Cortex Use Multi-Edge-Typed Dependency Storage? (RepoHyper audit)
+
+**Source-of-lesson:** RepoHyper `inspect.ipynb` ablation — ProximitySearchRadius achieves best precision by separating `call_graph`, `import_graph`, `inheritance_graph` as distinct adjacency matrices, then merging selectively per query.
+
+Cortex's `impact_analysis` currently uses a single `depends_on` edge type. RepoHyper's ablation shows that call-graph edges, import edges, and inheritance edges have different semantic weights for impact propagation — a callee change propagates differently than an import change.
+
+**Open question:** Should Cortex store `CALLS`, `IMPORTS`, `INHERITS`, `IMPLEMENTS` as distinct edge types and allow queries to filter by edge type?
+
+**Alternatives:**
+
+- (a) Yes — add edge type as a first-class attribute on all relationships. `impact_analysis` accepts `edgeTypes: ('CALLS'|'IMPORTS'|'INHERITS')[]` filter. High precision, moderate schema migration effort.
+- (b) Partial — add edge types only to new edges written by Phase 0.13 structural parsers. Existing edges keep generic `depends_on`. Lower migration cost, but mixed schema during transition.
+- (c) No — Cortex's synthesized knowledge graph is semantic (Role/Wiring), not structural (CALLS/IMPORTS). The LLM synthesizer already infers semantic dependency weight. Adding structural edge types would duplicate structural graph work that Phase 0.13 already does.
+
+---
+
+## 🔀 CROSS-DOMAIN AUDIT — Refinements (2026-05-25)
+
+Sources: mcp-code-graph, nexus-os, codegraph (remaining unread files). Cross-domain lens applied — patterns transfer across unrelated domains.
+
+---
+
+### Phase 7 Refinement — Multi-Stage Analysis Prompt Recipe (score: 48)
+
+**Source**: mcp-code-graph `commands/*.md` — each command exports a structured markdown template: Context → Files → Instructions → Output format.
+
+**What**: Every MCP tool that invokes an LLM (audit, review, smart_audit, etc.) should use a four-section prompt recipe rather than ad-hoc string concatenation. The sections are: (1) Context — what the tool is trying to accomplish and why, (2) Files — concrete file contents or excerpts at the relevant lines, (3) Instructions — numbered, imperative steps for the LLM to follow, (4) Output format — exact JSON or markdown schema expected in the response. This makes prompts auditable, swappable, and version-controllable as plain `.md` files on disk.
+
+```typescript
+interface PromptRecipe {
+  context: string;       // WHY — tool purpose, user intent
+  files: FileExcerpt[];  // WHAT — concrete code evidence
+  instructions: string[]; // HOW — numbered imperative steps
+  outputFormat: string;  // SHAPE — exact JSON/markdown schema
+}
+
+interface FileExcerpt {
+  path: string;
+  startLine: number;
+  endLine: number;
+  content: string;
+}
+
+// Load recipe from disk — recipes are version-controlled as .md files
+async function loadPromptRecipe(toolName: string): Promise<PromptRecipe> {
+  const recipePath = path.join(__dirname, "prompts", `${toolName}.md`);
+  const raw = await fs.promises.readFile(recipePath, "utf-8");
+  return parseRecipeMarkdown(raw); // parse ## Context / ## Files / ## Instructions / ## Output sections
+}
+
+function assemblePrompt(recipe: PromptRecipe, files: FileExcerpt[]): string {
+  return [
+    `## Context\n${recipe.context}`,
+    `## Files\n${files.map(f => `### ${f.path}:${f.startLine}-${f.endLine}\n\`\`\`\n${f.content}\n\`\`\``).join("\n\n")}`,
+    `## Instructions\n${recipe.instructions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`,
+    `## Output Format\n${recipe.outputFormat}`,
+  ].join("\n\n");
+}
+```
+
+**Counter-case**: Recipe files add a layer of indirection. For simple, stable prompts, inline strings are more readable and easier to iterate. Apply this pattern only to prompts that are multi-step, reused across commands, or likely to need tuning by non-engineers.
+
+**Source**: mcp-code-graph `commands/audit.md`, `commands/review.md`, `commands/migration-planner.md`
+
+---
+
+### Phase 7 Refinement — Search → Analyze → Prioritize Internal Workflow (score: 40)
+
+**Source**: mcp-code-graph `commands/migration-planner.md` — three-phase internal pipeline exposed as a single MCP tool.
+
+**What**: Complex MCP tools (audit, impact_analysis, smart_audit) should run an internal three-phase pipeline rather than a single LLM call. Phase 1 **Search** — retrieve raw candidates (graph queries, file reads, embedding similarity). Phase 2 **Analyze** — run LLM over each candidate individually to score it. Phase 3 **Prioritize** — sort + filter results by score, emit top-K. This prevents the LLM from being overwhelmed by unfocused context and improves precision on large codebases.
+
+```typescript
+async function runThreePhase<T, R>(opts: {
+  search: () => Promise<T[]>;
+  analyze: (item: T) => Promise<{ item: T; score: number; reasoning: string }>;
+  prioritize: (scored: Array<{ item: T; score: number; reasoning: string }>) => R[];
+  topK?: number;
+}): Promise<R[]> {
+  // Phase 1 — Search
+  const candidates = await opts.search();
+
+  // Phase 2 — Analyze (parallel, capped at 8 concurrent LLM calls)
+  const scored = await pLimit(8)(
+    candidates.map((item) => () => opts.analyze(item))
+  );
+
+  // Phase 3 — Prioritize
+  const sorted = scored.sort((a, b) => b.score - a.score);
+  return opts.prioritize(sorted.slice(0, opts.topK ?? 10));
+}
+
+// Example: smart_audit using the pipeline
+export async function smartAudit(entityId: string) {
+  return runThreePhase({
+    search: () => graph.getRelatedEntities(entityId),
+    analyze: async (entity) => {
+      const score = await llm.scoreEntity(entity);
+      return { item: entity, score, reasoning: score.reasoning };
+    },
+    prioritize: (scored) => scored.map((s) => ({ entity: s.item, score: s.score })),
+    topK: 10,
+  });
+}
+```
+
+**Counter-case**: Three-phase adds latency (three serial stages). For small codebases where a single LLM call handles everything, the overhead is unnecessary. Gate on entity count — run single-pass for <20 candidates, three-phase for 20+.
+
+**Source**: mcp-code-graph `commands/migration-planner.md` — Search → Analyze → Prioritize pattern
+
+---
+
+### Phase 7 Refinement — JSONL Event Sourcing with Session Isolation (score: 40)
+
+**Source**: nexus-os `bus.py:7-64` — per-session append-only event ledger.
+
+**What**: All significant MCP tool calls (ingest, audit, impact_analysis, graph writes) should emit JSONL event records to a per-session log file at `.knowledge/logs/<session-id>.jsonl`. Each record carries timestamp, tool name, entity IDs affected, and result summary. The log is append-only — no record is ever modified or deleted. On session end, the log is finalized with a `session_end` event. This enables audit trail, incremental replay for crash recovery, and token accounting.
+
+```typescript
+interface CortexEvent {
+  iso: string;            // ISO 8601 timestamp
+  sessionId: string;      // UUID, stable for the MCP server process lifetime
+  tool: string;           // MCP tool name
+  entityIds: string[];    // affected entity IDs (empty if none)
+  params: Record<string, unknown>; // tool parameters (redact secrets)
+  resultSummary: string;  // one-line human-readable outcome
+  tokenCost?: number;     // LLM tokens consumed, if applicable
+}
+
+class EventBus {
+  private readonly stream: fs.WriteStream;
+  private readonly sessionId: string;
+
+  constructor(logDir: string) {
+    this.sessionId = crypto.randomUUID();
+    const logPath = path.join(logDir, `${this.sessionId}.jsonl`);
+    this.stream = fs.createWriteStream(logPath, { flags: "a" });
+  }
+
+  emit(event: Omit<CortexEvent, "iso" | "sessionId">): void {
+    const record: CortexEvent = {
+      iso: new Date().toISOString(),
+      sessionId: this.sessionId,
+      ...event,
+    };
+    this.stream.write(JSON.stringify(record) + "\n");
+  }
+
+  close(): void {
+    this.emit({ tool: "session_end", entityIds: [], params: {}, resultSummary: "session closed" });
+    this.stream.end();
+  }
+}
+
+// Singleton per MCP server process
+export const bus = new EventBus(path.join(KNOWLEDGE_DIR, "logs"));
+```
+
+**Counter-case**: JSONL logs grow unboundedly on long-lived MCP servers. Add a `log_rotate` background task that archives logs older than 7 days to `.knowledge/logs/archive/` and deletes logs older than 30 days.
+
+**Source**: nexus-os `bus.py:7-64` — `EventBus`, `emit()`, `close()`
+
+---
+
+### Phase 7 Refinement — MCP Tool Registry with Composite Intent Callout (score: 36)
+
+**Source**: codegraph `tools.ts:276-470` — tool registry pattern with "PRIMARY TOOL" annotation in description.
+
+**What**: In the MCP tool registry, mark the one or two tools that cover 80% of use cases with a `[PRIMARY TOOL]` prefix in their description. This guides LLM agents toward the right entry point without requiring them to read all tool descriptions. Each tool registration should also carry an `intent` array (what goal does this tool serve) and a `seeAlso` array (related tools for follow-up), structured as metadata the registry can use for tool-suggestion and auto-routing.
+
+```typescript
+interface ToolRegistration {
+  name: string;
+  description: string;       // shown to LLM; prefix with "[PRIMARY TOOL]" for main entry points
+  intent: string[];          // e.g. ["understand entity", "read knowledge"]
+  seeAlso: string[];         // tool names for follow-up (e.g. read_entity → graph, impact_analysis)
+  inputSchema: JSONSchema;
+  handler: (params: unknown) => Promise<unknown>;
+}
+
+function buildRegistry(tools: ToolRegistration[]): Map<string, ToolRegistration> {
+  const registry = new Map<string, ToolRegistration>();
+  for (const tool of tools) {
+    registry.set(tool.name, tool);
+  }
+  return registry;
+}
+
+// Example — read_entity is the primary read-path tool
+const readEntityTool: ToolRegistration = {
+  name: "read_entity",
+  description: "[PRIMARY TOOL] Read a single entity's full knowledge page. Use this first when asked about any specific function, class, or module.",
+  intent: ["understand entity", "read knowledge", "get role"],
+  seeAlso: ["graph", "impact_analysis", "read_knowledge_index"],
+  inputSchema: { /* ... */ },
+  handler: readEntityHandler,
+};
+```
+
+**Counter-case**: `[PRIMARY TOOL]` annotation is a soft convention — LLM agents may ignore it. A stronger alternative is a routing tool that accepts a free-text intent and returns the best tool name. But that adds a round-trip; the annotation is zero-cost.
+
+**Source**: codegraph `tools.ts:276-470` — tool registry, description conventions
+
+---
+
+### Phase 7 Refinement — JSONL Token Accounting with Call Granularity (score: 32)
+
+**Source**: nexus-os `usage-report.py:48-127` — per-call token ledger with model, prompt, completion breakdown.
+
+**What**: Every LLM call made by a Cortex MCP tool should record its token consumption to the JSONL event bus (see JSONL Event Sourcing above). The record must carry model ID, prompt tokens, completion tokens, and the tool+entity context that triggered the call. A `get_savings` MCP tool aggregates the ledger and reports cumulative cost, per-tool breakdown, and the estimated dollar cost at current model pricing. This makes Cortex's token economics observable rather than opaque.
+
+```typescript
+interface TokenRecord {
+  iso: string;
+  tool: string;           // which MCP tool made the call
+  entityId?: string;      // entity being processed (if applicable)
+  model: string;          // e.g. "claude-sonnet-4-6"
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number; // promptTokens * inputRate + completionTokens * outputRate
+}
+
+const MODEL_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
+  "claude-sonnet-4-6": { inputPer1M: 3.0, outputPer1M: 15.0 },
+  "claude-haiku-4-5-20251001": { inputPer1M: 0.8, outputPer1M: 4.0 },
+};
+
+function recordTokens(
+  bus: EventBus,
+  tool: string,
+  model: string,
+  usage: { input_tokens: number; output_tokens: number },
+  entityId?: string,
+): void {
+  const pricing = MODEL_PRICING[model] ?? { inputPer1M: 0, outputPer1M: 0 };
+  const cost =
+    (usage.input_tokens / 1_000_000) * pricing.inputPer1M +
+    (usage.output_tokens / 1_000_000) * pricing.outputPer1M;
+
+  bus.emit({
+    tool: "token_record",
+    entityIds: entityId ? [entityId] : [],
+    params: { model, promptTokens: usage.input_tokens, completionTokens: usage.output_tokens },
+    resultSummary: `${usage.input_tokens + usage.output_tokens} tokens ($${cost.toFixed(4)})`,
+    tokenCost: usage.input_tokens + usage.output_tokens,
+  });
+}
+```
+
+**Counter-case**: Token accounting adds bookkeeping overhead to every LLM call. If Cortex moves to a zero-LLM-by-default model (structural graph only), this becomes dead weight. Make it opt-in via `CORTEX_TOKEN_ACCOUNTING=1` env var.
+
+**Source**: nexus-os `usage-report.py:48-127`
+
+---
+
+### Phase 7 Refinement — Context Assembly Pattern: Multi-Facet in One Call (score: 30)
+
+**Source**: codegraph `queries.ts:32-108` — `getContext()` fetches entity definition + callers + callees + imports in a single graph traversal rather than four separate calls.
+
+**What**: The `build_context_pack` MCP tool should assemble all context facets (entity definition, incoming edges, outgoing edges, sibling entities in same file, recent git log for file) in a single function call via parallel graph queries, rather than the LLM having to call multiple tools sequentially. The assembled pack is returned as a structured object; the LLM gets everything it needs in one round-trip.
+
+```typescript
+interface ContextPack {
+  entity: Entity;
+  callers: Entity[];      // entities that call/import this one
+  callees: Entity[];      // entities this one calls/imports
+  siblings: Entity[];     // other entities in the same source file
+  recentChanges: GitLogEntry[]; // last 5 commits touching this file
+}
+
+async function buildContextPack(
+  graph: KnowledgeGraph,
+  entityId: string,
+  git: GitReader,
+): Promise<ContextPack> {
+  const entity = graph.getEntity(entityId);
+  if (!entity) throw new Error(`Entity not found: ${entityId}`);
+
+  // All four facets in parallel — single round-trip
+  const [callers, callees, siblings, recentChanges] = await Promise.all([
+    graph.getIncomingEntities(entityId),
+    graph.getOutgoingEntities(entityId),
+    graph.getEntitiesInFile(entity.filePath).then((all) => all.filter((e) => e.id !== entityId)),
+    git.log(entity.filePath, { maxEntries: 5 }),
+  ]);
+
+  return { entity, callers, callees, siblings, recentChanges };
+}
+```
+
+**Counter-case**: Pre-fetching siblings and git log adds latency even when the caller only needs the entity definition. Gate on request params — include siblings/git only when `opts.full === true` or when entity count in the file is ≤20.
+
+**Source**: codegraph `queries.ts:32-108` — `getContext()` multi-facet assembly
+
+---
+
+### Phase 1 Refinement — Agent Config from Disk with Role-Based Fallback (score: 24)
+
+**Source**: nexus-os `autonomous_agent.py:25-101` — agent reads `agent_config.yaml` on startup; missing keys fall back to role-defaults map keyed by `agent.role`.
+
+**What**: When Cortex's analysis pipeline is parameterized (e.g., which LLM to use, token budget, extraction depth), read config from a disk file (`.cortex/agent_config.yaml` or `cortex.config.json`) on startup. If a key is missing, apply a role-based default from a hardcoded map keyed by the agent's declared role (e.g. `"extractor"`, `"reviewer"`, `"summarizer"`). This prevents silent silent misconfigurations when the user only partially specifies the config, and lets different roles carry different defaults without branching logic scattered across the codebase.
+
+```typescript
+type AgentRole = "extractor" | "reviewer" | "summarizer" | "auditor";
+
+interface AgentConfig {
+  model: string;
+  maxTokens: number;
+  extractionDepth: number;
+  parallelism: number;
+}
+
+const ROLE_DEFAULTS: Record<AgentRole, AgentConfig> = {
+  extractor:  { model: "claude-haiku-4-5-20251001", maxTokens: 4096,  extractionDepth: 2, parallelism: 8 },
+  reviewer:   { model: "claude-sonnet-4-6",          maxTokens: 8192,  extractionDepth: 3, parallelism: 4 },
+  summarizer: { model: "claude-haiku-4-5-20251001", maxTokens: 2048,  extractionDepth: 1, parallelism: 8 },
+  auditor:    { model: "claude-sonnet-4-6",          maxTokens: 16384, extractionDepth: 4, parallelism: 2 },
+};
+
+async function loadAgentConfig(role: AgentRole, configPath: string): Promise<AgentConfig> {
+  const defaults = ROLE_DEFAULTS[role];
+  try {
+    const raw = await fs.promises.readFile(configPath, "utf-8");
+    const overrides = JSON.parse(raw) as Partial<AgentConfig>;
+    return { ...defaults, ...overrides }; // disk overrides role defaults key-by-key
+  } catch {
+    return defaults; // config file missing → use role defaults silently
+  }
+}
+```
+
+**Counter-case**: Role-based defaults bake assumptions about which model to use per role into source code. When models are upgraded, the defaults must be updated in code. Better to express defaults in the config file itself with a `[default]` section. Adopt this pattern only if the config file is user-facing; otherwise just use environment variables.
+
+**Source**: nexus-os `autonomous_agent.py:25-101`
+
+---
+
+### Phase 0.13 Refinement — Cycle Detection via Visited + RecursionStack DFS (score: 20)
+
+**Source**: codegraph `queries.ts:259-297` — `detectCycles()` using classic two-set DFS, returns `{ hasCycle, cycles }`.
+
+**What**: When Phase 0.13 builds the structural call graph, run a cycle detection pass after all edges are written. Use the classic DFS with a `visited` set and a `recursionStack` set — a node is in a cycle if it is reached while already in the recursion stack. Return all detected cycles as arrays of entity IDs. Surface these as `CIRCULAR_DEPENDENCY` relationship edges in the graph so `impact_analysis` can flag circular imports to the user without re-running the DFS on every query.
+
+```typescript
+interface CycleResult {
+  hasCycle: boolean;
+  cycles: string[][];  // each inner array is the entity IDs forming one cycle
+}
+
+function detectCycles(
+  adjacency: Map<string, string[]>, // entityId → outgoing neighbor IDs
+): CycleResult {
+  const visited = new Set<string>();
+  const recursionStack = new Set<string>();
+  const cycles: string[][] = [];
+
+  function dfs(nodeId: string, path: string[]): boolean {
+    visited.add(nodeId);
+    recursionStack.add(nodeId);
+
+    for (const neighbor of adjacency.get(nodeId) ?? []) {
+      if (recursionStack.has(neighbor)) {
+        // Cycle found — extract the cycle portion of the path
+        const cycleStart = path.indexOf(neighbor);
+        cycles.push([...path.slice(cycleStart), neighbor]);
+        return true;
+      }
+      if (!visited.has(neighbor)) {
+        dfs(neighbor, [...path, neighbor]);
+      }
+    }
+
+    recursionStack.delete(nodeId);
+    return false;
+  }
+
+  for (const nodeId of adjacency.keys()) {
+    if (!visited.has(nodeId)) {
+      dfs(nodeId, [nodeId]);
+    }
+  }
+
+  return { hasCycle: cycles.length > 0, cycles };
+}
+
+// After graph build, write CIRCULAR_DEPENDENCY edges for detected cycles
+async function writeCycleEdges(graph: KnowledgeGraph, cycles: string[][]): Promise<void> {
+  for (const cycle of cycles) {
+    for (let i = 0; i < cycle.length - 1; i++) {
+      await graph.addEdge({
+        source: cycle[i],
+        target: cycle[i + 1],
+        relation: "CIRCULAR_DEPENDENCY",
+        metadata: { cycleLength: cycle.length },
+      });
+    }
+  }
+}
+```
+
+**Counter-case**: DFS cycle detection is O(V+E) — fine for module-level graphs (<10k nodes) but slow for large codebases with dense call graphs. For graphs >50k nodes, switch to Tarjan's SCC algorithm which detects all cycles in a single pass and is more cache-friendly. Gate on node count.
+
+**Source**: codegraph `queries.ts:259-297` — `detectCycles()`
