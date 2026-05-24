@@ -311,6 +311,18 @@ Write `steal-integration-<target>-<YYYY-MM-DD>.md` to cwd. Contains **copy-paste
 
 This artifact bridges the gap between "found this" and "added this." User can review, edit, then paste.
 
+**Multi-file item rule (mandatory before closing Step 7.5):** If a C/E item cites more than one source file (e.g. `propose_claude_md.py:42-200, reflect_claude_md.py:44-268`), ask: "do these files contribute *different behaviors* or just the same behavior implemented across files?" Different behaviors → separate skeleton sections, one per file's contribution. Same behavior → one skeleton is fine. Do NOT let a file's infrastructure (spawning, guards) shadow a file's behavior (the LLM call, the output format) in a single conflated skeleton. Common failure: the spawn/guard code is written, but the actual operation the spawned process performs is omitted.
+
+**Sentence-by-sentence completeness check (mandatory, runs after every skeleton is written):**
+1. Re-read the item's "What" description one sentence at a time.
+2. For each sentence, find the corresponding line(s) in your skeleton.
+3. If a sentence describes behavior with no matching code → add it now.
+4. If a sentence describes behavior you cannot implement → note it explicitly with `// TODO: <reason>`.
+This check is not optional. An integration scratch that summarizes behavior in prose but omits the code is a Step 7.5 defect.
+
+**Inventory-to-scratch coverage check (mandatory, runs after all skeletons are written):**
+Re-read every inventory item with score ≥ 20. Confirm each item has a dedicated skeleton. Items that share source files are NOT automatically merged — each has its own "What" description and must have its own skeleton unless the behaviors are provably identical. If you find an item without a skeleton, add it before finalizing.
+
 ### Step 7.6 — Annotate flaws.md with "Addressed by" lines (mandatory)
 
 For **every E item** and **every C item whose `closes_flaw` field is set**, append a ready-to-apply `**Addressed by**:` line directly into that flaw's entry in `flaws.md`:
@@ -373,6 +385,11 @@ Either fix the report, or add an **Audit limitations** section listing what you 
 26. Step 7.5's integration scratch is the bridge from finding to action — emit it every audit.
 27. Cross-audit ledger boost applies only when feature *name* matches in 3+ audits — not file path. Avoids treating the same library imported in three repos as three independent findings.
 28. Step 7.6 is mandatory for every E item and every C item with `closes_flaw` set — the flaw→implementation link must be bidirectional. Missing an "Addressed by" annotation is treated the same as missing a spot-check.
+29. **Multi-file items get multi-section skeletons.** A C/E item citing N source files with distinct behaviors must produce N skeleton sections — one per behavior. Infrastructure (spawn, guards, config) and behavior (the actual operation, LLM call, output format) are always distinct and must never be merged into one skeleton.
+30. **Sentence-by-sentence completeness is mandatory.** After writing each skeleton, re-read the item's "What" description sentence by sentence. Every sentence must map to a line of code. Unmapped sentences → add the code or note `// TODO`. Prose summaries without corresponding code are Step 7.5 defects.
+31. **Inventory-to-scratch coverage is mandatory.** After writing all skeletons, verify that every inventory item with score ≥ 20 has a dedicated skeleton. Shared source files do not imply merged skeletons — two items from the same file get two skeletons if their described behaviors differ.
+32. **F-bucket items require two layers, not one.** Every F item that results in a code-style or pattern rule MUST produce BOTH: (a) a soft layer — `CLAUDE.md` or `flaws.md` entry describing the rule; AND (b) a hard structural layer — a lint rule, CI grep check, pre-commit hook, or `scripts/check-*.ts` that enforces the rule mechanically for ANY agent or contributor regardless of whether they read documentation. A documentation-only addition is a Step 7.5 defect. The structural layer goes in `implementation_plan.md` under the relevant phase (Phase 0.17 for dev hygiene, or the phase that owns the affected module).
+33. **LLM-agnostic enforcement is the default.** Any addition to `CLAUDE.md` that encodes a code quality rule must be paired with a structural enforcement mechanism (lint, CI, pre-commit, type system) that works without the agent reading the file. `CLAUDE.md` is a soft hint for Claude Code only. CI is the truth.
 
 ---
 

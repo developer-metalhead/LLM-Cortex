@@ -249,6 +249,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 **Result:** the `userPrompt` payload contains the literal string `"[Diff Error] stdout maxBuffer length exceeded"` in place of the diff. The tool still returns `200 OK`, schema-valid output, and `staleEntities: []`.
 **Impact:** the Librarian prompt gets a placeholder error string instead of code changes. Any downstream `ingest` / `save_synthesis` synthesizes nothing — the index becomes permanently stale with no warning. `audit` and `smart_audit` happily report `staleCount: 0` because they have no visibility into the broken diff fetch.
 **Root cause:** Node default `maxBuffer` (1 MB) on the `git diff` child process. Need streaming or chunked read.
+**Partially addressed by**: Phase 5.7 Refinement — Diff Truncation with Disclosure Note (helpline audit, score: 60) — truncate at 12,000 chars + append disclosure string; never silently return maxBuffer error string.
 
 ### 2. `impact_analysis` returns "Safe to refactor" for non-existent entities
 **Repro:** `impact_analysis({entity: "NonExistent"})`.
@@ -387,7 +388,7 @@ The implementation plan **partially** anticipates the small-codebase pain:
 
 | Flaw | Coverage status |
 |------|-----------------|
-| #1 maxBuffer overflow on diff | ⚠️ not covered — needs dedicated fix in `get_pending_changes` diff layer |
+| #1 maxBuffer overflow on diff | ⚠️ partially addressed — Phase 5.7 Refinement — Diff Truncation with Disclosure Note (helpline, score 60) truncates at 12,000 chars + appends disclosure string so the LLM always knows what happened; full streaming fix in `get_pending_changes` still needed for diffs >12k |
 | #2 `impact_analysis` "safe to refactor" on typos | ✅ **Phase 0.2** — `validateEntityExists()` catches unknown entity names; fuzzy suggestions via `fuse.js` (Phase 0.9 gap 4) |
 | #3 phantom entity detection (no live `sourceFile`) | ✅ **Phase 0.3** (sourceFile required) + **Phase 0.4** (orphan detection on file deletion) |
 | #4 `save_concept` validation / deletion API | ✅ **Phase 0.2** — `validate.ts` gates all writes; empty/invalid names throw `ValidationError` |
@@ -446,6 +447,7 @@ const envLens = process.env.CORTEX_LENS;  ← random local from inside detectAct
 **Repro:** I knew the experience ledger code lived *somewhere* in `src/`. `cortex_find` couldn't find it (not indexed). CLAUDE.md prohibits `grep`. The only escape was `Glob` (filename match), which only worked because the file was helpfully named `experience.ts`.
 **Impact:** if a symbol's filename doesn't telegraph its purpose (e.g. `manager.ts`, `core.ts`), the agent is stuck. There's no content-search MCP tool — no `cortex_search_source(pattern, glob)`. The grep ban only works if Cortex offers a real substitute; it doesn't.
 **Addressed by**: Phase 0.9 — IDF-Weighted Content Search (Replace Grep Ban)
+**Addressed by**: Phase 28 Refinement — AST Symbol-Search MCP Tools: where_is / find_references / outline (helpline audit, score: 32) — AST-based symbol lookup replaces grep: no false hits from comments or strings; priority-deduplicated reference results.
 
 ### 29. `before_change` on a newly-added entity gives no source fallback
 **Repro:** `before_change({entity: "SoulEngine"})` on Task B.
@@ -1517,6 +1519,7 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Tests are written optimistically; when behavior changes the assertion is commented out instead of fixed or deleted. The test continues to run, reports "PASS", and provides false coverage signal. Harder to detect than a missing test because the test file looks populated.
 **Relevance to Cortex**: Never comment out assertions as a fix. If an assertion is wrong, either fix the assertion or delete the test. Add a lint rule that flags `// expect(` and `// assert(` patterns in `tests/` as a CI error.
 **Severity**: 3 (HIGH — produces false confidence; CI passes while behavior is untested)
+**Partially addressed by**: Phase 17 Refinement — AI Layer Validation Framework (helpline audit, score: 24) — validate_all.py pattern: real E2E tests that run hooks, call MCP tools, check recursion guards — not assertions over static file contents.
 
 ---
 
@@ -1525,3 +1528,13 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Filtering records with `WHERE path STARTS WITH '/opt/repos/myapp'` silently matches `/opt/repos/myapp_extra`. In a single-repo setup this is invisible; in multi-project setups it returns data from the wrong repo with no error.
 **Relevance to Cortex**: Every Cypher (or equivalent DB) query in Cortex that filters by `path STARTS WITH repoRoot` MUST first normalize the prefix with a trailing slash. Add a `toRepoPrefix(path: string): string` helper — `path.replace(/\/?$/, '/')` — and gate all such queries through it.
 **Severity**: 4 (HIGH — silent wrong-repo data in multi-project setups; no error thrown, no observable warning)
+
+---
+
+### 139. Shared exclude-dirs constant duplicated across files with silent divergence
+**Source-of-lesson**: helpline `propose_claude_md.py:38-41, reflect_claude_md.py:39-42, session_start_context.py:18-21, codebase_search.py:44-48` — `_EXCLUDE_DIRS` frozenset defined four times independently; `codebase_search.py` correctly adds `.claude`, `.tox`, `site-packages` that the hook files lack, meaning hooks scan AI-layer config dirs that the MCP skips
+**Pattern**: A shared constant (excluded directories, ignored patterns, file extensions) defined separately in each file that needs it. When one file gets updated (a new tool's cache dir is added) the others silently drift. No error is thrown; the divergence manifests as scan coverage differences that are invisible in tests and only surface as "why does the hook see this file but the MCP doesn't?"
+**Relevance to Cortex**: Any constant used in more than one Cortex file — `EXCLUDE_DIRS`, `SOURCE_EXTENSIONS`, `MAX_DIFF_CHARS`, `KNOWLEDGE_DIR` — must live in exactly one place (`src/constants.ts`) and be imported everywhere else. Never copy-paste a constant. If a new module needs a slightly different exclusion set, it must import the base set and extend it explicitly (`new Set([...BASE_EXCLUDE_DIRS, ".mypy_cache"])`), not re-declare from scratch.
+**Fix**: Create `src/constants.ts` as the single source of truth for all shared constants. Add `scripts/check-constants.ts` — a CI grep check that fails if any guarded constant name is defined outside `constants.ts`. Add `npm run check:constants` to the CI lint step (Phase 0.17) and to the husky pre-commit hook. This is LLM-agnostic: Claude, Codex, Gemini, or a human contributor all hit the same CI gate. The CLAUDE.md rule is a soft layer for Claude Code specifically; the CI check is the hard structural layer.
+**Addressed by**: Phase 0.17 Refinement — Shared-constants enforcement via `src/constants.ts` + `scripts/check-constants.ts` CI grep gate (helpline audit, flaw #139)
+**Severity**: 2 (MEDIUM — silent correctness drift; no runtime error; discovered only when behavior between modules diverges unexpectedly)

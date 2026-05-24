@@ -27,6 +27,8 @@ This project uses **Project Cortex** via the `project-cortex` MCP server. The kn
 - **Strict Typing**: Leverage strict types in all new modules.
 - **Robust Error Handling**: Wrap files/IO in robust try-catches.
 - **Testing**: Maintain 100% test coverage for all new cache/analysis rules.
+- **Single source for shared constants**: Never define the same constant (`EXCLUDE_DIRS`, `SOURCE_EXTENSIONS`, `MAX_DIFF_CHARS`, etc.) in more than one file. All shared constants live in `src/constants.ts` and are imported from there. If a module needs a variant, extend the base: `new Set([...BASE_EXCLUDE_DIRS, ".mypy_cache"])`. Duplication causes silent divergence — one file gets updated, others drift with no error. Source-of-lesson: helpline F1 (flaw #139).
+- **LLM-agnostic enforcement**: Every code quality rule added to this file MUST also have a structural enforcement layer — lint rule, CI check, pre-commit hook, or type-system constraint — that works for any agent or contributor without reading this file. `CLAUDE.md` is a soft hint for Claude Code only. CI is the truth.
 
 ## ⚡ Token Economics — Prompt-Cache Ordering
 When assembling LLM payloads (context packs, tool responses, registry output):
