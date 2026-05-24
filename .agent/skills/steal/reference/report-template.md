@@ -70,8 +70,8 @@ For each:
 - **What it does**: <1–2 sentences>
 - **Why Cortex benefits**: <specific capability gain>
 - **Counter-case**: <1-sentence reason this might be a bad idea>
-- **Proposed placement**: refinement to Phase X.Y / new Phase X.Y (verified unused)
-- **Integration sketch**: <3–5 lines of pseudocode>
+- **Proposed placement**: refinement to Phase <actual-number> (verified exists in enumeration) / New Phase — <name> (if no existing phase fits)
+- **Integration sketch**: <concrete TypeScript function skeleton — signature + body outline. Never pseudocode or a concept summary. If you cannot write a skeleton, say why.>
 - **Effort**: small / medium / large
 - **Concerns**: <deps, complexity, risk>
 - **Confidence**: high / medium / low
@@ -99,7 +99,7 @@ Features industry-standard for <domain> that the target does NOT have:
 
 - **Feature**: <name>
 - **Why standard for <domain>**: <1 sentence>
-- **Cortex status**: has it (Phase X.Y) | missing too — potential roadmap item
+- **Cortex status**: has it (Phase <actual-number>) | missing too — potential roadmap item
 
 ## Theme-Level Findings
 
@@ -109,7 +109,7 @@ Features industry-standard for <domain> that the target does NOT have:
 
 For each:
 - **Their feature**: <name> at `<file>`
-- **Cortex's version**: Phase <X.Y> — <why Cortex's is better>
+- **Cortex's version**: Phase <actual-number> — <why Cortex's is better>
 - **Case for target's approach**: <1-sentence steel-man>
 
 ## A. Already in Cortex (skip)

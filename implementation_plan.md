@@ -20061,3 +20061,215 @@ Apply to all read-class tools (`read_entity`, `cortex_find`, `source`, `build_co
 
 **Score**: 30 (severity=2, fit=5, effort=1, recency=1.0)
 
+
+
+## 🔒 REPOHYPER AUDIT — Refinements
+
+---
+
+### Phase 7 Refinement — JSON-Configured Graph Expansion Patterns (RepoHyper audit, score: 29)
+
+**Source-of-lesson**: RepoHyper `src/repo_graph/search_policy/subgraph_extractors.py` — `ProximitySearchPattern.walking()` DFS matching edge-type sequences against `patterns.json` allowlists per node type
+
+When Phase 7 graph traversal ships, make expansion routing config-driven rather than hardcoded. A `config/graph-expansion-patterns.json` lets operators tune which edge-type paths are explored per node type without code changes:
+
+```typescript
+// config/graph-expansion-patterns.json
+{
+  "entity":  [["depends_on"], ["calls"], ["depends_on", "calls"]],
+  "concept": [["references"], ["depends_on"]],
+  "file":    [["contains"], ["imports"]]
+}
+
+interface ExpansionPatterns {
+  [nodeType: string]: string[][];  // allowed edge-type sequences
+}
+
+function patternExpand(
+  startNode: string,
+  nodeType: string,
+  graph: KnowledgeGraph,
+  patterns: ExpansionPatterns,
+  maxDepth = 3
+): string[] {
+  const allowed = patterns[nodeType] ?? [];
+  const visited = new Set<string>();
+
+  function dfs(node: string, edgeSeq: string[], depth: number) {
+    if (depth >= maxDepth) return;
+    for (const edge of graph.outEdges(node)) {
+      const nextSeq = [...edgeSeq, edge.type];
+      const matchesAllowed = allowed.some(pattern =>
+        pattern.every((t, i) => nextSeq[i] === t)
+      );
+      if (matchesAllowed && !visited.has(edge.target)) {
+        visited.add(edge.target);
+        dfs(edge.target, nextSeq, depth + 1);
+      }
+    }
+  }
+
+  dfs(startNode, [], 0);
+  return [...visited];
+}
+```
+
+**Counter-case**: Config-driven routing adds an indirection layer — debugging unexpected traversal paths requires reading `patterns.json` alongside the code. Keep the default patterns conservative.
+
+---
+
+### Phase 7 Refinement — k-hop Subgraph via BFS Frontier (RepoHyper audit, score: 22)
+
+**Source-of-lesson**: RepoHyper `src/repo_graph/search_policy/subgraph_extractors.py` — `k_hop_subgraph()` sparse adjacency matrix exponentiation for k-hop neighborhoods
+
+Replace the current DFS traversal in `impact_analysis` with a k-hop BFS frontier so callers get explicit depth control:
+
+```typescript
+function kHopNeighborhood(
+  graph: KnowledgeGraph,
+  sourceNodes: string[],
+  k: number
+): Set<string> {
+  let frontier = new Set(sourceNodes);
+  const visited = new Set(sourceNodes);
+
+  for (let hop = 0; hop < k; hop++) {
+    const nextFrontier = new Set<string>();
+    for (const node of frontier) {
+      for (const neighbor of graph.neighbors(node)) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          nextFrontier.add(neighbor);
+        }
+      }
+    }
+    frontier = nextFrontier;
+    if (frontier.size === 0) break;
+  }
+  return visited;
+}
+```
+
+Expose `k` as a parameter on `impact_analysis` (default `k=2`). This gives the caller a predictable radius guarantee that the current unbounded DFS lacks.
+
+**Counter-case**: Fixed-k BFS can miss deep but narrow dependency chains that the current traversal would reach. Keep the existing DFS as a `--deep` flag alternative.
+
+---
+
+### Phase 7 Refinement — BFS Radius Expansion for cortex_find (closes Flaw #30) (RepoHyper audit, score: 14)
+
+**Source-of-lesson**: RepoHyper `src/repo_graph/search_policy/subgraph_extractors.py` — `ProximitySearchRadius` BFS expansion from KNN centers with `max_size` cap
+
+After initial entity match in `cortex_find`, expand results via bounded BFS to surface co-implementations and parallel patterns the keyword match would miss:
+
+```typescript
+function bfsExpand(
+  initialNodes: string[],
+  graph: KnowledgeGraph,
+  radius: number,
+  maxSize: number
+): string[] {
+  const visited = new Set(initialNodes);
+  let frontier = [...initialNodes];
+
+  for (let r = 0; r < radius && visited.size < maxSize; r++) {
+    const nextFrontier: string[] = [];
+    for (const node of frontier) {
+      for (const neighbor of graph.neighbors(node)) {
+        if (!visited.has(neighbor) && visited.size < maxSize) {
+          visited.add(neighbor);
+          nextFrontier.push(neighbor);
+        }
+      }
+    }
+    frontier = nextFrontier;
+    if (frontier.length === 0) break;
+  }
+  return [...visited];
+}
+```
+
+Call after initial match: `bfsExpand(matches, graph, radius=2, maxSize=20)`. The `maxSize` cap prevents result explosion on highly-connected hub nodes.
+
+**Counter-case**: BFS expansion can introduce loosely related entities that dilute precision. Gate behind an `--expand` flag so default behavior stays tight.
+
+---
+
+### Phase 26 Refinement — PPR Ranking for cortex_find Results (closes Flaw #26) (RepoHyper audit, score: 14)
+
+**Source-of-lesson**: RepoHyper `src/repo_graph/search_policy/subgraph_extractors.py` — `ppr_topk()` Personalized PageRank power iterations
+
+Replace `cortex_find`'s current substring-presence ranking with Personalized PageRank so topology-connected entities surface before incidentally-matching ones:
+
+```typescript
+function personalizedPageRank(
+  graph: KnowledgeGraph,
+  sourceNodes: string[],
+  alpha = 0.15,
+  maxIter = 20,
+  topK = 10
+): Array<{ node: string; score: number }> {
+  const nodes = graph.nodes();
+  const n = nodes.length;
+  let ppr = new Map<string, number>(nodes.map(nd => [nd, 1 / n]));
+  const personal = new Map<string, number>(
+    sourceNodes.map(s => [s, 1 / sourceNodes.length])
+  );
+
+  for (let i = 0; i < maxIter; i++) {
+    const next = new Map<string, number>();
+    for (const node of nodes) {
+      const spread = graph.inNeighbors(node).reduce((acc, nb) => {
+        const out = graph.outDegree(nb);
+        return acc + (ppr.get(nb) ?? 0) / (out || 1);
+      }, 0);
+      next.set(node, alpha * (personal.get(node) ?? 0) + (1 - alpha) * spread);
+    }
+    ppr = next;
+  }
+
+  return [...ppr.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topK)
+    .map(([node, score]) => ({ node, score }));
+}
+```
+
+Wire into `cortex_find` after the initial entity match step. On a graph with <500 nodes, 20 iterations completes in <5ms.
+
+**Counter-case**: PPR requires the full graph to be in-memory for each query. On very large graphs (>50k nodes) this becomes expensive. Clamp with a fallback to BFS expansion for graphs above a size threshold.
+
+---
+
+### Phase 35 Refinement — Import-Fallback Text Search for File→Entity Reverse Lookup (closes Flaw #35) (RepoHyper audit, score: 29)
+
+**Source-of-lesson**: RepoHyper `scripts/data/matching_repobench_graphs.py:81-97` — `finding_import_indexes_in_code()` scans code body text for entity name fragments (`.split(".")[-1]`) with frequency weights
+
+When the `cortex_find` exact-name match fails, fall back to scanning the calling code's text for known entity short-names and return weighted candidates. This closes the reverse-lookup gap where a file path cannot be mapped to an entity without reading the full index:
+
+```typescript
+function findReferencedEntities(
+  codeText: string,
+  entityIndex: Map<string, string[]>  // entityId → [fullName, shortName]
+): Array<{ entityId: string; weight: number }> {
+  const hits = new Map<string, number>();
+
+  for (const [entityId, names] of entityIndex) {
+    const shortName = names[names.length - 1];  // last dotted component
+    if (shortName.length < 3) continue;         // skip trivially common names
+
+    const pattern = new RegExp(`\\b${shortName}\\b`, 'g');
+    const count = (codeText.match(pattern) ?? []).length;
+    if (count > 0) hits.set(entityId, count);
+  }
+
+  const total = [...hits.values()].reduce((a, b) => a + b, 0) || 1;
+  return [...hits.entries()]
+    .map(([entityId, count]) => ({ entityId, weight: count / total }))
+    .sort((a, b) => b.weight - a.weight);
+}
+```
+
+Use in `cortex_find` as a fallback: when exact entity name match returns zero results, call `findReferencedEntities(callerCode, entityIndex)` and return weighted candidates. Also use in `before_change` to map an open file's path to its entity without requiring the user to know the entity name.
+
+**Counter-case**: Text frequency is a noisy signal — common names like `get`, `set`, `node` will produce false matches. The `shortName.length < 3` guard mitigates this but doesn't eliminate it. Treat results as ranked suggestions, not authoritative matches.

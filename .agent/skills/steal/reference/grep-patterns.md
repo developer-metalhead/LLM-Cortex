@@ -28,6 +28,11 @@ Apply during Step 2c (source pass). Extend with target-domain patterns as discov
 - `setTimeout\(.*0\)` — race-condition smell
 - `process\.env\.\w+\s*\|\|\s*['"]` — default secrets in code
 - `// @ts-ignore|// @ts-nocheck|# type: ignore` — type-system bypass
+- `['"](/home/|/root/|/datadrive|/mnt/|/opt/|/usr/local/|C:\\Users\\)` — hardcoded absolute data/model paths (always F in research code)
+- `device\s*=\s*['"]cuda|device\s*=\s*['"]cpu` — hardcoded device at module level
+- `os\.chdir\(|process\.chdir\(` — mutable global cwd (breaks concurrent runs)
+- `def __init__\((?!self)[a-z]` — Python constructor missing `self` (silent runtime bug)
+- `except:\s*pass|except Exception:\s*pass` — bare silent exception swallowing
 
 ## Concurrency / resilience
 - `retry|backoff|circuit[_-]?breaker|jitter`

@@ -1,0 +1,187 @@
+﻿{
+  "audit_iso": "2026-05-24T00:00:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\RepoHyper",
+  "target_name": "RepoHyper",
+  "commit_sha": "d2ba69a",
+  "mode": "full",
+  "calibration": "novel_research",
+  "files_scanned": 36,
+  "spot_check": "3/3 pass",
+  "bucket_counts": { "A": 2, "B": 1, "C": 8, "D": 8, "E": 3, "F": 4, "G": 2 },
+  "top_findings": [
+    "Import-fallback text search for edge discovery (E2, score 29)",
+    "JSON-configured semantic expansion patterns (C1, score 29)",
+    "k-hop subgraph via SparseTensor matrix power (C2, score 22)"
+  ],
+  "inventory": [
+    {
+      "id": "E1", "bucket": "E", "name": "PPR top-k subgraph extraction",
+      "source_file": "src/data/transform_utils/subgraph_extractors.py",
+      "source_symbol": "ppr_topk",
+      "source_line": null,
+      "closes_flaw": 26,
+      "severity": 3, "fit": 3, "effort": 2, "recency": 0.8, "score": 14,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "PPR requires full adjacency matrix and power iteration budget. Cortex knowledge graph is sparse entity-level — PPR density assumptions may not hold."
+    },
+    {
+      "id": "E2", "bucket": "E", "name": "Import-fallback text search for edge discovery",
+      "source_file": "scripts/data/matching_repobench_graphs.py",
+      "source_symbol": "finding_import_indexes_in_code",
+      "source_line": 81,
+      "closes_flaw": 35,
+      "severity": 3, "fit": 4, "effort": 1, "recency": 0.8, "score": 29,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "Text-based import matching is fragile — matches names in non-import contexts. Tree-sitter extracts imports more precisely; fallback adds noise when tree-sitter is available."
+    },
+    {
+      "id": "E3", "bucket": "E", "name": "BFS radius expansion from search centers",
+      "source_file": "src/repo_graph/search_policy/knn_search.py",
+      "source_symbol": "ProximitySearchRadius",
+      "source_line": null,
+      "closes_flaw": 30,
+      "severity": 3, "fit": 3, "effort": 2, "recency": 0.8, "score": 14,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "BFS in a code graph (call/import) differs from BFS in concept graph (usage/depends-on). Parallel implementations in Cortex share callers, not direct graph neighbors."
+    },
+    {
+      "id": "C1", "bucket": "C", "name": "JSON-configured semantic expansion patterns",
+      "source_file": "src/repo_graph/search_policy/knn_search.py",
+      "source_symbol": "ProximitySearchPattern.walking",
+      "source_line": null,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 7 Refinement",
+      "severity": 3, "fit": 4, "effort": 1, "recency": 0.8, "score": 29,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "Cortex graph edges already typed at entity level — JSON config adds maintenance overhead over simple BFS."
+    },
+    {
+      "id": "C2", "bucket": "C", "name": "k-hop subgraph via SparseTensor matrix power",
+      "source_file": "src/data/transform_utils/subgraph_extractors.py",
+      "source_symbol": "k_hop_subgraph",
+      "source_line": null,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 7 Refinement",
+      "severity": 3, "fit": 3, "effort": 1, "recency": 0.8, "score": 22,
+      "confidence": "medium",
+      "has_tests": false,
+      "counter_case": "TypeScript rewrite of SparseTensor ops is non-trivial; graphology adjacency lists may suffice at Cortex scale (<500 entities)."
+    },
+    {
+      "id": "C3", "bucket": "C", "name": "Swappable cosine vs MLP scoring decoder",
+      "source_file": "src/models/GCN.py",
+      "source_symbol": "RerankingDecoder",
+      "source_line": 35,
+      "closes_flaw": null,
+      "proposed_phase": "Future Phase (entity ranking)",
+      "severity": 2, "fit": 4, "effort": 1, "recency": 0.8, "score": 19,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "Cortex lacks entity ranking — swappable interface before any ranker exists is premature abstraction."
+    },
+    {
+      "id": "C4", "bucket": "C", "name": "Dataset-level pickle caching",
+      "source_file": "train_gnn.py",
+      "source_symbol": null,
+      "source_line": 53,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 3 Refinement",
+      "severity": 2, "fit": 4, "effort": 1, "recency": 0.8, "score": 19,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "Cortex already uses mtime-based stale detection; additional pickle cache duplicates state management."
+    },
+    {
+      "id": "C5", "bucket": "C", "name": "Batched processing with .split(N)",
+      "source_file": "src/repo_graph/repo_to_graph.py",
+      "source_symbol": "embed_code_unix_dict",
+      "source_line": null,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 3 Refinement",
+      "severity": 2, "fit": 4, "effort": 1, "recency": 0.8, "score": 19,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "Cortex LLM calls are token-window-limited not GPU-memory-limited; .split() for GPU OOM doesn't translate to API throughput management."
+    },
+    {
+      "id": "C6", "bucket": "C", "name": "Dual metric search (Euclidean / cosine toggle)",
+      "source_file": "src/repo_graph/search_policy/knn_search.py",
+      "source_symbol": "ProximitySearch",
+      "source_line": null,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 22+ (semantic search)",
+      "severity": 2, "fit": 4, "effort": 1, "recency": 0.8, "score": 19,
+      "confidence": "high",
+      "has_tests": false,
+      "counter_case": "Cortex does not use vector search in core path; applies only if semantic embedding added."
+    },
+    {
+      "id": "C7", "bucket": "C", "name": "PyCG call graph + 2to3 auto-translation fallback",
+      "source_file": "scripts/data/generate_call_graphs.py",
+      "source_symbol": "generate_call_graphs",
+      "source_line": 37,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 0 Refinement",
+      "severity": 2, "fit": 3, "effort": 2, "recency": 0.8, "score": 10,
+      "confidence": "medium",
+      "has_tests": false,
+      "counter_case": "PyCG and 2to3 are Python-specific; Cortex handles TypeScript. Pattern is valuable but not directly reusable."
+    },
+    {
+      "id": "C8", "bucket": "C", "name": "Five-typed edge Code Property Graph",
+      "source_file": "src/repo_graph/repo_to_graph.py",
+      "source_symbol": "load_contexts_then_embed",
+      "source_line": null,
+      "closes_flaw": null,
+      "proposed_phase": "Phase 22+",
+      "severity": 4, "fit": 2, "effort": 3, "recency": 0.8, "score": 6,
+      "confidence": "low",
+      "has_tests": false,
+      "counter_case": "Cortex entity graph is at module/class level; regraining to function/call-site level requires full re-ingestion redesign."
+    },
+    {
+      "id": "F1", "bucket": "F", "name": "Hardcoded absolute paths for grammar/data",
+      "source_file": "src/repo_graph/parse_source_code.py",
+      "source_symbol": null, "source_line": 1,
+      "pattern": "Language('/datadrive05/huypn16/...', 'python')",
+      "proposed_flaw_addition": "Never hardcode data or model paths — derive from config or env var with local default."
+    },
+    {
+      "id": "F2", "bucket": "F", "name": "Module-level hardcoded device = cuda:0",
+      "source_file": "src/repo_graph/repo_to_graph.py",
+      "source_symbol": null, "source_line": null,
+      "pattern": "device = 'cuda:0' at module level",
+      "proposed_flaw_addition": "Derive device from os.environ.get('DEVICE', 'cpu') or argparse argument."
+    },
+    {
+      "id": "F3", "bucket": "F", "name": "LLMModel.__init__ missing self parameter",
+      "source_file": "src/llm.py",
+      "source_symbol": "LLMModel.__init__", "source_line": 8,
+      "pattern": "def __init__(model_name): — self absent, self.llm used inside",
+      "proposed_flaw_addition": "Always exercise every class constructor in at least one test."
+    },
+    {
+      "id": "F4", "bucket": "F", "name": "os.chdir() mutable global cwd",
+      "source_file": "scripts/data/generate_call_graphs.py",
+      "source_symbol": null, "source_line": 47,
+      "pattern": "os.chdir() to set cwd for subprocess",
+      "proposed_flaw_addition": "Pass cwd= to subprocess.run() instead of os.chdir()."
+    },
+    {
+      "id": "G1", "bucket": "G",
+      "name": "PyCG complementary or redundant with tree-sitter for TypeScript?",
+      "question": "Is there a TypeScript equivalent to PyCG (ts-morph? dependency-cruiser?) giving Cortex typed call edges?",
+      "alternatives": ["dependency-cruiser JSON output", "tree-sitter + regex call sites", "skip call graphs — entity graph sufficient"]
+    },
+    {
+      "id": "G2", "bucket": "G",
+      "name": "Should impact_analysis use PPR instead of BFS?",
+      "question": "Should PPR from changed entity replace BFS in impact_analysis to surface most-affected entities first?",
+      "alternatives": ["PPR (topology-aware ranking)", "BFS + sort by depth", "BFS + sort by incoming-edge count as PPR proxy"]
+    }
+  ]
+}

@@ -91,6 +91,13 @@ Output a **calibration verdict**:
 
 State the verdict and proceed.
 
+**Minimum item floors by calibration** — hard requirement, not a guideline:
+- **Boilerplate/starter**: ≥3 total items (any bucket).
+- **Standard library/tool**: ≥8 total items; ≥1 F item (all non-trivial codebases have at least one anti-pattern).
+- **Novel/research**: ≥12 total items; ≥1 F item; ≥1 G item. A novel/research target with fewer than 12 findings is under-scanned — return to Step 2 and read more files before proceeding.
+
+If you reach Step 3 and are below the floor: **stop, go back to Step 2, read more files.** "Honesty over volume" applies to padding within buckets, not to missing buckets entirely.
+
 ### Step 1 — Load Cortex baseline
 
 1. **Phase enumeration (cached)**:
@@ -129,6 +136,15 @@ Do NOT randomly sample. Coverage failures are the dominant failure mode.
   - **Cite file + line + symbol** — no location, no inclusion.
   - **Capture file metadata** for each finding: `last_modified` (mtime), `has_tests` (boolean — is there a `*.test.*` / `*_test.*` / `*_spec.*` for this file or its containing module?). These feed scoring in Step 6.
 - **2d. Anti-miss checklist**: Confirm visits to `migrations/`, `plugins/`, `examples/`, `benchmarks/`, `scripts/`, `tools/`, `tests/e2e/`, `fixtures/`, `proto/`, `generated/`, `i18n/`, `Justfile`/`Makefile`/`Taskfile.yml`, `.github/workflows/`, `.gitlab-ci.yml`, `Dockerfile*`, `.env.example`, root `*.config.*`.
+- **2d.1 Anti-pattern scan (mandatory, feeds F bucket)**: After reading each source file, actively check for the following patterns — these are almost always present in research/library code and are easy to miss if you wait for them to appear naturally:
+  - Hardcoded absolute paths (strings starting with `/` or `C:\` that are data/model/tool paths, not stdlib)
+  - Hardcoded device/platform strings (`"cuda:0"`, `"cpu"`, `localhost:8080` at module level)
+  - Missing `self` / `this` in class constructors
+  - `os.chdir()` / `process.chdir()` in non-CLI code
+  - Bare `except: pass` / `catch {}` swallowing errors silently
+  - Unbounded growth (append-only lists/files with no eviction)
+  - Untested public API (no corresponding test file for the module)
+  Any of these found → queue as F candidate. Do not defer; note immediately.
 - **2e. Coverage gate**: Every top-level dir visited, every config read, all `*.md` read, anti-miss confirmed.
 
 For projects **>500 source files**, delegate per-directory to parallel Explore agents (cap: 5). Prompt template: `reference/explore-agent-prompt.md`.
@@ -162,6 +178,8 @@ On future audits, if a finding's name appears in **3+** prior audits, auto-boost
 
 **Checkpoint** (for `--resume`): also write `steal-checkpoint-<target>.json` containing `{ "step_completed": "2.5", "inventory_id_max": <n> }`. Update at each step boundary.
 
+**Artifact collision guard**: Before writing any artifact, Glob the exact filename. If a same-named file already exists (e.g. a prior LLM already ran this audit), append `-<llm-name>` to your filename (e.g. `steal-inventory-<target>-<date>-claude.md`) and note the collision in the report header. Never silently overwrite a prior run's artifacts.
+
 ### Step 3 — Categorize (7 buckets)
 
 | Bucket | Definition | Required to claim |
@@ -170,7 +188,7 @@ On future audits, if a finding's name appears in **3+** prior audits, auto-boost
 | **B** | Cortex has superior version | Phase + 1-sentence case FOR target's approach (steel-man) |
 | **C** | Worth stealing (gap) | Proposed phase placement + counter-case + score |
 | **D** | Niche / wrong fit | Cite violated Cortex principle |
-| **E** | Closes a known flaw | Flaw # (Grep-verified) + counter-case + score |
+| **E** | Closes a known flaw | Flaw # (Grep-verified) + counter-case + score + **passes Cortex principles filter** |
 | **F** | Anti-pattern (avoid) | Pattern + proposed flaws.md/CLAUDE.md addition |
 | **G** | Open question | Precise interrogative sentence + 2–3 alternative answers |
 
@@ -179,7 +197,7 @@ Distribution sanity (mature targets): A=20–40%, B=5–10%, C=15–30%, D=10–
 ### Step 4 — Flaw cross-reference
 
 - **Pass 1 (C→E upgrade)**: For each C, ask "does this also close a flaw?" Yes → upgrade to E.
-- **Pass 2 (flaw→target re-scan)**: For each open flaw, ask "did target solve it?" Targeted Grep on flaw keywords if no candidate. Missing a flaw closure is worse than missing a generic feature.
+- **Pass 2 (flaw→target re-scan, active)**: This is NOT a passive question. For the top 20 highest-severity open flaws in `flaws.md`, extract 2–3 keywords from each flaw's description and **actively Grep the target's source files** for those keywords. If a match is found, read the surrounding code and evaluate whether it addresses the flaw. Missing a flaw closure is a worse defect than missing a generic feature — treat this pass as mandatory searching, not optional reflection.
 
 ### Step 4.5 — Negative-space scan (`--quick` skips)
 
@@ -239,7 +257,13 @@ If `--headline-only` was passed, emit only sections 1 + 2 + 5.
 
 ### Step 7.5 — Emit integration scratch artifact
 
-Write `steal-integration-<target>-<YYYY-MM-DD>.md` to cwd. Contains **copy-paste-ready** content for `implementation_plan.md` and `flaws.md`:
+Write `steal-integration-<target>-<YYYY-MM-DD>.md` to cwd. Contains **copy-paste-ready** content for `implementation_plan.md` and `flaws.md`.
+
+**"Copy-paste-ready" means code, not summaries.** Each C/E entry in the scratch MUST include a concrete implementation skeleton — function signature + body outline in the target language (TypeScript for Cortex). A one-paragraph "Concept: ..." description does not qualify. If you cannot write a code skeleton, note it explicitly and explain why.
+
+**Phase numbers**: Look up the actual phase number from the Step 1 enumeration or propose a concrete new number (e.g. "Phase 7.3", "Phase 0.15"). **Never write `Phase X.Y` — that is a template placeholder, not a valid phase reference.** If the right phase number is genuinely unclear, write `New Phase — <name>` and leave the number for the human to assign.
+
+**Score threshold**: Include all C/E items with score ≥ 20. If no items score ≥ 20, include the top 3 by score regardless. Never leave the scratch empty for a real audit.
 
 ```markdown
 # Integration Scratch — <target>
@@ -252,13 +276,12 @@ Write `steal-integration-<target>-<YYYY-MM-DD>.md` to cwd. Contains **copy-paste
 **Source-of-lesson**: <target>/<file>:<line>
 
 ## To paste into implementation_plan.md
-<for each C item with score ≥ 30:>
-### Phase X.Y Refinement — <name>
-<refinement body formatted to match existing implementation_plan.md style>
+<for each C/E item with score ≥ 20 (or top 3 if none qualify):>
+### Phase <actual-number> Refinement — <name>
+<concrete TypeScript/code skeleton, not a concept summary>
 
-<for each E item with score ≥ 30:>
-### Phase X.Y Refinement — closes Flaw #<num> (<name>)
-<refinement body>
+## To update in flaws.md
+<backup record of every **Addressed by**: line written in Step 7.6>
 ```
 
 This artifact bridges the gap between "found this" and "added this." User can review, edit, then paste.
@@ -268,8 +291,10 @@ This artifact bridges the gap between "found this" and "added this." User can re
 For **every E item** and **every C item whose `closes_flaw` field is set**, append a ready-to-apply `**Addressed by**:` line directly into that flaw's entry in `flaws.md`:
 
 ```
-**Addressed by**: Phase X.Y Refinement — <name> (<target> audit, score: N)
+**Addressed by**: Phase <actual-number> Refinement — <name> (<target> audit, score: N)
 ```
+
+**Never write `Phase X.Y`** — that is a template placeholder. Use the actual phase number from the Step 1 enumeration, or write `New Phase — <name>` if no existing phase applies.
 
 Rules for this step:
 1. Locate the flaw in `flaws.md` by Grep-ing for `### <num>.` (e.g. `### 83.`).
@@ -304,7 +329,7 @@ Either fix the report, or add an **Audit limitations** section listing what you 
 7. Theme analysis (Step 5) is mandatory unless `--quick`.
 8. Re-classify aggressively; bucket assignment is provisional until verified.
 9. Never modify `implementation_plan.md` from inside this skill — emit Step 7.5's scratch file instead. **Exception**: Step 7.6 MUST directly annotate `flaws.md` with `**Addressed by**:` lines; also include those same lines in the scratch file as a backup record.
-10. Cortex principles are a hard filter — violators go to D, not C.
+10. Cortex principles are a hard filter — violators go to D, not C. **This applies to bucket E too.** A feature that violates a Cortex principle cannot be E regardless of which flaw it theoretically closes. If your own counter-case says "requires GPU / requires a cloud API / requires training data", that is a D, not an E.
 11. Bucket E is the gold; verify most rigorously.
 12. Mark low-confidence items with `⚠ low-confidence`.
 13. Monorepo workspaces stay separate in the inventory.

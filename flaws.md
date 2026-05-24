@@ -342,7 +342,7 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 18. `cortex_find` returns "No matches" instead of fuzzy suggestions
 **Repro:** `cortex_find("SoulEngine")` → `"No matches found."` — but `before_change("SoulEngine")` correctly responds with `Available entities: [list]`.
 **Impact:** the fuzzy/Levenshtein/RRF ranker promised by Phase 13.5 either isn't wired into `find` or is too strict. The "closest match suggestion" UX exists in one tool, missing in the obvious entry point.
-**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 0.9 Refinement — RRF K=60 Hybrid Search (score: 32)
+**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 0.9 Refinement — RRF K=60 Hybrid Search (score: 32) + Phase 13.5 Refinement — Bounded Damerau-Levenshtein + stem variant expansion (-ing/-tion/-ment/-ies/-er) (codegraph audit, E3, score: 48)
 
 ### 19. `cortex_soul_status` shows `"Soul Dirty: Yes"` immediately on cold start
 **Repro:** `cortex_soul_status` on a fresh server → `Memory Nodes: 0, Memory Edges: 0, Ledger Entries: 0, Profile Loaded: No, Soul Dirty: Yes`.
@@ -424,7 +424,7 @@ These flaws weren't found by exercising every tool — they were found by trying
 **Repro:** `cortex_find("experience ledger")` on Task A.
 **Result:** the only match was `Native IDE Workflows` because its description happens to contain the word "experience." The actual `ExperienceManager` class was not surfaced (it's not ingested). No fuzzy/semantic ranking — the obvious-but-irrelevant string match wins.
 **Impact:** false positives crowd out true negatives. An agent following the match would dig into the wrong entity.
-**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 13.6.1 Refinement — MMR Diversity Re-ranking + Phase 0.9 Refinement — RRF K=60 Hybrid Search
+**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 13.6.1 Refinement — MMR Diversity Re-ranking + Phase 0.9 Refinement — RRF K=60 Hybrid Search + Phase 26 Refinement — PPR Ranking for cortex_find Results (RepoHyper audit, score: 14) + Phase 13.5 Refinement — CamelCase/snake_case compound identifier tokenizer + nameMatchBonus length-ratio scoring (codegraph audit, E2, score: 60)
 
 ### 27. `source` skeleton mode strips the public API while keeping irrelevant locals
 **Repro:** `source({filePath: "src/knowledge/soul.ts"})` (cached, second read) on Task B.
@@ -455,6 +455,7 @@ const envLens = process.env.CORTEX_LENS;  ← random local from inside detectAct
 **Result:** one match — `CortexDaemon` (which holds `cortex.lock`).
 **Reality:** the codebase has at least **two** lock implementations: the daemon's `cortex.lock` and `SoulEngine`'s `.knowledge/soul_state.json.lock` with retry logic. Cortex returns only the indexed one and gives no hint that the other exists.
 **Impact:** anyone debugging "why is locking broken?" gets a false sense of completeness. They'd patch the daemon and never see the soul lock.
+**Addressed by**: Phase 7 Refinement — BFS Radius Expansion for cortex_find (RepoHyper audit, score: 14)
 
 ### 31. `source` has no targeted read — all-or-skeleton
 **Repro:** Task C asked one question ("does `query()` support `limit`?"). Skeleton hid the method signature; full mode returned all 178 lines of `experience.ts`.
@@ -471,11 +472,12 @@ const envLens = process.env.CORTEX_LENS;  ← random local from inside detectAct
 ### 34. `cortex_find` can't filter by file path or directory
 **Repro:** "find anything in `src/mcp/*`" → no way to express this. The `type` filter only segments entity/concept/parent.
 **Impact:** when triaging a directory ("what does Cortex know about the MCP module?"), the only path is `cortex_find` on guessed keywords + reading the full index.
-**Addressed by**: Phase 13 Refinement — Adaptive Output Budgeting by Project Size (codegraph audit, path filtering)
+**Addressed by**: Phase 13.5 Refinement — Field-Qualified Search Query Parser (kind:, path:, name: qualifiers on cortex_find) (codegraph audit, E7, score: 32)
 
 ### 35. No reverse lookup from file path → entity
 **Repro:** I'm editing `src/cli/soul.ts`. Question: is this file tracked as an entity? There's no MCP tool to ask. I have to read the entire knowledge index and visually scan source-citation lines for `src/cli/soul.ts`.
 **Impact:** a `find_by_path(path)` tool would make `before_change` and related workflows usable for in-editor context. Without it, the agent has to guess entity names from filenames.
+**Addressed by**: Phase 35 Refinement — Import-Fallback Text Search for File->Entity Reverse Lookup (RepoHyper audit, score: 29)
 
 ### 36. Ingestion staleness creates a two-tier knowledge experience
 **Repro:** every Cortex tool gives confident, fast answers about pre-phase-13.8 code (CortexDaemon, KnowledgeManager, etc.). For phase 13.8 additions (SoulEngine, ExperienceManager, cognitive.ts, packer.ts changes, MCP soul tools), every tool either errors, returns "not found," or returns misleading results. There's no banner/warning that ingestion is behind.
@@ -510,7 +512,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 41. Tool descriptions are written to "MUST" agents into behavior, inflating context
 **Repro:** `cortex_find` tool description: *"Use this INSTEAD of grep or read_knowledge_index when..."*. `read_entity` description: 200 tokens of pedagogy. `ingest` description embeds workflow instructions.
 **Impact:** the descriptions are LLM-targeted prose, not API documentation. Across the surface area they probably add ~5k tokens of context pressure to every session before the agent has done any work. Tool descriptions should describe behavior, not lobby for it.
-**Addressed by**: Phase 13 Refinement — tool description coercion fix
+**Addressed by**: Phase 13 Refinement — tool description coercion fix + Phase 4 Refinement — SERVER_INSTRUCTIONS concise playbook in MCP initialize response (codegraph audit, E5, score: 45)
 
 ### 42. Phantom-entity index inversion: KB more confident about hallucinations than reality
 **Repro:** `AuthService` (phantom) gets quality `0.94` with `evidence 1.00`. `SoulEngine` (real, unindexed) returns `not found`.
@@ -568,7 +570,7 @@ source({filePath: "/tmp/test-cortex-secret.env"} via Windows abs path) → retur
 **Attack surface:** combined with prompt injection in a code diff, an attacker can exfiltrate `~/.ssh/id_rsa`, `~/.aws/credentials`, `~/.npmrc`, password manager exports, browser cookie databases, anything readable by the user running the MCP server. The agent will obediently `source` whatever the injected prompt names.
 **Required fix:** validate `path.resolve(filePath)` is within `path.resolve(projectRoot)` (and not a symlink escape); reject otherwise. Same fix needed for `cortex_soul_import` / `cortex_soul_export` (already flagged in server.ts audit).
 **Severity:** this is the single most serious flaw in the entire inventory. Everything else is performance or correctness. This is **data exfiltration**.
-**Addressed by**: Phase 0.1 Refinement — `assertSafePath` Path Traversal Defense (closes Flaw #51 + #74, score: 75)
+**Addressed by**: Phase 0.1 Refinement — `assertSafePath` Path Traversal Defense (closes Flaw #51 + #74, score: 75) + `validatePathWithinRoot` + O_NOFOLLOW tmpdir symlink attack prevention (codegraph audit, E1, score: 75)
 
 ### 52. `log_query()` returns `[]` while `log.jsonl` contains 12 real entries
 **Repro:**
@@ -640,12 +642,12 @@ This entry was written when I called `source` on `soul.ts` and got the broken sk
 ### 63. State.json `version` field exists but is never checked
 **Repro:** `state.json` has top-level `version` key. No tool reports it; no migration path appears to depend on it visibly. Old log entries have `migrated: true` flags suggesting a one-time migration happened.
 **Impact:** schema versioning is silent. If a future version of Cortex changes the schema and old `state.json` files don't get migrated, breakage will be silent (entities just vanish).
-**Addressed by**: Phase 3.3 Refinement — Schema Version Guard for Incremental State (closes Flaw #63, score: 45)
+**Addressed by**: Phase 3.3 Refinement — Schema Version Guard for Incremental State (closes Flaw #63, score: 45) + Phase 3 Refinement — schema_versions table with sequential, described, gated migrations (codegraph audit, E6, score: 36)
 
 ### 64. `compress` accepts absolute paths and would mutate them too
 **Repro (not actually executed for safety):** `compress` description: `path: "The repo-relative path to the file or directory"`. Same loose validation as `source` based on the description pattern. An absolute path probably gets honored and modifies the file **in place**.
 **Impact:** combined with prompt injection, `compress({path: "C:/Users/me/Documents/important.md"})` could corrupt files outside the project. I deliberately didn't run this — but the pattern across all Cortex tools (no path validation) suggests it's reachable.
-**Addressed by**: Phase 0.1 — `validatePathWithinRoot(filePath, projectRoot)` (closes #51 structurally) + `writeSessionMarkerSafe()` (symlink-safe writes)
+**Addressed by**: Phase 0.1 — `validatePathWithinRoot(filePath, projectRoot)` (closes #51 structurally) + `writeSessionMarkerSafe()` (symlink-safe writes) + O_NOFOLLOW flag on tmpdir marker writes, stale-lock PID detection (codegraph audit, E1, score: 75)
 
 ### 65. Tool error messages don't say which projectRoot was used
 **Repro:** `source({filePath: ".env"})` returned nothing (1-byte file). `source({filePath: "nonexistent.ts"})` would say `"file not found"`. Neither includes which projectRoot was active.
@@ -803,6 +805,7 @@ Live tests of the areas I'd previously left unprobed.
 ### 86. 🚨 Schema `version` field is purely decorative — no migration gate
 **Repro (live):** set `state.json.version = 999` (a future version that doesn't exist). All subsequent tool calls (`get_cortex_status`, `cortex_find`, `read_entity`) returned normal results — no version warning, no refusal, no migration prompt.
 **Impact:** the version field (currently `2`, indicating a prior migration) is present in state but checked nowhere. A future Cortex release that changes the schema would silently misinterpret old state OR newer state. The migration mechanism the field hints at doesn't exist.
+**Addressed by**: Phase 3 Refinement — schema_versions table with sequential, described, gated migrations; `schemaVersion` checked at startup (codegraph audit, E6, score: 36)
 
 ### 87. `source` silently normalizes CRLF → LF
 **Repro (live):** wrote `_crlf_test.ts` with literal `\r\n` line endings (confirmed via `xxd`: `0d 0a`). `source` returned the file with `\n`-only endings. The raw bytes on disk are intact, but the tool's output doesn't reflect them.
@@ -1414,3 +1417,36 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: `@secretlint/profiler` installs a global `PerformanceObserver` that appends every `profiler.mark()` call to an unbounded `entries[]` array, then runs an `O(n)` `entries.find()` scan on each append. Across a worker processing ~1000 files this accumulates to O(n²) overhead (~1.2s pure profiler bookkeeping per worker, zero functional benefit). The profiler may be nested under `@secretlint/core/node_modules/@secretlint/profiler`, making direct singleton patching unreliable. The fix: no-op `performance.mark` via `Object.defineProperty` inside worker threads only (`isMainThread` guard). This neutralizes all profiler copies simultaneously since all call the single Node.js built-in `performance.mark`. The `try/catch` protects against future Node.js versions making the property non-configurable.
 **Relevance to Cortex**: When Phase 7.10 (Sensitive Data Sanitization Guardrail) uses secretlint in a worker thread, apply this fix. Any worker that runs secretlint on ~hundreds of files will accumulate the same O(n²) overhead without it.
 **Severity**: 3 (HIGH — silent 1.2s overhead per security-check worker on 1000-file repos; degrades Phase 7.10 performance invisibly)
+
+
+## 🔒 REPOHYPER AUDIT — Lessons
+
+### 126. Hardcoded absolute paths to grammar/data/model files
+**Source-of-lesson**: RepoHyper `src/repo_graph/parse_source_code.py:1`, `scripts/data/matching_repobench_graphs.py:16` — `Language('/datadrive05/huypn16/...')` hardcoded at module level
+**Pattern**: Tree-sitter grammar `.so` paths, model checkpoint directories, and dataset roots hardcoded as string literals. Breaks on any machine that isn't the original dev server; CI always fails on fresh checkout with a `FileNotFoundError` that gives no hint of where the path should come from.
+**Relevance to Cortex**: Any Cortex code that needs a grammar file, model weight, or data path must derive it from `process.env.CORTEX_<NAME>_PATH` with a documented local default, or accept it via CLI argument. Never commit a literal `/home/`, `/datadrive`, `/mnt/`, or `C:\Users\` path in source.
+**Severity**: 3 (HIGH — silent breakage on every non-author machine; reproducibility is zero)
+
+---
+
+### 127. Module-level hardcoded device string (`"cuda:0"`)
+**Source-of-lesson**: RepoHyper `src/repo_graph/repo_to_graph.py` — `device = "cuda:0"` at module level
+**Pattern**: Selecting a compute device (CUDA GPU index, CPU) as a top-level constant. Fails silently on CPU-only environments or multi-GPU machines where GPU 0 is occupied. No override path exists — callers cannot pass an alternative.
+**Relevance to Cortex**: If any future Cortex phase uses a local model for inference, derive the device at call time from `process.env.CORTEX_DEVICE ?? "cpu"` or an explicit config key. Never hardcode at module scope. Local-first means CPU-first as the safe default.
+**Severity**: 2 (MEDIUM — breaks on CPU-only dev machines; research code only, but the pattern should never enter Cortex)
+
+---
+
+### 128. Class constructor missing `self` / `this` — silent runtime bug
+**Source-of-lesson**: RepoHyper `src/llm.py:8` — `def __init__(model_name)` omits `self`; Python binds `model_name` to `self`, leaving `model_name` unbound inside the body
+**Pattern**: A Python constructor with `self` omitted silently re-binds the first positional argument. The class appears to work until instantiation, at which point it raises `TypeError: __init__() takes 1 positional argument but 2 were given` with a confusing message. Invisible in static analysis unless strict mypy/pyright is configured.
+**Relevance to Cortex**: Enable strict TypeScript `noImplicitThis` and `strictFunctionTypes`. For any Python tooling in Cortex's ecosystem, require at minimum `mypy --strict` on constructors. Every class constructor must have at least one instantiation test — this bug is 100% caught by a single `new Foo(args)` call.
+**Severity**: 2 (MEDIUM — runtime TypeError on every instantiation; invisible without tests)
+
+---
+
+### 129. `os.chdir()` / `process.chdir()` in non-interactive library code
+**Source-of-lesson**: RepoHyper `scripts/data/generate_call_graphs.py:47, 60` — `os.chdir(repo_dir)` before invoking PyCG, then `os.chdir(cwd)` to restore
+**Pattern**: Mutating the process working directory to set context for a subprocess. Breaks concurrent execution (two threads calling this simultaneously corrupt each other's `cwd`), makes relative paths fragile, and is invisible to callers. The restore-on-exit pattern fails if an exception is thrown between chdir and restore.
+**Relevance to Cortex**: Always pass `cwd` to `child_process.spawn` / `spawnSync` / `execFile`. Never call `process.chdir()` outside the CLI entry point. If a subprocess needs a specific working directory, pass it explicitly via the `cwd` option — never mutate global state.
+**Severity**: 2 (MEDIUM — breaks concurrent script invocations; fragile restore pattern)
