@@ -20407,3 +20407,101 @@ async function rankedImpactAnalysis(
 The intersection of BFS (completeness) and PPR (relevance) gives a ranked blast-radius list where high-centrality dependents surface first. A developer changing `CortexDaemon` sees `MCPServer` and `IngestPipeline` at the top, not `HealthCheck` which happens to transitively depend on it via 4 hops.
 
 **Counter-case**: PPR convergence over the full knowledge graph (potentially 500+ entities) adds ~5-10ms per `impact_analysis` call. For an interactive tool call this is acceptable; for batch pre-computation it may need memoization. Add `--no-rank` flag to skip PPR and return raw BFS order for scripted use.
+
+
+## 🔒 MCP-CODE-GRAPH AUDIT — Refinements
+
+---
+
+### Phase 4 Refinement — Runtime-conditional MCP tool schema extension (mcp-code-graph audit, C1, score: 24)
+
+**Source-of-lesson**: mcp-code-graph/src/utils.ts:18 — `createToolSchema<T>(baseSchema: T)`
+
+When Cortex grows to support multiple deployment modes (multi-lens, multi-project Phase 11), extend tool schemas conditionally at registration time rather than exposing every possible param to every deployment:
+
+```typescript
+// src/mcp/tool-schema.ts
+import { z, ZodRawShape } from 'zod';
+import { CortexConfig } from '../config.js';
+
+export function createToolSchema<T extends ZodRawShape>(
+  baseSchema: T,
+  config: CortexConfig
+): ZodRawShape {
+  let schema: ZodRawShape = { ...baseSchema };
+
+  // Add lens selector only when multiple lenses are configured
+  if (config.lenses && config.lenses.length > 1) {
+    const lensOptions = config.lenses.map(l => l.id) as [string, ...string[]];
+    schema = {
+      ...schema,
+      lens: z
+        .enum(lensOptions)
+        .optional()
+        .describe(`Lens to query. Available: ${lensOptions.join(', ')}. Defaults to active lens.`),
+    };
+  }
+
+  // Add project selector only when multi-project is configured
+  if (config.projects && config.projects.length > 1) {
+    const projectIds = config.projects.map(p => p.id) as [string, ...string[]];
+    schema = {
+      ...schema,
+      project: z
+        .enum(projectIds)
+        .describe(`Project to query. Available: ${projectIds.join(', ')}.`),
+    };
+  }
+
+  return schema;
+}
+```
+
+Wrap every `server.registerTool()` call with `createToolSchema(baseParams, config)`. Single-project installs see a minimal schema; multi-project installs automatically get a required `project` disambiguation param — same registration code, different agent UX per deployment.
+
+**Counter-case**: Cortex is currently always single-project. Conditional schema extension before Phase 11 is actively in progress adds indirection with no immediate benefit.
+
+---
+
+### Phase 11 Refinement — IS_MULTI_PROJECT config flag + per-call project disambiguation (mcp-code-graph audit, C2, score: 18)
+
+**Source-of-lesson**: mcp-code-graph/src/config.ts:6, src/index.ts:40-52 — `IS_MULTI_REPO: boolean` + `REPO_LIST: string[]` + per-tool `repository` required param
+
+The simplest multi-project config shape: a boolean mode flag + project list, with per-call disambiguation injected as a required tool param:
+
+```typescript
+// Extend CortexConfig for multi-project mode
+interface CortexConfig {
+  IS_MULTI_PROJECT: boolean;
+  PROJECT_LIST: Array<{ id: string; root: string; knowledgeDir: string }>;
+}
+
+// CLI arg parsing: --project=myapp:./apps/myapp  --project=api:./apps/api
+const projectArgs = args.filter(arg => arg.startsWith('--project='));
+if (projectArgs.length > 1) {
+  config.IS_MULTI_PROJECT = true;
+  config.PROJECT_LIST = projectArgs.map(arg => {
+    const [id, root] = arg.replace('--project=', '').split(':');
+    return { id, root, knowledgeDir: `${root}/.knowledge` };
+  });
+}
+
+// Per-tool project resolver
+function resolveProject(
+  projectId: string | undefined,
+  config: CortexConfig
+): { root: string; knowledgeDir: string } {
+  if (!config.IS_MULTI_PROJECT) {
+    return { root: config.PROJECT_ROOT, knowledgeDir: config.KNOWLEDGE_DIR };
+  }
+  const project = config.PROJECT_LIST.find(p => p.id === projectId);
+  if (!project) {
+    throw new Error(
+      `Unknown project: "${projectId}". Available: ${config.PROJECT_LIST.map(p => p.id).join(', ')}`
+    );
+  }
+  return project;
+}
+```
+
+**Counter-case**: mcp-code-graph's multi-repo works because all state lives in the cloud — one API call, one `repoUrl` param. Cortex local multi-project requires separate `.knowledge/` loading, separate state.json, and LRU eviction (per the GitNexus pattern already in Phase 11 planning). This skeleton captures the config shape and disambiguation logic; the local loading complexity is the hard part.

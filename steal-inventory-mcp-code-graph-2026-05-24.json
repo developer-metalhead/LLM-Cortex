@@ -1,0 +1,29 @@
+﻿{
+  "audit_date": "2026-05-24",
+  "target": "mcp-code-graph",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\mcp-code-graph",
+  "commit": { "sha": "908180f", "branch": "main" },
+  "mode": "full",
+  "calibration": "boilerplate_starter",
+  "files_scanned": 17,
+  "bucket_counts": { "A": 1, "B": 0, "C": 3, "D": 7, "E": 0, "F": 5, "G": 1 },
+  "items": [
+    { "id": "A1", "bucket": "A", "name": "MCP server stdio transport + tool registration", "source": "src/index.ts:10-34", "phase": "4", "has_tests": false },
+    { "id": "C1", "bucket": "C", "name": "Runtime-conditional MCP tool schema extension (createToolSchema)", "source": "src/utils.ts:18", "score": 24, "severity": 2, "fit": 4, "effort": 1, "recency": 1.0, "phase_placement": "Phase 4 Refinement", "has_tests": false, "confidence": "high" },
+    { "id": "C2", "bucket": "C", "name": "IS_MULTI_REPO + REPO_LIST multi-repo server config", "source": "src/config.ts:6, src/index.ts:40-52", "score": 18, "severity": 3, "fit": 3, "effort": 2, "recency": 1.0, "phase_placement": "Phase 11 Refinement", "has_tests": false, "confidence": "high" },
+    { "id": "C3", "bucket": "C", "name": "Idempotent CI release guard + git-log auto-changelog", "source": ".github/workflows/publish-release.yml:36-67", "score": 12, "severity": 2, "fit": 3, "effort": 2, "recency": 1.0, "phase_placement": "Phase 12 Refinement", "has_tests": false, "confidence": "high" },
+    { "id": "D1", "bucket": "D", "name": "list-graphs cloud tool", "source": "src/index.ts:65", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "D2", "bucket": "D", "name": "get-code cloud tool", "source": "src/index.ts:107", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "D3", "bucket": "D", "name": "find-direct-connections cloud tool", "source": "src/index.ts:186", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "D4", "bucket": "D", "name": "nodes-semantic-search cloud tool", "source": "src/index.ts:269", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "D5", "bucket": "D", "name": "docs-semantic-search cloud tool", "source": "src/index.ts:342", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "D6", "bucket": "D", "name": "folder-tree-structure cloud tool", "source": "src/index.ts:415", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "D7", "bucket": "D", "name": "get-usage-dependency-links cloud tool", "source": "src/index.ts:487", "violated_principle": "local-first + no-third-party-api-for-core" },
+    { "id": "F1", "bucket": "F", "name": "Missing response.ok before JSON parsing — silent HTTP error pass-through", "source": "src/index.ts:162,245,320,390,464,545", "has_tests": false },
+    { "id": "F2", "bucket": "F", "name": "Production startup debug dumps via console.error", "source": "src/index.ts:4-8,570-578", "has_tests": false },
+    { "id": "F3", "bucket": "F", "name": ".env.example typo CODEGPT_GRPAH_ID", "source": ".env.example:3", "has_tests": false },
+    { "id": "F4", "bucket": "F", "name": "SECURITY.md placeholder email security@example.com", "source": "SECURITY.md:8", "has_tests": false },
+    { "id": "F5", "bucket": "F", "name": "CI sed -i mutates package.json without revert", "source": ".github/workflows/publish-release.yml:94", "has_tests": false },
+    { "id": "G1", "bucket": "G", "name": "Should Cortex MCP tool schemas be conditionally extended based on server config?", "source": "src/utils.ts:18", "alternatives": ["A: yes, add conditionalParams() hook", "B: no, always single-project", "C: config-driven defaults not conditional required/optional"] }
+  ]
+}

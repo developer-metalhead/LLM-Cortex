@@ -1,0 +1,49 @@
+{
+  "audited_iso": "2026-05-24T15:35:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\mcp-code-graph",
+  "commit_sha": "unknown",
+  "mode": "full",
+  "calibration_verdict": "Boilerplate / API Wrapper (<1000 LOC, no local business logic). Shallow audit.",
+  "inventory": [
+    {
+      "id": 1,
+      "bucket": "D",
+      "name": "SaaS nodes-semantic-search",
+      "source_file": "src/index.ts",
+      "source_line": 269,
+      "description": "Semantic search functionality implemented entirely as a thin fetch wrapper calling https://api-mcp.codegpt.co.",
+      "confidence": "high",
+      "steel_man": "Violates Cortex Principle 1 and 6 (Local-first, No third-party API for core). It offloads the entire knowledge graph generation and querying to a proprietary cloud service."
+    },
+    {
+      "id": 2,
+      "bucket": "D",
+      "name": "SaaS get-usage-dependency-links",
+      "source_file": "src/index.ts",
+      "source_line": 487,
+      "description": "Blast radius / dependency analysis wrapper around CodeGPT's proprietary graph.",
+      "confidence": "high",
+      "steel_man": "Violates Cortex Principle 1 and 6. Cortex natively solves this locally via the `before_change` workflow."
+    },
+    {
+      "id": 3,
+      "bucket": "D",
+      "name": "SaaS find-direct-connections",
+      "source_file": "src/index.ts",
+      "source_line": 186,
+      "description": "Topological neighbors query wrapper around CodeGPT's proprietary graph.",
+      "confidence": "high",
+      "steel_man": "Violates Cortex Principle 1 and 6. Cortex natively handles topological relationships via the `[[WikiLink]]` knowledge base and `resolve_refs`."
+    },
+    {
+      "id": 4,
+      "bucket": "D",
+      "name": "SaaS docs-semantic-search",
+      "source_file": "src/index.ts",
+      "source_line": 342,
+      "description": "Documentation search wrapper calling the CodeGPT API.",
+      "confidence": "high",
+      "steel_man": "Violates Cortex Principle 1 and 6. Cloud dependency for basic doc search is incompatible with Cortex's local-first architecture."
+    }
+  ]
+}

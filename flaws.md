@@ -1450,3 +1450,42 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Mutating the process working directory to set context for a subprocess. Breaks concurrent execution (two threads calling this simultaneously corrupt each other's `cwd`), makes relative paths fragile, and is invisible to callers. The restore-on-exit pattern fails if an exception is thrown between chdir and restore.
 **Relevance to Cortex**: Always pass `cwd` to `child_process.spawn` / `spawnSync` / `execFile`. Never call `process.chdir()` outside the CLI entry point. If a subprocess needs a specific working directory, pass it explicitly via the `cwd` option — never mutate global state.
 **Severity**: 2 (MEDIUM — breaks concurrent script invocations; fragile restore pattern)
+
+
+## 🔒 MCP-CODE-GRAPH AUDIT — Lessons
+
+### 130. `response.ok` not checked before `.json()` — silent HTTP error pass-through in MCP tools
+**Source-of-lesson**: mcp-code-graph `src/index.ts:162, 245, 320, 390, 464, 545` — six tool handlers, none check `response.ok`
+**Pattern**: `fetch()` does not throw on 4xx/5xx. Calling `.json()` on an error response returns a valid JSON error object. Destructuring `.content` from that object yields `undefined`, which gets stringified as `"undefined"` and returned as the tool's text result. The MCP client receives a structurally-valid success response with garbage content — no exception, no MCP error result, no indication of failure.
+**Relevance to Cortex**: Every `fetch()` call inside a Cortex MCP tool handler MUST check `if (!response.ok) { throw new Error(\`HTTP \${response.status}: \${await response.text()}\`); }` before calling `.json()`. Thrown errors propagate through the MCP SDK as proper error results. Silent `undefined` content does not.
+**Severity**: 3 (HIGH — tool silently returns "undefined" on auth failure, wrong ID, or server error; agent has no signal to retry or surface to user)
+
+---
+
+### 131. Production startup debug dumps via `console.error` in MCP server code
+**Source-of-lesson**: mcp-code-graph `src/index.ts:4-8, 570-578` — `console.error('MCP Code Graph starting...')` and `=== DEBUG INFO ===` env-var dump on every startup
+**Pattern**: Debug statements added during development are left in the release binary. MCP servers communicate over stdio; stderr is the MCP host's only channel for server-side messages. Chatty debug output obscures real errors and makes log-based debugging impossible.
+**Relevance to Cortex**: No `console.error` / `console.log` debug statements in Cortex MCP server code unless guarded by `process.env.DEBUG`. Use structured logging with a verbosity flag. The MCP stdio contract treats stderr as errors-only; violating this breaks host-side error detection.
+**Severity**: 2 (MEDIUM — obscures real errors in production logs; degrades debuggability of the MCP host integration)
+
+### 132. `.env.example` key name differs from actual env var used in code
+**Source-of-lesson**: mcp-code-graph `.env.example:3` — `CODEGPT_GRPAH_ID=""` (typo) vs `process.env.CODEGPT_GRAPH_ID` in `src/config.ts:5`
+**Pattern**: A typo in the documented example config (`GRPAH_ID`) means anyone copying from `.env.example` sets a variable the code never reads. The correct key (`GRAPH_ID`) is silently ignored. No test catches this because there are no tests.
+**Relevance to Cortex**: Add a CI check: for every `process.env.CORTEX_*` reference in `src/`, assert the key appears verbatim in `.env.example`. A grep-based lint step catches this class of drift before it ships.
+**Severity**: 2 (MEDIUM — causes silent misconfiguration; user sees no error, feature just doesn't work)
+
+---
+
+### 133. `SECURITY.md` shipped with placeholder contact email
+**Source-of-lesson**: mcp-code-graph `SECURITY.md:8` — `security@example.com`
+**Pattern**: SECURITY.md template copied and committed without replacing the generic contact address. Security researchers who find a vulnerability report to a black hole.
+**Relevance to Cortex**: Cortex's SECURITY.md must have a real contact address before the project goes public. Template placeholders (`example.com`, `TODO`, `your-name@`) must be caught by a pre-push lint check or PR checklist item.
+**Severity**: 1 (LOW — no runtime impact; reputational risk only)
+
+---
+
+### 134. CI mutates committed files with `sed -i` without reverting
+**Source-of-lesson**: mcp-code-graph `.github/workflows/publish-release.yml:94` — `sed -i 's/"name": "mcp-code-graph"/"name": "@judinilabs\/mcp-code-graph"/' package.json`
+**Pattern**: CI modifies `package.json` in-place to change the package scope for GitHub Packages publishing. If the publish step fails mid-way, the runner's workspace has a different `package.json` than source control. Subsequent CI steps (e.g. `npm install`) may behave inconsistently. The mutation is invisible to reviewers — the committed file looks fine.
+**Relevance to Cortex**: Never mutate committed files in CI without an explicit `git restore <file>` at the end of the step. Use a separate publish-only `package.json` (`npm publish --workspace`), or pass the scope as a CLI flag (`npm publish --scope=@org`) if the registry supports it.
+**Severity**: 2 (MEDIUM — silent inconsistency between workspace and source; breaks reproducibility of CI steps that run after the mutation)
