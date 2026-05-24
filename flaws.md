@@ -1513,3 +1513,11 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Tests are written optimistically; when behavior changes the assertion is commented out instead of fixed or deleted. The test continues to run, reports "PASS", and provides false coverage signal. Harder to detect than a missing test because the test file looks populated.
 **Relevance to Cortex**: Never comment out assertions as a fix. If an assertion is wrong, either fix the assertion or delete the test. Add a lint rule that flags `// expect(` and `// assert(` patterns in `tests/` as a CI error.
 **Severity**: 3 (HIGH — produces false confidence; CI passes while behavior is untested)
+
+---
+
+### 138. STARTS WITH path prefix collision (missing trailing slash)
+**Source-of-lesson**: CodeGraphContext `src/codegraphcontext/tools/indexing/resolution/post_resolution.py:51-52` — consistently applies `repo_path.rstrip("/") + "/"` before every Cypher `STARTS WITH` clause; absent in the surrounding ecosystem, causing silent cross-repo leakage
+**Pattern**: Filtering records with `WHERE path STARTS WITH '/opt/repos/myapp'` silently matches `/opt/repos/myapp_extra`. In a single-repo setup this is invisible; in multi-project setups it returns data from the wrong repo with no error.
+**Relevance to Cortex**: Every Cypher (or equivalent DB) query in Cortex that filters by `path STARTS WITH repoRoot` MUST first normalize the prefix with a trailing slash. Add a `toRepoPrefix(path: string): string` helper — `path.replace(/\/?$/, '/')` — and gate all such queries through it.
+**Severity**: 4 (HIGH — silent wrong-repo data in multi-project setups; no error thrown, no observable warning)

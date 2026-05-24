@@ -136,6 +136,15 @@ Do NOT randomly sample. Coverage failures are the dominant failure mode.
   - **Cite file + line + symbol** — no location, no inclusion.
   - **Capture file metadata** for each finding: `last_modified` (mtime), `has_tests` (boolean — is there a `*.test.*` / `*_test.*` / `*_spec.*` for this file or its containing module?). These feed scoring in Step 6.
 - **2d. Anti-miss checklist**: Confirm visits to `migrations/`, `plugins/`, `examples/`, `benchmarks/`, `scripts/`, `tools/`, `tests/e2e/`, `fixtures/`, `proto/`, `generated/`, `i18n/`, `Justfile`/`Makefile`/`Taskfile.yml`, `.github/workflows/`, `.gitlab-ci.yml`, `Dockerfile*`, `.env.example`, root `*.config.*`.
+
+- **2d.2 Always-read files (never skip, never partial-read — unconditionally high-value)**:
+  - **Security files**: any file matching `security*.py`, `security*.ts`, `*_guard*.ts`, `*ssrf*.py`, `*auth*.py`, `*sanitize*.ts`. Read **fully** (not just the first 200 lines). Security patterns live anywhere in the file body and are the single highest-severity findings. Partial-reading a security file is equivalent to not reading it.
+  - **Domain-core directories** (read 100% of files, no sampling):
+    - `parsers/`, `languages/`, `extractors/`, `resolvers/` — in code-analysis/AST targets, per-language files contain the non-obvious novel techniques (normalization, complexity heuristics, dynamic dispatch detection). These files are dispatched via a registry so they score near-zero on import-centrality — the hot-path algorithm will never surface them. They must be read unconditionally.
+    - `core/`, `engine/`, `runtime/` — project's central machinery.
+    - `resolution/`, `inference/` — call-graph and type-inference logic.
+  - **Top-3 git-churned files**: from Step 1.5's churn list, the three files with the highest change count MUST be fully read regardless of whether they appear in import-centrality. High churn = high author investment = high signal density.
+
 - **2d.1 Anti-pattern scan (mandatory, feeds F bucket)**: After reading each source file, actively check for the following patterns — these are almost always present in research/library code and are easy to miss if you wait for them to appear naturally:
   - Hardcoded absolute paths (strings starting with `/` or `C:\` that are data/model/tool paths, not stdlib)
   - Hardcoded device/platform strings (`"cuda:0"`, `"cpu"`, `localhost:8080` at module level)
@@ -145,7 +154,8 @@ Do NOT randomly sample. Coverage failures are the dominant failure mode.
   - Unbounded growth (append-only lists/files with no eviction)
   - Untested public API (no corresponding test file for the module)
   Any of these found → queue as F candidate. Do not defer; note immediately.
-- **2e. Coverage gate**: Every top-level dir visited, every config read, all `*.md` read, anti-miss confirmed.
+
+- **2e. Coverage gate**: Every top-level dir visited AND every domain-core subdir (2d.2) fully covered, every config read, all `*.md` read, anti-miss confirmed. A top-level dir that contains a domain-core subdir does NOT count as "visited" until the subdir's files are individually read.
 
 For projects **>500 source files**, delegate per-directory to parallel Explore agents (cap: 5). Prompt template: `reference/explore-agent-prompt.md`.
 
@@ -193,6 +203,8 @@ On future audits, if a finding's name appears in **3+** prior audits, auto-boost
 | **G** | Open question | Precise interrogative sentence + 2–3 alternative answers |
 
 Distribution sanity (mature targets): A=20–40%, B=5–10%, C=15–30%, D=10–20%, E=5–15%, F=0–5%, G=0–5%.
+
+**Surprises → Bucket drain (mandatory after categorization):** Every item noted under `## Surprises` MUST be formally assigned to a bucket (A–G) or explicitly documented as "outside scope — D" with the violated Cortex principle cited. The Surprises section is a staging area, not a final resting place. An interesting observation that never enters a bucket is a Step 3 defect. After completing initial categorization, re-read every Surprises item and ask: "What bucket does this belong to?" Assign it, then score it if C/E.
 
 ### Step 4 — Flaw cross-reference
 
@@ -242,6 +254,16 @@ Pick **3 random items** from buckets C and E. For each, Read the cited file with
 - Add an "Audit limitations" section noting the hallucination detection.
 
 In `--paranoid` mode, every C/E item gets this check (not just 3 random). Expensive but every claim is bullet-verified.
+
+### Step 6.6 — Resolve documented limitations before reporting (mandatory)
+
+Before writing the report, review every entry in the running "Audit limitations" list. For each flagged file or directory that was NOT read:
+
+1. **Attempt to read it now** if budget permits. Prioritize by: (a) git-churn rank from Step 1.5 — highest-churn unread files first; (b) files flagged as "may contain X" where X matches a domain the audit already found novel findings in.
+2. **If budget is exhausted**: explicitly state "Budget exhausted — [file] not read" in the report header. Do NOT silently omit the limitation.
+3. **After reading**: run Step 3's Surprises → Bucket drain on any new observations. New C/E items found here get scored and added to the inventory; if score ≥ 20, include in the integration scratch (Step 7.5).
+
+**The rule**: a documented limitation is a promise to the user that something was skipped. That promise must be resolved — either by reading the file, or by explicitly disclosing why it was impossible. Running Steps 7.5 and 7.6 with unresolved limitations produces an incomplete integration scratch.
 
 ### Step 7 — Produce report
 

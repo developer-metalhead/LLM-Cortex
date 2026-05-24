@@ -20932,3 +20932,210 @@ export function extractFrameworkEdges(parsedFile: ParsedFile): FrameworkEdge[] {
 **Wire into Phase 0.13 Java/Kotlin parser:** Call `extractFrameworkEdges(parsedFile)` after class extraction. Add `INJECTS`, `EXPOSES_ENDPOINT`, `PROVIDES_BEAN`, `QUERIES`, `MAPS_TO` to the schema contract's `RELATIONSHIP_TYPES` set (see Phase 0.2 Refinement — Schema Contract as Frozen Set above).
 
 **Counter-case:** Framework-specific edges lock the schema to Spring vocabulary. Equivalent extraction rules are needed for Django, Rails, Laravel, etc. — roughly 5× scope expansion. Mitigate by defining generic edge type names (`FRAMEWORK_INJECTS`, `EXPOSES_ENDPOINT`) and plugging in framework-specific extraction as optional language-parser extensions.
+
+---
+
+### Phase 0.13 Refinement — STARTS WITH Path Safety Pattern (CodeGraphContext audit, score: 60)
+
+**Closes:** Flaw #138 (STARTS WITH path prefix collision without trailing slash)
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/indexing/resolution/post_resolution.py:51-52` — `repo_path.rstrip("/") + "/"` applied consistently before every Cypher `STARTS WITH` clause
+
+Without a trailing slash, `WHERE path STARTS WITH '/opt/repos/myapp'` silently matches `/opt/repos/myapp_extra`. One helper function, used everywhere, eliminates the class.
+
+```typescript
+// src/db/path-utils.ts
+
+/** Normalize a repo root path for use in STARTS WITH / LIKE prefix queries.
+ *  Appends a trailing slash so '/opt/repos/myapp' cannot match '/opt/repos/myapp_extra'.
+ */
+export function toRepoPrefix(repoPath: string): string {
+  return repoPath.replace(/\/?$/, '/');
+}
+```
+
+**Wire everywhere STARTS WITH is used:** In every Cypher query that filters by `path STARTS WITH repoRoot`, replace the raw variable with `toRepoPrefix(repoRoot)`:
+
+```typescript
+// Before
+WHERE n.path STARTS WITH $repoRoot
+
+// After
+WHERE n.path STARTS WITH $repoPrefix
+// params: { repoPrefix: toRepoPrefix(repoRoot) }
+```
+
+**Counter-case:** Single-project Cortex setups never observe the bug (only one repo prefix exists). The fix is a one-liner but requires touching every query that filters by path — non-trivial grep-and-replace across the codebase.
+
+---
+
+### Phase 0.13 Refinement — Parser Query Deduplication by Node Identity (CodeGraphContext audit, score: 45)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/languages/typescript.py:174-256` and `go.py:205-240`
+
+Tree-sitter queries can return multiple captures for the same AST node (name capture, params capture, return-type capture all hit the same function). Without deduplication, one function becomes N function records. The fix: bucket captures by `(startByte, endByte, nodeType)` before processing.
+
+```typescript
+// src/ingestion/parser-utils.ts
+
+type NodeKey = `${number}:${number}:${string}`;
+
+function nodeKey(node: SyntaxNode): NodeKey {
+  return `${node.startIndex}:${node.endIndex}:${node.type}`;
+}
+
+/**
+ * Group raw Tree-sitter query captures by their anchor node identity.
+ * Multiple captures that belong to the same function/class node are
+ * merged into one record, preventing duplicate entity entries.
+ */
+export function groupCapturesByNode<T extends { node: SyntaxNode }>(
+  captures: T[],
+  anchorField: keyof T,
+): Map<NodeKey, T[]> {
+  const buckets = new Map<NodeKey, T[]>();
+  for (const cap of captures) {
+    const anchor = cap[anchorField] as unknown as SyntaxNode;
+    const key = nodeKey(anchor);
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(cap);
+    buckets.set(key, bucket);
+  }
+  return buckets;
+}
+```
+
+**Wire into Phase 0.13 parsers:** In each language parser's entity extraction loop, call `groupCapturesByNode(captures, 'functionNode')` before iterating. Process one record per bucket key instead of one record per raw capture.
+
+**Counter-case:** Adds one Map allocation per parse call. For files with <500 functions the overhead is negligible. Parsers that already emit captures in one-per-function order don't need this.
+
+---
+
+### Phase 0.13 Refinement — Synthetic Root Entity for Module-Level Calls (CodeGraphContext audit, score: 36)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/languages/python.py:170-203`
+
+In Python (and TypeScript top-level), function calls at module scope (outside any function or class) have no natural caller entity. Without a root entity, these calls produce floating CALLS edges with a null source — query results are silently incomplete.
+
+The fix: create one synthetic `<module>` entity per file (line 1, spanning the whole file) and attach all unparented calls to it.
+
+```typescript
+// src/ingestion/module-frame.ts
+
+export interface ModuleFrameEntity {
+  name: '<module>';
+  qualifiedName: string;
+  kind: 'module-frame';
+  path: string;
+  lineStart: number;
+  lineEnd: number;
+}
+
+/**
+ * Create a synthetic root entity for a file to anchor module-level calls.
+ * Without this, calls at the top level of a file have no source entity
+ * and produce orphaned CALLS edges.
+ */
+export function createModuleFrame(filePath: string, totalLines: number): ModuleFrameEntity {
+  return {
+    name: '<module>',
+    qualifiedName: `${filePath}:<module>`,
+    kind: 'module-frame',
+    path: filePath,
+    lineStart: 1,
+    lineEnd: totalLines,
+  };
+}
+
+/**
+ * Attach any CALLS edges whose caller is null to the module-frame entity.
+ * Called after the main AST parse pass, before writing edges to the graph.
+ */
+export function attachOrphanedCalls(
+  calls: Array<{ callerName: string | null; calledName: string; line: number }>,
+  moduleFrame: ModuleFrameEntity,
+): Array<{ callerName: string; calledName: string; line: number }> {
+  return calls.map(c => ({
+    ...c,
+    callerName: c.callerName ?? moduleFrame.qualifiedName,
+  }));
+}
+```
+
+**Wire into Phase 0.13 parsers:** After AST traversal, create the module frame via `createModuleFrame(filePath, lineCount)`, then run `attachOrphanedCalls(rawCalls, moduleFrame)` before writing to the graph. Suppress creating a second `<module>` entity if one already exists for the file (idempotent on re-parse).
+
+**Counter-case:** `<module>` entities inflate node count for files with many module-level calls (e.g., Python scripts, TS index barrels). Filter them from entity listings that don't benefit from root-frame visibility.
+
+---
+
+### Phase 0.2 Refinement — SSRF + DNS Rebinding Guards for URL-Fetching Operations (graphify audit, score: 36)
+
+**Source-of-lesson:** graphify `graphify/security.py:42-129` (confirmed fully implemented — production code, not stub)
+**Applies when:** Any Cortex phase that fetches user-provided or externally-sourced URLs (Phase 22+ GitHub integration, documentation fetch, SCIP binary download).
+
+Three layers of protection against SSRF (Server-Side Request Forgery), each closing a gap the previous layer misses:
+
+**Layer 1 — URL validation with NAT64 + CGN ranges** (`validate_url`, lines 42-86):
+Standard `is_private` / `is_reserved` checks miss RFC 6598 CGN range (`100.64.0.0/10`) and NAT64 WKP (`64:ff9b::/96`). Must be checked explicitly.
+
+**Layer 2 — DNS rebinding prevention** (`_ssrf_guarded_socket`, lines 89-117):
+Patches `socket.getaddrinfo` for the duration of the fetch to re-validate every resolved IP. A URL can pass Layer 1 (valid public hostname) but resolve to a private IP via DNS rebinding (TOCTOU attack). The socket patch catches this at connection time.
+
+**Layer 3 — Per-redirect URL re-validation** (`_NoFileRedirectHandler`, lines 120-129):
+Custom redirect handler re-calls `validate_url()` on every 3xx target before following. Prevents open-redirect SSRF where the initial URL is safe but redirects to a private endpoint.
+
+```typescript
+// src/security/ssrf-guard.ts
+
+import { isIP } from 'net';
+import dns from 'dns/promises';
+
+const PRIVATE_CIDRS = [
+  // RFC 1918
+  [0x0A000000, 0xFF000000],  // 10.0.0.0/8
+  [0xAC100000, 0xFFF00000],  // 172.16.0.0/12
+  [0xC0A80000, 0xFFFF0000],  // 192.168.0.0/16
+  // RFC 6598 CGN (missed by most libraries)
+  [0x64400000, 0xFFC00000],  // 100.64.0.0/10
+  // Loopback, link-local, reserved
+  [0x7F000000, 0xFF000000],  // 127.0.0.0/8
+  [0xA9FE0000, 0xFFFF0000],  // 169.254.0.0/16
+  [0xE0000000, 0xF0000000],  // 224.0.0.0/4 (multicast)
+] as const;
+
+function isPrivateIp(ip: string): boolean {
+  if (!isIP(ip)) return false;
+  const n = ip.split('.').reduce((acc, oct) => (acc << 8) | parseInt(oct, 10), 0) >>> 0;
+  return PRIVATE_CIDRS.some(([net, mask]) => (n & mask) === net);
+}
+
+export async function validateUrl(url: string): Promise<void> {
+  const parsed = new URL(url);  // throws on malformed
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error(`Disallowed scheme: ${parsed.protocol}`);
+  }
+  // DNS-resolve and check every returned IP (Layer 1 + 2 combined)
+  const addresses = await dns.lookup(parsed.hostname, { all: true });
+  for (const { address } of addresses) {
+    if (isPrivateIp(address)) {
+      throw new Error(`Blocked: ${parsed.hostname} resolves to private IP ${address}`);
+    }
+  }
+}
+
+/** Fetch wrapper that re-validates redirects (Layer 3). */
+export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+  await validateUrl(url);
+  const res = await fetch(url, { ...options, redirect: 'manual' });
+  if (res.status >= 300 && res.status < 400) {
+    const location = res.headers.get('location');
+    if (!location) throw new Error('Redirect with no Location header');
+    await validateUrl(location);  // re-validate before following
+    return safeFetch(location, options);
+  }
+  return res;
+}
+```
+
+**Wire into any URL-fetching code:** Replace bare `fetch(url, ...)` with `safeFetch(url, ...)`. Call `validateUrl(url)` at the MCP tool handler boundary before passing URLs deeper into the stack.
+
+**Counter-case:** Cortex is local-first — core tools read the local filesystem and do not fetch user-provided URLs. This guard applies only when URL-fetching phases ship (Phase 22+). Adding it prematurely to non-fetching code adds latency for zero security benefit. Gate with `if (CORTEX_ENABLES_URL_FETCH)` until the fetching phase exists.
