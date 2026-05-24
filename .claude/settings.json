@@ -1,4 +1,7 @@
 {
+  "allowedPaths": [
+    "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\aider"
+  ],
   "mcpServers": {
     "project-cortex": {
       "command": "C:\\Program Files\\nodejs\\node.exe",

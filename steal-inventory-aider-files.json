@@ -1,0 +1,28 @@
+{
+  "audited_iso": "2026-05-24T00:00:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\aider",
+  "files": {
+    "aider/aider/repomap.py": "2026-05-24",
+    "aider/aider/coders/base_coder.py": "2026-05-24",
+    "aider/aider/models.py": "2026-05-24",
+    "aider/aider/history.py": "2026-05-24",
+    "aider/aider/linter.py": "2026-05-24",
+    "aider/aider/analytics.py": "2026-05-24",
+    "aider/aider/watch.py": "2026-05-24",
+    "aider/aider/sendchat.py": "2026-05-24",
+    "aider/aider/commands.py": "2026-05-24",
+    "aider/aider/coders/chat_chunks.py": "2026-05-24",
+    "aider/aider/coders/architect_coder.py": "2026-05-24",
+    "aider/aider/scrape.py": "2026-05-24",
+    "aider/aider/reasoning_tags.py": "2026-05-24",
+    "aider/aider/run_cmd.py": "2026-05-24",
+    "aider/aider/copypaste.py": "2026-05-24",
+    "aider/aider/versioncheck.py": "2026-05-24",
+    "aider/aider/onboarding.py": "2026-05-24",
+    "aider/aider/main.py": "2026-05-24",
+    "aider/aider/io.py": "2026-05-24",
+    "aider/aider/repo.py": "2026-05-24",
+    "aider/HISTORY.md": "2026-05-24",
+    "aider/pyproject.toml": "2026-05-24"
+  }
+}

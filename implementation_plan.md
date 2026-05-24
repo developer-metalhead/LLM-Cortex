@@ -1439,6 +1439,34 @@ Both processes run in the background (`&`) so the commit doesn't block. If `stat
 
 ---
 
+### Phase 0.9 Refinement — Token Estimation via 1% Line Sampling
+
+For large knowledge files or source files being assembled into LLM payloads, use sampling-based token estimation instead of full tokenization when exact counts aren't needed:
+
+```typescript
+function estimateTokens(text: string, tokenCount: (t: string) => number): number {
+  if (text.length < 200) return tokenCount(text);   // exact for short texts
+
+  const lines = text.split('\n');
+  const step = Math.max(Math.floor(lines.length / 100), 1);
+  const sample = lines.filter((_, i) => i % step === 0).join('\n');
+  const sampleTokens = tokenCount(sample);
+  // Extrapolate: sample_tokens / sample_length * full_length
+  return Math.round(sampleTokens / sample.length * text.length);
+}
+```
+
+**Apply in**:
+- `build_context_pack` when estimating whether adding an entity will exceed budget
+- `compress` when computing pre/post sizes for reporting
+- Any bulk file scan where exact token count is unnecessary
+
+**Error**: typically <5% for files >200 lines. Use exact count when precision matters (budget-decision boundaries).  
+**Source**: aider `repomap.py:89-101` — `RepoMap.token_count()`  
+**Score**: 30 (severity=2, fit=5, effort=1)
+
+---
+
 ### Phase 0.10 Refinement — Marker-Delimited Async Git Hook Sync (CodeGraph)
 
 **Source-of-lesson**: codegraph/src/sync/git-hooks.ts:19-80
@@ -1567,6 +1595,69 @@ This produces objective signal on whether a search algorithm change actually imp
 - **`cortex clone <github-url>` / cross-repo mode** (mirrors `graphify clone`):
   - Clones target repo to `~/.cortex/repos/<owner>/<repo>/` (shallow clone, depth 1).
   - Runs `cortex sync` in the cloned repo, produces `.knowledge/state.json` there.
+
+---
+
+### Phase 0.11 Refinement — Token Budget Pre-Flight Warning (closes Flaw #37)
+
+Before sending any LLM request (synthesis, entity generation, or Phase 22 chat), compute the estimated token count and compare against `model.max_input_tokens`. If at or near limit, emit a structured warning with actionable remedies rather than silently failing with a cryptic API error.
+
+```typescript
+interface BudgetCheck {
+  ok: boolean;
+  inputTokens: number;
+  maxInputTokens: number;
+  remedies?: string[];
+}
+
+function checkTokenBudget(messages: Message[], model: ModelInfo): BudgetCheck {
+  const inputTokens = model.tokenCount(messages);
+  const maxInputTokens = model.info.max_input_tokens ?? 0;
+
+  if (maxInputTokens && inputTokens >= maxInputTokens) {
+    return {
+      ok: false,
+      inputTokens,
+      maxInputTokens,
+      remedies: [
+        'Run cortex compress to reduce entity sizes',
+        'Drop unused entities from the current context pack',
+        'Break large entity pages into smaller focused pages',
+      ],
+    };
+  }
+  return { ok: true, inputTokens, maxInputTokens };
+}
+```
+
+**Output format** (emit as structured tool response, not silent failure):
+```
+⚠️  Context budget: 198,432 / 200,000 tokens (99.2%)
+Remedies: run compress, drop unused entities, or break large pages.
+```
+
+**Source**: aider `base_coder.py:1396-1417` — `check_tokens()`  
+**Score**: 36 (severity=3, fit=4, effort=1) — closes Flaw #37
+
+---
+
+### Phase 0.11 Refinement — Chat History Budget: `max_input_tokens / 16` Heuristic
+
+When `compress` or any future `cortex chat` history management must decide how many message tokens to keep before summarizing, use this validated heuristic instead of a hardcoded constant:
+
+```typescript
+function deriveHistoryBudget(model: ModelInfo): number {
+  const maxInput = model.info.max_input_tokens ?? 0;
+  if (!maxInput) return 1024;
+  // Keep 1/16th of context window for history; clamp to [1024, 8192]
+  return Math.min(Math.max(Math.floor(maxInput / 16), 1024), 8192);
+}
+```
+
+**Why this works**: 200k-context models (Claude 3.7 Sonnet) → 12,500 tokens → capped at 8,192. 8k-context models → 500 tokens → floored at 1,024. The heuristic is validated across thousands of aider users. Apply in Phase 0.11 benchmark harness and Phase 22 chat session manager.
+
+**Source**: aider `models.py:357-358` — `Model.__init__`  
+**Score**: 30 (severity=2, fit=5, effort=1)
   - `cortex_find` and `build_context_pack` accept `--repo <owner/repo>` flag to query a cross-repo knowledge base.
   - Use case: "what does the auth service do?" without switching workspace.
 - Document: "commit `.knowledge/` to your repo; only gitignore `.knowledge/cache/`."
@@ -8951,6 +9042,36 @@ Introduce a deterministic clustering step that runs _before_ the LLM synthesis c
 
 ---
 
+### Phase 14 Refinement — FileWatcher AI-Comment Trigger Pattern (aider)
+
+For `cortex watch` (Phase 0.13/14 file watching daemon), adopt aider's regex pattern for detecting AI work requests embedded as code comments. Cross-language, editor-agnostic, zero-config trigger mechanism.
+
+**AI comment regex** (Python `#`, JS/TS `//`, SQL `--`, Lisp `;`):
+```typescript
+const AI_COMMENT_PATTERN = /(?:#|\/\/|--|;+) *(ai\b.*|.*\bai[?!]?) *$/im;
+
+function hasAiComment(fileContent: string): boolean {
+  return AI_COMMENT_PATTERN.test(fileContent);
+}
+```
+
+**Trigger action variants**:
+- `# ai` — open-ended request (the comment text IS the request)
+- `# ai!` — strong mode (auto-execute without confirmation)
+- `# ai?` — question mode (ask about the code without modifying)
+
+**Implementation rules** (from aider `watch.py:65-200`):
+1. Use `chokidar` (Node) or `watchfiles` (Python/Rust) for cross-platform file watching
+2. Load gitignore patterns via `pathspec` / `ignore` library — handles complex glob patterns correctly
+3. Skip files >1MB — prevents loading compiled assets or large data fixtures
+4. Deduplicate by file path before triggering — batch multiple rapid saves into one LLM call
+5. Filter by gitignore spec: build a combined spec from all `.gitignore` files in the repo + always-ignore list (`.aider*`, IDE dirs, temp files, binary extensions)
+
+**Source**: aider `watch.py:65-200` — `FileWatcher`  
+**Score**: 18 (severity=2, fit=3, effort=2)
+
+---
+
 ## 🕸️ Phase 14.1: Leiden Community Detection on the Knowledge Graph — ⏳ Planned
 
 **Layman's Terms**
@@ -11508,6 +11629,129 @@ function getDisplayIP(): string {
 Skip the heuristic when `process.env.DOCKER_HOST` or `process.env.KUBERNETES_SERVICE_HOST` is set — in those environments trust the bound address directly.
 
 **Source**: antigravity_phone_chat `server.js:81-103` — `getLocalIP()`
+
+---
+
+### Phase 22 Refinement — Prompt-Cache Warming Thread for Long-Lived Sessions
+
+When Phase 22 (`cortex server start`) or any future `cortex chat` command opens a long-lived Anthropic session, start a background cache-warming thread to prevent the 5-minute prompt cache TTL from expiring during user pauses.
+
+```typescript
+class CacheWarmer {
+  private interval: NodeJS.Timeout | null = null;
+  private warmingPingsLeft = 0;
+  private cacheableMessages: Message[] = [];
+
+  start(messages: Message[], pings = 4, intervalMs = 60_000) {
+    this.cacheableMessages = messages;  // stable prefix only (system + examples + repo)
+    this.warmingPingsLeft = pings;
+    this.interval = setInterval(async () => {
+      if (this.warmingPingsLeft <= 0) return;
+      this.warmingPingsLeft--;
+      try {
+        await litellm.completion({
+          model: currentModel,
+          messages: this.cacheableMessages,
+          max_tokens: 1,   // minimal cost — only need the cache header
+          stream: false,
+        });
+      } catch { /* cache warm is best-effort — ignore errors */ }
+    }, intervalMs);
+  }
+
+  stop() {
+    if (this.interval) clearInterval(this.interval);
+    this.interval = null;
+  }
+}
+```
+
+**Key rules** (from aider source):
+- Only send the **cacheable prefix** (system + few-shot examples + repo map / readonly files) — NOT the current turn or reminder. The volatile tail must not be cached.
+- 4 pings × 60s interval = 4-minute coverage → prevents expiry during a normal human pause
+- Gate the warmer behind an `okToWarmCache` boolean; set to `false` when handing off to a sub-coder to avoid double-pinging
+- Check `usage.prompt_cache_hit_tokens` in the ping response to confirm cache is alive; log in verbose mode
+
+**Source**: aider `base_coder.py:1357-1392` — `warm_cache_worker()`  
+**Score**: 45 (severity=3, fit=5, effort=1)
+
+---
+
+### Phase 22 Refinement — FinishReasonLength Prefill Continuation for Long Synthesis
+
+When a `save_synthesis` or entity generation call hits the model's output token limit (`finish_reason=length`), and the model supports `assistant_prefill`, chain responses rather than truncating:
+
+```typescript
+async function* sendWithContinuation(messages: Message[], model: ModelInfo): AsyncIterable<string> {
+  let accumulated = '';
+  let continueLoop = true;
+
+  while (continueLoop) {
+    continueLoop = false;
+    const response = await litellm.completion({ model: model.name, messages, stream: true });
+    for await (const chunk of response) {
+      const delta = chunk.choices[0]?.delta?.content ?? '';
+      accumulated += delta;
+      yield delta;
+    }
+    const finishReason = response.choices?.[0]?.finish_reason;
+    if (finishReason === 'length' && model.info.supports_assistant_prefill) {
+      // Append partial as assistant prefill and continue
+      messages = [...messages, { role: 'assistant', content: accumulated, prefix: true }];
+      continueLoop = true;
+      accumulated = '';
+    }
+  }
+}
+```
+
+**Gate**: only enable when `model.info.supports_assistant_prefill` is true (Claude Sonnet/Opus support this). The `prefix: true` field tells Anthropic not to add a trailing newline so the continuation is seamless.  
+**Source**: aider `base_coder.py:1492-1505` — FinishReasonLength handler  
+**Score**: 18 (severity=3, fit=3, effort=2)
+
+---
+
+### Phase 22 Refinement — Windows PowerShell vs CMD Parent-Process Detection
+
+When Phase 22's server or `cortex run` executes shell commands on Windows, detect the terminal type and wrap the command appropriately:
+
+```typescript
+import { execSync } from 'child_process';
+
+function getWindowsShell(): 'powershell' | 'cmd' | 'other' {
+  try {
+    // Walk parent process names via wmic
+    const out = execSync('wmic process where ProcessId=%PPID% get Name /value', {
+      encoding: 'utf8', timeout: 2000
+    }).toLowerCase();
+    if (out.includes('powershell')) return 'powershell';
+    if (out.includes('cmd.exe')) return 'cmd';
+  } catch { /* ignore */ }
+  return 'other';
+}
+
+function wrapForWindows(cmd: string, shell: ReturnType<typeof getWindowsShell>): string {
+  return shell === 'powershell' ? `powershell -Command "${cmd.replace(/"/g, '\\"')}"` : cmd;
+}
+```
+
+**Python reference** (for any Python subprocess callers in future CLI):
+```python
+import psutil
+def get_windows_parent_process_name():
+    current = psutil.Process()
+    while True:
+        parent = current.parent()
+        if parent is None: break
+        name = parent.name().lower()
+        if name in ['powershell.exe', 'cmd.exe']:
+            return name
+        current = parent
+    return None
+```
+
+**Source**: aider `run_cmd.py:26-38` — `get_windows_parent_process_name()`  
+**Score**: 24 (severity=2, fit=4, effort=1)
 
 ---
 

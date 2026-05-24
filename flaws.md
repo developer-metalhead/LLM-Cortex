@@ -1361,6 +1361,16 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 
 ---
 
+## 🔒 AIDER AUDIT — Lessons
+
+### 124. Third-party telemetry tokens hardcoded in source — anti-pattern for Phase 22+
+**Source-of-lesson**: aider `aider/analytics.py:55-56` — `mixpanel_project_token` and `posthog_project_api_key` constants hard-coded at module level in a public repo
+**Pattern**: Any analytics SDK project token committed to source is permanently discoverable — even if the account is later closed, the token remains in git history and enables unauthorized tracking by anyone with access to the repo. Aider uses UUID-prefix sampling (`is_uuid_in_percentage`) to limit collection to ~10% of users, but the tokens are still public.
+**Relevance to Cortex**: When Phase 22 (`cortex server start`) or any future Cortex feature adds telemetry: (1) all SDK project tokens MUST come from environment variables (`CORTEX_TELEMETRY_KEY`), never from committed constants; (2) telemetry must be 100% opt-in via explicit flag or `cortex.json` key — no silent collection; (3) no data leaves the machine in local-only mode regardless of opt-in status; (4) the `cortex server init` wizard must generate and write the env var, not hardcode a default.
+**Severity**: 2 (medium — future-phase concern; current Cortex has no telemetry)
+
+---
+
 ## 🔒 CODEGRAPH AUDIT — Lessons
 
 ### 123. Synchronous shell-out in PreToolUse hooks blocks the event loop
