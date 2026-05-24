@@ -20505,3 +20505,430 @@ function resolveProject(
 ```
 
 **Counter-case**: mcp-code-graph's multi-repo works because all state lives in the cloud — one API call, one `repoUrl` param. Cortex local multi-project requires separate `.knowledge/` loading, separate state.json, and LRU eviction (per the GitNexus pattern already in Phase 11 planning). This skeleton captures the config shape and disambiguation logic; the local loading complexity is the hard part.
+
+---
+
+### Phase 13.5 Refinement — Portable Identifier Normalization for cortex_find (CodeGraphContext audit, score: 48)
+
+**Closes:** Flaw #18 (`cortex_find` returns "No matches" instead of fuzzy suggestions)
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/code_finder.py:29-244`
+
+Min-of-raw-vs-normalized Levenshtein prevents style-inflation when matching camelCase identifiers against snake_case names. The normalized form strips `_` and spaces and lowercases, so `my_functon` vs `myFunction` is edit-distance 1 (a single typo) instead of 3 (underscore + case inflation).
+
+```typescript
+// src/search/fuzzy.ts
+
+function normalizeIdentifier(s: string): string {
+  return s.toLowerCase().replace(/[_\s]/g, '');
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a.length < b.length) return levenshtein(b, a);
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 0; i < a.length; i++) {
+    const curr = [i + 1];
+    for (let j = 0; j < b.length; j++) {
+      curr.push(Math.min(prev[j + 1] + 1, curr[j] + 1, prev[j] + (a[i] !== b[j] ? 1 : 0)));
+    }
+    prev = curr;
+  }
+  return prev[prev.length - 1];
+}
+
+export function fuzzyMatchIdentifiers(
+  query: string,
+  names: string[],
+  maxDist = 2,
+): Array<{ name: string; distance: number }> {
+  const qRaw = query.toLowerCase();
+  const qNorm = normalizeIdentifier(query);
+  const scored: Array<{ name: string; distance: number }> = [];
+  for (const name of names) {
+    const d = Math.min(levenshtein(qRaw, name.toLowerCase()), levenshtein(qNorm, normalizeIdentifier(name)));
+    if (d <= maxDist) scored.push({ name, distance: d });
+  }
+  return scored.sort((a, b) => a.distance - b.distance);
+}
+```
+
+**Wire into cortex_find:** Replace exact-match fallback with `fuzzyMatchIdentifiers(query, allEntityNames, 2)`. Return top-5 by distance when no exact match found.
+
+**Counter-case:** Normalized form loses word-boundary info — `setUser` and `userSet` normalize similarly. A trie or n-gram approach is more precise but 3× harder.
+
+---
+
+### Phase 0.13 Refinement — Generic Config File Node Indexing (CodeGraphContext audit, score: 45)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/graph_builder.py:73-80`
+
+Config and infrastructure files (`.toml`, `.yaml`, `Dockerfile`, `Makefile`, etc.) become minimal `File` nodes even without parser support. This lets the graph capture infrastructure relationships (a Python `open("config.toml")` → IMPORTS edge to the config node).
+
+```typescript
+// src/ingestion/parser-registry.ts
+
+const GENERIC_EXTENSIONS = new Set([
+  '.toml', '.sh', '.yaml', '.yml', '.json', '.ini', '.cfg', '.env',
+  '.bat', '.ps1', '.dockerignore', '.gitignore', '.md', '.txt',
+]);
+const GENERIC_FILENAMES = new Set(['Dockerfile', 'Makefile', 'docker-compose.yml']);
+
+export function isGenericFile(filePath: string): boolean {
+  const p = path.parse(filePath);
+  return GENERIC_EXTENSIONS.has(p.ext) || GENERIC_FILENAMES.has(p.base);
+}
+
+export function buildGenericFileNode(filePath: string, repoPath: string): FileNode {
+  return {
+    id: `file:${filePath}`,
+    path: filePath,
+    relativePath: path.relative(repoPath, filePath),
+    name: path.basename(filePath),
+    lang: 'generic',
+    isParsed: false,
+  };
+}
+```
+
+**Wire into ingest pipeline:** After language-parser dispatch in `ingest()`, check `isGenericFile(filePath)` for remaining files. Write these as `File` nodes with no `CONTAINS` children but proper `IMPORTS` edges when code files reference them.
+
+**Counter-case:** Creates noise nodes with no semantic content — a `.gitignore` File node with zero edges adds query overhead without signal. Gate behind `CORTEX_INDEX_GENERIC_FILES=true` (default: false) to opt in.
+
+---
+
+### Phase 7.8 Refinement — CGC_REPORT Generation Pattern (CodeGraphContext audit, score: 36)
+
+**Source-of-lesson:** CodeGraphContext `CGC_REPORT.md` + `src/codegraphcontext/tools/code_finder.py:135-162`
+
+Structured graph health report: god nodes (highest fan-in), cross-module links annotated with confidence labels (AMBIGUOUS marked explicitly), dead code candidates (entities with no inbound references), and a Cypher playbook with per-finding-type template queries.
+
+```typescript
+// src/tools/generate-graph-report.ts
+
+export interface GraphReport {
+  godNodes: Array<{ entity: string; inDegree: number }>;
+  crossModuleLinks: Array<{ from: string; to: string; confidence: string }>;
+  deadEntities: Array<{ entity: string; reason: string }>;
+  cypherPlaybook: Array<{ title: string; query: string }>;
+}
+
+export function generateGraphReport(db: GraphDB): GraphReport {
+  const godNodes = db.query(`
+    MATCH (e:Entity)<-[:RELATES_TO|WIRES_TO]-(other)
+    RETURN e.name AS entity, count(other) AS inDegree
+    ORDER BY inDegree DESC LIMIT 10
+  `);
+  const crossModuleLinks = db.query(`
+    MATCH (a:Entity)-[r:RELATES_TO]->(b:Entity)
+    WHERE a.sourceFile <> b.sourceFile
+    RETURN a.name AS from, b.name AS to,
+           coalesce(r.confidence, 'INFERRED') AS confidence
+    ORDER BY confidence LIMIT 20
+  `);
+  const deadEntities = db.query(`
+    MATCH (e:Entity)
+    WHERE NOT ()-[:RELATES_TO|WIRES_TO]->(e) AND NOT e.isEntryPoint
+    RETURN e.name AS entity, 'no_callers' AS reason LIMIT 20
+  `);
+  const cypherPlaybook = [
+    { title: 'Entities with most cross-module dependencies',
+      query: `MATCH (a)-[:RELATES_TO]->(b) WHERE a.sourceFile <> b.sourceFile RETURN a.name, count(*) ORDER BY count(*) DESC LIMIT 10` },
+    { title: 'Entities never referenced (dead knowledge?)',
+      query: `MATCH (e:Entity) WHERE NOT ()-[:RELATES_TO]->(e) RETURN e.name, e.sourceFile` },
+  ];
+  return { godNodes, crossModuleLinks, deadEntities, cypherPlaybook };
+}
+```
+
+**Wire into Phase 7.8:** Call `generateGraphReport(db)` from the `graph` MCP tool. Include report sections in `ARCH_GRAPH.md` output. Add a "Suggested Cypher" section per finding type.
+
+**Counter-case:** Cortex's graph is conceptual (entities/relationships), not structural (functions/CALLS). "God node" semantics differ — applies to most-referenced entity pages, not function fan-in. Phase 7.8 already plans Review Advisories; this refinement is an implementation template, not a new idea.
+
+---
+
+### Phase 1 Refinement — O(k) Incremental Watcher Update (CodeGraphContext audit, score: 32)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/core/watcher.py:188-295`
+
+When a file changes: (1) query callers/inheritors BEFORE deleting nodes; (2) DETACH DELETE changed file's nodes; (3) delete stale outgoing CALLS from callers; (4) re-parse only the affected subset; (5) re-link from DB-cached class lookup. O(k) where k = affected files, vs O(n) full re-index.
+
+```typescript
+// src/watcher/incremental-update.ts
+
+export async function incrementalFileUpdate(
+  db: GraphDB,
+  changedFilePath: string,
+  repoPath: string,
+  ingestor: FileIngestor,
+): Promise<void> {
+  const callerPaths = await db.query<string[]>(`
+    MATCH (caller:Function)-[:CALLS]->(fn:Function {path: $path})
+    RETURN DISTINCT caller.path AS callerPath
+  `, { path: changedFilePath });
+
+  const inheritorPaths = await db.query<string[]>(`
+    MATCH (cls:Class {path: $path})<-[:INHERITS]-(child:Class)
+    RETURN DISTINCT child.path AS childPath
+  `, { path: changedFilePath });
+
+  const affectedPaths = new Set([changedFilePath, ...callerPaths, ...inheritorPaths]);
+
+  await db.run(`MATCH (n {path: $path}) DETACH DELETE n`, { path: changedFilePath });
+
+  for (const callerPath of callerPaths) {
+    await db.run(`MATCH (caller:Function {path: $path})-[c:CALLS]->() DELETE c`, { path: callerPath });
+  }
+
+  const subsetData = await ingestor.parseFiles([...affectedPaths]);
+  const classLookup = await db.getRepoClassLookup(repoPath);
+  await ingestor.linkCalls(subsetData, classLookup);
+  await ingestor.linkInheritance(subsetData);
+}
+```
+
+**Wire into Phase 1's `FileWatcher`:** Replace `fullReIndex(repoPath)` in `on_modified` handler with `incrementalFileUpdate(...)`. Add 2s debounce per file path key to batch rapid saves.
+
+**Counter-case:** Cortex's "graph" is LLM synthesis of entities, not AST-derived CALLS edges. The O(k) optimization is most valuable when transitive structural edges are the bottleneck. If Phase 1 only re-ingests the changed file into LLM synthesis, there is less transitive link pressure.
+
+---
+
+### Phase 1 Refinement — Job ETA + Idempotency Guard (CodeGraphContext audit, score: 24)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/core/jobs.py:57-63, 106-121`
+
+`etaSeconds()`: throughput-based ETA from elapsed/processedFiles ratio. `findActiveJobByPath()`: idempotency guard — prevents launching duplicate indexing jobs for the same normalized path. `cleanupOldJobs(maxAgeHours)`: bounded memory growth, removes completed jobs older than 24h.
+
+```typescript
+// src/jobs/job-manager.ts
+
+export class JobManager {
+  private jobs = new Map<string, JobInfo>();
+
+  etaSeconds(job: JobInfo): number | null {
+    if (job.status !== 'running' || job.processedFiles === 0) return null;
+    const elapsed = (Date.now() - job.startTime.getTime()) / 1000;
+    return (elapsed / job.processedFiles) * (job.totalFiles - job.processedFiles);
+  }
+
+  findActiveJobByPath(path: string): JobInfo | null {
+    const resolved = normalizePath(path);
+    for (const job of this.jobs.values()) {
+      if (normalizePath(job.path) === resolved &&
+          (job.status === 'pending' || job.status === 'running')) {
+        return job;
+      }
+    }
+    return null;
+  }
+
+  cleanupOldJobs(maxAgeHours = 24): void {
+    const cutoff = Date.now() - maxAgeHours * 3600 * 1000;
+    for (const [id, job] of this.jobs) {
+      if (job.endTime && job.endTime.getTime() < cutoff) this.jobs.delete(id);
+    }
+  }
+}
+```
+
+**Counter-case:** Cortex operations are mostly LLM synthesis (seconds per file). ETA based on "files processed" may mislead if LLM latency is the bottleneck rather than file parse speed.
+
+---
+
+### Phase 0.3 Refinement — Language-Family Compatibility (CodeGraphContext audit, score: 24)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/indexing/resolution/calls.py:64-80`
+
+Prevents false-negative CALLS edges when a `.kt` function calls a `.java` function, or a `.ts` module calls a `.js` module. Companion to the existing Cross-Language Edge Gating refinement from the Graphify audit.
+
+```typescript
+// src/ingestion/language-compat.ts
+
+const LANGUAGE_FAMILIES: Set<string>[] = [
+  new Set(['java', 'kotlin']),
+  new Set(['c', 'cpp']),
+  new Set(['javascript', 'typescript']),
+];
+
+export function languagesAreCompatible(lang1: string | null, lang2: string | null): boolean {
+  if (!lang1 || !lang2) return true;
+  if (lang1 === lang2) return true;
+  return LANGUAGE_FAMILIES.some(family => family.has(lang1) && family.has(lang2));
+}
+```
+
+**Wire into Phase 0.3 Refinement (Cross-Language Edge Gating):** In `createCallEdge(caller, callee)`, call `languagesAreCompatible(caller.lang, callee.lang)` before writing the edge. Skip if incompatible.
+
+**Counter-case:** Phase 0.3 Refinement (Graphify) may already implement language-family compatibility. Verify before adding to avoid duplication.
+
+---
+
+### Phase 0.2 Refinement — Schema Contract as Frozen Set (CodeGraphContext audit, score: 24)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/indexing/schema_contract.py:1-70`
+
+`NODE_LABELS` and `RELATIONSHIP_TYPES` as frozen `Set`s with named merge-key constants. Any emitted label not in the set triggers a `console.warn` (not an error), allowing forward schema evolution while catching typos at runtime.
+
+```typescript
+// src/schema/contract.ts
+
+export const NODE_LABELS = new Set([
+  'Repository', 'Directory', 'File',
+  'Function', 'Class', 'Module', 'Variable',
+  'Interface', 'Trait', 'Struct', 'Enum', 'Union',
+  'Record', 'Property', 'Annotation', 'Parameter', 'Macro',
+] as const);
+
+export const RELATIONSHIP_TYPES = new Set([
+  'CONTAINS', 'CALLS', 'IMPORTS', 'INHERITS', 'IMPLEMENTS',
+  'HAS_PARAMETER', 'INCLUDES',
+] as const);
+
+export const MERGE_KEYS = {
+  Function:   ['name', 'path', 'lineNumber'] as const,
+  Class:      ['name', 'path', 'lineNumber'] as const,
+  File:       ['path'] as const,
+  Repository: ['path'] as const,
+} as const;
+
+export function assertKnownLabel(label: string): void {
+  if (!NODE_LABELS.has(label as any)) {
+    console.warn(`[schema-contract] Unknown node label emitted: "${label}". Add to NODE_LABELS if intentional.`);
+  }
+}
+```
+
+**Counter-case:** Cortex's schema is fluid — entities evolve via LLM synthesis. Freezing labels in a constant precludes dynamic evolution. Treat as a "known-safe" allowlist that warns but does not error on unknown labels.
+
+---
+
+### Phase 0.13 Refinement — Post-Resolution via Inheritance + Embeddings (CodeGraphContext audit, score: 24)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/indexing/resolution/post_resolution.py:1-206`
+
+After the initial CALLS graph is written, a second pass re-examines lowest-confidence edges (tiers 8/9). Uses the INHERITS graph to narrow candidates to one; falls back to ANN embedding similarity as a tiebreaker. Batches all re-resolution in a single UNWIND query to avoid N round-trips.
+
+```typescript
+// src/ingestion/post-resolution.ts
+
+export async function runInheritanceReresolve(
+  db: GraphDB,
+  repoPath: string,
+  vectorResolver?: VectorResolver,
+): Promise<number> {
+  const repoPrefix = repoPath.replace(/\/?$/, '/');
+
+  const lowConfidence = await db.query(`
+    MATCH (caller)-[c:CALLS]->(called)
+    WHERE (caller.path STARTS WITH $repoPrefix OR called.path STARTS WITH $repoPrefix)
+      AND c.resolutionTier IN [8, 9]
+    RETURN caller.name, caller.path, called.name AS calledName, c.lineNumber
+  `, { repoPrefix });
+
+  if (!lowConfidence.length) return 0;
+
+  const uniqueNames = [...new Set(lowConfidence.map(r => r.calledName).filter(Boolean))];
+  const implementations = await db.query(`
+    UNWIND $names AS name
+    MATCH (cls:Class)-[:CONTAINS]->(fn:Function {name: name})
+    WHERE fn.path STARTS WITH $repoPrefix
+    OPTIONAL MATCH (cls)-[:INHERITS]->(parent:Class)
+    RETURN fn.name AS queriedName, fn.path, cls.name, parent.name AS parentName
+  `, { names: uniqueNames, repoPrefix });
+
+  const nameToImpls = groupBy(implementations, r => r.queriedName);
+  const improvements: Array<{ callerPath: string; calledName: string; newCalledPath: string; confidence: number; tier: number }> = [];
+
+  for (const row of lowConfidence) {
+    const candidates = (nameToImpls[row.calledName] ?? []).filter(i => i.path !== row.callerPath);
+    if (!candidates.length) continue;
+    let bestPath: string | null = null;
+    let confidence = 0.78; let tier = 10;
+    if (candidates.length === 1) {
+      bestPath = candidates[0].path;
+    } else {
+      const pool = candidates.filter(c => c.parentName).length ? candidates.filter(c => c.parentName) : candidates;
+      if (pool.length === 1) { bestPath = pool[0].path; }
+      else if (vectorResolver) {
+        bestPath = await vectorResolver.resolve(row.calledName, null, pool.map(p => p.path), repoPath);
+        if (bestPath) { confidence = 0.82; tier = 11; }
+      }
+    }
+    if (bestPath) improvements.push({ callerPath: row.callerPath, calledName: row.calledName, newCalledPath: bestPath, confidence, tier });
+  }
+
+  if (improvements.length) {
+    await db.run(`
+      UNWIND $batch AS row
+      MATCH (caller {path: row.callerPath})-[old:CALLS {calledName: row.calledName}]->()
+        WHERE old.resolutionTier IN [8, 9]
+      DELETE old
+      WITH caller, row
+      MATCH (newCalled:Function {name: row.calledName, path: row.newCalledPath})
+      MERGE (caller)-[c:CALLS {calledName: row.calledName}]->(newCalled)
+      SET c.confidence = row.confidence, c.resolutionTier = row.tier
+    `, { batch: improvements });
+  }
+
+  return improvements.length;
+}
+```
+
+**Counter-case:** Requires Phase 0.13 structural CALLS graph to exist. Premature until multi-language parsers produce CALLS edges.
+
+---
+
+### Phase 0.13 Refinement — Spring DI + ORM Annotation Semantic Edges (CodeGraphContext audit, score: 24)
+
+**Source-of-lesson:** CodeGraphContext `src/codegraphcontext/tools/languages/java.py:238-241` (fully implemented — `_extract_spring_injections` and `_extract_orm_mappings` both called in production)
+**Confidence:** High (confirmed by direct file read)
+
+Two complementary annotation-driven edge types extracted entirely from Java/Kotlin source files — no live database connection required:
+
+1. **Spring DI edges**: `@Autowired`/`@Inject` → INJECTS; `@GetMapping`/`@PostMapping`/`@PutMapping`/`@DeleteMapping` → EXPOSES_ENDPOINT; `@Bean` → PROVIDES_BEAN
+2. **ORM annotation edges**: `@Entity`/`@Table` class annotations → MAPS_TO (data model tag); Spring Data derived query method names (`findByUserId`, `existsByEmail`) → QUERIES edge
+
+```typescript
+// src/ingestion/framework-edges.ts
+
+export function extractFrameworkEdges(parsedFile: ParsedFile): FrameworkEdge[] {
+  const edges: FrameworkEdge[] = [];
+
+  for (const cls of parsedFile.classes) {
+    // @Autowired / @Inject → INJECTS
+    for (const field of cls.fields ?? []) {
+      if (field.decorators?.some(d => ['Autowired', 'Inject'].includes(d))) {
+        edges.push({ type: 'INJECTS', from: cls.name, to: field.type, fromPath: parsedFile.path });
+      }
+    }
+
+    for (const method of cls.methods ?? []) {
+      // @GetMapping / @PostMapping / etc → EXPOSES_ENDPOINT
+      const endpointAnnotation = method.decorators?.find(d =>
+        ['GetMapping', 'PostMapping', 'PutMapping', 'DeleteMapping', 'RequestMapping'].includes(d)
+      );
+      if (endpointAnnotation) {
+        edges.push({ type: 'EXPOSES_ENDPOINT', from: cls.name, to: method.name, fromPath: parsedFile.path });
+      }
+      // @Bean → PROVIDES_BEAN
+      if (method.decorators?.includes('Bean')) {
+        edges.push({ type: 'PROVIDES_BEAN', from: cls.name, to: method.returnType ?? method.name, fromPath: parsedFile.path });
+      }
+      // Spring Data derived queries (findByXxx, existsByXxx) → QUERIES
+      if (/^(findBy|existsBy|countBy|deleteBy)/.test(method.name)) {
+        edges.push({ type: 'QUERIES', from: cls.name, to: method.name, fromPath: parsedFile.path });
+      }
+    }
+
+    // @Entity / @Table → data model node tag
+    if (cls.decorators?.some(d => ['Entity', 'Table'].includes(d))) {
+      edges.push({ type: 'MAPS_TO', from: cls.name, to: cls.name, fromPath: parsedFile.path, isOrmEntity: true });
+    }
+  }
+
+  return edges;
+}
+```
+
+**Wire into Phase 0.13 Java/Kotlin parser:** Call `extractFrameworkEdges(parsedFile)` after class extraction. Add `INJECTS`, `EXPOSES_ENDPOINT`, `PROVIDES_BEAN`, `QUERIES`, `MAPS_TO` to the schema contract's `RELATIONSHIP_TYPES` set (see Phase 0.2 Refinement — Schema Contract as Frozen Set above).
+
+**Counter-case:** Framework-specific edges lock the schema to Spring vocabulary. Equivalent extraction rules are needed for Django, Rails, Laravel, etc. — roughly 5× scope expansion. Mitigate by defining generic edge type names (`FRAMEWORK_INJECTS`, `EXPOSES_ENDPOINT`) and plugging in framework-specific extraction as optional language-parser extensions.

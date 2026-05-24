@@ -342,7 +342,7 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 18. `cortex_find` returns "No matches" instead of fuzzy suggestions
 **Repro:** `cortex_find("SoulEngine")` → `"No matches found."` — but `before_change("SoulEngine")` correctly responds with `Available entities: [list]`.
 **Impact:** the fuzzy/Levenshtein/RRF ranker promised by Phase 13.5 either isn't wired into `find` or is too strict. The "closest match suggestion" UX exists in one tool, missing in the obvious entry point.
-**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 0.9 Refinement — RRF K=60 Hybrid Search (score: 32) + Phase 13.5 Refinement — Bounded Damerau-Levenshtein + stem variant expansion (-ing/-tion/-ment/-ies/-er) (codegraph audit, E3, score: 48)
+**Addressed by**: Phase 13.5 — Fuzzy Levenshtein & RRF Search Ranker (done) + Phase 0.9 Refinement — RRF K=60 Hybrid Search (score: 32) + Phase 13.5 Refinement — Bounded Damerau-Levenshtein + stem variant expansion (-ing/-tion/-ment/-ies/-er) (codegraph audit, E3, score: 48) + New Phase Refinement — Portable camelCase/snake_case Normalization for cortex_find (CodeGraphContext audit, score: 48)
 
 ### 19. `cortex_soul_status` shows `"Soul Dirty: Yes"` immediately on cold start
 **Repro:** `cortex_soul_status` on a fresh server → `Memory Nodes: 0, Memory Edges: 0, Ledger Entries: 0, Profile Loaded: No, Soul Dirty: Yes`.
@@ -1489,3 +1489,27 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: CI modifies `package.json` in-place to change the package scope for GitHub Packages publishing. If the publish step fails mid-way, the runner's workspace has a different `package.json` than source control. Subsequent CI steps (e.g. `npm install`) may behave inconsistently. The mutation is invisible to reviewers — the committed file looks fine.
 **Relevance to Cortex**: Never mutate committed files in CI without an explicit `git restore <file>` at the end of the step. Use a separate publish-only `package.json` (`npm publish --workspace`), or pass the scope as a CLI flag (`npm publish --scope=@org`) if the registry supports it.
 **Severity**: 2 (MEDIUM — silent inconsistency between workspace and source; breaks reproducibility of CI steps that run after the mutation)
+
+---
+
+### 135. Placeholder stubs masquerading as planned functionality (`NotImplementedError` accumulation)
+**Source-of-lesson**: CodeGraphContext `src/codegraphcontext/tools/query_tool_languages/*.py` — 16 per-language toolkit files all raise `NotImplementedError` in their public API, yet are routed from `advanced_language_query_tool.py` in production
+**Pattern**: Stub files are committed to define the interface before implementation. Without a test that forces a real code path, the stubs accumulate and are routed from production code that can never succeed. Dead code disguised as planned functionality.
+**Relevance to Cortex**: Any Cortex phase that introduces stub modules with `throw new Error('Not implemented')` MUST include at minimum one end-to-end test that exercises the stub's code path and produces a non-error result. DoD for a phase that introduces a stub: at least one real code path through the stub must pass CI before the phase closes.
+**Severity**: 3 (HIGH — stubs silently routed from production code become invisible dead code; agents receive hallucinated success responses)
+
+---
+
+### 136. Test fixture undefined, silently not collected by CI
+**Source-of-lesson**: CodeGraphContext `tests/unit/languages/test_mixins.py` — test references a `graph` fixture that is never defined; not caught because the test is not collected in normal CI runs
+**Pattern**: A test is written referencing a fixture that was never defined or was renamed. Normal CI skips uncollected tests without error. The broken test sits dormant until someone runs the full suite explicitly, at which point it fails with a confusing fixture error, not a meaningful assertion failure.
+**Relevance to Cortex**: All Cortex test files must import their fixtures explicitly or use a centralized fixture registry that validates fixture references at test-discovery time. CI should run `vitest --reporter=verbose` and fail on any collected test with a missing import, not just assertion failures.
+**Severity**: 2 (MEDIUM — silent test gap; coverage appears healthy but a test code path is never exercised)
+
+---
+
+### 137. E2E test assertions commented out (false passes)
+**Source-of-lesson**: CodeGraphContext `tests/e2e/` — some E2E test assertions are commented out, producing tests that always pass without verifying behavior
+**Pattern**: Tests are written optimistically; when behavior changes the assertion is commented out instead of fixed or deleted. The test continues to run, reports "PASS", and provides false coverage signal. Harder to detect than a missing test because the test file looks populated.
+**Relevance to Cortex**: Never comment out assertions as a fix. If an assertion is wrong, either fix the assertion or delete the test. Add a lint rule that flags `// expect(` and `// assert(` patterns in `tests/` as a CI error.
+**Severity**: 3 (HIGH — produces false confidence; CI passes while behavior is untested)
