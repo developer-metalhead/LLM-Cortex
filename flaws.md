@@ -4,7 +4,7 @@ Hands-on audit. Every flaw below was reproduced live against this repo by exerci
 
 **Repo state at time of audit:** branch `phase13.8`, `lastSyncCommit=7d23277133db9e58c15d200743a1ecef3e148f8f`, 15 active entities, 7 concepts.
 
-**Total flaws catalogued: 141** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
+**Total flaws catalogued: 142** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
 **Total phases in implementation_plan.md: 189** — far more than any team can ship coherently.
 
 ---
@@ -265,7 +265,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 ### 4. `save_concept` has zero validation; no deletion API
 **Repro:** `save_concept({concept: {name: "FLAW_TEST_CONCEPT", description: "Inserting a junk concept"}})` → `"Concept 'FLAW_TEST_CONCEPT' saved to knowledge base."` Subsequent `cortex_find("FLAW_TEST_CONCEPT")` confirms it persisted.
 **Impact:** any agent (or prompt-injected text in a diff) can pollute the KB indefinitely. There is no `delete_concept` / `delete_entity` MCP tool — I had to surgically edit `state.json` to undo my test. Concept names aren't validated against a regex, source file existence isn't required, no provenance is recorded.
-**Addressed by**: Phase 0.2 — `validate.ts` Schema Gating & Referential Integrity
+**Addressed by**: Phase 0.2 — `validate.ts` Schema Gating & Referential Integrity; **also (deletion side)** AtomSpace audit E7 — DeleteLink deletion-by-insertion (score: 32): add `delete_entity` / `delete_concept` MCP tools using the DeleteLink pattern — deletion is triggered by presenting a deletion intent to the store, which handles cascading cleanup (state.json, index.md, entity file, typeIndex).
 
 ### 5. `lint` reports cycles as ERROR; `audit_quality` ignores them
 **Repro:** `lint` returned 3 `ERROR cycle` findings (`CortexDaemon → CortexWatcher → CortexDaemon` etc.). `audit_quality` ran immediately after and reported all 15 entities at quality `0.94`, `✅ All entities meet the quality gate (0.50)`.
@@ -1560,3 +1560,13 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Using compile-time / module-level constants for resource capacity limits (buffer sizes, registry sizes, cache capacities) that will grow over a project's lifetime. Changing the limit requires a code change rather than a config change; the limit is typically discovered only when a production system fails with an opaque error.
 **Relevance to Cortex**: Cross-reference flaw #109 (compaction thresholds `10MB`, `180 days` hardcoded). Any resource limit in Cortex — diff buffer cap, entity cache size, max entity count, history window — MUST be configurable via `cortex.json` or `CORTEX_*` env var with a documented safe default. The constant lives in `src/constants.ts` (flaw #139 pattern) and is overrideable at startup.
 **Severity**: 2 (MEDIUM — hits a silent wall under load; config change becomes a code-change; mirrors flaw #109)
+
+---
+
+## \U0001F512 ATOMSPACE AUDIT (PASS 2) — Anti-Pattern
+
+### 142. Thread-unsafe mutable flag deferred with “rare, so punt”
+**Source-of-lesson**: AtomSpace `opencog/atoms/flow/FilterLink.h:55` — `mutable bool _recursive_exec` is a per-instance flag used to guard against re-entrant execution, but it should be per-thread. The comment reads: "FIXME: this flag should be per-instance AND per-thread, so that multiple threads can run this instance without collision. But for now, this is rare, so punt."
+**Pattern**: Shared mutable state that is known to be thread-unsafe, acknowledged in a comment, and deliberately deferred because the concurrent case is considered rare. This is a debt that accumulates: "rare" becomes "common" as the system scales, the comment becomes invisible, and the race condition surfaces in production under load with no obvious cause.
+**Relevance to Cortex**: Any `mutable` / non-`readonly` field in a shared Cortex service class that carries a per-call sentinel (e.g., `_running`, `_locked`, `_dirty`) must be either (a) made per-call via a local variable, or (b) guarded by an explicit lock. Never defer with a comment. The fix is almost always making the flag a parameter rather than class state.
+**Severity**: 2 (MEDIUM — the race is deferred, not resolved; surfaces under concurrent load with no obvious stack trace)

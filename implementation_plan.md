@@ -24853,3 +24853,210 @@ class OperationStream {
 - Without Phase 22: streaming is best-effort via polling; a `stream: false` default keeps existing behavior unchanged.
 
 **Counter-case**: MCP protocol does not natively support streaming responses. Without Phase 22's server, this is just a polling wrapper around a background task — adds complexity for marginal UX improvement in CLI mode. Defer until Phase 22 is in-scope.
+
+---
+
+### Phase 4.1 — `delete_entity` / `delete_concept` MCP Tools — DeleteLink Pattern (AtomSpace audit pass 2, score: 32)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/constrain/DeleteLink.h` — "designed to delete any closed, grounded Atom that it wraps, when an attempt is made to put the DeleteLink into the AtomSpace." Deletion is triggered by *insertion* of a special marker — you never call a separate delete method; you present a deletion intent to the store.
+
+**Closes**: Flaw #4 (deletion side) — "There is no `delete_concept` / `delete_entity` MCP tool"
+
+**What**: Add `delete_entity` and `delete_concept` as first-class MCP tools. Pattern from DeleteLink: the store handles cascading cleanup atomically when a deletion intent is presented. The caller does not need to know about state.json, index.md, entity files, or typeIndex — those are all store internals.
+
+**Implementation**
+
+```typescript
+// src/tools/delete.ts
+
+export async function deleteEntity(params: { name: string }): Promise<DeleteResult> {
+  const entity = this.state.entities[params.name];
+  if (!entity) throw new EntityNotFoundError(params.name);
+
+  // "DeleteLink pattern": present a deletion intent; store handles cascading cleanup.
+  await this.store.delete({
+    type: "entity",
+    id: params.name,
+    cascade: [
+      () => delete this.state.entities[params.name],           // state.json
+      () => fs.unlink(entity.filePath),                        // entity .md file
+      () => this.typeIndex.remove(params.name, entity.type),   // typeIndex
+      () => this.removeFromIndex(params.name),                 // index.md
+      () => this.purgeDanglingRefs(params.name),               // orphan refs
+    ],
+  });
+
+  return { deleted: params.name, danglingRefsFixed: [] };
+}
+```
+
+**Definition of Done**
+
+- `delete_entity({ name: "FooService" })` removes the entity file, removes from state.json and index.md, removes from typeIndex, and returns a list of any other entities that referenced it (now orphaned).
+- Deleting a non-existent entity returns `NOT_FOUND`, not a silent success.
+- `delete_concept` follows the same pattern for concept entries.
+
+**Counter-case**: DeleteLink is an O(1) in-memory operation. Cortex's deletion cascades to disk (entity file, state.json, index.md) and must handle partial-failure recovery (e.g., file deleted but state.json not updated). Wrap the cascade in a transaction-like sequence with rollback on failure, or accept eventual consistency with a repair command (`cortex doctor --fix-orphans`).
+
+---
+
+### Phase 0.9.1 — DefineLink / TypedAtomLink Write-Once Immutable Field Binding (AtomSpace audit pass 2, score: 36)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/grant/UniqueLink.h` comments + `TypedAtomLink.h` — "any attempt to provide a different specification for an atom will throw an error." `TypedAtomLink` = globally unique, single type definition per atom; `DefineLink` = globally unique, immutable name binding. Both: first-write-wins, re-write throws.
+
+**Closes**: Flaw #4 (validation side extension) — prevents reclassification of immutable fields without explicit delete+recreate.
+
+**What**: Certain entity fields should be write-once after initial creation: `sourceFile` (the on-disk path), `type` (entity vs concept), and `id`. Changing these silently would corrupt the knowledge base. `save_entity` should detect changes to these fields and reject with a `VALIDATION_ERROR`, requiring `delete_entity` + `save_entity` for genuine reclassification.
+
+**Implementation**
+
+```typescript
+// src/knowledge/immutableFields.ts
+
+const IMMUTABLE_FIELDS: ReadonlySet<string> = new Set(["id", "sourceFile", "type"]);
+
+export function validateImmutability(
+  existing: Entity,
+  incoming: Partial<Entity>
+): void {
+  for (const field of IMMUTABLE_FIELDS) {
+    if (field in incoming && incoming[field] !== existing[field as keyof Entity]) {
+      throw new ValidationError(
+        `Field "${field}" is immutable after initial creation. ` +
+        `Current value: "${existing[field as keyof Entity]}". ` +
+        `To change it, delete the entity and recreate it.`
+      );
+    }
+  }
+}
+
+// In save_entity handler — run BEFORE writing:
+if (this.state.entities[incoming.id]) {
+  validateImmutability(this.state.entities[incoming.id], incoming);
+}
+```
+
+**Definition of Done**
+
+- Calling `save_entity` with a changed `sourceFile` on an existing entity returns `VALIDATION_ERROR` with a clear message.
+- Calling `save_entity` with a changed `type` (entity → concept) returns `VALIDATION_ERROR`.
+- Changing mutable fields (description, relationships, quality) succeeds as before.
+- Unit test: create entity, attempt to mutate each immutable field, verify error.
+
+**Counter-case**: Knowledge bases should be correctable. A user who accidentally ingested an entity with the wrong `sourceFile` cannot fix it without deleting and recreating. Mitigate by making the error message explicit: "To change `sourceFile`, call `delete_entity` then `save_entity`." The friction is intentional — reclassification is a structural change, not an update.
+
+---
+
+### Phase 0.5.1 — GrantLink First-Come-First-Served In-Process Operation Lock (AtomSpace audit pass 2, score: 18)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/grant/GrantLink.h` — "thread-safe, mutually-exclusive, atomic, first-come-first-serve relationships between pairs of Atoms. Once a name has been granted, it cannot be re-used. Attempts to create a second GrantLink of the same name will simply return the first. No errors are thrown."
+
+**Closes**: No existing flaw; prevents concurrent `ingest` / `compress` calls within the same process.
+
+**What**: Long-running MCP tools (`ingest`, `compress`, `save_synthesis`) must not run concurrently — the second call would read stale in-flight state. A GrantLink-style first-come-first-served lock: the first caller claims the token; subsequent callers see the claimed token and return early with "operation already in progress."
+
+**Implementation**
+
+```typescript
+// src/knowledge/OperationLock.ts
+
+class OperationLock {
+  // GrantLink analogue: Map from opName → claimant sessionId.
+  // First insert wins; Map.get returns the winner.
+  private grants = new Map<string, string>();
+
+  /** Returns true if this caller won the grant; false if already claimed. */
+  tryGrant(opName: string, sessionId: string): boolean {
+    if (this.grants.has(opName)) return false; // first GrantLink already exists
+    this.grants.set(opName, sessionId);
+    return true;
+  }
+
+  release(opName: string, sessionId: string): void {
+    if (this.grants.get(opName) === sessionId) {
+      this.grants.delete(opName);
+    }
+  }
+
+  getHolder(opName: string): string | undefined {
+    return this.grants.get(opName);
+  }
+}
+
+// In ingest handler:
+// if (!opLock.tryGrant("ingest", sessionId)) {
+//   throw new ConflictError(`ingest already in progress (session: ${opLock.getHolder("ingest")})`);
+// }
+// try { ... } finally { opLock.release("ingest", sessionId); }
+```
+
+**Definition of Done**
+
+- Two concurrent `ingest` calls: first proceeds, second returns `CONFLICT: ingest already in progress`.
+- If the first `ingest` crashes without releasing the lock, a subsequent call after the process restarts succeeds (grant map is in-memory only; clears on restart).
+- Unit test: two concurrent `ingest` calls on the same `KnowledgeManager` instance; verify only one executes.
+
+**Counter-case**: Phase 0.5 addresses *process-level* locking via OS-native file locks (fcntl). This addresses *within-process* concurrency (two MCP calls in the same process). For a single-process CLI server, the two layers overlap; for Phase 22 (multi-tenant server), both layers are needed. This phase only makes sense alongside or after Phase 0.5.
+
+---
+
+### Phase 2.1 — Reverse-Reference Index + `incomingSet` Query for `impact_analysis` (AtomSpace audit, IncomingOfLink, score: 32)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/flow/IncomingOfLink.h` — returns a `LinkValue` (list) of the incoming set of a given atom, optionally filtered by type. Example: `IncomingOfLink(Predicate "foo", TypeNode 'EvaluationLink)` returns all `EvaluationLink` atoms that contain `"foo"`. The key: the reverse index is not just an internal data structure — it is a **first-class query operation** composable with other patterns.
+
+**Closes**: G2 (open question "does `impact_analysis` need a reverse-reference index?") — yes, and with type filtering.
+
+**What**: `impact_analysis` currently traverses all entities forward (scan every entity, check if it references the target). A reverse-reference index — `Map<entityId, Set<entityId>>` maintained on every `save_entity` write — makes blast-radius lookup O(1). Expose it as `incomingSet(entityId, type?)` so `impact_analysis` can also answer "which entities of type concept reference this entity" in a single call.
+
+**Implementation**
+
+```typescript
+// src/knowledge/ReverseIndex.ts
+
+export class ReverseIndex {
+  // incomingSet[target] = Set of entityIds that reference target
+  private index = new Map<string, Set<string>>();
+
+  onSave(entity: Entity): void {
+    // Remove old reverse edges for this entity (stale refs)
+    for (const [, set] of this.index) set.delete(entity.id);
+
+    // Add new reverse edges from this entity's relationships
+    for (const rel of entity.relationships ?? []) {
+      if (!this.index.has(rel.target)) this.index.set(rel.target, new Set());
+      this.index.get(rel.target)!.add(entity.id);
+    }
+  }
+
+  onDelete(entityId: string): void {
+    this.index.delete(entityId);
+    for (const [, set] of this.index) set.delete(entityId);
+  }
+
+  /** IncomingOfLink analogue — optionally filter by entity type */
+  incomingSet(targetId: string, type?: string): ReadonlySet<string> {
+    const all = this.index.get(targetId) ?? new Set<string>();
+    if (!type) return all;
+    return new Set([...all].filter(id => this.entityType(id) === type));
+  }
+}
+```
+
+Wire into `impact_analysis`:
+```typescript
+// Before: O(n) full scan
+// After: O(1) index lookup
+const dependents = reverseIndex.incomingSet(params.entity);
+if (dependents.size === 0) return "No dependents found. Safe to refactor.";
+```
+
+**Definition of Done**
+
+- `impact_analysis("AuthService")` returns its dependents without a full entity scan.
+- `reverseIndex.incomingSet("AuthService", "concept")` returns only concept-type dependents.
+- Index stays consistent across `save_entity`, `delete_entity`, and server restart (rebuild from state.json on init).
+- Unit test: add 50 entities with cross-references, verify `incomingSet` returns exact set.
+
+**Counter-case**: Cortex's KB is small (<200 entities); O(n) scan completes in <1ms — the performance gain is invisible at current scale. The real value is correctness: the forward scan can miss references embedded in relationship arrays that aren't the primary `sourceFile` pointer. The reverse index is the authoritative answer to "who depends on X."
+
+**Also resolves G1**: Integer type codes (NameServer pattern) only pay off at >1000 distinct types. Cortex has ~5 (`entity`, `concept`, `synthesis`, `flaw`, `phase`). String types are correct at this scale. No action on G1.
