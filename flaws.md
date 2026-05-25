@@ -4,7 +4,7 @@ Hands-on audit. Every flaw below was reproduced live against this repo by exerci
 
 **Repo state at time of audit:** branch `phase13.8`, `lastSyncCommit=7d23277133db9e58c15d200743a1ecef3e148f8f`, 15 active entities, 7 concepts.
 
-**Total flaws catalogued: 117** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
+**Total flaws catalogued: 141** across security, correctness, data integrity, hidden runtime, missing features, and architectural debt.
 **Total phases in implementation_plan.md: 189** — far more than any team can ship coherently.
 
 ---
@@ -337,6 +337,7 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 16. `lastSyncCommit` becomes a dangling reference after force-push / branch reset
 **Repro:** `get_cortex_status` returns `lastSyncCommit: 7d23277133db9e58c15d200743a1ecef3e148f8f`. `git log --oneline` doesn't show it. `git cat-file -t` confirms it exists in the reflog but is unreachable from any branch tip.
 **Impact:** the diff-against-orphaned-commit path is the exact path that triggers flaw #1. Cortex never detects orphan commits — should validate `lastSyncCommit` is reachable from `HEAD` on every status check and self-heal.
+**Addressed by**: AtomSpace audit E2 — StateLink atomic singleton state (score: 32): store `lastSyncCommit` in a singleton slot that validates reachability before write; stale references become impossible because the slot is updated atomically and the write guard rejects unreachable SHAs.
 
 ### 17. Onboarding tour rationales are identical templates
 **Repro:** `cortex_onboard({audience: "junior", depth: "quick"})` — every entity stop reads `"Tour Rationale: Primary active functional entity forming the cornerstone of this module."` Every concept stop reads `"Core architectural abstraction governing system-wide standards and operations."`
@@ -350,7 +351,7 @@ Four unsolicited files dropped from normal "read" operations. Should be opt-in v
 ### 19. `cortex_soul_status` shows `"Soul Dirty: Yes"` immediately on cold start
 **Repro:** `cortex_soul_status` on a fresh server → `Memory Nodes: 0, Memory Edges: 0, Ledger Entries: 0, Profile Loaded: No, Soul Dirty: Yes`.
 **Impact:** the dirty flag is true without an actual mutation. Combined with the audit finding that nothing flushes on SIGINT/SIGTERM, this means the dirty bit lies in both directions.
-**Addressed by**: Phase 0.5 — OS-Native File Locking (`fcntl` / Named Mutex)
+**Addressed by**: Phase 0.5 — OS-Native File Locking (`fcntl` / Named Mutex); **also** AtomSpace audit E2 — StateLink atomic singleton state (score: 32): initialize `soulDirty` in a defined singleton slot at server startup so cold-start reads always return `false` rather than `undefined` coerced to truthy.
 
 ### 20. Brevity stats footer only appears when brevity ≠ `off`
 **Repro:** default brevity → no `📉 Cortex Brevity Stats` footer ever appears in any tool response. `configure_brevity({level: "ultra"})` → footer appears on next call.
@@ -531,6 +532,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 44. `compress` modifies files in place with no dry-run
 **Repro:** `compress({path: ".knowledge"})` would in-place edit every entity/concept markdown file. No `--dry-run`, no preview, no backup.
 **Impact:** one wrong invocation could destroy the wiki. Should default to dry-run-with-diff and require `apply: true` to commit.
+**Addressed by**: AtomSpace audit E3 — Transient COW Knowledge Frame (score: 24): compress runs in a shallow in-memory clone of the entity map (COW child); mutations are invisible to disk until `apply: true` is passed; the default `dry_run=true` mode collects and returns a diff then discards the frame.
 
 ### 45. No batch reads
 **Repro:** to read 5 entities I need 5 sequential `read_entity` calls. The MCP protocol supports batching but Cortex doesn't expose `read_entities({names: [...]})` or `read_many`.
@@ -540,6 +542,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 46. `source` calls aren't parallelizable in the same turn
 **Repro:** the `source` tool mutates cache state on every call. If I issue two `source` calls in parallel in one assistant turn, they race on the cache and may both return "full" (no compression) or both invalidate each other's skeletons.
 **Impact:** I had to serialize `source` reads, doubling latency on multi-file inspections.
+**Addressed by**: AtomSpace audit E6 — EvaluatorPool thread-local resource pool (score: 18): add a `thread_local Map<string, CacheEntry>` as a hot read-layer in the source cache, keyed by `(entityId, version)`; parallel calls get isolated read paths and fall through to the shared cache with a lock only on miss. Note: this is a partial fix — the root cause (shared write-path idempotency) still needs to be addressed for full parallelism.
 
 ### 47. Mutating tools have no audit trail
 **Repro:** `save_concept`, `configure_brevity`, `configure_safeguards`, `compress` all mutate state. None record who called them, when, or what changed.
@@ -982,6 +985,7 @@ No env var, no `cortex.json` option, no MCP tool to adjust.
 ### 113. The "Failed Approaches" mechanism is documented in the schema but no entity uses it
 **Repro:** `cat .knowledge/state.json | jq` shows every entity has a `relationships` array, but **no entity has a `failedApproaches` field populated**, despite the schema supporting it and the Librarian prompt explicitly asking for "detective work" to record deletion-of-significant-patterns.
 **Impact:** the most architecturally interesting feature — recording *why* a previous approach was abandoned — isn't being produced by the Librarian. Either the prompt isn't firing the heuristic, or the synthesis output schema isn't capturing it. Either way, the "remember mistakes" pitch is unfulfilled today.
+**Addressed by**: AtomSpace audit E4 — Active Architecture Design-Notes pattern (score: 24): create `design-notes/` directory with committed `.md` files for each major design debate (capturing why approaches were abandoned); update the Librarian synthesis prompt to populate `failedApproaches` by referencing these documents. The design docs are the canonical source; the entity field is the queryable index.
 
 ### 114. No `cortex setup --dry-run` to see what files will be written
 **Repro:** `cortex setup claude-code` writes `.claude/settings.json`, `.claude/hooks/*.js`, `.claude/commands/*.md`, `.agents/workflows/*.md`, modifies `.gitignore`, possibly creates `.knowledge/`. No way to preview before running.
@@ -1538,3 +1542,21 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Fix**: Create `src/constants.ts` as the single source of truth for all shared constants. Add `scripts/check-constants.ts` — a CI grep check that fails if any guarded constant name is defined outside `constants.ts`. Add `npm run check:constants` to the CI lint step (Phase 0.17) and to the husky pre-commit hook. This is LLM-agnostic: Claude, Codex, Gemini, or a human contributor all hit the same CI gate. The CLAUDE.md rule is a soft layer for Claude Code specifically; the CI check is the hard structural layer.
 **Addressed by**: Phase 0.17 Refinement — Shared-constants enforcement via `src/constants.ts` + `scripts/check-constants.ts` CI grep gate (helpline audit, flaw #139)
 **Severity**: 2 (MEDIUM — silent correctness drift; no runtime error; discovered only when behavior between modules diverges unexpectedly)
+
+---
+
+## \U0001F512 ATOMSPACE AUDIT — Anti-Patterns
+
+### 140. Reader-Writer Mutex Anti-Pattern — slower in both contention and no-contention cases
+**Source-of-lesson**: AtomSpace `opencog/atoms/atom_types/NameServer.h:62–70` — documented failure: "reader-writer mutexes cause cache-line ping-ponging when there is contention, effectively serializing access, and are just plain slower when there is no contention. Thus, the current implementations seem to be a lose-lose proposition." NameServer switched to plain `std::mutex`.
+**Pattern**: Adding a `ReadWriteLock` / `RWMutex` to a shared cache on the assumption that "many readers, few writers" justifies the overhead. On modern CPUs the shared-state bookkeeping required by RW mutexes creates cache-line coherence traffic that (a) serializes readers under contention and (b) adds overhead even with zero contention. The benefit over a plain mutex only materializes for reader operations that are provably long (>1ms) AND the reader-to-writer ratio is >10:1 measured under realistic load — not assumed.
+**Relevance to Cortex**: If flaw #46 (`source` parallelism) or any future shared-cache fix introduces concurrency primitives, benchmark plain `Mutex` first. Only graduate to `ReadWriteLock` if profiling under realistic concurrent load shows it is faster — not by assumption.
+**Severity**: 2 (MEDIUM — incorrect locking abstraction degrades performance vs plain mutex; no correctness impact)
+
+---
+
+### 141. Hardcoded Resource Capacity Limits
+**Source-of-lesson**: AtomSpace `opencog/atoms/atom_types/NameServer.cc:29` — `MAX_NUM_VALUE = 64` compile-time constant caps the number of registered atom types. Exceeding the limit requires changing source and recompiling; no runtime error is surfaced until the limit is hit silently.
+**Pattern**: Using compile-time / module-level constants for resource capacity limits (buffer sizes, registry sizes, cache capacities) that will grow over a project's lifetime. Changing the limit requires a code change rather than a config change; the limit is typically discovered only when a production system fails with an opaque error.
+**Relevance to Cortex**: Cross-reference flaw #109 (compaction thresholds `10MB`, `180 days` hardcoded). Any resource limit in Cortex — diff buffer cap, entity cache size, max entity count, history window — MUST be configurable via `cortex.json` or `CORTEX_*` env var with a documented safe default. The constant lives in `src/constants.ts` (flaw #139 pattern) and is overrideable at startup.
+**Severity**: 2 (MEDIUM — hits a silent wall under load; config change becomes a code-change; mirrors flaw #109)

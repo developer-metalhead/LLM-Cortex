@@ -24636,3 +24636,220 @@ function wrapTool<T>(fn: () => Promise<T>): () => Promise<McpToolResult> {
 ```
 
 **Counter-case**: Adding `isError: true` to MCP responses means the calling agent sees a tool failure rather than a text response. Some agents treat tool failures as conversation-stoppers rather than recoverable conditions. Emit `isError: true` only for `NOT_FOUND` and `VALIDATION` (recoverable); use `isError: false` with a `[INTERNAL]` prefix for `500`-class errors so the agent can decide whether to retry.
+
+---
+
+## 🔬 ATOMSPACE AUDIT — New Phases (2026-05-25)
+
+---
+
+### Phase 0.7.1 — Tool Registration Idempotency Guard (AtomSpace audit, score: 24)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/atom_types/NameServer.cc` — `beginTypeDecls()` checks `_loaded_modules` set before registering types; prevents double-registration when a library is loaded from both the build directory and the system install path.
+
+**Closes**: No existing flaw, but prevents a silent overwrite that is hard to diagnose.
+
+**What**: When the MCP server registers tools (in dev mode, hot-reload, or if a plugin is required from two different paths), a duplicate registration silently overwrites the first handler with no warning. The last-write-wins behavior means the registration order determines which handler is active — non-deterministic and invisible.
+
+**Implementation**
+
+```typescript
+// src/server.ts — wrap tool registration in a dedup guard
+const _registeredTools = new Set<string>();
+
+function registerTool(name: string, schema: ToolSchema, handler: ToolHandler): void {
+  if (_registeredTools.has(name)) {
+    console.warn(`[ODR] Tool "${name}" already registered — skipping duplicate.`);
+    return;
+  }
+  _registeredTools.add(name);
+  server.setRequestHandler(/* ... */ handler);
+}
+```
+
+**Definition of Done**
+
+- Registering the same tool name twice in a test logs a `[ODR]` warning and calls the handler only once.
+- Hot-reload in dev mode does not produce duplicate tool registrations.
+
+**Counter-case**: MCP servers typically restart fully on hot-reload; double-registration may never occur in practice. The guard adds 1 line of overhead per registration call. Acceptable.
+
+---
+
+### Phase 13.5.3 — TypeIndex for Entity Category Queries (AtomSpace audit, score: 24)
+
+**Source-of-lesson**: AtomSpace `opencog/atomspace/TypeIndex.h` — `std::vector<AtomSet>` indexed by `Type` integer; each `AtomSet` is an `unordered_set<Handle>` + `shared_mutex`. Enables O(1) "all atoms of type X" without full graph traversal. Benchmark note: use `std::unordered_set` (Folly F14 caused intermittent race conditions in AtomSpace's pattern matcher).
+
+**Closes**: No existing flaw; fills a performance gap in `cortex_find` type-filtered queries.
+
+**What**: `cortex_find` with a type filter (e.g., "show all concepts", "show all entities by type") currently performs a linear scan over all KB entries. A type index — `Map<string, Set<string>>` maintained on every write — makes these queries O(1).
+
+**Implementation**
+
+```typescript
+// src/knowledge/TypeIndex.ts
+
+export class TypeIndex {
+  private index = new Map<string, Set<string>>();
+
+  add(entityId: string, type: string): void {
+    if (!this.index.has(type)) this.index.set(type, new Set());
+    this.index.get(type)!.add(entityId);
+  }
+
+  remove(entityId: string, type: string): void {
+    this.index.get(type)?.delete(entityId);
+  }
+
+  /** O(1) lookup — replaces O(n) filtered scan in cortex_find */
+  getAll(type: string): ReadonlySet<string> {
+    return this.index.get(type) ?? new Set();
+  }
+}
+```
+
+Wire into `KnowledgeManager`: call `typeIndex.add(entity.id, entity.type)` on every `saveEntity` / `saveConcept`, and `typeIndex.remove` on delete. Initialize on server start by iterating `state.json` once.
+
+**Definition of Done**
+
+- `cortex_find({ type: "concept" })` returns the correct set without reading every entity.
+- Unit test: add 100 entities of mixed types, query each type, verify O(1) path (no full-scan calls).
+
+**Counter-case**: Cortex's KB is typically <200 entities; O(n) scan completes in <1ms. Type index adds write overhead and a second data structure to keep consistent. Premature optimization unless performance is already a complaint or corpus grows to >10k entities (Phase 33.5 territory).
+
+---
+
+### Phase 13.5.4 — Selectivity-First ("Thinnest Term") Search Ordering (AtomSpace audit, score: 18)
+
+**Source-of-lesson**: AtomSpace `opencog/query/README.md` — Pattern Engine starts every search from the constant with the smallest incoming set (most selective node). This prunes the search space maximally early — the same insight behind SQL query planners and Datalog magic sets. Quote: "In typical datasets most typical queries run in milliseconds" precisely because real-world graphs follow power-law distributions.
+
+**Closes**: No existing flaw; improves multi-term `cortex_find` latency.
+
+**What**: For multi-term `cortex_find` queries, order clause evaluation by selectivity (rarest term first) rather than input order. The first term produces the smallest candidate set; subsequent terms filter it. Selectivity estimate: term document frequency from the existing fuzzy index.
+
+**Implementation**
+
+```typescript
+// src/search/query-planner.ts
+
+interface TermPlan {
+  term: string;
+  docFreq: number;   // lower = more selective
+}
+
+function orderBySelectivity(terms: string[], index: FuzzyIndex): TermPlan[] {
+  return terms
+    .map(term => ({ term, docFreq: index.documentFrequency(term) }))
+    .sort((a, b) => a.docFreq - b.docFreq); // most selective first
+}
+
+// In cortex_find handler:
+// const ordered = orderBySelectivity(queryTerms, fuzzyIndex);
+// const candidates = intersect(ordered.map(p => fuzzyIndex.query(p.term)));
+```
+
+**Definition of Done**
+
+- A 3-term query produces the same results regardless of input order.
+- Benchmark: 3-term query on a 500-entity corpus completes faster when the rare term is first than when the common term is first (even if the absolute difference is <1ms, document the result).
+
+**Counter-case**: Cortex's corpus is small; multi-term search completes in <5ms regardless of order. Selectivity ordering adds a planning step for marginal latency savings. More relevant after Phase 33.5 (SQLite FTS5) where the planner can pass selectivity hints to the query engine.
+
+---
+
+### Phase 14.4 — Computed Entity Properties (AtomSpace audit, score: 18)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/value/FutureStream.h` — `FutureStream` stores a `_formula` (HandleSeq of executable atoms) and a `_scratch` AtomSpace. `update()` executes the formula in the scratch space each time the value is queried; results never touch the base AtomSpace. Lazy — no computation until tapped.
+
+**Closes**: No existing flaw; makes quality scores and derived stats always current without explicit refresh.
+
+**What**: Add a `computedProperties` field to the entity schema. Each entry specifies a formula and its inputs. `read_entity` executes the formula against the current entity state at read time. Results are never written to disk and cannot go stale.
+
+**Implementation**
+
+```typescript
+// Entity schema addition (not persisted):
+interface ComputedProperty {
+  name: string;
+  formula: "qualityScore" | "dependentCount" | "lastModifiedDelta" | string;
+  inputs: string[];  // field names from the entity
+}
+
+// src/knowledge/computedProperties.ts
+const FORMULAS: Record<string, (inputs: Record<string, unknown>) => unknown> = {
+  qualityScore: ({ evidenceCount, recency, linkDensity }) =>
+    weightedAverage(evidenceCount as number, recency as number, linkDensity as number),
+  dependentCount: ({ entityId }, ctx) =>
+    ctx.typeIndex.getAll("entity").size, // placeholder
+};
+
+export function evaluateComputed(entity: Entity, ctx: QueryContext): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const prop of entity.computedProperties ?? []) {
+    const fn = FORMULAS[prop.formula];
+    if (fn) result[prop.name] = fn(pick(entity, prop.inputs), ctx);
+  }
+  return result;
+}
+```
+
+**Definition of Done**
+
+- `read_entity` response includes computed fields without a stale-read risk.
+- Adding a new formula requires only updating `FORMULAS` — no schema migration.
+
+**Counter-case**: Quality scores are already recomputed on read by `get_entity_quality`. A generic formula system adds complexity without immediate payoff. Implement only when a second computed property is needed (Phase 14 community detection may provide `communityId` as a natural computed property).
+
+---
+
+### Phase 22.2 — Streaming Results for Long-Running Operations (AtomSpace audit, score: 12)
+
+**Source-of-lesson**: AtomSpace `opencog/atoms/value/QueueValue.h` — thread-safe FIFO with `open()` / `close()` / `add()` / `remove()` lifecycle. Producer-consumer API where the queue is "open" while the producer runs and "closed" when it finishes. Consumers call `remove()` which blocks until an item is available or the queue is closed.
+
+**Closes**: No existing flaw; eliminates synchronous blocking for `ingest`, `compress`, and synthesis calls on large codebases.
+
+**What**: Long-running MCP tools (`ingest`, `compress`, `save_synthesis`) return a `streamId` immediately. The caller polls `stream_read(streamId)` for progress events. The stream is "open" while the operation runs; each progress event is a JSON object with `{ type, message, percent, entityId? }`. The stream closes on completion or error.
+
+**Implementation sketch** (requires Phase 22 central server for full SSE support; can be approximated with polling in CLI mode):
+
+```typescript
+// src/tools/streaming.ts
+
+type StreamEvent =
+  | { type: "progress"; message: string; percent: number }
+  | { type: "entity_processed"; entityId: string }
+  | { type: "done"; summary: string }
+  | { type: "error"; message: string };
+
+class OperationStream {
+  private queue: StreamEvent[] = [];
+  private closed = false;
+  readonly id: string;
+
+  constructor() { this.id = crypto.randomUUID(); }
+
+  push(event: StreamEvent): void {
+    if (this.closed) return;
+    this.queue.push(event);
+  }
+
+  close(): void { this.closed = true; }
+
+  drain(): StreamEvent[] {
+    const events = [...this.queue];
+    this.queue = [];
+    return events;
+  }
+
+  get isDone(): boolean { return this.closed && this.queue.length === 0; }
+}
+```
+
+**Definition of Done**
+
+- `ingest({ stream: true })` returns `{ streamId: "uuid" }` immediately.
+- Polling `stream_read({ streamId })` returns accumulated progress events.
+- When ingest finishes, the final poll returns `[{ type: "done", summary: "..." }]`.
+- Without Phase 22: streaming is best-effort via polling; a `stream: false` default keeps existing behavior unchanged.
+
+**Counter-case**: MCP protocol does not natively support streaming responses. Without Phase 22's server, this is just a polling wrapper around a background task — adds complexity for marginal UX improvement in CLI mode. Defer until Phase 22 is in-scope.
