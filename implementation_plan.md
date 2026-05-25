@@ -25060,3 +25060,2390 @@ if (dependents.size === 0) return "No dependents found. Safe to refactor.";
 **Counter-case**: Cortex's KB is small (<200 entities); O(n) scan completes in <1ms — the performance gain is invisible at current scale. The real value is correctness: the forward scan can miss references embedded in relationship arrays that aren't the primary `sourceFile` pointer. The reverse index is the authoritative answer to "who depends on X."
 
 **Also resolves G1**: Integer type codes (NameServer pattern) only pay off at >1000 distinct types. Cortex has ~5 (`entity`, `concept`, `synthesis`, `flaw`, `phase`). String types are correct at this scale. No action on G1.
+
+---
+
+## Linux Kernel Audit Refinements (2026-05-25)
+
+*Source: `/steal` audit of Linux kernel commit `eed108ed` (fs/, kernel/, mm/, include/, Documentation/). All items below cite a kernel analogue. Skeletons in `steal-integration-Linux-2026-05-25.md`.*
+
+---
+
+### Phase 0.11 Refinement — compaction_pressure Tunable in cortex.json — closes Flaw #109 (Linux kernel audit, score: 36)
+
+**Kernel analogue**: `sysctl_vfs_cache_pressure = 100` in `fs/dcache.c:76`; `vfs_pressure_ratio()` computes `effective = base × 100 / pressure`.
+
+**Problem**: `COMPACTION_THRESHOLD_BYTES` (10 MB) and the 180-day age gate in `src/knowledge/experience.ts` are hardcoded. Users with large knowledge bases or fast-moving projects have no way to tune compaction aggressiveness without editing source.
+
+**Change**:
+1. Add `compaction_pressure: number` (default `100`, range `1–1000`) to `cortex.json` schema.
+2. Replace hardcoded constants in `experience.ts` with:
+
+```typescript
+function getEffectiveThreshold(config: CortexConfig): { bytes: number; maxAgeMs: number } {
+  const BASE_BYTES = 10 * 1024 * 1024;
+  const BASE_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+  const pressure = config.compaction_pressure ?? 100;
+  return {
+    bytes: Math.floor((BASE_BYTES * 100) / pressure),
+    maxAgeMs: Math.floor((BASE_AGE_MS * 100) / pressure),
+  };
+}
+```
+
+`pressure > 100` → more aggressive (smaller threshold); `pressure < 100` → more lenient (larger threshold). Identical to Linux's semantics.
+
+**Definition of Done**
+- `cortex.json` schema accepts `compaction_pressure`; invalid values rejected at startup.
+- `experience.ts` uses `getEffectiveThreshold(config)` everywhere; hardcoded values removed.
+- Default `pressure=100` produces the same byte/age values as before (no behavioral change at default).
+- Unit test: `pressure=200` halves threshold; `pressure=50` doubles it.
+
+**Counter-case**: Default 10 MB + 180 days covers nearly all users. A tunable creates a support surface without a clear majority use case.
+
+---
+
+### Phase 0.10 Refinement — Field-Level Concurrency Documentation Convention (Linux kernel audit, score: 30)
+
+**Kernel analogue**: `kernel/workqueue.c:152–191` — every struct field carries a one-word lock annotation in a comment: `/* I: init-only */`, `/* L: pool->lock */`, `/* WR: wq->mutex writes, RCU reads */`.
+
+**Problem**: `KnowledgeManager` has no documented locking model. Future contributors (or agents) cannot tell which fields are safe to read outside an async lock without risking a race on a concurrent write.
+
+**Convention** (apply to `src/knowledge/KnowledgeManager.ts`):
+
+```typescript
+// I:  set once in constructor, never reassigned after
+// M:  all writes must hold asyncMutex; reads safe outside lock
+// V:  version counter — increment on every write under M
+// D:  dirty flag — set under M, cleared by flush
+// R:  read-only cache; invalidated (deleted) under M on write
+
+class KnowledgeManager {
+  private readonly projectRoot: string;  /* I */
+  private readonly config: CortexConfig; /* I */
+
+  private entities: Map<string, Entity>; /* M */
+  private index: IndexMetadata;          /* M */
+  private entityVersion = 0;            /* M + V */
+  private soulDirty = false;            /* M + D */
+  private skeletonCache: Map<string, string>; /* R */
+}
+```
+
+**Definition of Done**
+- All shared fields in `KnowledgeManager` carry a locking annotation comment.
+- `CLAUDE.md` updated: "Every new field added to `KnowledgeManager` must carry an `/* I | M | V | D | R */` annotation."
+- No runtime changes; this is documentation only.
+
+**Counter-case**: Documentation rots — if a lock is refactored, mismatched comments become worse than no comments. Mitigated by the CLAUDE.md rule requiring annotations on every new field.
+
+---
+
+### Phase 0.10 Refinement — writeWithRollback for KnowledgeManager Write Path — closes Flaw #46 (Linux kernel audit, score: 24)
+
+**Kernel analogue**: `notifier_call_chain_robust(nl, val_up, val_down, v)` in `kernel/notifier.c:99` — fires forward handlers 1..N; on failure at step K, fires reverse (rollback) handlers K-1..1.
+
+**Problem** (Flaw #46): `KnowledgeManager.saveEntity()` updates skeleton-cache, then writes to disk, then updates the index. If disk write succeeds but index update throws, the cache and index diverge permanently. No compensation path exists.
+
+**Change** — add `writeWithRollback` utility to `KnowledgeManager`:
+
+```typescript
+type WriteHandler<T> = {
+  name: string;
+  forward: (ctx: T) => void | Promise<void>;
+  rollback: (ctx: T) => void | Promise<void>;
+};
+
+async function writeWithRollback<T>(handlers: WriteHandler<T>[], ctx: T): Promise<void> {
+  const applied: WriteHandler<T>[] = [];
+  for (const handler of handlers) {
+    try {
+      await handler.forward(ctx);
+      applied.push(handler);
+    } catch (err) {
+      for (const done of [...applied].reverse()) {
+        try { await done.rollback(ctx); }
+        catch (rbErr) { console.error(`[writeWithRollback] rollback of ${done.name} failed:`, rbErr); }
+      }
+      throw err;
+    }
+  }
+}
+```
+
+Wire into `saveEntity()`:
+```typescript
+await writeWithRollback([
+  { name: 'skeleton-cache', forward: ctx => skeletonCache.set(ctx.entityId, ctx.skeleton), rollback: ctx => skeletonCache.delete(ctx.entityId) },
+  { name: 'entity-file',    forward: ctx => fs.writeFile(ctx.path, ctx.content, 'utf8'),   rollback: ctx => fs.unlink(ctx.path).catch(() => {}) },
+  { name: 'index-update',   forward: ctx => updateIndex(ctx.entityId, ctx.meta),           rollback: ctx => removeFromIndex(ctx.entityId) },
+], { entityId, skeleton, path, content, meta });
+```
+
+**Definition of Done**
+- `saveEntity()` uses `writeWithRollback`; any single-step failure leaves cache + index consistent.
+- Test: stub `updateIndex` to throw after disk write succeeds → verify cache entry is removed and disk file is deleted.
+- Flaw #46 status updated to "Mitigated" (full fix requires eliminating shared state; this prevents divergence).
+
+**Counter-case**: True fix for flaw #46 is eliminating shared mutable state entirely. `writeWithRollback` cleans up after the race rather than preventing it.
+
+---
+
+### Phase 0.11 Refinement — NegativeEntityCache + cortex_coverage_gaps Tool — closes Flaw #50 (Linux kernel audit, score: 24)
+
+**Kernel analogue**: `DEFINE_PER_CPU(long, nr_dentry_negative)` + `DCACHE_MISS_TYPE` in `fs/dcache.c:144` — the dentry cache explicitly tracks "not found" lookups; a separate counter lets the OS report how much memory is consumed by negative entries.
+
+**Problem** (Flaw #50): When `cortex_find` or `getEntity` fails to find an entity, the miss is silently discarded. There is no way to ask Cortex "what have you been asked about that you don't know?"
+
+**Change**:
+
+```typescript
+interface NegativeCacheEntry { missedAt: Date; missCount: number; }
+
+class NegativeEntityCache {
+  private cache = new Map<string, NegativeCacheEntry>();
+
+  recordMiss(entityIdOrPath: string): void {
+    const e = this.cache.get(entityIdOrPath);
+    if (e) { e.missCount++; e.missedAt = new Date(); }
+    else this.cache.set(entityIdOrPath, { missedAt: new Date(), missCount: 1 });
+  }
+
+  invalidate(entityIdOrPath: string): void { this.cache.delete(entityIdOrPath); }
+
+  getGaps(): { path: string; missCount: number; firstMissedAt: Date }[] {
+    return Array.from(this.cache.entries()).map(([path, e]) => ({ path, missCount: e.missCount, firstMissedAt: e.missedAt }));
+  }
+}
+```
+
+New MCP tool `cortex_coverage_gaps()` → returns `{ missingPaths: string[], totalMissCount: number, oldestMiss: Date }`.
+
+**Definition of Done**
+- Every failed `getEntity` / `cortex_find` lookup calls `negativeCache.recordMiss(id)`.
+- Every successful ingest calls `negativeCache.invalidate(path)`.
+- `cortex_coverage_gaps` tool registered in MCP; returns sorted miss list.
+- Test: 5 missed lookups → `getGaps()` returns 5 entries; ingest one path → that entry removed.
+
+**Counter-case**: Negative cache entries must be explicitly invalidated on file creation. Stale "not found" results can be returned until cache expiry if invalidation is missed.
+
+---
+
+### Phase 13.5 Refinement — Entity LRU Walk with Fine-Grained Eviction Callback (Linux kernel audit, score: 18)
+
+**Kernel analogue**: `enum lru_status { LRU_REMOVED, LRU_REMOVED_RETRY, LRU_ROTATE, LRU_SKIP, LRU_RETRY, LRU_STOP }` in `include/linux/list_lru.h:19`.
+
+**Problem**: Current entity eviction (if any) uses a simple "evict oldest" policy. There is no way for an individual entity to say "I'm in use right now — skip me" or "I was accessed recently — rotate me to the tail instead of evicting me."
+
+**Change** — add `EntityLRUCache` to Phase 13.5's skeleton cache:
+
+```typescript
+enum LruStatus { REMOVED, REMOVED_RETRY, ROTATE, SKIP, RETRY, STOP }
+type LruWalkCallback<T> = (item: T, cache: EntityLRUCache<T>) => LruStatus;
+
+class EntityLRUCache<T> {
+  private list: T[] = []; // head = MRU, tail = LRU
+
+  walk(budget: number, isolate: LruWalkCallback<T>): number {
+    let freed = 0, i = this.list.length - 1;
+    while (i >= 0 && freed < budget) {
+      const status = isolate(this.list[i], this);
+      switch (status) {
+        case LruStatus.REMOVED:       this.list.splice(i, 1); freed++; i--; break;
+        case LruStatus.ROTATE:        this.list.splice(i, 1); this.list.unshift(this.list[i]); i--; break;
+        case LruStatus.STOP:          return freed;
+        case LruStatus.REMOVED_RETRY: freed++; i = this.list.length - 1; break;
+        default:                      i--; break;
+      }
+    }
+    return freed;
+  }
+}
+```
+
+**Definition of Done**
+- Phase 13.5 skeleton cache uses `EntityLRUCache`; `walk()` drives eviction when threshold is reached.
+- Callback for skeletons: ROTATE if accessed within last 60s; REMOVED otherwise.
+- Test: walk with budget=3 on 10-item LRU → exactly 3 removed; recently-accessed items rotated, not removed.
+
+**Counter-case**: Over-engineering for a cache <5000 items. Simple evict-oldest covers 95% of use cases without the callback complexity.
+
+---
+
+### Phase 22 Refinement — seq_file-Style Iterator Protocol for Large MCP Responses (Linux kernel audit, score: 18)
+
+**Kernel analogue**: `seq_open()` + `start()/show()/stop()` callbacks in `fs/seq_file.c:42`; auto-doubles buffer (`m->size <<= 1`) on `Eoverflow` rather than pre-allocating for unknown output size.
+
+**Problem**: Tools like `cortex_export` and `build_context_pack` pre-allocate a response string for unknown output size. Large knowledge bases can produce responses that exceed MCP transport limits with no pagination.
+
+**Change** — add `seqRead()` iterator to `src/tools/export.ts`:
+
+```typescript
+interface SeqOps<State> {
+  start(cursor: number): State | null;
+  next(state: State, cursor: number): State | null;
+  show(state: State): string;
+  stop(state: State | null): void;
+}
+
+async function seqRead<State>(ops: SeqOps<State>, maxBytes = 64 * 1024): Promise<string> {
+  let buf = '', cursor = 0;
+  let state = ops.start(cursor);
+  try {
+    while (state !== null) {
+      const chunk = ops.show(state);
+      if (buf.length + chunk.length > maxBytes) {
+        buf += `\n<!-- truncated at ${cursor} items; call again with cursor=${cursor} -->`;
+        break;
+      }
+      buf += chunk;
+      cursor++;
+      state = ops.next(state, cursor);
+    }
+  } finally { ops.stop(state); }
+  return buf;
+}
+```
+
+**Definition of Done**
+- `cortex_export` uses `seqRead`; responses exceeding 64 KB are paginated with a cursor comment.
+- MCP client can call again with `cursor=N` to resume from where truncation occurred.
+- Test: 200-entity export with 64 KB limit → response is truncated at exactly the limit with cursor hint.
+
+**Counter-case**: MCP has its own streaming protocol. A `seq_file` wrapper may conflict with MCP framing for tools that already use streaming responses.
+
+---
+
+### Phase 0.10 Refinement — Versioned Entity Reads with Optimistic Retry — partially closes Flaw #46 (Linux kernel audit, score: 18)
+
+**Kernel analogue**: `do { seq = read_seqcount_begin(); ... } while (read_seqcount_retry(seq));` from `Documentation/locking/seqlock.rst:84` and `fs/dcache.c:362`.
+
+**Problem**: If `readEntity()` spans an `await` point and a concurrent write completes mid-read, the returned entity snapshot may be stale (old content, new index state = partial read).
+
+**Change** — add version checking to `KnowledgeManager`:
+
+```typescript
+class VersionedEntityReader {
+  async readEntity(id: string): Promise<{ entity: Entity; version: number }> {
+    const version = this.km.entityVersion;
+    const entity = await this.km.getEntity(id);
+    if (this.km.entityVersion !== version) return this.readEntity(id); // retry
+    return { entity, version };
+  }
+}
+```
+
+**Definition of Done**
+- `KnowledgeManager` exposes a public `entityVersion: number` counter incremented on every write.
+- `VersionedEntityReader` wraps all reads that span await points.
+- Test: simulate write during read by incrementing version in mid-read stub → verify retry occurs and final entity is from post-write state.
+- Note: Node.js single-threaded event loop means concurrent writes are impossible within a synchronous block. This pattern only applies when reads span `await` points while write-permitting tasks are queued.
+
+**Counter-case**: Node.js single-threaded; synchronous reads cannot be interrupted. This only matters when reads span explicit `await` points with concurrent writes queued — currently rare in Cortex.
+
+---
+
+### Phase 13.5 Refinement — ExperienceShrinker count_objects/scan_objects Split — closes Flaw #109 (Linux kernel audit, score: 18)
+
+**Kernel analogue**: `struct shrinker { count_objects(); scan_objects(); }` in `include/linux/shrinker.h:82`; `SHRINK_EMPTY` sentinel short-circuits the scan when nothing is evictable.
+
+**Problem** (Flaw #109, complementary to E1): Current compaction is "count + evict" in a single pass. Under memory pressure, there is no way to quickly ask "how much could we free?" without actually freeing it.
+
+**Change**:
+
+```typescript
+const SHRINK_EMPTY = 0;
+
+interface EntityShrinker {
+  countEvictable(): number;      // fast, no I/O — returns 0 (SHRINK_EMPTY) if nothing to free
+  evict(budget: number): number; // slow — removes up to budget items, returns count removed
+}
+
+class ExperienceShrinker implements EntityShrinker {
+  constructor(private experienceLog: ExperienceLog, private maxAgeMs: number) {}
+
+  countEvictable(): number {
+    const cutoff = Date.now() - this.maxAgeMs;
+    const count = this.experienceLog.countEntriesBefore(cutoff);
+    return count === 0 ? SHRINK_EMPTY : count;
+  }
+
+  evict(budget: number): number {
+    if (this.countEvictable() === SHRINK_EMPTY) return 0;
+    return this.experienceLog.compactBefore(Date.now() - this.maxAgeMs, budget);
+  }
+}
+
+function maybeShrink(shrinker: EntityShrinker, pressure: number): void {
+  const evictable = shrinker.countEvictable();
+  if (evictable === SHRINK_EMPTY) return;
+  const budget = Math.ceil((evictable * pressure) / 100);
+  shrinker.evict(budget);
+}
+```
+
+**Definition of Done**
+- `ExperienceShrinker` replaces the monolithic compaction path in `experience.ts`.
+- `countEvictable()` completes without file I/O (reads in-memory age index only).
+- `maybeShrink()` called on each ingest; `pressure` sourced from `compaction_pressure` tunable (Phase 0.11 above).
+- Test: 100 entries older than threshold → `countEvictable()` returns 100; `evict(30)` removes exactly 30.
+
+**Counter-case**: Cortex has no external memory pressure signals. `countEvictable()` would always return the same value without an external trigger to drive `maybeShrink()`.
+
+---
+
+### Phase 13.5 Refinement — Recency-Weighted Search: vruntime-Inspired Staleness Penalty (Linux kernel audit, score: 12)
+
+**Kernel analogue**: `vruntime_cmp()` in `kernel/sched/fair.c:538`; CFS tracks cumulative virtual runtime per task — tasks with lower vruntime are scheduled first; long-dormant tasks naturally accumulate a lower vruntime relative to active ones.
+
+**Proposed change**: Add an optional `recency_weight` parameter to `cortex_find`. When non-zero, apply a staleness penalty to the composite score:
+
+```typescript
+// penalty = tanh((now - entity.lastAccessedAt) / HALF_LIFE_MS) * recency_weight
+// composite = base_score * (1 - penalty)
+// HALF_LIFE_MS default: 30 days
+```
+
+**Definition of Done**
+- `cortex_find` accepts optional `recency_weight` (0–1, default 0 = disabled).
+- At `recency_weight=0.2`, an entity not accessed in 90 days scores ~15% lower than one accessed today.
+- Test: two entities with identical content scores; one last accessed 1 day ago, one 120 days ago → 120-day entity ranks lower at `recency_weight=0.2`.
+- G1 question resolved: content-based search is default; recency is opt-in via `recency_weight`.
+
+**Counter-case**: Adding a time dimension to rankings increases tunability burden. High-scoring entities may unexpectedly drop on recency without users understanding why. Keep disabled by default.
+
+---
+
+### Phase 5 Refinement — Debounced Entity Write with Read-Drain Flush (Linux kernel audit, score: 12)
+
+**Kernel analogue**: `struct delayed_work` in `include/linux/workqueue.h:114`; a work item that fires after a configurable delay, reset on each re-schedule — used to batch writes rather than flush on every mutation.
+
+**Problem**: Every `saveEntity()` call immediately writes to disk. High-frequency ingest sessions (e.g., scanning a large codebase) generate one file write per entity, saturating disk I/O unnecessarily.
+
+**Change** — add debounced flush to `KnowledgeManager`:
+
+```typescript
+private flushTimer: ReturnType<typeof setTimeout> | null = null;
+private dirtyEntities = new Set<string>();
+
+scheduleFlush(entityId: string, delay = 500): void {
+  this.dirtyEntities.add(entityId);
+  if (this.flushTimer) clearTimeout(this.flushTimer);
+  this.flushTimer = setTimeout(() => this.flushDirty(), delay);
+}
+
+private async flushDirty(): Promise<void> {
+  const toFlush = [...this.dirtyEntities];
+  this.dirtyEntities.clear();
+  this.flushTimer = null;
+  for (const id of toFlush) await this.writeToDisk(id);
+}
+```
+
+**Definition of Done**
+- `saveEntity()` calls `scheduleFlush()` instead of writing immediately; flush fires 500ms after last call.
+- Process exit / graceful shutdown drains `dirtyEntities` synchronously before exit.
+- Test: 20 rapid `saveEntity()` calls within 100ms → exactly 1 disk write batch; flush contains all 20.
+
+**Counter-case**: Debouncing introduces a 500ms window where in-memory state is ahead of disk state. A crash in that window loses up to 500ms of writes. For Cortex's use case (derived data, always regenerable), this is acceptable — but note the trade-off.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 2 Phases
+
+### Phase 0.17 Refinement — BFS Cycle Detection with Generation Counter (Linux kernel audit pass 2, score: 36)
+
+**Kernel analogue**: `check_noncircular()` in `kernel/locking/lockdep.c:2124`; BFS over the lock dependency graph using a `dep_gen_id` generation counter — incrementing the counter at the start of each traversal replaces clearing the visited set; each node stores the generation it was last visited; if the stored generation equals the current generation, the node is already visited.
+
+**Closes flaw #5** (`lint` reports cycles but `audit_quality` ignores them).
+
+**Problem**: The current DFS cycle detection (Phase 0.13) clears a `visited: Set<string>` before each traversal. For repeated cycle checks the allocation and GC pressure accumulates.
+
+**Change** — replace `visited: Set` with a generation counter:
+
+```typescript
+let bfsGeneration = 0;
+
+interface GraphNode {
+  id: string;
+  visitedGen: number;
+  parent: GraphNode | null;
+}
+
+function detectCycle(
+  sourceId: string,
+  targetId: string,
+  getNeighbors: (id: string) => string[],
+  nodes: Map<string, GraphNode>
+): string[] | null {
+  bfsGeneration++;
+  const sourceNode = nodes.get(sourceId)!;
+  sourceNode.visitedGen = bfsGeneration;
+  sourceNode.parent = null;
+  const queue: GraphNode[] = [sourceNode];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const neighborId of getNeighbors(current.id)) {
+      if (neighborId === targetId) {
+        return reconstructPath(current, nodes, sourceId).concat(targetId);
+      }
+      const neighbor = nodes.get(neighborId);
+      if (!neighbor || neighbor.visitedGen === bfsGeneration) continue;
+      neighbor.visitedGen = bfsGeneration;
+      neighbor.parent = current;
+      queue.push(neighbor);
+    }
+  }
+  return null;
+}
+```
+
+**Definition of Done**
+- `detectCycle()` uses generation counter, not `new Set()` per call.
+- `audit_quality` calls `detectCycle` for each entity and penalises quality score when a cycle is found.
+- Test: graph with cycle A→B→C→A → `detectCycle('A', 'A', ...)` returns path; graph without cycle returns null.
+- 10 repeated traversals on 200-node graph produce no Set allocations (verified by heap snapshot).
+
+**Counter-case**: Cortex's entity graph is small (<200 entities); O(n) DFS is negligible and the generation counter optimization is premature at this scale.
+
+---
+
+### Phase 0.11 Refinement — DECLARE_EWMA Adaptive Compaction Pressure (Linux kernel audit pass 2, score: 36)
+
+**Kernel analogue**: `DECLARE_EWMA(name, _precision, _weight_rcp)` in `include/linux/average.h:28`; compile-time macro that generates a type-safe integer EWMA (no floating point) with configurable precision (fixed-point bits) and weight reciprocal (higher = slower decay).
+
+**Closes flaw #109** (compaction thresholds not user-configurable; also see E1 vfs_cache_pressure tunable).
+
+**Problem**: The `compaction_pressure` tunable (Phase 0.11 E1) needs a smoothed signal to avoid reacting to transient spikes. A single miss rate sample can spike to 100% on cold start.
+
+**Change** — add integer EWMA cache hit-rate tracker:
+
+```typescript
+const EWMA_PRECISION = 8;   // fixed-point fractional bits
+const EWMA_WEIGHT_RCP = 8;  // weight reciprocal: 1/8 new, 7/8 old (slow decay)
+
+class EntityCacheEWMA {
+  private internal = 0;  // scaled by (1 << EWMA_PRECISION)^2
+
+  add(hitRatePct: number): void {
+    const val = Math.floor(hitRatePct * (1 << EWMA_PRECISION) / 100);
+    if (this.internal === 0) {
+      this.internal = val << EWMA_PRECISION;
+    } else {
+      this.internal =
+        (((this.internal << (EWMA_WEIGHT_RCP - 1)) - this.internal) +
+         (val << EWMA_PRECISION)) >>
+        (EWMA_WEIGHT_RCP - 1);
+    }
+  }
+
+  read(): number {
+    return (this.internal >> EWMA_PRECISION) * 100 / (1 << EWMA_PRECISION);
+  }
+
+  get pressureLevel(): 'low' | 'medium' | 'critical' {
+    const rate = this.read();
+    if (rate < 10) return 'critical';
+    if (rate < 40) return 'medium';
+    return 'low';
+  }
+}
+```
+
+**Definition of Done**
+- `EntityCacheEWMA.add()` accepts hit rate 0–100; `read()` returns smoothed value.
+- Warm-up guard: minimum 10 samples before `pressureLevel` is trusted (return `null` until warm).
+- `pressureLevel` drives compaction threshold scaling (CRITICAL → halve threshold, LOW → double).
+- Test: stream of 100% hit rate followed by one 0% hit → EWMA stays above 40% (slow decay); sustained 0% hit rate for 20 samples → EWMA drops below 10% (critical).
+- No floating-point arithmetic in hot path.
+
+**Counter-case**: EWMA adds temporal hysteresis. A one-time large ingest would keep threshold elevated for many subsequent operations, causing under-compaction until the EWMA forgets the spike. Gate critical decisions on both instantaneous miss ratio AND EWMA.
+
+---
+
+### Phase 5 Refinement — Bounded Event Queue + IN_Q_OVERFLOW Sentinel (Linux kernel audit pass 2, score: 36)
+
+**Kernel analogue**: `inotify_max_queued_events` sysctl + `IN_Q_OVERFLOW` pseudo-event in `fs/notify/inotify/inotify_user.c:50`; the inotify queue is bounded; when the queue is full, a single overflow event is appended (not each subsequent event); the consumer must do a full re-scan on receiving overflow rather than processing individual events.
+
+**Closes flaw #141** (hardcoded resource capacity limits — specifically watcher event queue depth).
+
+**Problem**: The file watcher accumulates events in an unbounded array. Under high file churn (e.g., `npm install`, large git rebase) the queue can grow to tens of thousands of entries before the event loop processes them.
+
+**Change** — add bounded queue with overflow sentinel:
+
+```typescript
+const MAX_WATCHER_QUEUE_DEPTH = 1000; // overrideable via cortex.json
+
+interface WatchEvent {
+  type: 'add' | 'change' | 'unlink' | 'overflow';
+  path: string;
+}
+
+class BoundedWatcherQueue {
+  private queue: WatchEvent[] = [];
+  private overflowed = false;
+
+  enqueue(event: WatchEvent): void {
+    if (this.overflowed) return;
+    if (this.queue.length >= MAX_WATCHER_QUEUE_DEPTH) {
+      this.queue = [{ type: 'overflow', path: '' }];
+      this.overflowed = true;
+      return;
+    }
+    this.queue.push(event);
+  }
+
+  drain(): WatchEvent[] {
+    const events = [...this.queue];
+    this.queue = [];
+    this.overflowed = false;
+    return events;
+  }
+}
+```
+
+**Consumer** handles overflow:
+```typescript
+const events = watcherQueue.drain();
+if (events[0]?.type === 'overflow') {
+  await fullRescan();
+} else {
+  for (const ev of events) await handleEvent(ev);
+}
+```
+
+**Definition of Done**
+- `BoundedWatcherQueue` caps at `maxWatcherQueueDepth` (from `cortex.json`, default 1000).
+- Overflow emits exactly one `overflow` sentinel event.
+- Consumer triggers `fullRescan()` on overflow sentinel.
+- `maxWatcherQueueDepth` appears in `CONFIG_SCHEMA` with `min: 10`, `max: 100_000`, `default: 1000`.
+- Test: enqueue 1001 events → queue contains exactly 1 event with `type: 'overflow'`; `drain()` resets overflow flag.
+
+**Counter-case**: An overflow event requires the consumer to do a full re-scan, which may be more expensive than processing the individual events. Set `maxWatcherQueueDepth` high enough that overflow is rare under normal churn.
+
+---
+
+### Phase 0.11 Refinement — cortex.json Schema Bounds Validation (Linux kernel audit pass 2, score: 24)
+
+**Kernel analogue**: `ctl_table.extra1 = &it_zero, ctl_table.extra2 = &it_int_max, proc_doulongvec_minmax` in `fs/notify/inotify/inotify_user.c:61`; every sysctl entry declares min and max bounds; the kernel rejects out-of-range values at write time with a descriptive error.
+
+**Closes flaw #144** (numeric thresholds without user-facing escape hatch).
+
+**Problem**: `cortex.json` accepts arbitrary values for tunables. A user setting `compaction_pressure: 0` would cause division by zero; `ewmaWeightRcp: 1` would make the EWMA instantly reactive; `maxWatcherQueueDepth: -1` would bypass the overflow guard.
+
+**Change** — add `CONFIG_SCHEMA` bounds map and `validateConfig()`:
+
+```typescript
+interface ConfigBounds<T> {
+  min: T;
+  max: T;
+  default: T;
+  description: string;
+}
+
+const CONFIG_SCHEMA: Record<string, ConfigBounds<number>> = {
+  compaction_pressure:  { min: 1,     max: 1_000,   default: 100,  description: "Compaction aggressiveness (100=default, 200=2× more aggressive)" },
+  maxWatcherQueueDepth: { min: 10,    max: 100_000, default: 1_000, description: "Max watcher events before overflow sentinel (see flaw #141)" },
+  ewmaWeightRcp:        { min: 2,     max: 64,      default: 8,    description: "EWMA weight reciprocal: higher = slower decay" },
+  pressureWindowSize:   { min: 5,     max: 10_000,  default: 50,   description: "Lookups per pressure window before emitting a signal" },
+};
+
+function validateConfig(raw: Partial<CortexConfig>): { config: CortexConfig; errors: string[] } {
+  const errors: string[] = [];
+  const config = { ...DEFAULT_CONFIG };
+  for (const [key, bounds] of Object.entries(CONFIG_SCHEMA)) {
+    const val = (raw as Record<string, number>)[key];
+    if (val === undefined) continue;
+    if (typeof val !== 'number' || !Number.isFinite(val)) {
+      errors.push(`${key}: expected number, got ${typeof val}`);
+    } else if (val < bounds.min || val > bounds.max) {
+      errors.push(`${key}: ${val} out of range [${bounds.min}, ${bounds.max}] — ${bounds.description}`);
+    } else {
+      (config as Record<string, number>)[key] = val;
+    }
+  }
+  return { config, errors };
+}
+```
+
+**Definition of Done**
+- `validateConfig()` runs at daemon startup; throws `ConfigValidationError` if any bound is violated.
+- Error message includes: key name, supplied value, permitted range, description.
+- All tunables added by pass 1 (E1–E3) and pass 2 (E6, E7) are listed in `CONFIG_SCHEMA`.
+- `cortex.json.example` is auto-generated from `CONFIG_SCHEMA` defaults + descriptions.
+- Test: `validateConfig({ compaction_pressure: 0 })` → error contains "out of range [1, 1000]".
+
+**Counter-case**: Runtime validation duplicates JSON Schema `min`/`maximum` keywords. Consider using JSON Schema for validation instead of hand-coded bounds; avoids two sources of truth.
+
+---
+
+### Phase 0.11 Refinement — Miss-Ratio Window → 3-Level Pressure Signal (Linux kernel audit pass 2, score: 27)
+
+**Kernel analogue**: `vmpressure_calc_level(scanned, reclaimed)` in `mm/vmpressure.c:120`; tracks ratio of scanned:reclaimed pages over a fixed window; emits LOW/MEDIUM/CRITICAL pressure events to subscribers; window resets after emission.
+
+**Problem**: The EWMA (pass 2 E6) smooths the hit rate signal but emits a continuous value. Higher-level components (auto-compaction trigger, pressure-aware context packing) need a discrete signal with clear thresholds rather than a floating 0–100% value.
+
+**Change** — add windowed pressure monitor that feeds discrete levels to subscribers:
+
+```typescript
+const PRESSURE_WIN = 50;  // configurable via cortex.json pressureWindowSize
+
+enum PressureLevel { LOW = 0, MEDIUM = 1, CRITICAL = 2 }
+
+class KnowledgePressureMonitor {
+  private windowScanned = 0;
+  private windowHits = 0;
+  private warmupCount = 0;
+  private readonly WARMUP_MIN = 10;
+
+  record(hit: boolean): PressureLevel | null {
+    this.warmupCount++;
+    if (this.warmupCount < this.WARMUP_MIN) return null;
+
+    this.windowScanned++;
+    if (hit) this.windowHits++;
+
+    if (this.windowScanned < PRESSURE_WIN) return null;
+
+    const missRatio = Math.round(
+      (this.windowScanned - this.windowHits) * 100 / this.windowScanned
+    );
+    this.reset();
+
+    if (missRatio >= 95) return PressureLevel.CRITICAL;
+    if (missRatio >= 60) return PressureLevel.MEDIUM;
+    return PressureLevel.LOW;
+  }
+
+  private reset(): void {
+    this.windowScanned = 0;
+    this.windowHits = 0;
+  }
+}
+```
+
+**Definition of Done**
+- `KnowledgePressureMonitor.record()` returns `null` until `PRESSURE_WIN` lookups have accumulated.
+- Cold-start warm-up guard: minimum 10 lookups before pressure is computed (prevents false CRITICAL at empty cache).
+- CRITICAL pressure triggers immediate compaction; MEDIUM logs a warning; LOW is a no-op.
+- `pressureWindowSize` tunable in `CONFIG_SCHEMA` (min 5, max 10000, default 50).
+- Test: 50 cache misses → CRITICAL; 30 hits + 20 misses → LOW; first 9 lookups all misses → returns null.
+
+**Counter-case**: Cold-start Cortex has 100% miss rate (empty cache). Window fires CRITICAL on first 50 lookups, triggering compaction on an empty cache. Warm-up guard (minimum N lookups before signal is trusted) is mandatory.
+
+---
+
+### Phase 13.5 Refinement — Shadow Entry + Refault Distance for Skeleton Cache (Linux kernel audit pass 2, score: 18)
+
+**Kernel analogue**: `workingset_eviction()` + `pack_shadow()` + `workingset_test_recent()` in `mm/workingset.c:390`; when a page is evicted, its slot stores a compact "shadow" (generation + zone bits); on refault, `refault_distance = (R - E) & MASK` where R=current generation, E=eviction generation; if refault distance < active list size → page was in working set → promote to active immediately.
+
+**Problem**: Skeleton cache evicts cold entities but has no way to know if an evicted entity was actually needed shortly after eviction (i.e., it was in the working set but was evicted due to a temporary pressure spike).
+
+**Change** — add shadow entry map alongside the LRU skeleton cache:
+
+```typescript
+interface ShadowEntry { evictedAt: number; evictionGeneration: number; }
+
+class TwoTierSkeletonCache {
+  private active = new Map<string, CachedSkeleton>();   // hot: accessed ≥2×
+  private inactive = new Map<string, CachedSkeleton>(); // cold: accessed once
+  private shadows = new Map<string, ShadowEntry>();     // ghost: recently evicted
+  private generation = 0;
+
+  access(entityId: string): CachedSkeleton | null {
+    const activeEntry = this.active.get(entityId);
+    if (activeEntry) return activeEntry;
+
+    const inactiveEntry = this.inactive.get(entityId);
+    if (inactiveEntry) {
+      // promote to active on second access
+      this.inactive.delete(entityId);
+      this.active.set(entityId, inactiveEntry);
+      return inactiveEntry;
+    }
+
+    // check refault distance
+    const shadow = this.shadows.get(entityId);
+    if (shadow) {
+      const refaultDistance = this.generation - shadow.evictionGeneration;
+      if (refaultDistance < this.active.size) {
+        // short refault: entity was in working set; skip inactive, admit to active directly
+        this.shadows.delete(entityId);
+        return null; // caller re-fetches and admits to active via admit()
+      }
+    }
+    return null;
+  }
+}
+```
+
+**Definition of Done**
+- Evicted entities leave a shadow entry (generation counter only, no content).
+- Refault with distance < active list size → admit to active tier directly.
+- Shadow map capped at `2 × maxCacheSize` to prevent unbounded growth.
+- Test: evict entity A; access 10 other entities; re-access A → refault distance < active size → A goes to active tier.
+
+**Counter-case**: Shadow entry bookkeeping requires a separate Map growing proportionally to evicted entities. At Cortex's scale (<5000 entities) the added complexity may not be worth it; the two-tier CLOCK (C14) already covers the hot/cold split without shadow entries.
+
+---
+
+### Phase 13.5 Refinement — Adaptive Context-Pack Window: get_next_ra_size Ramp (Linux kernel audit pass 2, score: 18)
+
+**Kernel analogue**: `get_next_ra_size(ra, max)` in `mm/readahead.c:394`; readahead window ramps geometrically: `cur < max/16 → 4×`, `cur ≤ max/2 → 2×`, else `max`; window shrinks back to 2 pages on a cache miss (non-sequential access detected).
+
+**Problem**: `build_context_pack` uses a fixed budget per call. Sequential entity traversals (e.g., walking an import graph hop-by-hop) could benefit from a larger window on confirmed sequential access.
+
+**Change** — add adaptive window that ramps on sequential access, resets on non-sequential:
+
+```typescript
+const RA_MIN = 4;   // minimum context entities
+const RA_MAX = 32;  // maximum context entities
+
+class AdaptiveContextWindow {
+  private currentSize = RA_MIN;
+  private sequentialCount = 0;
+  private lastEntityId: string | null = null;
+
+  next(entityId: string, isSequential: boolean): number {
+    if (!isSequential || entityId === this.lastEntityId) {
+      this.currentSize = RA_MIN;
+      this.sequentialCount = 0;
+    } else {
+      this.sequentialCount++;
+      if (this.sequentialCount >= 3) { // gate: confirm sequential pattern
+        if (this.currentSize < RA_MAX / 16) this.currentSize = Math.min(this.currentSize * 4, RA_MAX);
+        else if (this.currentSize <= RA_MAX / 2) this.currentSize = Math.min(this.currentSize * 2, RA_MAX);
+        else this.currentSize = RA_MAX;
+      }
+    }
+    this.lastEntityId = entityId;
+    return this.currentSize;
+  }
+}
+```
+
+**Definition of Done**
+- Window starts at `RA_MIN=4`; ramps to `RA_MAX=32` over ≥3 confirmed sequential accesses.
+- Non-sequential access resets window to `RA_MIN`.
+- `build_context_pack` passes `window.next(entityId, isSequential)` as the entity budget.
+- Test: 5 sequential accesses → window reaches 16+; one non-sequential access → window resets to 4.
+
+**Counter-case**: LLM access patterns are rarely sequential. Window would expand, pre-fetch wrong entities, and waste ingest budget. Must gate on confirmed sequential pattern (≥3 sequential accesses) — already implemented above.
+
+---
+
+### Phase 13.5 Refinement — Two-Tier CLOCK for Skeleton Cache (Linux kernel audit pass 2, score: 18)
+
+**Kernel analogue**: Double CLOCK lists in `mm/workingset.c:27`; pages fault into the inactive list; on second access, promoted to active list; active list size is bounded (≤50% of total); when active grows, the tail is demoted back to inactive (not evicted).
+
+**Problem**: The current LRU walk (Phase 13.5 C2) treats all cached skeletons equally. Entities that are accessed once during a large context pack should not block entities accessed repeatedly.
+
+**Change** — two-tier CLOCK with inactive (fault in) and active (promoted on 2nd access):
+
+```typescript
+class TwoTierClock {
+  private inactive = new Map<string, { data: CachedSkeleton; referenced: boolean }>();
+  private active   = new Map<string, { data: CachedSkeleton; referenced: boolean }>();
+  private readonly maxTotal: number;
+
+  fault(entityId: string, data: CachedSkeleton): void {
+    if (this.inactive.has(entityId)) {
+      // second access → promote to active
+      this.inactive.delete(entityId);
+      this.active.set(entityId, { data, referenced: true });
+      this.balanceActive();
+    } else {
+      this.inactive.set(entityId, { data, referenced: false });
+      this.evictIfNeeded();
+    }
+  }
+
+  private balanceActive(): void {
+    // active list capped at maxTotal / 2
+    while (this.active.size > this.maxTotal / 2) {
+      for (const [id, entry] of this.active) {
+        if (!entry.referenced) {
+          this.active.delete(id);
+          this.inactive.set(id, { data: entry.data, referenced: false }); // demote
+          break;
+        }
+        entry.referenced = false; // clear reference bit, give one more chance
+      }
+    }
+  }
+
+  private evictIfNeeded(): void {
+    while (this.inactive.size + this.active.size > this.maxTotal) {
+      for (const [id, entry] of this.inactive) {
+        if (!entry.referenced) { this.inactive.delete(id); break; }
+        entry.referenced = false;
+      }
+    }
+  }
+}
+```
+
+**Definition of Done**
+- Entities fault into `inactive`; promoted to `active` on second access.
+- `active` list never exceeds 50% of `maxTotal`; overflow demotes to `inactive` (not evicts).
+- Test: fault 100 entities once each, then access 20 twice → those 20 are in `active`; evicting a cold one removes from `inactive` not `active`.
+
+**Counter-case**: Two-tier cache adds promotion/demotion bookkeeping. At <5000 entities the LRU walk (C2 from prior audit) already covers this use case. Implement only if benchmarks show the two-tier policy produces fewer cold evictions under actual access patterns.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 3 Phases
+
+### Phase 5 Refinement — warnOnce DO_ONCE_LITE Sentinel (Linux kernel audit pass 3, score: 60)
+
+**Kernel analogue**: `DO_ONCE_LITE_IF` in `include/linux/once_lite.h:13`; `printk_once` / `pr_warn_once` in `include/linux/printk.h:649,668` — static `bool __already_done` per call site; first call executes, all subsequent calls are a single branch-predict-friendly memory read.
+
+**Closes flaw #146** (no rate limiting or deduplication on repeated logs).
+
+**Problem**: Every entity-cache-miss, every non-TypeScript `source()` call, and every startup config notice fires on every invocation with no deduplication. Long ingest sessions generate thousands of identical log lines.
+
+**Change** — add `warnOnce` utility:
+
+```typescript
+// src/utils/warn-once.ts
+const _warned = new Set<string>();
+
+export function warnOnce(msg: string): void {
+  const key = new Error().stack?.split('\n')[2]?.trim() ?? msg;
+  if (_warned.has(key)) return;
+  _warned.add(key);
+  console.warn(`[cortex] ${msg}`);
+}
+```
+
+**Definition of Done**
+- `warnOnce()` fires exactly once per unique call site, regardless of how many times it is called.
+- Applied to: entity-cache-miss fallback log, `source()` non-TypeScript warning, config notice on startup.
+- Test: call `warnOnce('msg')` 100 times from the same call site → `console.warn` called exactly once.
+- `_warned` Set is module-scoped and never cleared (intentional — once-warnings must survive for the process lifetime).
+
+**Counter-case**: A static Set that only grows leaks one string per unique warning site; acceptable at Cortex's scale (< 100 distinct call sites).
+
+---
+
+### Phase 5 Refinement — RatelimitState Burst+Interval+Missed (Linux kernel audit pass 3, score: 40)
+
+**Kernel analogue**: `struct ratelimit_state { interval, burst, rs_n_left, missed, begin }` in `include/linux/ratelimit_types.h:16`; `ratelimit_state_exit()` drains suppression summary on teardown.
+
+**Closes flaw #146** (complementary to `warnOnce` — handles recurring-but-throttled warnings vs one-time notices).
+
+**Problem**: Recurring warnings (repeated ingest of the same file, LLM API rate-limit hits, watch debounce noise) should fire up to N times per window, not zero (once) and not unboundedly.
+
+**Change** — `RatelimitState` class:
+
+```typescript
+export class RatelimitState {
+  private nLeft: number;
+  private missed = 0;
+  private begin: number;
+
+  constructor(
+    private readonly burst: number,
+    private readonly intervalMs: number,
+    private readonly label: string
+  ) {
+    this.nLeft = burst;
+    this.begin = Date.now();
+  }
+
+  allow(): boolean {
+    const now = Date.now();
+    if (now - this.begin >= this.intervalMs) {
+      if (this.missed > 0) {
+        console.warn(`[cortex:ratelimit] ${this.label}: ${this.missed} events suppressed in last ${this.intervalMs}ms`);
+        this.missed = 0;
+      }
+      this.nLeft = this.burst;
+      this.begin = now;
+    }
+    if (this.nLeft > 0) { this.nLeft--; return true; }
+    this.missed++;
+    return false;
+  }
+
+  drainOnExit(): void {
+    if (this.missed > 0) {
+      process.stderr.write(JSON.stringify({ type: 'suppressed_summary', component: this.label, count: this.missed }) + '\n');
+    }
+  }
+}
+```
+
+**Definition of Done**
+- `allow()` returns true at most `burst` times per `intervalMs` window.
+- On window reset, emits "N events suppressed" if `missed > 0`.
+- `drainOnExit()` called from `SIGTERM` handler via a global registry.
+- Applied to: LLM API retry warnings, repeated ingest skip notices, watch debounce logs.
+- Test: call `allow()` 10 times within 60s with `burst=3` → returns true 3 times, false 7 times; `missed === 7`.
+
+**Counter-case**: Plain `Date.now()` check is sufficient; the class overhead is unnecessary for Cortex's call volume — but consistent encapsulation is worth it.
+
+---
+
+### Phase 0.11 Refinement — WMARK Three-Level Graduated Cache Pressure (Linux kernel audit pass 3, score: 40)
+
+**Kernel analogue**: `WMARK_MIN`, `WMARK_LOW`, `WMARK_HIGH` computed in `mm/page_alloc.c:6397` — `__setup_per_zone_wmarks()`; different code paths trigger at each level: background reclaim at LOW, synchronous reclaim at MIN, OOM at below-MIN.
+
+**Closes flaw #109** (extends the graduated pressure system alongside EWMA and miss-ratio window).
+
+**Problem**: Cortex's entity cache uses a single `maxEntities` constant. When exceeded, it does one thing (eviction). There is no graduated response: no early warning, no background reclaim before hitting the wall.
+
+**Change** — three watermarks computed from `maxEntities`:
+
+```typescript
+export function computeWatermarks(maxEntities: number) {
+  return {
+    low: Math.floor(maxEntities * 0.70),  // background eviction
+    min: Math.floor(maxEntities * 0.90),  // synchronous evict before admit
+    max: maxEntities,                      // WARN + full LRU walk
+  };
+}
+
+// In entity cache admit:
+const level = checkWatermark(cache.size, watermarks);
+if (level === 'min') evictSynchronous(1);
+else if (level === 'low') scheduleBackgroundEviction();
+if (cache.size >= watermarks.max) { warnOnce('cache at capacity'); evictFullLRU(); }
+```
+
+**Definition of Done**
+- `computeWatermarks(maxEntities)` returns `{ low, min, max }`.
+- `LOW` → background eviction scheduled; `MIN` → synchronous evict before any new admit; at `MAX` → `warnOnce` + full LRU walk.
+- All three thresholds tunable via `cortex.json` as percentages (default: 70/90/100).
+- Test: cache at 69% → no action; at 72% → background eviction scheduled; at 91% → synchronous evict fires before next admit.
+
+**Counter-case**: Three thresholds add three config knobs most users never touch. A simpler high/low pair may be sufficient — keep the defaults opinionated to reduce decision fatigue.
+
+---
+
+### Phase 0.4 Refinement — VersionedEntityCache Generation-Pointer Snapshot (Linux kernel audit pass 3, score: 32)
+
+**Kernel analogue**: `rcu_assign_pointer(p, new)` + `synchronize_rcu()` in `include/linux/rcupdate.h:660` — writers build a new version, atomically swap the pointer, then wait for existing readers to finish before reclaiming old state.
+
+**Closes flaw #147** (entity cache has no snapshot consistency across async operations).
+
+**Problem**: The entity cache Map is mutated by the file watcher mid-read by MCP tool handlers. An async handler that starts reading during a watcher batch update sees a partially-updated cache with no indication the snapshot is inconsistent.
+
+**Change** — `VersionedEntityCache` with active/shadow swap:
+
+```typescript
+class VersionedEntityCache {
+  private active: ReadonlyMap<string, CachedEntity> = new Map();
+  private shadow: Map<string, CachedEntity> = new Map();
+  private generation = 0;
+
+  read(id: string): CachedEntity | undefined { return this.active.get(id); }
+
+  // File watcher accumulates changes in shadow
+  shadowSet(id: string, entity: CachedEntity): void { this.shadow.set(id, entity); }
+  shadowDelete(id: string): void { this.shadow.delete(id); }
+
+  // Called once per watcher batch — atomic swap
+  commitShadow(): void {
+    this.generation++;
+    this.active = new Map(this.shadow);
+  }
+}
+```
+
+**Definition of Done**
+- All MCP tool handlers call `cache.read()` only, never mutate `active`.
+- All watcher mutations go to `shadow`; `commitShadow()` called once per completed batch.
+- `generation` exposed as a readonly number — callers can detect stale reads by comparing generations.
+- Test: handler reads entity A while watcher is updating A in shadow → handler sees pre-update version; post-commit → handler sees updated version.
+
+**Counter-case**: Node.js is single-threaded; there is no true concurrent race. The discipline is still valuable for async correctness during `await` gaps but adds `Map` copy overhead on every watcher batch.
+
+---
+
+### Phase 7 Refinement — BatchedCounter Approximate Accumulation (Linux kernel audit pass 3, score: 24)
+
+**Kernel analogue**: `struct percpu_counter { count, counters[] }` in `include/linux/percpu_counter.h:22`; `percpu_counter_add_batch()` accumulates locally until shard overflows `batch`; `percpu_counter_read()` for cheap approximate, `__percpu_counter_sum()` for exact.
+
+**Closes flaw #145** (unchecked integer arithmetic — accumulating with bare `+`).
+
+**Problem**: Token counters (`totalTokensUsed`, `cacheHitCount`) use bare `+=`. For dashboard reads, exact sync on every increment is unnecessary; for billing exports, precision is required.
+
+**Change** — `BatchedCounter` class:
+
+```typescript
+export class BatchedCounter {
+  private localDelta = 0;
+  private count = 0;
+  constructor(private readonly BATCH = 64) {}
+
+  add(amount: number): void {
+    this.localDelta += amount;
+    if (Math.abs(this.localDelta) >= this.BATCH) {
+      this.count += this.localDelta;
+      this.localDelta = 0;
+    }
+  }
+
+  read(): number { return this.count; }  // approximate
+
+  sum(): number {  // exact
+    if (this.localDelta !== 0) { this.count += this.localDelta; this.localDelta = 0; }
+    return this.count;
+  }
+}
+```
+
+**Definition of Done**
+- `totalTokensUsed`, `cacheHitCount`, `ingestionCount` replaced with `BatchedCounter` instances.
+- Dashboard reads use `.read()`; billing/ledger exports call `.sum()` first.
+- `sum()` result is asserted with `Number.isSafeInteger()` before writing to ledger (closing flaw #145's root cause).
+- Test: add 100 items of value 1 with `BATCH=10` → `read()` returns multiple of 10 (possibly not 100 until `sum()` is called); `sum()` always returns exactly 100.
+
+**Counter-case**: Single-threaded Node.js; batching reduces write frequency by `BATCH` — useful at >1000 increments/sec, irrelevant at Cortex's normal call volume.
+
+---
+
+### Phase 5 Refinement — kfifo Power-of-2 Ring Queue for Compaction Work (Linux kernel audit pass 3, score: 24)
+
+**Kernel analogue**: `struct __kfifo { in, out, mask, data }` in `include/linux/kfifo.h:49`; ever-increasing indices, slot = `data[in & mask]`, full = `len > mask`, empty = `in === out`.
+
+**Problem**: The compaction work queue is an unbounded `Array`. Under rapid ingest bursts (e.g., initial repo scan), it can accumulate thousands of pending compaction tasks with no back-pressure.
+
+**Change** — `RingQueue<T>` with power-of-2 capacity:
+
+```typescript
+export class RingQueue<T> {
+  private readonly buf: (T | undefined)[];
+  private readonly mask: number;
+  private head = 0;
+  private tail = 0;
+
+  constructor(capacity: number) {
+    const size = nextPow2(capacity);
+    this.buf = new Array(size);
+    this.mask = size - 1;
+  }
+
+  get length(): number { return this.head - this.tail; }
+  get isFull():  boolean { return this.length > this.mask; }
+
+  push(item: T): boolean {
+    if (this.isFull) return false;
+    this.buf[this.head++ & this.mask] = item;
+    return true;
+  }
+
+  shift(): T | undefined {
+    if (this.head === this.tail) return undefined;
+    const item = this.buf[this.tail & this.mask];
+    this.buf[this.tail++ & this.mask] = undefined;
+    return item;
+  }
+}
+```
+
+**Definition of Done**
+- Compaction work queue is a `RingQueue<CompactionTask>(64)`.
+- `push()` returning `false` → dropped task is logged via `warnOnce()`.
+- Capacity configurable via `cortex.json compactionQueueDepth` with bounds `[16, 4096]`.
+- Test: push 65 items into a capacity-64 queue → 64th returns true, 65th returns false; `length === 64`.
+
+**Counter-case**: V8 JIT handles plain arrays efficiently at Cortex's scale; the fixed-capacity guarantee is the only real benefit here, which the existing `BoundedWatcherQueue` already provides for the watcher path.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 4 Phases
+
+### Phase 5 Refinement — IngestCompletion Dedup Gate (Linux kernel audit pass 4, score: 60)
+
+**Kernel analogue**: `struct completion { unsigned int done; struct swait_queue_head wait }` in `include/linux/completion.h:26`; `complete()` increments `done` and wakes all waiters; `wait_for_completion()` blocks until `done > 0`.
+
+**Closes flaw #149** (duplicate concurrent ingest of same entity).
+
+**Problem**: Two parallel MCP tool calls can both trigger `ingest()` on the same entity, making two identical LLM calls and paying double the cost.
+
+**Change** — `Completion` class + `ingestWithDedup` wrapper:
+
+```typescript
+export class Completion {
+  private done = false;
+  private waiters: Array<() => void> = [];
+
+  complete(): void {
+    if (this.done) return;
+    this.done = true;
+    this.waiters.splice(0).forEach(w => w());
+  }
+
+  wait(): Promise<void> {
+    if (this.done) return Promise.resolve();
+    return new Promise<void>(resolve => this.waiters.push(resolve));
+  }
+}
+
+const inflightIngests = new Map<string, Completion>();
+
+export async function ingestWithDedup(entityId: string, ingestFn: () => Promise<void>): Promise<void> {
+  const existing = inflightIngests.get(entityId);
+  if (existing) { await existing.wait(); return; }
+  const completion = new Completion();
+  inflightIngests.set(entityId, completion);
+  try { await ingestFn(); }
+  finally { inflightIngests.delete(entityId); completion.complete(); }
+}
+```
+
+**Definition of Done**
+- All `ingest()` call sites replaced with `ingestWithDedup(entityId, () => ingest(entityId))`.
+- Concurrent calls for the same entity result in exactly one LLM call; all waiters resume when it completes.
+- `complete()` fires in `finally` — error in `ingestFn` still resolves all waiters (they re-check staleness on return).
+- Test: two concurrent `ingestWithDedup('entity-A', fn)` calls → `fn` called exactly once; both callers resolve.
+
+**Counter-case**: Promises already model this; the `Completion` class is a named abstraction over a Promise with an exposed resolve. Value is the naming discipline and the `inflightIngests` map pattern, not a new runtime primitive.
+
+---
+
+### Phase 0.4 Refinement — CONCURRENCY.md Lock-Ordering Convention (Linux kernel audit pass 4, score: 45)
+
+**Kernel analogue**: `fs/notify/mark.c:19–36` — mandatory comment block at the top of every file touching shared fsnotify state: `group->mark_mutex → mark->lock → connector->lock`. All code review uses this as the authoritative spec.
+
+**Closes flaw #148** (no documented async re-entrancy constraints on shared state).
+
+**Problem**: Cortex's watcher, KnowledgeManager, and entity cache share mutable state. No document states which mutations are safe, in which order, and under what discipline. A new contributor has no reference.
+
+**Change** — add `CONCURRENCY.md` to the repo root:
+
+```markdown
+# Cortex Async Re-entrancy Constraints
+(Analogous to Linux fsnotify mark.c:19 lock-ordering header)
+
+## Canonical Access Order
+  FileWatcher events → EntityCache.shadow → EntityCache.commitShadow() → EntityCache.active
+
+## Rules
+1. MCP tool handlers: READ from `EntityCache.active` ONLY. Never mutate.
+2. FileWatcher batches: WRITE to `EntityCache.shadow` ONLY. Never touch `active` mid-batch.
+3. `commitShadow()`: called ONLY at watcher batch completion, never mid-handler.
+4. Any new method on KnowledgeManager or EntityCache that mutates shared state MUST
+   have a comment: `// concurrency: Rule N applies — <reason>`
+
+## Violation pattern
+Adding `EntityCache.active.set(id, entity)` directly in a tool handler violates Rule 1.
+Fix: queue the update to shadow; trigger a commitShadow after the next watcher batch.
+```
+
+Also add to `CLAUDE.md`:
+```
+## Async Concurrency Discipline
+Any PR that adds a method to KnowledgeManager or EntityCache mutating shared state
+MUST cite the applicable rule from CONCURRENCY.md in a comment on that method.
+CI lint rule: scripts/check-concurrency-comments.ts — rejects new assignments to
+shared cache fields without a `// concurrency:` comment.
+```
+
+**Definition of Done**
+- `CONCURRENCY.md` exists at repo root with the access order and 4 rules.
+- `CLAUDE.md` references `CONCURRENCY.md` for mutation discipline.
+- `scripts/check-concurrency-comments.ts` grep rejects new `this.active` / `this.entities` mutations in `EntityCache` without `// concurrency:` comment.
+- Test: CI script fails on a synthetic PR that adds `cache.active.set(...)` without the comment.
+
+**Counter-case**: Node.js is single-threaded; runtime enforcement is impossible. The value is purely documentation and reviewer discipline.
+
+---
+
+### Phase 13.5 Refinement — IntrusiveLRU Zero-Allocation O(1) Promotion (Linux kernel audit pass 4, score: 60)
+
+**Kernel analogue**: `struct list_head { next, prev }` in `include/linux/list.h`; embedded inside host structs; `list_del()` poisons both pointers after removal (`LIST_POISON1/2`); `list_entry()` = `container_of()` recovers host struct; `list_for_each_entry()` provides type-safe iteration.
+
+**Problem**: The current entity cache LRU uses array index bookkeeping for eviction ordering. Promoting a cache hit from position N to position 0 requires an O(n) splice or index update.
+
+**Change** — embed `lruPrev`/`lruNext` directly in `CachedEntity` and manage a doubly-linked list by entity ID:
+
+```typescript
+// Each CachedEntity gains:
+interface CachedEntity {
+  lruPrev: string | null;
+  lruNext: string | null;
+  // ... existing fields
+}
+
+class IntrusiveLRU {
+  private head: string | null = null;  // MRU end
+  private tail: string | null = null;  // LRU end (eviction candidate)
+
+  touch(id: string, entities: Map<string, CachedEntity>): void {
+    this.remove(id, entities);
+    this.prepend(id, entities);
+  }
+
+  evictTail(entities: Map<string, CachedEntity>): string | null {
+    if (!this.tail) return null;
+    const id = this.tail;
+    this.remove(id, entities);
+    return id;
+  }
+}
+```
+
+**Definition of Done**
+- `EntityCache` uses `IntrusiveLRU` for eviction ordering.
+- `touch()` and `evictTail()` are both O(1).
+- `list_del` equivalent: after removal, `lruPrev` and `lruNext` set to `null` (poison equivalent — any re-use without re-admit is a logic error).
+- Test: admit 1000 entities; touch entity #500 → it moves to head; evict 500 times → entity #500 is the last to be evicted.
+
+**Counter-case**: The eviction path is not hot at Cortex's scale; an O(n) array splice on 5000 entities takes <1ms. IntrusiveLRU is worth implementing as a correctness improvement (no index drift) more than a performance one.
+
+---
+
+### Phase 0.2 Refinement — ToolResult<T> Discriminated Union (Linux kernel audit pass 4, score: 45)
+
+**Kernel analogue**: `IS_ERR()` in `include/linux/err.h:76` marked `__must_check` — the compiler forces callers to handle the error path. `IS_ERR_OR_NULL` covers both null and error returns.
+
+**Problem**: MCP tool handlers return a mix of `{ error: string }`, `null`, thrown exceptions, and raw values. There is no consistent error propagation contract; callers pattern-match on different shapes.
+
+**Change** — `ToolResult<T>` discriminated union with enforced checking:
+
+```typescript
+export type ToolResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; code: ToolErrorCode; message: string };
+
+// All tool handlers return ToolResult<T>.
+// ESLint: @typescript-eslint/no-unused-vars on destructured .value
+// ensures callers check .ok before accessing .value.
+```
+
+**Definition of Done**
+- All public MCP tool handler functions return `ToolResult<T>`.
+- `ToolErrorCode` enum covers all error categories (NOT_FOUND, VALIDATION, INGEST_FAILED, CYCLE_DETECTED, TIMEOUT).
+- No tool handler `throw`s to the caller — errors are returned as `err(code, message)`.
+- ESLint rule added to flag `result.value` access without a prior `result.ok` check.
+- Test: `readEntity('nonexistent')` returns `{ ok: false, code: 'NOT_FOUND', message: '...' }`.
+
+**Counter-case**: TypeScript discriminated unions are already idiomatic; the main gain is consistency, not capability. Migration of existing handlers that throw is a one-time refactor cost.
+
+---
+
+### Phase 0.4 Refinement — DirtyBitmap find_next_bit O(N/32) Scan (Linux kernel audit pass 4, score: 36)
+
+**Kernel analogue**: `DECLARE_BITMAP(name, bits)` + `bitmap_set()` + `bitmap_clear()` + `find_next_bit()` in `include/linux/bitmap.h`; scans 32/64 entities per word; compile-time constant folding for single-bit operations.
+
+**Problem**: `dirtyEntities: Set<string>` iterates all dirty IDs as strings on every flush. Each Set entry costs ~50–100 bytes (string interning + Set entry overhead).
+
+**Change** — `DirtyBitmap` with slot-based entity assignment:
+
+```typescript
+export class DirtyBitmap {
+  private readonly words: Uint32Array;
+  constructor(capacity: number) {
+    this.words = new Uint32Array(Math.ceil(capacity / 32));
+  }
+  set(slot: number):   void { this.words[slot >>> 5] |= 1 << (slot & 31); }
+  clear(slot: number): void { this.words[slot >>> 5] &= ~(1 << (slot & 31)); }
+  isSet(slot: number): boolean { return (this.words[slot >>> 5] & (1 << (slot & 31))) !== 0; }
+  findNext(from: number): number {
+    for (let w = from >>> 5; w < this.words.length; w++) {
+      const word = w === (from >>> 5) ? this.words[w] & ~((1 << (from & 31)) - 1) : this.words[w];
+      if (word !== 0) return (w << 5) + 31 - Math.clz32(word & -word);
+    }
+    return -1;
+  }
+}
+```
+
+**Definition of Done**
+- `EntityCache` assigns each entity a numeric slot at admit time; slot released on eviction.
+- `dirtyBitmap.set(slot)` replaces `dirtyEntities.add(id)`.
+- Flush walk uses `findNext()` instead of `for...of dirtyEntities`.
+- Test: mark 5000 slots dirty, call `findNext(0)` repeatedly → visits all 5000 in order; `findNext` never visits a cleared slot.
+
+**Counter-case**: At <5000 entities, `Set` iteration is imperceptibly fast. Implement alongside slot-based entity admission (required by IntrusiveLRU anyway) rather than as a standalone change.
+
+---
+
+### Phase 5 Refinement — WatcherDestroyQueue Deferred Teardown (Linux kernel audit pass 4, score: 24)
+
+**Kernel analogue**: `LIST_HEAD(destroy_list)` + `DECLARE_DELAYED_WORK(reaper_work, fsnotify_mark_destroy_workfn)` in `fs/notify/mark.c:86`; marks pending destruction are queued, not freed immediately; reaper fires after `FSNOTIFY_REAPER_DELAY` (1 jiffy) to avoid holding locks during memory reclaim.
+
+**Problem**: The file watcher's unlink handler calls `cache.evict(entityId)` synchronously. If a tool handler is mid-read on that entity (across an `await` gap), the eviction races the read.
+
+**Change** — defer eviction to a reaper queue:
+
+```typescript
+const destroyQueue: string[] = [];
+let reaperScheduled = false;
+const REAPER_DELAY_MS = 50;
+
+export function queueDestroy(entityId: string): void {
+  destroyQueue.push(entityId);
+  if (!reaperScheduled) {
+    reaperScheduled = true;
+    setTimeout(drainDestroyQueue, REAPER_DELAY_MS);
+  }
+}
+
+async function drainDestroyQueue(): Promise<void> {
+  reaperScheduled = false;
+  for (const id of destroyQueue.splice(0)) await cache.evict(id);
+}
+```
+
+**Definition of Done**
+- Watcher unlink handler calls `queueDestroy(entityId)` instead of `cache.evict(entityId)`.
+- `drainDestroyQueue` runs after `REAPER_DELAY_MS` — sufficient for any in-flight async handler to complete.
+- `REAPER_DELAY_MS` tunable via `cortex.json` with bounds `[10, 5000]`.
+- Test: watcher fires unlink while a tool handler is mid-read of that entity → handler completes without error; eviction runs after handler resolves.
+
+**Counter-case**: VersionedEntityCache shadow-swap already provides snapshot isolation; deferred destruction is belt-and-suspenders. Implement together for defense in depth.
+
+---
+
+### Phase 0.4 Refinement — SaturatingRefCount Entity Lifetime (Linux kernel audit pass 4, score: 24)
+
+**Kernel analogue**: `REFCOUNT_SATURATED = INT_MIN/2` in `include/linux/refcount.h:115`; `refcount_inc()` warns and saturates if old value was 0 (use-after-free); `refcount_dec_and_test()` returns true only at exact zero transition with release semantics.
+
+**Problem**: No mechanism tracks how many tool handlers hold a live reference to a `CachedEntity` across `await` gaps. An entity can be evicted while a handler still has a pointer to it.
+
+**Change** — `RefCount` class embedded in `CachedEntity`:
+
+```typescript
+export class RefCount {
+  private n = 1;
+  inc(): void {
+    if (this.n === 0) { console.warn('[cortex:refcount] use-after-free'); this.n = Number.MAX_SAFE_INTEGER; return; }
+    if (this.n < Number.MAX_SAFE_INTEGER) this.n++;
+  }
+  decAndTest(): boolean {
+    if (this.n === 0) { console.warn('[cortex:refcount] double-free prevented'); return false; }
+    if (this.n === Number.MAX_SAFE_INTEGER) return false;
+    return --this.n === 0;
+  }
+}
+
+// In eviction path:
+// if (!entity.refCount.decAndTest()) {
+//   evictionDeferred.add(entityId);  // retry after handler releases
+//   return;
+// }
+// cache.delete(entityId);
+```
+
+**Definition of Done**
+- Each `CachedEntity` has a `RefCount refCount` starting at 1 (owned by the cache).
+- Tool handlers call `entity.refCount.inc()` at entry, `entity.refCount.decAndTest()` at exit.
+- Eviction defers if `refCount > 1`; retries when handler releases.
+- Test: evict entity while a mock handler holds a reference → eviction deferred; after handler release → eviction completes.
+
+**Counter-case**: VersionedEntityCache and WatcherDestroyQueue together already prevent the race this solves. RefCount adds belt-and-suspenders correctness at the cost of every tool handler needing explicit inc/dec discipline — easy to forget.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 5 Phases
+
+### Phase 0.11 Refinement — CompactionBackoff Exponential Defer (Linux kernel audit pass 5, score: 60)
+
+**Kernel analogue**: `COMPACT_MAX_DEFER_SHIFT=6` in `mm/compaction.c:119`; `defer_compaction()` increments `compact_defer_shift` (capped at 6, max 64 skips) and resets `compact_considered=0`; `compaction_deferred()` returns true while `++compact_considered < 1 << compact_defer_shift`.
+
+**Closes flaw #150** (compaction retried immediately on failure with no back-off).
+
+**Change**:
+
+```typescript
+export class CompactionBackoff {
+  private deferShift = 0;
+  private considered = 0;
+  private static readonly MAX_SHIFT = 6;  // max 64 skips
+
+  isDeferred(): boolean {
+    if (this.deferShift === 0) return false;
+    return ++this.considered < (1 << this.deferShift);
+  }
+  defer(): void {
+    if (this.deferShift < CompactionBackoff.MAX_SHIFT) this.deferShift++;
+    this.considered = 0;
+  }
+  reset(): void { this.deferShift = 0; this.considered = 0; }
+}
+
+// In ExperienceManager.maybeCompact():
+// if (this.backoff.isDeferred()) return;
+// try { await this.compact(); this.backoff.reset(); }
+// catch (e) { this.backoff.defer(); warnOnce(`Compaction failed: ${e}`); }
+```
+
+**Definition of Done**
+- `CompactionBackoff` instance lives on `ExperienceManager`.
+- `isDeferred()` checked before every compaction attempt.
+- `defer()` called on any thrown error from the compaction path.
+- `reset()` called on success.
+- Max back-off: 64 skips × call-interval before retry.
+- Test: simulate 3 consecutive failures → `isDeferred()` returns true for 1, 2, 4 subsequent calls; after `reset()` → returns false immediately.
+
+**Counter-case**: Cortex compaction is cheap in-memory; guard `defer()` behind `e instanceof IOError` to avoid back-off on logic errors.
+
+---
+
+### Phase 0.4 Refinement — EntitySlotAllocator Cyclic IDR (Linux kernel audit pass 5, score: 40)
+
+**Kernel analogue**: `idr_alloc_cyclic()` in `include/linux/idr.h:118` — starts from `idr_next` (last allocation point) to prevent immediate reuse of recently-freed IDs.
+
+**Closes flaw #151** (dirty bitmap slot assignment has no FIFO reuse guarantee).
+
+**Change**:
+
+```typescript
+export class EntitySlotAllocator {
+  private readonly inUse: boolean[];
+  private cursor = 0;
+
+  constructor(private readonly capacity: number) {
+    this.inUse = new Array(capacity).fill(false);
+  }
+
+  alloc(): number | null {
+    for (let i = 0; i < this.capacity; i++) {
+      const slot = (this.cursor + i) % this.capacity;
+      if (!this.inUse[slot]) {
+        this.inUse[slot] = true;
+        this.cursor = (slot + 1) % this.capacity;
+        return slot;
+      }
+    }
+    return null;
+  }
+
+  release(slot: number): void { this.inUse[slot] = false; }
+}
+```
+
+**Definition of Done**
+- `EntitySlotAllocator(MAX_ENTITIES)` instance on `EntityCache`.
+- `alloc()` called at admit time; result stored as `entity.slot`.
+- `release(slot)` called at eviction time.
+- `DirtyBitmap.clear(slot)` called immediately after `alloc()`.
+- Test: alloc 100 slots, free slot 0, alloc again → new slot is NOT 0 (cursor advanced past it); slot 0 is reused only after cursor wraps fully around.
+
+**Counter-case**: Plain `freeSlots: number[]` stack is O(1) alloc/free with no FIFO — simpler but allows immediate reuse. Only the cyclic variant closes flaw #151; the stack variant does not.
+
+---
+
+### Phase 0.11 Refinement — ThreeHorizonLoad Average EXP_1/5/15 (Linux kernel audit pass 5, score: 32)
+
+**Kernel analogue**: `avenrun[3]` in `kernel/sched/loadavg.c:62`; `EXP_1=1884, EXP_5=2014, EXP_15=2037` in `loadavg.h:21–23` (fixed-point with `FSHIFT=11`); `calc_load(a, exp, active) = a*exp + active*(FIXED_1-exp)`; `fixed_power_int()` for O(log N) missed-window catch-up.
+
+**Extends flaw #109** closure (single EWMA cannot distinguish spikes from sustained pressure).
+
+**Change**:
+
+```typescript
+const FSHIFT = 11;
+const FIXED_1 = 1 << FSHIFT;
+const EXP_SHORT  = Math.round(FIXED_1 * Math.exp(-5 / 60));
+const EXP_MEDIUM = Math.round(FIXED_1 * Math.exp(-5 / 300));
+const EXP_LONG   = Math.round(FIXED_1 * Math.exp(-5 / 900));
+
+export class ThreeHorizonLoad {
+  private s = 0; private m = 0; private l = 0;
+  tick(active: number): void {
+    const u = (a: number, e: number) => Math.round((a * e + active * (FIXED_1 - e)) / FIXED_1);
+    this.s = u(this.s, EXP_SHORT); this.m = u(this.m, EXP_MEDIUM); this.l = u(this.l, EXP_LONG);
+  }
+  get pressure(): 'spike' | 'sustained' | 'normal' {
+    const [s, l] = [this.s / FIXED_1, this.l / FIXED_1];
+    if (s > 0.8 && l > 0.8) return 'sustained';
+    if (s > 0.8 && l < 0.4) return 'spike';
+    return 'normal';
+  }
+}
+```
+
+**Definition of Done**
+- `tick(activeQueries)` called every 5s via a scheduled interval.
+- `pressure === 'sustained'` triggers aggressive compaction threshold scaling.
+- `pressure === 'spike'` logs a warning but does not change thresholds (spike will resolve).
+- Test: 10 ticks at `active=10` → short > 0.8; then 20 ticks at `active=0` → short drops below 0.4, long still decaying → `pressure === 'spike'` during first phase; `'normal'` after.
+
+**Counter-case**: Single EWMA from pass 2 already provides a smoothed signal; three horizons add diagnostic granularity that matters mainly for dashboards, not compaction decisions.
+
+---
+
+### Phase 5 Refinement — EventBatchList llist Bulk-Pop (Linux kernel audit pass 5, score: 60)
+
+**Kernel analogue**: `llist_del_all()` in `include/linux/llist.h:281` — atomically swaps `head->first` with NULL in one operation, returning the entire detached chain; `llist_add()` uses `cmpxchg` for lock-free multi-producer push.
+
+**Problem**: The current watcher event array accumulates via `push()` while the drain loop iterates it. Events arriving during iteration may be missed or double-processed depending on iteration ordering.
+
+**Change** — swap-and-process pattern:
+
+```typescript
+export class EventBatchList {
+  private head: { event: WatchEvent; next: typeof this.head } | null = null;
+
+  push(event: WatchEvent): void {
+    this.head = { event, next: this.head };
+  }
+
+  popAll(): WatchEvent[] {
+    const chain = this.head;
+    this.head = null;  // detach entire chain atomically
+    if (!chain) return [];
+    const events: WatchEvent[] = [];
+    let n = chain;
+    while (n) { events.push(n.event); n = n.next as typeof n; }
+    return events.reverse();  // llist_reverse_order: oldest-first
+  }
+}
+```
+
+**Definition of Done**
+- All watcher event collection uses `EventBatchList`.
+- `popAll()` returns events in oldest-first order.
+- Events pushed during `popAll()` processing land on a fresh head, processed in the next drain.
+- Test: push 5 events; call `popAll()` while pushing 3 more → first call returns exactly 5; second call returns 3.
+
+**Counter-case**: Node.js is single-threaded; array splice is safe within a tick. The swap-and-process discipline is the steal — it makes the "drain is atomic" invariant explicit and prevents future bugs when async processing is added.
+
+---
+
+### Phase 13 Refinement — SeqBuf Overflow-Safe Context Pack Writer (Linux kernel audit pass 5, score: 40)
+
+**Kernel analogue**: `struct seq_buf { buffer, size, len }` in `include/linux/seq_buf.h:21`; `seq_buf_printf()` sets `len = size+1` sentinel on overflow; `seq_buf_has_overflowed()` checks `len > size`.
+
+**Problem**: `build_context_pack` checks budget inside a loop with `if (tokens > budget) break`. The budget check is interspersed with content generation, making it hard to track exactly when overflow occurred or how many bytes were written.
+
+**Change** — `SeqBuf` with overflow sentinel:
+
+```typescript
+export class SeqBuf {
+  private pos = 0; private parts: string[] = []; private overflow = false;
+  constructor(private readonly limit: number) {}
+  write(s: string): boolean {
+    if (this.overflow || this.pos + s.length > this.limit) {
+      this.overflow = true; return false;
+    }
+    this.parts.push(s); this.pos += s.length; return true;
+  }
+  hasOverflowed(): boolean { return this.overflow; }
+  toString(): string { return this.parts.join(''); }
+}
+```
+
+**Definition of Done**
+- `build_context_pack` uses `SeqBuf(budget * AVG_CHARS_PER_TOKEN)`.
+- Entity skeletons written with `buf.write(skeleton)`.
+- Loop breaks on `!buf.write(...)` — natural sentinel.
+- Response includes `truncated: buf.hasOverflowed()` field.
+- Test: write 10 strings of 100 chars each into a 750-char buffer → first 7 succeed, 8th returns false, `hasOverflowed() === true`.
+
+**Counter-case**: Token budgets are counts, not byte counts; `SeqBuf` works in bytes unless a token estimator is applied. Apply a `charsPerToken` scaling factor at construction time.
+
+---
+
+### Phase 0.11 Refinement — clamp() + roundupPow2 Math Utilities (Linux kernel audit pass 5, score: 36)
+
+**Kernel analogue**: `clamp(val, lo, hi)` in `include/linux/minmax.h:206`; `roundup_pow_of_two()` in `include/linux/log2.h:174`; `is_power_of_2()` at line 45.
+
+**Change** — add to `src/utils/math.ts`:
+
+```typescript
+export const isPow2      = (n: number) => n > 0 && (n & (n - 1)) === 0;
+export const roundupPow2 = (n: number) => { let p = 1; while (p < n) p <<= 1; return p; };
+export const clamp       = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+```
+
+**CLAUDE.md rule to add**: All ring-buffer, queue, and bitmap capacities MUST be a power of 2 — use `roundupPow2(n)` at construction time. The mask trick (`index & (size-1)`) is only correct when size is a power of 2.
+
+**Also**: Replace `validateConfig` throws-on-bad-value with `clamp`-and-warn for non-security-critical tunables (compaction_pressure, ewmaWeightRcp, pressureWindowSize). Only throw for values that would cause crashes (negative sizes, zero divisors).
+
+**Definition of Done**
+- `isPow2`, `roundupPow2`, `clamp` in `src/utils/math.ts`.
+- `RingQueue`, `BoundedWatcherQueue`, `DirtyBitmap` constructors all call `roundupPow2(capacity)`.
+- `validateConfig` uses `clamp` for tunables; emits `warnOnce` on clamping; throws only for structurally-invalid values.
+- CLAUDE.md updated with the power-of-2 rule.
+- Test: `roundupPow2(5) === 8`, `roundupPow2(8) === 8`, `clamp(150, 1, 100) === 100`.
+
+---
+
+### Phase 5 Refinement — GlobCache __pure Memoization (Linux kernel audit pass 5, score: 36)
+
+**Kernel analogue**: `bool __pure glob_match(char const *pat, char const *str)` in `include/linux/glob.h:8`; `__pure` means the result is determined solely by arguments — the compiler may cache/hoist it; no side effects, no global reads.
+
+**Problem**: Cortex re-evaluates micromatch glob patterns against file paths on every ingest scan. The same `{pattern, path}` pair is evaluated thousands of times during a full repo scan.
+
+**Change**:
+
+```typescript
+const _globCache = new Map<string, boolean>();
+
+export function globMatch(pattern: string, path: string): boolean {
+  const key = `${pattern}\0${path}`;
+  let result = _globCache.get(key);
+  if (result === undefined) {
+    result = micromatch.isMatch(path, pattern);
+    _globCache.set(key, result);
+  }
+  return result;
+}
+
+export function clearGlobCache(): void { _globCache.clear(); }
+```
+
+**Definition of Done**
+- All `micromatch.isMatch(path, pattern)` calls in the ingest path replaced with `globMatch(pattern, path)`.
+- `clearGlobCache()` called on watcher config reload (patterns may change).
+- Test: call `globMatch('**/*.ts', 'src/foo.ts')` 1000 times → micromatch called exactly once (cache hit thereafter).
+
+**Counter-case**: Cache grows unboundedly with novel path strings. Cap at `MAX_GLOB_CACHE = 10_000` entries; evict via simple counter reset when limit is reached.
+
+---
+
+### Phase 5 Refinement — EventBatchList ovflist Secondary Buffer (Linux kernel audit pass 5, score: 32)
+
+**Kernel analogue**: `fs/eventpoll.c:131` — `struct epitem { ovflist next }`; while `ep_send_events` is harvesting the ready list, new-arriving events go onto `ovflist` instead of the main ready list; after harvest `ovflist` is merged back; no event is lost even if it arrives during the drain window.
+
+**Problem**: Cortex's watcher drain callback processes events synchronously. If the OS fires a new watcher notification while the drain is running (across an `await` boundary), the new event is queued to the same array the drain is iterating, potentially causing double-processing or skipped events.
+
+**Change**:
+
+```typescript
+export class TwoPhaseEventDrain {
+  private primary: WatchEvent[] = [];
+  private overflow: WatchEvent[] = [];
+  private draining = false;
+
+  push(event: WatchEvent): void {
+    (this.draining ? this.overflow : this.primary).push(event);
+  }
+
+  async drain(handler: (events: WatchEvent[]) => Promise<void>): Promise<void> {
+    if (this.primary.length === 0) return;
+    this.draining = true;
+    const batch = this.primary.splice(0);
+    try {
+      await handler(batch);
+    } finally {
+      this.draining = false;
+      // merge ovflist back — becomes next primary batch
+      this.primary.unshift(...this.overflow.splice(0));
+    }
+  }
+}
+```
+
+**Definition of Done**
+- Watcher event handler uses `TwoPhaseEventDrain`; `draining` flag set during `handler` call.
+- Events pushed during an active drain land in `overflow`; re-queued as next primary batch after handler resolves.
+- Test: push 5 events, start drain, push 3 more during await — verify all 8 are processed across two drain calls with no duplicates.
+
+**Counter-case**: Node.js `EventEmitter` callbacks are synchronous within a tick; a new watcher event cannot arrive during a synchronous drain. The race only exists if drain uses `await` — which Cortex does. Guard with a `draining` flag only around the async span, not the full method.
+
+---
+
+### Phase 0.4 Refinement — WQ_FLAG_EXCLUSIVE Single-Waiter Wake (Linux kernel audit pass 5, score: 24)
+
+**Kernel analogue**: `kernel/sched/wait.c:92` — `__wake_up_common()` breaks after waking one exclusive waiter (`WQ_FLAG_EXCLUSIVE`); prevents thundering-herd when multiple waiters compete for the same resource; exclusive waiters are tail-inserted so non-exclusive (broadcast) waiters fire first.
+
+**Problem**: Cortex's promise-based async patterns (e.g. `IngestCompletion`, watcher drain, compaction lock) resolve all waiters simultaneously. If 50 concurrent tool calls are waiting on the same ingest, all 50 resume at once and compete for LRU slots, triggering 50 simultaneous cache evictions.
+
+**Change**: Add `ExclusiveGate` — a completion-style primitive that wakes exactly one waiter per `release()` call:
+
+```typescript
+export class ExclusiveGate {
+  private waiters: Array<() => void> = [];
+
+  /** Wake exactly one waiter (FIFO order). */
+  release(): void {
+    const next = this.waiters.shift();
+    if (next) next();
+  }
+
+  wait(): Promise<void> {
+    return new Promise(resolve => this.waiters.push(resolve));
+  }
+}
+```
+
+**Definition of Done**
+- `ExclusiveGate` exported from `src/utils/exclusive-gate.ts`.
+- Used in compaction lock: only one compaction caller proceeds at a time; others queue.
+- Test: 10 concurrent waiters → release called 10 times → each fires exactly once in FIFO order.
+
+**Counter-case**: `IngestCompletion` correctly broadcasts to all waiters (they all need the result). `ExclusiveGate` is only applicable to resource-contention scenarios (compaction, LRU eviction) where only one caller should proceed. Do not replace `Completion` with `ExclusiveGate`.
+
+---
+
+### Phase 0.4 Refinement — Fixed-Size Entity HashMap (Linux kernel audit pass 5, score: 24)
+
+**Kernel analogue**: `include/linux/hashtable.h:16` — `DEFINE_HASHTABLE(name, bits)` declares a fixed-size hash table of `2^bits` buckets at compile time; avoids dynamic resizing; `hash_add()`, `hash_del()`, `hash_for_each_possible()` all O(1) average; no GC pressure from rehashing.
+
+**Problem**: Cortex's entity map is a JavaScript `Map`. Under sustained high-entity-count ingest, `Map` rehashes at load-factor thresholds, causing GC spikes. The capacity is always known at startup (`maxEntities` in config).
+
+**Change**: Pre-size the entity map at construction time using a power-of-2 capacity:
+
+```typescript
+// In ExperienceManager constructor:
+// Use roundupPow2(maxEntities * 1.5) as initial Map capacity hint.
+// JS Map doesn't accept a capacity hint, but we can pre-populate to force
+// the internal hash table to allocate to the right size:
+const capacity = roundupPow2(config.maxEntities);
+// Alternatively: use a fixed-bucket open-address table if GC is measurable.
+```
+
+**Definition of Done**
+- `ExperienceManager` passes `roundupPow2(config.maxEntities * 2)` as a sizing hint.
+- Add a benchmark: sustained 5000-entity ingest → measure GC pause histogram before/after.
+- CLAUDE.md rule: **entity maps are pre-sized at construction; never allow default empty-Map growth under load**.
+
+**Counter-case**: JavaScript `Map` hides its internal table; there is no public capacity-hint API. Pre-populating to force allocation is a hack. Only pursue this if `--heap-prof` shows Map rehashing in the GC profile. Otherwise the `roundupPow2` convention (for ring buffers, bitmaps) is the steal — not a new Map implementation.
+
+---
+
+### Phase 5 Refinement — Three-Priority plist Work Queue (Linux kernel audit pass 5, score: 24)
+
+**Kernel analogue**: `include/linux/plist.h:86` — `struct plist_node { prio, prio_list, node_list }`; `plist_add()` inserts in O(K) where K = distinct priority levels; `plist_first()` O(1) dequeue of highest-priority item; only one node per priority on the priority spine.
+
+**Problem**: Cortex's ingest queue processes all entity ingests in FIFO order regardless of entity importance. A bulk re-index of 5000 low-importance stubs blocks a single high-importance entity (e.g. the file the user just opened) for seconds.
+
+**Change**: Three-priority ingest queue replacing the single FIFO array:
+
+```typescript
+export type IngestPriority = 'high' | 'normal' | 'low';
+
+export class PriorityIngestQueue {
+  private readonly queues = {
+    high:   [] as IngestTask[],
+    normal: [] as IngestTask[],
+    low:    [] as IngestTask[],
+  };
+
+  enqueue(task: IngestTask, priority: IngestPriority = 'normal'): void {
+    this.queues[priority].push(task);
+  }
+
+  dequeue(): IngestTask | undefined {
+    return this.queues.high.shift()
+        ?? this.queues.normal.shift()
+        ?? this.queues.low.shift();
+  }
+
+  get size(): number {
+    return this.queues.high.length + this.queues.normal.length + this.queues.low.length;
+  }
+}
+```
+
+**Definition of Done**
+- `PriorityIngestQueue` exported from `src/utils/priority-queue.ts`.
+- `ingest` MCP tool accepts optional `priority` param; defaults to `'normal'`.
+- Watcher-triggered ingests (user is actively editing) use `'high'`; background re-index uses `'low'`.
+- Test: enqueue 100 low + 1 high → dequeue order is high first.
+
+**Counter-case**: With only 3 priority levels, three `Array.shift()` checks is O(1) and simpler than `plist`. `plist` only adds value with 99 priority levels (RT scheduling). The steal is the architectural pattern (separate queues per priority) not the data structure.
+
+---
+
+### Phase 13.5 Refinement — folio_mark_accessed Referenced-Bit Promotion (Linux kernel audit pass 5, score: 24)
+
+**Kernel analogue**: `mm/swap.c:461` — `folio_mark_accessed()` sets a referenced bit on first access; on second access with the bit set, promotes the folio to active list via `folio_activate()`; avoids promoting on first touch (could be a one-time scan).
+
+**Problem**: Cortex's Two-Tier CLOCK (pass 2) promotes an entity to the hot tier on first access after a cold miss. This causes scan-driven false promotions: a background ingest that reads every entity once fills the hot tier with entities that will never be accessed again.
+
+**Change**: Add a `referenced` flag to entity metadata. On first access: set `referenced = true` but keep entity in cold tier. On second access with `referenced = true`: promote to hot tier. Reset `referenced` on eviction from cold tier:
+
+```typescript
+interface EntityMeta {
+  slot: number;
+  referenced: boolean;  // ← new
+  tier: 'hot' | 'cold';
+}
+
+function onAccess(entity: EntityMeta): void {
+  if (entity.tier === 'cold') {
+    if (entity.referenced) {
+      promoteToHot(entity);   // 2nd touch → hot
+      entity.referenced = false;
+    } else {
+      entity.referenced = true;  // 1st touch → mark only
+    }
+  }
+}
+```
+
+**Definition of Done**
+- `referenced` flag added to entity metadata in `ExperienceManager`.
+- Cold-tier access path checks `referenced` before promoting; sets it on first touch.
+- `referenced` reset to `false` when entity is evicted from cold tier back to the free list.
+- Test: access entity once → still cold; access again → hot.
+
+**Counter-case**: Two-Tier CLOCK from pass 2 already handles the 2nd-access case. This is a refinement that adds the intermediate `referenced` step to prevent false promotions on first-access scans. Only implement if profiling shows hot-tier churn during background ingest.
+
+---
+
+### Phase 0.2 Refinement — sort_r Closure Comparator Convention (Linux kernel audit pass 5, score: 24)
+
+**Kernel analogue**: `include/linux/sort.h:17` — `sort_r(base, num, size, cmp_func, swap_func, priv)` passes a `priv` context pointer to the comparator; enables sorting with external state (e.g. a score table) without global variables; `cmp_int = ((l > r) - (l < r))` branchless three-way compare.
+
+**Problem**: Cortex's sort comparators for entity ranking (by score, by recency, by staleness) capture external state via closure. If the same comparator logic is duplicated in multiple places (e.g. in `cortex_find` result ranking, in LRU eviction candidate selection, in audit ordering), there is no shared pattern.
+
+**Change**: Standardize on a `Comparator<T>` type and a `cmpInt` utility:
+
+```typescript
+export type Comparator<T> = (a: T, b: T) => number;
+
+/** Branchless three-way integer compare: negative if a<b, 0 if equal, positive if a>b */
+export const cmpInt = (a: number, b: number): number => (a > b ? 1 : 0) - (a < b ? 1 : 0);
+
+/** Reverse a comparator (descending sort) */
+export const descending = <T>(cmp: Comparator<T>): Comparator<T> => (a, b) => cmp(b, a);
+```
+
+**Definition of Done**
+- `cmpInt`, `Comparator<T>`, `descending` exported from `src/utils/math.ts`.
+- All sort calls in `cortex_find`, `LRUManager`, `AuditService` use `cmpInt` for numeric comparisons.
+- CLAUDE.md rule: **never write `(a, b) => a.score - b.score`; use `cmpInt(a.score, b.score)` — subtraction overflows on large integers**.
+
+**Counter-case**: `Array.prototype.sort()` already accepts a closure comparator natively in JS; `sort_r`'s `priv` pointer is unnecessary. `cmpInt` is a micro-optimization irrelevant at Cortex's sort sizes (<5000 items). The steal is the convention (standardized `Comparator<T>` type + `cmpInt` util) not a performance gain.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 6 Phases
+*(lib/, io_uring/, ipc/ — 2026-05-25)*
+
+---
+
+### Phase 0.11 Refinement — WinMinmax Sliding-Window Min/Max (Linux kernel audit pass 6, score: 36)
+
+**Kernel analogue**: `lib/win_minmax.c:29` — Kathleen Nichols' algorithm; `minmax_running_min/max(m, win, t, meas)` tracks best/2nd/3rd samples within window `win`; O(1) per update, constant space; on a new extreme, all prior samples are forgotten (they're all ≥ the new value by definition); sub-window updates at 1/4 and 1/2 boundaries handle sparse data.
+
+**Problem**: Cortex's EWMA (pass 2) tracks the weighted average cache hit rate. Under a transient miss burst (brief spike of cache misses), the EWMA dips but recovers quickly. Under structural under-capacity (sustained low hit rate throughout the window), the EWMA looks similar. The two cases demand different responses: burst → wait; structural → trigger aggressive compaction. EWMA cannot distinguish them.
+
+**Change**:
+
+```typescript
+// src/knowledge/win-minmax.ts
+interface MinmaxSample { t: number; v: number; }
+
+export class WinMinmax {
+  private s: [MinmaxSample, MinmaxSample, MinmaxSample] = [
+    { t: 0, v: 0 }, { t: 0, v: 0 }, { t: 0, v: 0 },
+  ];
+
+  reset(t: number, v: number): number {
+    this.s[0] = this.s[1] = this.s[2] = { t, v };
+    return v;
+  }
+
+  runningMin(win: number, t: number, meas: number): number {
+    const val = { t, v: meas };
+    if (meas <= this.s[0].v || t - this.s[2].t > win) return this.reset(t, meas);
+    if (meas <= this.s[1].v) this.s[2] = this.s[1] = val;
+    else if (meas <= this.s[2].v) this.s[2] = val;
+    // subwin update (omitted for brevity — see steal-integration-Linux-2026-05-25-pass6.md P6-E1)
+    return this.s[0].v;
+  }
+}
+
+// In ExperienceManager tick:
+// hitRateMin.runningMin(5 * 60_000, Date.now(), currentHitRate);
+// if (hitRateMin.runningMin(...) < LOW_WATERMARK) → structural pressure confirmed
+```
+
+**Definition of Done**
+- `WinMinmax` exported from `src/knowledge/win-minmax.ts`.
+- `ExperienceManager` tracks both EWMA (ThreeHorizonLoad) and `WinMinmax` for cache hit rate.
+- Pressure diagnosis: if `ThreeHorizonLoad.pressure === 'sustained'` AND `winMin < LOW_WATERMARK` → structural (trigger compaction); if only short EWMA is high → spike (skip compaction).
+- Test: feed 100 hit ticks then 10 miss ticks → EWMA shows dip, winMin shows minimum from miss window.
+
+**Counter-case**: EWMA already drives compaction decisions adequately for most workloads. WinMinmax only adds diagnostic value when distinguishing spike from structural pressure matters. Add behind a `config.enableWinMinmax` flag initially.
+
+---
+
+### Phase 0.4 Refinement — DirtyGate max_pending_changes Back-pressure (Linux kernel audit pass 6, score: 36)
+
+**Kernel analogue**: `lib/lru_cache.c:67` — `lc->max_pending_changes`; when `pending_changes >= max_pending_changes`, `LC_STARVING` flag set; `lc_get()` returns `NULL`; caller MUST commit a transaction (flush) before adding more changes.
+
+**Problem**: Cortex's DirtyBitmap (pass 4) accumulates dirty entity slots with no maximum. On a large `git clone` ingest (5000 files), all 5000 entities go dirty simultaneously. The next flush interval writes 5000 JSONL entries at once — multi-second IO spike, GC pause, and visible latency to concurrent MCP tool calls.
+
+**Change**:
+
+```typescript
+// src/knowledge/dirty-gate.ts
+export class DirtyGate {
+  private pendingDirty = 0;
+  private starving = false;
+  private readonly flushWaiters: Array<() => void> = [];
+
+  constructor(private readonly maxPendingDirty: number) {}
+
+  tryMarkDirty(): boolean {
+    if (this.starving) return false;
+    this.pendingDirty++;
+    if (this.pendingDirty >= this.maxPendingDirty) this.starving = true;
+    return true;
+  }
+
+  waitForCapacity(): Promise<void> {
+    if (!this.starving) return Promise.resolve();
+    return new Promise(resolve => this.flushWaiters.push(resolve));
+  }
+
+  onFlushed(flushedCount: number): void {
+    this.pendingDirty = Math.max(0, this.pendingDirty - flushedCount);
+    if (this.pendingDirty < this.maxPendingDirty) {
+      this.starving = false;
+      this.flushWaiters.splice(0).forEach(r => r());
+    }
+  }
+}
+```
+
+**Definition of Done**
+- `DirtyGate` exported from `src/knowledge/dirty-gate.ts`.
+- `ExperienceManager` uses `DirtyGate` with `maxPendingDirty = config.maxPendingDirty ?? 256`.
+- Background ingest path: `if (!dirtyGate.tryMarkDirty()) { await dirtyGate.waitForCapacity(); }`.
+- User-triggered `save_concept` calls bypass the gate (never stall interactive calls).
+- After each flush batch: `dirtyGate.onFlushed(flushedCount)`.
+- Test: ingest 500 entities → flush fires at 256, gate starves, resumes after flush completes.
+
+**Counter-case**: The gate stalls background ingest when the dirty queue is full. Acceptable for batch re-index; unacceptable for interactive saves. The `maxPendingDirty` limit must be high enough to allow normal ingest bursts without triggering unnecessary back-pressure.
+
+---
+
+### Phase 5 Refinement — ErrSeq Error-Subscription Sampling (Linux kernel audit pass 6, score: 36)
+
+**Kernel analogue**: `lib/errseq.c:62` — `errseq_set(eseq, err)` records error, bumps counter only if last error was seen; `errseq_sample(eseq)` returns opaque cookie; `errseq_check(eseq, since)` → error if changed; `errseq_check_and_advance(eseq, since)` → error + advances cursor; `ERRSEQ_SEEN` bit prevents counter churn when no subscriber reads.
+
+**Problem**: Cortex's fire-and-forget JSONL writes (background flush, compaction) fail silently. The MCP tool handler that initiated the work returns "success" to the LLM even when the underlying write failed. The LLM then references data it believes was persisted — which doesn't exist on disk.
+
+**Change**:
+
+```typescript
+// src/utils/err-seq.ts
+export type ErrSeqCookie = number;
+
+export class ErrSeq {
+  private seq = 0;
+  private lastErr = 0;
+  private seen = true;
+
+  set(errCode: number): void {
+    if (errCode === 0) return;
+    if (this.seen) this.seq++;
+    this.lastErr = errCode;
+    this.seen = false;
+  }
+
+  sample(): ErrSeqCookie {
+    this.seen = true;
+    return this.seq;
+  }
+
+  check(since: ErrSeqCookie): number {
+    return this.seq === since ? 0 : this.lastErr;
+  }
+
+  checkAndAdvance(sinceRef: { value: ErrSeqCookie }): number {
+    const err = this.check(sinceRef.value);
+    if (err !== 0) sinceRef.value = this.sample();
+    return err;
+  }
+}
+
+// In KnowledgeManager:
+// export const ioErrSeq = new ErrSeq();
+// In writeJSONL catch block: ioErrSeq.set(1);
+//
+// In MCP tool handlers:
+// const since = { value: ioErrSeq.sample() };
+// await doWork();
+// if (ioErrSeq.checkAndAdvance(since)) return toolError('IO error during operation');
+```
+
+**Definition of Done**
+- `ErrSeq` exported from `src/utils/err-seq.ts`.
+- `KnowledgeManager` exposes a module-level `ioErrSeq: ErrSeq` instance.
+- All `catch` blocks in JSONL write paths call `ioErrSeq.set(1)`.
+- `save_concept`, `ingest`, and `compress` MCP handlers sample at start and check at end.
+- Test: trigger a write failure → tool call returns error; subsequent calls with no failure → tool call returns success.
+
+**Counter-case**: A thrown exception from an `await`ed write already propagates in Node.js — `errseq` is only needed for fire-and-forget writes where the caller doesn't `await`. Audit which write paths are truly fire-and-forget before adding this; most Cortex writes already propagate via `await`.
+
+---
+
+### Phase 13 Refinement — ObjectPool Fixed-Size Slab Cache (Linux kernel audit pass 6, score: 36)
+
+**Kernel analogue**: `io_uring/alloc_cache.h:21` — `IO_ALLOC_CACHE_MAX = 128`; `io_alloc_cache_get` LIFO pop; `io_alloc_cache_put` returns false if at cap; falls back to `io_cache_alloc_new` on miss and `kvfree` on overflow; LIFO gives best cache locality.
+
+**Problem**: Cortex's `build_context_pack` and `cortex_find` allocate and discard many small objects per call (result entries, builder state, token windows). Under rapid tool-call sequences, GC pressure from repeated allocation/deallocation can cause latency spikes.
+
+**Change**:
+
+```typescript
+// src/utils/object-pool.ts
+export class ObjectPool<T> {
+  private readonly stack: T[] = [];
+
+  constructor(
+    private readonly maxCached: number,
+    private readonly factory: () => T,
+    private readonly reset?: (obj: T) => void,
+  ) {}
+
+  get(): T {
+    const obj = this.stack.pop();
+    if (obj !== undefined) { this.reset?.(obj); return obj; }
+    return this.factory();
+  }
+
+  put(obj: T): void {
+    if (this.stack.length < this.maxCached) this.stack.push(obj);
+    // else: let GC collect it
+  }
+}
+```
+
+**Definition of Done**
+- `ObjectPool<T>` exported from `src/utils/object-pool.ts`.
+- One pool per frequently-allocated type in the hot path (identified by profiler).
+- Pool cap: `IO_ALLOC_CACHE_MAX = 128` per pool type.
+- `clear()` called on MCP server shutdown to release pooled objects.
+- Test: get 200 objects from a pool of cap 128 → first 128 are recycled, remaining 72 are freshly allocated.
+
+**Counter-case**: Node.js's generational GC handles short-lived objects efficiently. Only implement if `--heap-prof` shows allocation in the hot path of `build_context_pack` or `cortex_find`. Do not pre-optimize without profiling evidence.
+
+---
+
+### Phase 13.5 Refinement — TimerQueue rb_root_cached Stale-Entity Expiry (Linux kernel audit pass 6, score: 24)
+
+**Kernel analogue**: `lib/timerqueue.c:35` — `timerqueue_add(head, node)` inserts sorted by `expires`; `rb_add_cached` maintains O(1) leftmost (soonest expiry); returns `true` if new node is now the next-to-expire; `timerqueue_del` O(log n) removal.
+
+**Problem**: Cortex's stale entity eviction scans all entities on each tick to find expired ones — O(n) per tick. At 5000 entities with a 30s tick, this is 5000 comparisons every 30s for a task that typically touches 0–5 entities per tick.
+
+**Change**:
+
+```typescript
+// src/knowledge/expiry-queue.ts
+// Min-heap sorted by expiry time. O(log n) insert/delete, O(1) next-expiry.
+export class ExpiryQueue {
+  private readonly heap: Array<{ entityId: string; expiresAt: number }> = [];
+
+  enqueue(entityId: string, expiresAt: number): void {
+    this.heap.push({ entityId, expiresAt });
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  peekNext(): { entityId: string; expiresAt: number } | undefined {
+    return this.heap[0];
+  }
+
+  dequeueExpired(now: number): string[] {
+    const expired: string[] = [];
+    while (this.heap[0]?.expiresAt <= now) {
+      expired.push(this.heap[0].entityId);
+      this._swap(0, this.heap.length - 1);
+      this.heap.pop();
+      if (this.heap.length > 0) this._siftDown(0);
+    }
+    return expired;
+  }
+
+  private _bubbleUp(i: number): void { /* standard min-heap */ }
+  private _siftDown(i: number): void { /* standard min-heap */ }
+  private _swap(a: number, b: number): void {
+    [this.heap[a], this.heap[b]] = [this.heap[b], this.heap[a]];
+  }
+}
+```
+
+**Definition of Done**
+- `ExpiryQueue` exported from `src/knowledge/expiry-queue.ts`.
+- On entity admit: `expiryQueue.enqueue(entity.id, Date.now() + maxStaleMs)`.
+- On entity access: remove old entry, re-enqueue with updated expiry.
+- On tick: `expiryQueue.dequeueExpired(Date.now())` returns only expired IDs.
+- Test: enqueue 100 entities with staggered expiries → tick fires → only entities past expiry are returned.
+
+**Counter-case**: At <5000 entities, O(n) scan completes in <1ms and requires no parallel data structure. ExpiryQueue only matters at high entity counts or sub-second tick intervals. Profile before implementing.
+
+---
+
+### Phase 2 Refinement — IntervalTree Line-Range Entity Lookup for impact_analysis (Linux kernel audit pass 6, score: 24)
+
+**Kernel analogue**: `lib/interval_tree.c:10` — `INTERVAL_TREE_DEFINE` macro; `interval_tree_iter_first(tree, start, last)` finds first node whose `[node->start, node->last]` overlaps `[start, last]`; augmented `__subtree_last` enables O(log n + k) lookup.
+
+**Problem**: `impact_analysis` MCP tool: given a changed line range `[start, end]`, finds all code entities (functions, classes, methods) whose source range overlaps. Without an interval tree, this is likely a linear scan over all entities — O(n) per impact query.
+
+**Change**:
+
+```typescript
+// src/knowledge/interval-tree.ts (simplified augmented BST)
+interface Interval { id: string; start: number; end: number; }
+
+export class IntervalTree {
+  private intervals: Interval[] = [];  // replace with augmented rb-tree for large n
+
+  insert(id: string, start: number, end: number): void {
+    this.intervals.push({ id, start, end });
+  }
+
+  remove(id: string): void {
+    const idx = this.intervals.findIndex(i => i.id === id);
+    if (idx >= 0) this.intervals.splice(idx, 1);
+  }
+
+  /** Returns IDs of all entities whose [start, end] overlaps [queryStart, queryEnd] */
+  query(queryStart: number, queryEnd: number): string[] {
+    return this.intervals
+      .filter(i => i.start <= queryEnd && i.end >= queryStart)
+      .map(i => i.id);
+  }
+}
+// For large repos: replace backing store with sorted array + binary search on start,
+// filtered by __subtree_last augmentation (max end in left subtree).
+```
+
+**Definition of Done**
+- `IntervalTree` exported from `src/knowledge/interval-tree.ts`.
+- `impact_analysis` tool builds/queries the interval tree keyed by entity line ranges.
+- `insert`/`remove` called on entity ingest/eviction.
+- Test: insert 100 entities with overlapping ranges → query [50, 60] → returns only overlapping entities.
+
+**Counter-case**: At <5000 entities, linear scan for overlapping intervals is <1ms. Interval tree only pays off on large repos with frequent `impact_analysis` calls. Start with the linear implementation and replace only if profiling shows it in the hot path.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 7 Phases
+*(include/linux/seqlock.h, overflow.h, notifier.h — 2026-05-25)*
+
+---
+
+### Phase 0.11 Refinement — SafeAdd/WrappingAdd Checked Arithmetic (Linux kernel audit pass 7, score: 45)
+
+**Kernel analogue**: `include/linux/overflow.h:61` — `check_add_overflow(a, b, d)` wraps `__builtin_add_overflow`; returns `true` on overflow AND stores result in `*d`; `__must_check` forces callers to handle the flag; `wrapping_add(type, a, b):73` — intentionally wrapping addition that explicitly silences overflow sanitizers, documents the intent.
+
+**Problem**: Cortex's token budget accumulation (`build_context_pack`), byte counters in `SeqBuf`, score accumulators in `cortex_find`, and JSONL byte-size tracking all use raw `+` with no overflow guard and no naming convention distinguishing "this should never overflow" from "this is intentionally cyclic." A single bug that accumulates too large a value silently produces a nonsensical token budget.
+
+**Change**:
+
+```typescript
+// src/utils/math.ts (additions)
+
+/** Checked add — returns { result, overflow }. Use for token budgets, byte counters. */
+export function safeAdd(a: number, b: number): { result: number; overflow: boolean } {
+  const result = a + b;
+  return { result, overflow: result > Number.MAX_SAFE_INTEGER };
+}
+
+/** Checked multiply — returns { result, overflow }. */
+export function safeMul(a: number, b: number): { result: number; overflow: boolean } {
+  const result = a * b;
+  return { result, overflow: !Number.isFinite(result) || result > Number.MAX_SAFE_INTEGER };
+}
+
+/** Wrapping add for ring-buffer indices. Documents intentional modular arithmetic.
+ *  RULE: never use (a + b) % cap — use wrappingAdd(a, b, cap) instead.
+ *  Requires cap to be a power of 2. */
+export function wrappingAdd(a: number, b: number, cap: number): number {
+  return (a + b) & (cap - 1);
+}
+```
+
+**Definition of Done**
+- `safeAdd`, `safeMul`, `wrappingAdd` exported from `src/utils/math.ts`.
+- All token budget accumulations in `build_context_pack` use `safeAdd`; throw/log on overflow.
+- All ring-buffer head/tail increments use `wrappingAdd`.
+- CLAUDE.md rule: **never use `(a + b) % capacity` for ring-buffer indices — use `wrappingAdd(a, b, capacity)`; never use bare `+` for token budget accumulators — use `safeAdd`**.
+
+**Counter-case**: JavaScript float64 overflows only above 2^53 (~9 quadrillion). At Cortex's entity counts and token budgets, actual overflow is practically impossible. The primary value is the naming convention (`safeAdd` vs `wrappingAdd`) that documents intent, not runtime safety.
+
+---
+
+### Phase 0.11 Refinement — SeqConfig Hot-Reload Consistency (Linux kernel audit pass 7, score: 36)
+
+**Kernel analogue**: `include/linux/seqlock.h:42` — `seqcount_t { sequence }`; writers call `write_seqcount_begin` (seq → odd) before mutation and `write_seqcount_end` (seq → even) after; readers call `read_seqcount_begin` (sample seq), do the read, call `read_seqcount_retry` — if seq changed (odd or different even), retry; zero blocking in either direction.
+
+**Problem**: Cortex's config hot-reload (`configWatcher` on `cortex.json`) writes a new config object while MCP tool handlers may be mid-execution across `await` boundaries. A handler that reads `config.maxEntities` before an `await` and `config.tokenBudget` after can see two different config generations — producing an inconsistent combination (e.g., eviction threshold from old config, token budget from new config).
+
+**Change**:
+
+```typescript
+// src/utils/seq-config.ts
+export class SeqConfig<T> {
+  private seq = 0;
+  private value: T;
+
+  constructor(initial: T) { this.value = initial; }
+
+  /** Synchronous swap — MUST NOT contain any await. */
+  write(newValue: T): void {
+    this.seq++;          // odd: write in progress
+    this.value = newValue;
+    this.seq++;          // even: stable
+  }
+
+  /** Returns consistent snapshot. Retries if write raced the read. */
+  read(): T {
+    for (let i = 0; i < 100; i++) {
+      const seq = this.seq;
+      if (seq & 1) continue;                      // write in progress
+      const snap = { ...this.value as object } as T;
+      if (this.seq === seq) return snap;           // stable read
+    }
+    return this.value;
+  }
+}
+
+// In ConfigManager:
+// export const liveConfig = new SeqConfig<CortexConfig>(loadConfig());
+// configWatcher.on('change', () => liveConfig.write(reloadConfig())); // no await inside write
+// In MCP handlers: const cfg = liveConfig.read();
+```
+
+**Definition of Done**
+- `SeqConfig<T>` exported from `src/utils/seq-config.ts`.
+- `ConfigManager` uses `SeqConfig` to hold the live config.
+- `configWatcher` callback calls `liveConfig.write(newConfig)` synchronously (no `await` inside).
+- All MCP tool handlers call `liveConfig.read()` at call start; do not cache config across `await` boundaries.
+- Test: write new config during a mock `await` → read after `await` returns new config consistently.
+
+**Counter-case**: Node.js is single-threaded; torn reads only occur if `configWatcher` callback awaits during a config swap. Audit the config-write code path — if it never awaits mid-swap, torn reads cannot occur and `SeqConfig` is unnecessary. Implement only after confirming the write path has `await`s.
+
+---
+
+### Phase 22 Refinement — NotifierChain Plugin Hook Registration (Linux kernel audit pass 7, score: 24)
+
+**Kernel analogue**: `include/linux/notifier.h:54` — `struct notifier_block { notifier_fn_t notifier_call; struct notifier_block *next; int priority }`; `raw_notifier_chain_register(nh, nb)` inserts sorted by `priority`; `raw_notifier_call_chain(nh, val, v)` calls in priority order; returning `NOTIFY_STOP` from any handler aborts the rest of the chain; `blocking_notifier_call_chain_robust:178` — automatic rollback: if any handler returns `NOTIFY_BAD`, already-notified handlers are called with `val_down`.
+
+**Problem**: Cortex's ingest/save/compress pipeline has no hook system. External callers have no injection point for custom validation, audit logging, or transformation. All pipeline logic is hardcoded.
+
+**Change**:
+
+```typescript
+// src/utils/notifier-chain.ts
+export type NotifyResult = 'ok' | 'stop' | 'bad';
+export type NotifierFn<T> = (event: string, data: T) => NotifyResult | Promise<NotifyResult>;
+
+interface NotifierBlock<T> {
+  fn: NotifierFn<T>;
+  priority: number;
+}
+
+export class NotifierChain<T> {
+  private readonly blocks: Array<NotifierBlock<T>> = [];
+
+  register(fn: NotifierFn<T>, priority = 0): void {
+    this.blocks.push({ fn, priority });
+    this.blocks.sort((a, b) => b.priority - a.priority);  // highest first
+  }
+
+  unregister(fn: NotifierFn<T>): void {
+    const idx = this.blocks.findIndex(b => b.fn === fn);
+    if (idx >= 0) this.blocks.splice(idx, 1);
+  }
+
+  async call(event: string, data: T): Promise<NotifyResult> {
+    const called: Array<NotifierBlock<T>> = [];
+    for (const block of this.blocks) {
+      const result = await block.fn(event, data);
+      if (result === 'bad') {
+        // rollback: call all already-notified with undo event
+        for (const b of called.reverse()) await b.fn(`undo:${event}`, data);
+        return 'bad';
+      }
+      called.push(block);
+      if (result === 'stop') return 'stop';
+    }
+    return 'ok';
+  }
+}
+
+// Usage:
+// export const ingestHooks = new NotifierChain<IngestEvent>();
+// ingestHooks.register(async (event, data) => { validate(data); return 'ok'; }, priority: 10);
+// In ingest path: if (await ingestHooks.call('beforeIngest', event) === 'bad') return;
+```
+
+**Definition of Done**
+- `NotifierChain<T>` exported from `src/utils/notifier-chain.ts`.
+- Hook points: `beforeIngest`, `afterIngest`, `beforeCompress`, `configChanged`.
+- `NOTIFY_STOP` aborts ingest chain; `NOTIFY_BAD` triggers rollback callbacks.
+- Test: register 3 handlers; middle one returns 'stop' → third handler never called.
+
+**Counter-case**: Cortex has no plugin architecture and CLAUDE.md says "surface-don't-act." A notifier chain adds real complexity for a hypothetical future requirement. Assign to Phase 22 (future/optional); implement only when a specific plugin or audit-hook requirement is identified.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Pass 8 Phases
+
+### Phase 0.12 Refinement — ScopedResource RAII with TypeScript `using` Keyword ⏳
+**Source**: Linux kernel `include/linux/cleanup.h:210` — `DEFINE_FREE(name, type, free)`, `__free(name)` variable attribute, `guard(mutex)(&lock)`, `no_free_ptr(p)`, `return_ptr(p)`, `DEFINE_CLASS(name, type, exit, init)`, `CLASS(name, var)(args)` — GCC `__attribute__((cleanup))` for guaranteed scope-exit cleanup; the exact C analogue of TypeScript 5.2's `using` keyword and `Symbol.dispose` protocol.
+
+**Problem**: Cortex's ingest pipeline and file-watcher management use try/finally blocks for resource cleanup, which are verbose and easily omitted on new code paths. Early returns after acquiring a file handle risk leaking the FD.
+
+**Solution**:
+1. Update `tsconfig.json` to add `"ESNext.Disposable"` to `lib` and set `target: "ES2022"`.
+2. Add `[Symbol.dispose]()` to `FileHandleWrapper`, `WatcherSession`, and any other scoped resource wrapper in `src/utils/`.
+3. Replace `const fd = openSync(...); try { ... } finally { closeSync(fd); }` patterns with `using fd = new FileHandleWrapper(path)`.
+4. For async resources, use `await using lock = await acquireLock(name)` with `[Symbol.asyncDispose]()`.
+5. Document the LIFO-unwind convention: resources declared earlier in the same scope are disposed last.
+
+**Definition of Done**
+- `FileHandleWrapper` and `WatcherSession` implement `Disposable` / `AsyncDisposable`.
+- No bare `closeSync` / `watcher.close()` calls outside of `[Symbol.dispose]()` implementations.
+- Test: using wrapper → dispose called on early return; no-op on normal path.
+
+**Counter-case**: TypeScript `using` requires `lib: ['ES2022', 'ESNext.Disposable']` — adds a tsconfig build constraint. Existing try/finally is functionally equivalent; the primary gain is readability and reduced omission risk.
+
+---
+
+### Phase 0.13 Refinement — assertManagerOwns Debug Assertions ⏳
+**Source**: Linux kernel `include/linux/lockdep.h:284` — `lockdep_assert_held(l)` asserts a lock IS held before entering a critical section; compiled out when `debug_locks` is false (production). Complements CONCURRENCY.md from pass 4's Phase 15.
+
+**Problem**: Cortex's manager internal methods (ExperienceManager._addToIndex, KnowledgeWriter._writeJSONL) can be called from any scope. Calling them outside of an active `batch()` context is a programming error, but it manifests silently as data corruption rather than a clear assertion failure.
+
+**Solution**:
+```typescript
+// src/utils/assert-owns.ts
+const DEBUG = process.env.NODE_ENV !== 'production';
+
+export function assertManagerOwns(
+  manager: { isBusy(): boolean },
+  methodName: string
+): void {
+  if (DEBUG && !manager.isBusy()) {
+    throw new Error(
+      `assertManagerOwns: ${methodName} called outside of active manager context`
+    );
+  }
+}
+```
+Add `isBusy(): boolean` to ExperienceManager and KnowledgeWriter. Add `assertManagerOwns(this, 'methodName')` at the top of every `_private` mutation method.
+
+**Definition of Done**
+- `assertManagerOwns` exported from `src/utils/assert-owns.ts`.
+- `ExperienceManager.isBusy()` and `KnowledgeWriter.isBusy()` implemented.
+- All `_private` mutation methods have the assert as first line.
+- Tests: call private method outside of batch → throws in test environment (NODE_ENV=test).
+- Production (NODE_ENV=production) → assert is a no-op.
+
+**Counter-case**: Node.js is single-threaded; "who owns this" violations typically manifest as null-dereference errors anyway. Primary value is documentation and earlier-error-surfacing, not runtime safety. Low priority unless a manager misuse bug is observed in practice.
+
+---
+
+### Phase 0.14 Refinement — Eviction Tombstone Guard ⏳
+**Source**: Linux kernel `include/linux/poison.h:19` — `POISON_FREE = 0x6b` magic value written to freed memory slots; makes stale-pointer dereferences crash at a known address rather than silently accessing recycled memory. Surfaces flaw #157.
+
+**Problem** (flaw #157): Cortex's LRU evicts entities without tombstoning their ID slot. If entity IDs are recycled (e.g., sequential integers), a stale ID held by an in-flight request silently resolves to the new occupant. Even with UUIDs, the invariant is undocumented and unverified.
+
+**Solution**:
+1. After LRU eviction, log the evicted entity ID to a `_evictedIds: Set<string>` with a short TTL (e.g., 30 s).
+2. In `entity_get` / `read_entity`, check `_evictedIds` first; if hit, return a tombstone error: `{ error: 'entity_evicted', id }`.
+3. Add a comment in entity ID generation: `// IDs are SHA-256 content hashes; they are NEVER reused. The eviction guard is belt-and-suspenders.`
+4. Test: evict an entity; attempt lookup within TTL → tombstone error returned.
+
+**Definition of Done**
+- `_evictedIds: TTLSet<string>` added to entity manager.
+- `entity_get` checks eviction set before Map lookup.
+- Comment in ID generation documents the no-reuse invariant.
+- Test: post-eviction lookup returns tombstone error within TTL window.

@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "schema_version": "1.0",
+    "audit_date": "2026-05-25",
+    "target": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\Linux",
+    "target_name": "Linux",
+    "commit_sha": "eed108ed",
+    "calibration": "novel/research",
+    "mode": "full",
+    "pass": 7,
+    "subsystems_covered": [
+      "include/linux/seqlock.h",
+      "include/linux/shrinker.h",
+      "include/linux/circ_buf.h",
+      "include/linux/notifier.h",
+      "include/linux/overflow.h",
+      "include/linux/xarray.h",
+      "lib/siphash.c"
+    ],
+    "artifact_collision": false
+  },
+  "bucket_counts": {
+    "A": 2,
+    "B": 0,
+    "C": 1,
+    "D": 3,
+    "E": 2,
+    "F": 0,
+    "G": 0
+  },
+  "items": [
+    {
+      "id": "P7-E1",
+      "bucket": "E",
+      "name": "overflow.h Checked Arithmetic Guards",
+      "closes_flaw": "#145",
+      "source_file": "include/linux/overflow.h",
+      "source_line": 61,
+      "symbol": "check_add_overflow(), check_sub_overflow:107, check_mul_overflow:153, check_shl_overflow:192, wrapping_add():73, wrapping_assign_add():90, __must_check_overflow()",
+      "severity": 3,
+      "fit": 5,
+      "effort": 1,
+      "recency": 1.0,
+      "score": 45,
+      "has_tests": true,
+      "last_modified": "active",
+      "confidence": "high",
+      "counter_case": "JavaScript numbers are 64-bit floats; integer overflow in the traditional sense requires values >2^53, far beyond Cortex's entity counts and token budgets. The steal is the naming convention (safeAdd vs wrappingAdd) and the __must_check discipline, not a runtime safety net."
+    },
+    {
+      "id": "P7-E2",
+      "bucket": "E",
+      "name": "seqlock Config Hot-Reload Consistency",
+      "closes_flaw": "#156",
+      "source_file": "include/linux/seqlock.h",
+      "source_line": 42,
+      "symbol": "seqcount_t { sequence }, read_seqcount_begin(), read_seqcount_retry(), write_seqcount_begin(), write_seqcount_end(), SEQCNT_ZERO()",
+      "severity": 3,
+      "fit": 4,
+      "effort": 1,
+      "recency": 1.0,
+      "score": 36,
+      "has_tests": true,
+      "last_modified": "active",
+      "confidence": "high",
+      "counter_case": "Node.js is single-threaded; torn reads only occur across await boundaries. If configWatcher never awaits mid-swap, torn reads cannot occur. Audit config-write code for awaits before implementing; may be unnecessary."
+    },
+    {
+      "id": "P7-C1",
+      "bucket": "C",
+      "name": "NotifierChain Priority-Sorted Callback Registration",
+      "source_file": "include/linux/notifier.h",
+      "source_line": 54,
+      "symbol": "struct notifier_block { notifier_call, next, priority }, raw_notifier_chain_register(), raw_notifier_call_chain(), NOTIFY_OK=1, NOTIFY_STOP_MASK=0x8000, NOTIFY_BAD, NOTIFY_STOP, blocking_notifier_call_chain_robust():178",
+      "proposed_phase": "22 Refinement",
+      "severity": 2,
+      "fit": 4,
+      "effort": 2,
+      "recency": 1.0,
+      "score": 24,
+      "has_tests": true,
+      "last_modified": "active",
+      "confidence": "high",
+      "counter_case": "Cortex has no plugin architecture. A notifier chain adds complexity for a hypothetical future requirement. Only implement when a specific plugin/hook requirement is identified."
+    },
+    {
+      "id": "P7-A1",
+      "bucket": "A",
+      "name": "shrinker count_objects/scan_objects split",
+      "source_file": "include/linux/shrinker.h",
+      "source_line": 82,
+      "symbol": "struct shrinker { count_objects, scan_objects, batch, seeks }, SHRINK_STOP, SHRINK_EMPTY, struct shrink_control { nr_to_scan, nr_scanned }",
+      "existing_phase": "Phase 13.5 Refinement — ExperienceShrinker count_objects/scan_objects Split (pass 1)"
+    },
+    {
+      "id": "P7-A2",
+      "bucket": "A",
+      "name": "circ_buf CIRC_CNT/CIRC_SPACE power-of-2 macros",
+      "source_file": "include/linux/circ_buf.h",
+      "source_line": 16,
+      "symbol": "CIRC_CNT(head,tail,size), CIRC_SPACE(head,tail,size), CIRC_CNT_TO_END, CIRC_SPACE_TO_END",
+      "existing_phase": "Phase 5 Refinement — kfifo Power-of-2 Ring Queue (pass 3)"
+    },
+    {
+      "id": "P7-D1",
+      "bucket": "D",
+      "name": "XArray eXtensible Sparse Array",
+      "source_file": "include/linux/xarray.h",
+      "source_line": 1,
+      "symbol": "xa_store(), xa_load(), xa_erase(), xa_for_each(), xa_for_each_marked(), XA_MARK_0",
+      "violated_principle": "At <5000 entities JS Map provides O(1) amortized lookup with no complexity overhead. XArray marks concept (dirty iteration) is below score threshold at this scale."
+    },
+    {
+      "id": "P7-D2",
+      "bucket": "D",
+      "name": "SipHash Keyed Collision-Resistant Hash",
+      "source_file": "lib/siphash.c",
+      "source_line": 46,
+      "symbol": "siphash_key_t { key[2] }, __siphash_aligned(), SIPROUND, PREAMBLE, POSTAMBLE",
+      "violated_principle": "Local-first tool — no adversarial input threat model. Hash-flooding requires attacker-controlled inputs from untrusted sources."
+    },
+    {
+      "id": "P7-D3",
+      "bucket": "D",
+      "name": "jump_label Static Branch Patching",
+      "source_file": "include/linux/jump_label.h",
+      "source_line": 1,
+      "symbol": "static_branch_likely(), static_branch_unlikely(), DEFINE_STATIC_KEY_FALSE(), static_key_enable()",
+      "violated_principle": "Requires compiler/CPU-level branch rewriting via NOP patching. No equivalent exists in JavaScript/Node.js."
+    }
+  ]
+}

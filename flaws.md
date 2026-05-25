@@ -271,6 +271,7 @@ Roughly 5 flaws are pure papercuts (#21, #22, #25, #58, #65) that can be folded 
 **Repro:** `lint` returned 3 `ERROR cycle` findings (`CortexDaemon → CortexWatcher → CortexDaemon` etc.). `audit_quality` ran immediately after and reported all 15 entities at quality `0.94`, `✅ All entities meet the quality gate (0.50)`.
 **Impact:** lint findings are decorative. Quality scoring ignores structural integrity. Cycles also suggest the synthesis got relationships wrong (logger doesn't actually depend on daemon) — but no audit surfaces this.
 **Addressed by**: Phase 0.13 Refinement — Cycle Detection via Visited + RecursionStack DFS (codegraph cross-domain audit, score: 20) — detects cycles at graph-build time and writes `CIRCULAR_DEPENDENCY` edges; `audit_quality` can then query for these edges and penalise quality scores instead of relying on `lint`.
+**Addressed by (BFS generation counter)**: Phase 0.17 Refinement — BFS Cycle Detection with Generation Counter (Linux kernel audit pass 2, score: 36) — replaces DFS visited-set with a generation counter (`bfsGeneration++`) so the same node map can be reused across traversals without clearing; O(n) per traversal, O(1) per-node reset. See `steal-integration-Linux-2026-05-25-claude.md` E5.
 
 ---
 
@@ -543,6 +544,8 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 **Repro:** the `source` tool mutates cache state on every call. If I issue two `source` calls in parallel in one assistant turn, they race on the cache and may both return "full" (no compression) or both invalidate each other's skeletons.
 **Impact:** I had to serialize `source` reads, doubling latency on multi-file inspections.
 **Addressed by**: AtomSpace audit E6 — EvaluatorPool thread-local resource pool (score: 18): add a `thread_local Map<string, CacheEntry>` as a hot read-layer in the source cache, keyed by `(entityId, version)`; parallel calls get isolated read paths and fall through to the shared cache with a lock only on miss. Note: this is a partial fix — the root cause (shared write-path idempotency) still needs to be addressed for full parallelism.
+**Addressed by (write-path rollback)**: Linux kernel audit E2 — `notifier_call_chain_robust()` two-phase notifier (score: 24): wrap the multi-step write path (skeleton cache → entity file → index → soulDirty) in a `writeWithRollback()` that fires reverse handlers on failure; prevents partial-write state that makes the cache inconsistent for concurrent readers. See `steal-integration-Linux-2026-05-25.md` E2.
+**Addressed by (optimistic reads)**: Linux kernel audit C4 — seqcount read-retry (score: 18): version-stamp each entity write and retry reads that span an `await` across a concurrent version change. See Phase 0.10.2.
 
 ### 47. Mutating tools have no audit trail
 **Repro:** `save_concept`, `configure_brevity`, `configure_safeguards`, `compress` all mutate state. None record who called them, when, or what changed.
@@ -561,6 +564,7 @@ Plain `Read` on `src/knowledge/soul.ts` would have been **1 round trip** and ~eq
 ### 50. No way to query "what does Cortex *not* know?"
 **Repro:** there's no tool that returns the list of source files NOT yet ingested. `audit` says "no stale entities" (i.e., existing entities are fresh) but doesn't surface "files that should exist as entities but don't."
 **Impact:** the coverage gap (flaw #43) has no API surface. An agent can't ask "what's missing" — only "what's stale among what exists." This is how phantom entities + missing entities coexist with `audit` reporting all-clear.
+**Addressed by**: Linux kernel audit E4 — `DCACHE_MISS_TYPE` negative cache tracking (score: 24): add `NegativeEntityCache` (Map<path, {missedAt, missCount}>) that records every entity lookup miss; expose via new `cortex_coverage_gaps` tool returning `{ missingPaths, totalMissCount }`. Invalidate on successful ingest. See `steal-integration-Linux-2026-05-25.md` E4.
 
 ---
 
@@ -969,6 +973,11 @@ const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;     // 180 days hardcoded
 ```
 No env var, no `cortex.json` option, no MCP tool to adjust.
 **Impact:** a user on a heavily-active codebase (1000+ tool calls/day) hits the 10MB threshold in months; a user on a quiet codebase never hits it. The compaction behavior should be tunable per-project.
+**Addressed by (tunable)**: Linux kernel audit E1 — `vfs_cache_pressure` (score: 36): replace `COMPACTION_THRESHOLD_BYTES` / `SIX_MONTHS_MS` with a `compaction_pressure` tunable in `cortex.json` (default=100); `effective_threshold = base × 100 / pressure`. See `steal-integration-Linux-2026-05-25.md` E1.
+**Addressed by (eviction mechanism)**: Linux kernel audit E3 — shrinker `count_objects` / `scan_objects` split (score: 18): expose an `ExperienceShrinker` with `countEvictable()` (fast, no I/O) and `evict(budget)` (slow, actual compaction). See `steal-integration-Linux-2026-05-25.md` E3.
+**Addressed by (EWMA signal)**: Phase 0.11 Refinement — DECLARE_EWMA Adaptive Compaction Pressure (Linux kernel audit pass 2, score: 36) — integer-only EWMA tracks cache hit rate; `pressureLevel` property returns LOW/MEDIUM/CRITICAL without floating-point arithmetic; guards against cold-start false-critical with a minimum-lookups warm-up window. See `steal-integration-Linux-2026-05-25-claude.md` E6.
+**Addressed by (three-horizon load avg)**: Phase 0.11 Refinement — Three-Horizon Load Average EXP_1/5/15 (Linux kernel audit pass 5, score: 32) — three EWMA accumulators with different decay constants distinguish pressure spikes (short high, long low) from sustained overload (all three high); `fixed_power_int` for missed-window catch-up. See `steal-integration-Linux-2026-05-25-pass5.md` P5-E3.
+**Addressed by (graduated watermarks)**: Phase 0.11 Refinement — WMARK Three-Level Graduated Cache Pressure (Linux kernel audit pass 3, score: 40) — `CACHE_LOW`/`CACHE_MIN`/`CACHE_MAX` watermarks computed proportionally from `maxEntities`; background eviction at LOW, synchronous eviction at MIN, full LRU walk at MAX. See `steal-integration-Linux-2026-05-25-pass3.md` P3-E3.
 
 ### 110. No npm vulnerabilities currently (POSITIVE)
 **Repro (live):** `npm audit --json` → `{info:0, low:0, moderate:0, high:0, critical:0, total:0}`.
@@ -1560,6 +1569,7 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Using compile-time / module-level constants for resource capacity limits (buffer sizes, registry sizes, cache capacities) that will grow over a project's lifetime. Changing the limit requires a code change rather than a config change; the limit is typically discovered only when a production system fails with an opaque error.
 **Relevance to Cortex**: Cross-reference flaw #109 (compaction thresholds `10MB`, `180 days` hardcoded). Any resource limit in Cortex — diff buffer cap, entity cache size, max entity count, history window — MUST be configurable via `cortex.json` or `CORTEX_*` env var with a documented safe default. The constant lives in `src/constants.ts` (flaw #139 pattern) and is overrideable at startup.
 **Severity**: 2 (MEDIUM — hits a silent wall under load; config change becomes a code-change; mirrors flaw #109)
+**Addressed by**: Phase 5 Refinement — Bounded Event Queue + IN_Q_OVERFLOW Sentinel (Linux kernel audit pass 2, score: 36) — `BoundedWatcherQueue` caps the watcher event queue at `maxWatcherQueueDepth` (configurable via `cortex.json`); overflow emits a single `overflow` sentinel instead of growing unboundedly; consumer re-scans on overflow rather than processing a corrupted partial queue. See `steal-integration-Linux-2026-05-25-claude.md` E7.
 
 ---
 
@@ -1570,3 +1580,149 @@ Graphify ships with `bandit` (security static analysis), `pip-audit` (dependency
 **Pattern**: Shared mutable state that is known to be thread-unsafe, acknowledged in a comment, and deliberately deferred because the concurrent case is considered rare. This is a debt that accumulates: "rare" becomes "common" as the system scales, the comment becomes invisible, and the race condition surfaces in production under load with no obvious cause.
 **Relevance to Cortex**: Any `mutable` / non-`readonly` field in a shared Cortex service class that carries a per-call sentinel (e.g., `_running`, `_locked`, `_dirty`) must be either (a) made per-call via a local variable, or (b) guarded by an explicit lock. Never defer with a comment. The fix is almost always making the flag a parameter rather than class state.
 **Severity**: 2 (MEDIUM — the race is deferred, not resolved; surfaces under concurrent load with no obvious stack trace)
+
+---
+
+## 🐧 LINUX KERNEL AUDIT — Anti-Patterns
+
+### 143. "Skip-the-Safety" Fast Path Flag
+**Source-of-lesson**: Linux kernel `fs/dcache.c:440-441` — `DCACHE_NORCU` flag bypasses RCU-deferred free "for dentries never visible to RCU." The flag is technically correct in a narrow construction-time window, but its correctness proof must survive every future refactor that touches dentry lifecycle.
+**Pattern**: Adding a `SKIP_X` / `NO_VALIDATE` / `NORCU` flag to bypass a safety mechanism for objects that are "freshly created and therefore guaranteed safe." The invariant is invisible to future readers, breaks silently when a new code path publishes the object before the flag is cleared, and creates two code paths with subtly different safety properties.
+**Relevance to Cortex**: Any time a PR adds `skipCacheCheck`, `noValidation`, `bypassVersionCheck` or similar flags for "freshly ingested" entities, reject it. The safe path should always be taken; if it's too slow, fix the safe path. Cross-reference flaw #46's "quick path" for newly-created cache entries.
+**Severity**: 3 (HIGH — bypassed safety mechanisms are by definition invisible until they fail; the failure is non-obvious)
+
+---
+
+### 144. Numeric Thresholds Without a User-Facing Escape Hatch
+**Source-of-lesson**: Linux kernel `kernel/sched/fair.c:79` — `sysctl_sched_base_slice = 700000ULL` (0.7ms CFS granularity) is a hardcoded default that Linux ALSO exposes as `/proc/sys/kernel/sched_base_slice_ns` so it is tunable without a recompile. Cortex (flaw #109) has the same constants (`COMPACTION_THRESHOLD_BYTES = 10MB`, `SIX_MONTHS_MS`) but WITHOUT the sysctl-equivalent: no env var, no `cortex.json` key, no MCP tool.
+**Pattern**: Hardcoding a performance/behavior constant that is correct for the median case but wrong for outlier deployments, with no way for the user to adjust it without modifying source. Discovered only when a power user files a bug.
+**Relevance to Cortex**: Every numeric threshold in `src/constants.ts` and `src/knowledge/experience.ts` must have a `cortex.json` or `CORTEX_*` env var override with the hardcoded value as the default. Apply to all future constants too. Cross-reference flaw #109 (direct instance), flaw #141 (AtomSpace `MAX_NUM_VALUE` instance).
+**Severity**: 2 (MEDIUM — correct for median user, silently wrong for outliers; config change becomes a source change)
+**Addressed by**: Phase 0.11 Refinement — cortex.json Schema Bounds Validation (Linux kernel audit pass 2, score: 24) — `CONFIG_SCHEMA` map declares `min`/`max`/`default`/`description` per tunable; `validateConfig()` enforces bounds at startup, throws with the permitted range on violation, and documents the escape hatch in `cortex.json.example`. See `steal-integration-Linux-2026-05-25-claude.md` E8.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT (PASS 2) — Anti-Pattern
+
+### 145. Unchecked Integer Arithmetic in Accumulation Counters
+**Source-of-lesson**: Linux kernel `include/linux/overflow.h:61` — `check_add_overflow(a, b, d)` and `wrapping_add(type, a, b)`: the kernel cannot afford silent integer overflow, so every arithmetic operation on counters uses explicit overflow-checked variants. JavaScript's `Number` type is a 64-bit float with only 53 bits of integer precision; accumulating large values (token counts, savings ledger sums, usage statistics) with bare `+` silently loses precision above 2^53.
+**Pattern**: Token counts and savings ledger sums use bare `+` arithmetic without `Number.isSafeInteger()` guard. Silent precision loss if count approaches 2^53 (~9 quadrillion — achievable in long-running high-frequency tool calls or if a counter is accidentally multiplied).
+**Relevance to Cortex**: Any counter that accumulates over time (`totalTokensSaved`, `callCount`, running byte sums) must assert `Number.isSafeInteger(result)` after each addition, or use `BigInt` for accumulators that could plausibly reach 2^53. Add `scripts/check-unsafe-arithmetic.ts` as a CI grep: flag any `+= ` or `+ ` on identifiers matching `*tokens*`, `*count*`, `*bytes*`, `*size*` without a corresponding `isSafeInteger` guard.
+**Severity**: 2 (MEDIUM — silent precision loss; manifests only at extreme scale but the failure is invisible and produces wrong numbers, not a crash)
+**Addressed by**: Phase 7 Refinement — BatchedCounter Approximate Accumulation (Linux kernel audit pass 3, score: 24) — local delta accumulates increments up to `BATCH=64`; flushes to central count only on overflow; `read()` for dashboards (approximate), `sum()` for billing exports (exact). See `steal-integration-Linux-2026-05-25-pass3.md` P3-E6.
+**Addressed by (checked arithmetic)**: Phase 0.11 Refinement — SafeAdd/WrappingAdd Checked Arithmetic Guards (Linux kernel audit pass 7, score: 45) — `safeAdd(a, b)` returns `{ result, overflow }` for token budget and byte counter paths; `wrappingAdd(a, b, modulus)` documents intentional ring-buffer wrap-around. See `steal-integration-Linux-2026-05-25-pass7.md` P7-E1.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT (PASS 3) — New Flaws
+
+### 146. No Rate Limiting or Deduplication on Repeated Logs
+**Source-of-lesson**: Linux kernel `include/linux/ratelimit_types.h:16` + `include/linux/once_lite.h:13` — the kernel has a complete three-layer log discipline: (1) `printk_once` / `pr_warn_once` for one-time notices; (2) `printk_ratelimited` / `ratelimit_state` for burst-capped repeated warnings; (3) `ratelimit_state_exit()` for suppression summaries on teardown.
+**Pattern**: Emitting the same warning/info line on every tool invocation (entity-cache-miss, non-TypeScript source warning, config notice) with no throttling, burst cap, or once-sentinel. Long ingest sessions produce thousands of identical lines that drown out meaningful signals.
+**Relevance to Cortex**: Wrap all per-invocation warnings behind `warnOnce(msg)` (DO_ONCE_LITE pattern, score: 60) for truly one-time notices, and `RatelimitState { burst: 5, interval: 60_000 }` (score: 40) for recurring-but-throttled warnings. On graceful shutdown, drain all `RatelimitState` instances and emit suppression summaries to the experience ledger.
+**Severity**: 3 (HIGH — noisy logs erode trust and hide real errors; repeated identical warnings are the most common reason developers disable logging entirely)
+**Addressed by**: Phase 5 Refinement — `warnOnce()` DO_ONCE_LITE Sentinel (Linux kernel audit pass 3, score: 60); Phase 5 Refinement — `RatelimitState` burst+interval+missed (Linux kernel audit pass 3, score: 40). See `steal-integration-Linux-2026-05-25-pass3.md` P3-E1, P3-E2, P3-E4.
+
+---
+
+### 147. Entity Cache Has No Snapshot Consistency Across Async Operations
+**Source-of-lesson**: Linux kernel `include/linux/rcupdate.h:101` — RCU separates readers (always see a consistent snapshot, never block) from writers (build a new version, then atomically swap the pointer). The `__rcu` type annotation enforces that RCU-protected pointers are never accessed outside a read-side critical section.
+**Pattern**: The entity cache Map is mutated by the file watcher and read by MCP tool handlers in the same event loop tick. An async handler that reads the cache mid-update may see a partially-updated state (some entities updated, some not) with no indication that the snapshot is inconsistent.
+**Relevance to Cortex**: Apply generation-pointer discipline: `activeCache` (read by all MCP handlers, never mutated mid-call) and `shadowCache` (built by the watcher). Watcher calls `commitShadow()` only at batch boundaries. Handlers always read a consistent snapshot of the previous complete batch.
+**Severity**: 3 (HIGH — silent partial reads are the hardest class of bug to reproduce; manifests as stale entity data returned to the LLM with no error signal)
+**Addressed by**: Phase 0.4 Refinement — VersionedEntityCache Generation-Pointer Snapshot (Linux kernel audit pass 3, score: 32). See `steal-integration-Linux-2026-05-25-pass3.md` P3-E5.
+**Addressed by (deferred teardown)**: Phase 5 Refinement — Deferred Mark Destruction Reaper Queue (Linux kernel audit pass 4, score: 24) — watcher unlink handler queues eviction to `destroyQueue`; reaper drains after `REAPER_DELAY_MS`; no handler can read an evicting entity during the delay. See `steal-integration-Linux-2026-05-25-pass4.md` P4-E3.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT (PASS 4) — New Flaws
+
+### 148. No Documented Async Re-entrancy Constraints on Shared State
+**Source-of-lesson**: Linux kernel `fs/notify/mark.c:19–36` — mandatory comment block at the top of every file touching shared fsnotify state, stating the canonical lock acquisition order: `group->mark_mutex → mark->lock → connector->lock`. Every code review uses this as the authoritative spec.
+**Pattern**: Cortex's watcher, KnowledgeManager, and entity cache share mutable state with no documented ordering discipline. A developer adding a new method to KnowledgeManager has no canonical reference for which mutations are safe, in which order, and under what constraints.
+**Relevance to Cortex**: Add `CONCURRENCY.md` documenting: (1) MCP handlers read `EntityCache.active` only; (2) FileWatcher writes to `EntityCache.shadow` only; (3) `commitShadow()` fires only at batch boundaries. Add CLAUDE.md rule: any PR mutating shared KnowledgeManager/EntityCache state must cite the applicable discipline in a comment.
+**Severity**: 3 (HIGH — undocumented re-entrancy constraints are invisible until they produce a race bug; the bug is then nearly impossible to reproduce under normal load)
+**Addressed by**: Phase 0.4 Refinement — CONCURRENCY.md Lock-Ordering Convention (Linux kernel audit pass 4, score: 45). See `steal-integration-Linux-2026-05-25-pass4.md` P4-E2.
+
+---
+
+### 149. Duplicate Concurrent Ingest of Same Entity
+**Source-of-lesson**: Linux kernel `include/linux/completion.h:26` — `struct completion { done, wait }` is a one-shot gate where the first caller executes and all concurrent callers await the result; widely used to prevent redundant work (e.g., driver initialization races).
+**Pattern**: Two concurrent MCP tool calls can both trigger `ingest()` on the same entity. Both make separate LLM calls, pay twice the cost, and write the same result to disk twice — the second write clobbers the first.
+**Relevance to Cortex**: Before calling `ingestFn()`, check `inflightIngests.has(entityId)`. If yes, `await inflightIngests.get(entityId).wait()` — the in-flight ingest completes and all waiters continue without re-invoking LLM. `complete()` is called in the `finally` block so it fires even on error.
+**Severity**: 3 (HIGH — duplicate LLM calls double the cost silently; the second write creates a TOCTOU race on the entity file that may produce partial writes under high concurrency)
+**Addressed by**: Phase 5 Refinement — IngestCompletion Dedup Gate (Linux kernel audit pass 4, score: 60). See `steal-integration-Linux-2026-05-25-pass4.md` P4-E1.
+
+---
+
+## 🐧 LINUX KERNEL AUDIT (PASS 5) — New Flaws
+
+### 150. Compaction Retried Immediately on Failure With No Back-off
+**Source-of-lesson**: Linux kernel `mm/compaction.c:119` — `COMPACT_MAX_DEFER_SHIFT=6`; `defer_compaction()` doubles the skip count after each failure (capped at 64 consecutive skips); `compaction_deferred()` is an O(1) gate checked before any compaction attempt.
+**Pattern**: Cortex's `maybeCompact()` is called on every entity access past the threshold. If compaction fails (JSONL file locked, disk full), it is retried on the very next call with no cooldown, hammering disk on every entity access until the underlying condition resolves.
+**Relevance to Cortex**: After a compaction failure, increment `deferShift` (capped at 6); skip compaction for `1 << deferShift` subsequent calls; reset on success. Total back-off ceiling: 64 skips — enough to ride out a transient file lock without user-visible latency.
+**Severity**: 3 (HIGH — a locked JSONL file turns every entity read into a failed compaction attempt; under heavy ingest this becomes thousands of failed IO operations per second)
+**Addressed by**: Phase 0.11 Refinement — CompactionBackoff Exponential Defer (Linux kernel audit pass 5, score: 60). See `steal-integration-Linux-2026-05-25-pass5.md` P5-E1.
+
+---
+
+### 151. Entity Slot Assignment for Dirty Bitmap Has No FIFO Reuse Guarantee
+**Source-of-lesson**: Linux kernel `include/linux/idr.h:118` — `idr_alloc_cyclic()` starts from `idr_next` (last allocation point) to avoid immediate reuse of recently-freed IDs; prevents a stale reference from accidentally matching a new allocation.
+**Pattern**: The dirty bitmap (Phase 0.4, P4-C3) requires a stable integer slot per entity. A naïve `nextSlot++` counter immediately reuses slot numbers after eviction. If an entity is evicted and its slot reused before the next flush, the new entity inherits the old entity's dirty bit — incorrect dirty marking with no error signal.
+**Relevance to Cortex**: Use cyclic slot allocation: scan forward from `lastAllocated + 1` mod `capacity`. FIFO reuse ensures a recently-freed slot is the last to be recycled, giving any async handler holding the old slot number time to complete before reuse.
+**Severity**: 3 (HIGH — stale dirty bits produce phantom writes; creates a TOCTOU race between dirty-bit reads and concurrent entity eviction)
+**Addressed by**: Phase 0.4 Refinement — EntitySlotAllocator Cyclic IDR (Linux kernel audit pass 5, score: 40). See `steal-integration-Linux-2026-05-25-pass5.md` P5-E2.
+
+---
+
+### 152. Score and Count Fields Compared Without Sign Guard
+**Source-of-lesson**: Linux kernel `include/linux/minmax.h:105` — `min()` uses `BUILD_BUG_ON_MSG` to reject mixing signed and unsigned types in the same comparison; makes sign mismatch a compile error rather than silent undefined behavior.
+**Pattern**: Cortex's score fields (staleness score, relevance score, miss-ratio) can be negative (error sentinel, uninitialized, or below-zero relative scoring). Size/count fields (entity count, buffer length, queue depth) are always non-negative. TypeScript allows comparing them directly with `<` / `>` without any cast or guard — a negative score compared against an entity count produces a semantically wrong but syntactically valid result.
+**Relevance to Cortex**: Add branded types: `type Score = number & { __brand: 'Score' }` and `type Count = number & { __brand: 'Count' }`. Any comparison between a `Score` and a `Count` without an explicit `Number.isFinite()` + range check becomes a TypeScript type error. Add an ESLint rule (`@typescript-eslint/no-unsafe-comparison` or custom) flagging raw `number` comparisons in scoring and threshold paths.
+**Severity**: 2 (MEDIUM — silent wrong comparisons; most paths happen to work because scores are non-negative in practice, but the invariant is not enforced)
+**Addressed by**: Phase 0.2 Refinement — sort_r Closure Comparator Convention (Linux kernel audit pass 5, score: 24) adds `cmpInt` and `Comparator<T>`; CLAUDE.md rule: **never use subtraction `a.score - b.score` in comparators — use `cmpInt(a.score, b.score)`**. See `steal-inventory-Linux-2026-05-25-pass5.md` P5-F1.
+
+---
+
+### 153. EWMA Loses Minimum-in-Window Needed for Burst Detection
+**Source-of-lesson**: Linux kernel `lib/win_minmax.c:29` — Kathleen Nichols' windowed min/max tracker; keeps best/2nd/3rd samples over a window; O(1) per update; used in TCP BBR for minimum RTT estimation over rolling windows.
+**Pattern**: EWMA gives the weighted average but cannot answer "what was the worst hit rate in the last 5 minutes?" EWMA smooths over transient spikes; winminmax retains the extreme. The distinction matters when diagnosing burst (short dip from transient miss) vs structural under-capacity (sustained low hit rate throughout the window).
+**Relevance to Cortex**: Alongside the ThreeHorizonLoad (pass 5) EWMA, add a `WinMinmax` for the minimum cache hit rate over a 5-minute window. If the minimum is below `LOW_WATERMARK`, structural pressure is confirmed regardless of the EWMA value.
+**Severity**: 2 (MEDIUM — wrong diagnosis leads to wrong eviction decisions; EWMA may smooth over a structural problem that WinMinmax would have caught)
+**Addressed by**: Phase 0.11 Refinement — WinMinmax Sliding-Window Min/Max (Linux kernel audit pass 6, score: 36). See `steal-integration-Linux-2026-05-25-pass6.md` P6-E1.
+
+---
+
+### 154. No Back-pressure on Dirty Entity Accumulation
+**Source-of-lesson**: Linux kernel `lib/lru_cache.c:67` — `max_pending_changes` cap; when `pending_changes >= max_pending_changes`, `LC_STARVING` flag is set and `lc_get()` returns `NULL`; callers must commit a transaction (flush) before adding more changes.
+**Pattern**: Without a cap on pending changes, a heavy-ingest session can accumulate thousands of dirty entities simultaneously, then spike-flush all of them at once. The STARVING gate forces incremental flushing by blocking new dirty entries when the queue is full.
+**Relevance to Cortex**: The DirtyBitmap (pass 4) accumulates dirty entity slots with no maximum. Under a `git clone` ingest of 5000 files, all 5000 entities go dirty in the first second. The flush interval then writes 5000 JSONL entries at once, causing a multi-second IO spike and GC pause.
+**Severity**: 3 (HIGH — burst IO spike on large ingests; can exceed OS file-write rate limits and cause visible latency to concurrent MCP tool calls)
+**Addressed by**: Phase 0.4 Refinement — DirtyGate max_pending_changes Back-pressure (Linux kernel audit pass 6, score: 36). See `steal-integration-Linux-2026-05-25-pass6.md` P6-E2.
+
+---
+
+### 155. Fire-and-Forget IO Writers Provide No Error Propagation to Callers
+**Source-of-lesson**: Linux kernel `lib/errseq.c:62` — `errseq_set/sample/check_and_advance`; any subscriber samples once and can later check whether any new error occurred since their sample; the SEEN bit prevents counter churn when no subscriber reads the error.
+**Pattern**: Cortex's JSONL write operations that are dispatched without `await` have no mechanism for the MCP tool handler that initiated them to discover whether the write succeeded. The handler returns a success response to the LLM regardless.
+**Relevance to Cortex**: A tool call that saves a concept triggers a JSONL write. If the JSONL file is locked by another process and the write fails silently, the LLM receives "saved successfully" and proceeds to reference the concept in follow-up calls — only to discover it doesn't exist on the next read.
+**Severity**: 3 (HIGH — false-success responses to LLM cause diverged mental models; LLM assumes data was persisted when it was not)
+**Addressed by**: Phase 5 Refinement — ErrSeq Error-Subscription Sampling (Linux kernel audit pass 6, score: 36). See `steal-integration-Linux-2026-05-25-pass6.md` P6-E3.
+
+---
+
+### 156. Config Object Torn Read Possible During Hot-Reload Across Await Boundaries
+**Source-of-lesson**: Linux kernel `include/linux/seqlock.h:42` — `seqcount_t { sequence }`; `read_seqcount_begin/retry` for lockless readers; `write_seqcount_begin/end` brackets the write; odd sequence = write in progress (readers retry); even = stable.
+**Pattern**: Cortex's file-watcher hot-reload can overwrite the config object at any point. An MCP tool handler that reads `config.maxEntities` before an `await` and `config.tokenBudget` after the `await` can see two different config versions — one field from old config, one from new. Each field is individually consistent, but the combination is not.
+**Relevance to Cortex**: Wrap the config object in a `SeqConfig<T>` that increments a counter around writes and lets readers retry if the counter changed during their read. Writers are never blocked by readers; readers only retry on the rare case of a concurrent write.
+**Severity**: 2 (MEDIUM — torn reads produce subtle wrong-behavior rather than crashes; most config fields are independent so the combination error is hard to detect in tests)
+**Addressed by**: Phase 0.11 Refinement — SeqConfig Hot-Reload Consistency (Linux kernel audit pass 7, score: 36). See `steal-integration-Linux-2026-05-25-pass7.md` P7-E2.
+
+---
+
+### 157. Stale Entity ID Silent Slot Reuse After LRU Eviction
+**Source-of-lesson**: Linux kernel `include/linux/poison.h:19` — `POISON_FREE = 0x6b`, `POISON_INUSE = 0x5a`, `LIST_POISON1 = 0x100`, `LIST_POISON2 = 0x122`; freed memory is written with a distinctive magic value so any stale pointer dereference crashes immediately at a known address rather than silently operating on recycled memory.
+**Pattern**: Cortex's LRU evicts entities from the entity Map without tombstoning or marking the evicted slot. If entity IDs are small integers that can be reused, a stale ID held by an in-flight LLM context could silently resolve to a new, unrelated entity that happens to occupy the same slot — producing subtly wrong context packs with no error signal.
+**Relevance to Cortex**: After LRU eviction, the entity ID should be logged as evicted. Any subsequent lookup of that ID within the same request window should return a clear error or a tombstone record, not silently succeed. If entity IDs are UUIDs or content hashes (never reused), this flaw does not apply — but that invariant is undocumented and code review cannot verify it without an explicit guard.
+**Severity**: 2 (MEDIUM — silent reuse requires ID recycling; if IDs are content-hashed this never fires. But the invariant is undocumented and code review cannot verify it without an explicit guard.)
+**Addressed by**: Phase 0.14 Refinement — Eviction Tombstone Guard (Linux kernel audit pass 8). See `steal-integration-Linux-2026-05-25-pass8.md` P8-F1 analysis.

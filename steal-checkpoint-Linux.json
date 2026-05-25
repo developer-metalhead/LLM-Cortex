@@ -1,0 +1,101 @@
+{
+  "step_completed": "8",
+  "audit_date": "2026-05-25",
+  "target": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\Linux",
+  "status": "complete",
+  "pass_1": {
+    "inventory_id_max": "G2",
+    "artifacts_written": [
+      "steal-inventory-Linux-2026-05-25.md",
+      "steal-inventory-Linux-2026-05-25.json",
+      "steal-integration-Linux-2026-05-25.md"
+    ],
+    "flaws_annotated": ["#46", "#50", "#109", "#143", "#144"],
+    "bucket_counts": { "A": 4, "B": 2, "C": 6, "D": 5, "E": 4, "F": 2, "G": 2 },
+    "top_findings": [
+      "vfs_cache_pressure user-configurable tunable (E1, score 36)",
+      "Field-level locking documentation convention (C1, score 30)",
+      "Rollback-safe two-phase notifier chain (E2, score 24)"
+    ]
+  },
+  "pass_2": {
+    "inventory_id_max": "G4",
+    "artifact_collision": true,
+    "artifact_suffix": "-claude",
+    "artifacts_written": [
+      "steal-inventory-Linux-2026-05-25-claude.md",
+      "steal-inventory-Linux-2026-05-25-claude.json",
+      "steal-integration-Linux-2026-05-25-claude.md"
+    ],
+    "flaws_annotated": ["#5", "#109", "#141", "#144"],
+    "flaw_added": "#145",
+    "implementation_plan_phases_appended": [
+      "Phase 0.17 Refinement — BFS Cycle Detection with Generation Counter",
+      "Phase 0.11 Refinement — DECLARE_EWMA Adaptive Compaction Pressure",
+      "Phase 5 Refinement — Bounded Event Queue + IN_Q_OVERFLOW Sentinel",
+      "Phase 0.11 Refinement — cortex.json Schema Bounds Validation",
+      "Phase 0.11 Refinement — Miss-Ratio Window → 3-Level Pressure Signal",
+      "Phase 13.5 Refinement — Shadow Entry + Refault Distance for Skeleton Cache",
+      "Phase 13.5 Refinement — Adaptive Context-Pack Window: get_next_ra_size Ramp",
+      "Phase 13.5 Refinement — Two-Tier CLOCK for Skeleton Cache"
+    ],
+    "bucket_counts": { "A": 0, "B": 1, "C": 5, "D": 2, "E": 4, "F": 1, "G": 2 },
+    "top_findings": [
+      "BFS Cycle Detection with Generation Counter (E5, score 36)",
+      "DECLARE_EWMA Adaptive Compaction Pressure (E6, score 36)",
+      "Bounded Event Queue + IN_Q_OVERFLOW Sentinel (E7, score 36)"
+    ]
+  },
+  "pass_3": {
+    "artifact_suffix": "-pass3",
+    "subsystems": ["ratelimit", "page_alloc WMARK", "kfifo", "printk/once_lite", "percpu_counter", "timer", "rcupdate"],
+    "artifacts_written": [
+      "steal-inventory-Linux-2026-05-25-pass3.md",
+      "steal-inventory-Linux-2026-05-25-pass3.json",
+      "steal-integration-Linux-2026-05-25-pass3.md"
+    ],
+    "flaws_annotated": ["#109", "#145"],
+    "flaws_added": ["#146", "#147"],
+    "implementation_plan_phases_appended": [
+      "Phase 5 Refinement — warnOnce DO_ONCE_LITE Sentinel",
+      "Phase 5 Refinement — RatelimitState Burst+Interval+Missed",
+      "Phase 0.11 Refinement — WMARK Three-Level Graduated Cache Pressure",
+      "Phase 0.4 Refinement — VersionedEntityCache Generation-Pointer Snapshot",
+      "Phase 7 Refinement — BatchedCounter Approximate Accumulation",
+      "Phase 5 Refinement — kfifo Power-of-2 Ring Queue for Compaction Work"
+    ],
+    "bucket_counts": { "A": 0, "B": 0, "C": 1, "D": 2, "E": 6, "F": 0, "G": 0 },
+    "top_findings": [
+      "warnOnce DO_ONCE_LITE sentinel (P3-E1, score 60)",
+      "RatelimitState burst+interval+missed (P3-E2, score 40)",
+      "WMARK three-level graduated cache pressure (P3-E3, score 40)"
+    ]
+  },
+  "pass_4": {
+    "artifact_suffix": "-pass4",
+    "subsystems": ["list.h", "refcount.h", "mempool.h", "err.h", "bitmap.h", "completion.h", "workqueue.h", "fs/notify/mark.c"],
+    "not_found": ["lib/win_minmax.c", "lib/crc32.c"],
+    "artifacts_written": [
+      "steal-inventory-Linux-2026-05-25-pass4.md",
+      "steal-inventory-Linux-2026-05-25-pass4.json",
+      "steal-integration-Linux-2026-05-25-pass4.md"
+    ],
+    "flaws_annotated": ["#147"],
+    "flaws_added": ["#148", "#149"],
+    "implementation_plan_phases_appended": [
+      "Phase 5 Refinement — IngestCompletion Dedup Gate",
+      "Phase 0.4 Refinement — CONCURRENCY.md Lock-Ordering Convention",
+      "Phase 13.5 Refinement — IntrusiveLRU Zero-Allocation O(1) Promotion",
+      "Phase 0.2 Refinement — ToolResult<T> Discriminated Union",
+      "Phase 0.4 Refinement — DirtyBitmap find_next_bit O(N/32) Scan",
+      "Phase 5 Refinement — WatcherDestroyQueue Deferred Teardown",
+      "Phase 0.4 Refinement — SaturatingRefCount Entity Lifetime"
+    ],
+    "bucket_counts": { "A": 0, "B": 0, "C": 5, "D": 2, "E": 3, "F": 1, "G": 0 },
+    "top_findings": [
+      "IngestCompletion dedup gate (P4-E1, score 60)",
+      "IntrusiveLRU zero-allocation list (P4-C1, score 60)",
+      "Lock-ordering comment convention (P4-E2, score 45)"
+    ]
+  }
+}
