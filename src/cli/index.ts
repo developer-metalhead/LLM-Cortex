@@ -30,6 +30,8 @@ import { runCompress } from "./compress.js";
 import { runStats } from "./stats.js";
 import { runSavings } from "./savings.js";
 import { runSource } from "./source.js";
+import { runSync } from "./sync.js";
+import { runSoul } from "./soul.js";
 // Smart Root Detection: Climb up until we find .knowledge or .git
 function findProjectRoot(startDir: string): string {
   let current = startDir;
@@ -427,6 +429,29 @@ program
   .option("--stats", "Show cache statistics instead of reading a file")
   .action(async (filePath, options) => {
     const code = await runSource(projectRoot, filePath, options);
+    process.exitCode = code;
+  });
+
+program
+  .command("sync")
+  .description("Check for pending knowledge-base changes and show sync status")
+  .option("--lens <name>", "Override cognitive lens (ENGINEERING, FORENSIC, CREATIVE, EXECUTION, STRATEGIC)")
+  .action(async (options) => {
+    const code = await runSync(projectRoot, { lens: options.lens as string | undefined });
+    process.exitCode = code;
+  });
+
+program
+  .command("soul")
+  .description("Manage the persistent soul engine (memory, cognitive lens, experience ledger)")
+  .argument("[subcommand]", "Subcommand: status, reset, export, import")
+  .option("-o, --output <path>", "Export output path")
+  .option("-f, --file <path>", "Import file path")
+  .action(async (subcommand, options) => {
+    const code = await runSoul(projectRoot, subcommand, {
+      output: options.output as string | undefined,
+      file: options.file as string | undefined,
+    });
     process.exitCode = code;
   });
 

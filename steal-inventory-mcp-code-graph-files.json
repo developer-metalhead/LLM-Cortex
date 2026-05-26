@@ -1,0 +1,21 @@
+﻿{
+  "audited_iso": "2026-05-24T00:00:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\mcp-code-graph",
+  "files": {
+    "src/index.ts": "2026-05-24T00:00:00Z",
+    "src/config.ts": "2026-05-24T00:00:00Z",
+    "src/utils.ts": "2026-05-24T00:00:00Z",
+    "README.md": "2026-05-24T00:00:00Z",
+    "SECURITY.md": "2026-05-24T00:00:00Z",
+    ".env.example": "2026-05-24T00:00:00Z",
+    ".github/workflows/publish-release.yml": "2026-05-24T00:00:00Z",
+    ".claude/commands/analyze-architecture.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/security-audit.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/repository-onboarding.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/technical-debt-analyzer.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/api-ecosystem-analyzer.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/migration-planner.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/performance-optimizer.md": "2026-05-24T00:00:00Z",
+    ".claude/commands/component-onboarding.md": "2026-05-24T00:00:00Z"
+  }
+}

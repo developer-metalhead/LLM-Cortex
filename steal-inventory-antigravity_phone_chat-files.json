@@ -1,0 +1,25 @@
+{
+  "audited_iso": "2026-05-23T00:00:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\connect4private\\antigravity_phone_chat",
+  "files": {
+    "server.js": "2026-05",
+    "generate_ssl.js": "2026-05",
+    "ui_inspector.js": "2026-05",
+    "launcher.py": "2026-05",
+    "package.json": "2026-05",
+    "public/index.html": "2026-05",
+    "public/login.html": "2026-05",
+    "public/js/app.js": "2026-05",
+    "public/css/style.css": "2026-05",
+    "README.md": "2026-05",
+    "CODE_DOCUMENTATION.md": "2026-05",
+    "DESIGN_PHILOSOPHY.md": "2026-05",
+    "SECURITY.md": "2026-05",
+    "RELEASE_NOTES.md": "2026-05",
+    ".env.example": "2026-05",
+    "start_ag_phone_connect.bat": "2026-05",
+    "start_ag_phone_connect.sh": "2026-05",
+    "install_context_menu.bat": "2026-05",
+    "install_context_menu.sh": "2026-05"
+  }
+}

@@ -27,3 +27,22 @@ This project uses **Project Cortex** via the `project-cortex` MCP server. The kn
 - **Strict Typing**: Leverage strict types in all new modules.
 - **Robust Error Handling**: Wrap files/IO in robust try-catches.
 - **Testing**: Maintain 100% test coverage for all new cache/analysis rules.
+- **Single source for shared constants**: Never define the same constant (`EXCLUDE_DIRS`, `SOURCE_EXTENSIONS`, `MAX_DIFF_CHARS`, etc.) in more than one file. All shared constants live in `src/constants.ts` and are imported from there. If a module needs a variant, extend the base: `new Set([...BASE_EXCLUDE_DIRS, ".mypy_cache"])`. Duplication causes silent divergence — one file gets updated, others drift with no error. Source-of-lesson: helpline F1 (flaw #139).
+- **LLM-agnostic enforcement**: Every code quality rule added to this file MUST also have a structural enforcement layer — lint rule, CI check, pre-commit hook, or type-system constraint — that works for any agent or contributor without reading this file. `CLAUDE.md` is a soft hint for Claude Code only. CI is the truth.
+
+## ⚡ Token Economics — Prompt-Cache Ordering
+When assembling LLM payloads (context packs, tool responses, registry output):
+- **Sort deterministically** before serializing: entity lists by `entity_id`, file lists by path, plugin/registry maps by key. Non-deterministic `Map`/`Set` iteration order silently invalidates the Anthropic prompt cache on every call.
+- **Preserve prior transcript bytes** unchanged where possible — don't reorder fields that were stable in the previous turn.
+- Applies to: `build_context_pack` entity ordering, `cortex_find` result ordering, any registry or plugin list emitted into prompts.
+- Source-of-lesson: openclaw `AGENTS.md:41`
+
+## 🔬 Prove-First Gate — Agentic Code Changes
+When an agent (including Claude Code) proposes changes to Cortex's own source or `.knowledge/`:
+1. **Prove**: reproduce the failing case → write or cite a regression test → produce a dirty diff showing proof.
+2. **Review**: human reviews the dirty diff → approves → agent commits exactly one fix per accepted change.
+- **Skip criteria** (do NOT proceed without proof): uncertain repro, guessed dependency behavior, no focused proof feasible.
+- Source-of-lesson: openclaw `.agents/skills/openclaw-small-bugfix-sweep/SKILL.md`
+
+## 🚫 Anti-Pattern — Never reduce CLAUDE.md to a redirect
+This file MUST contain Claude Code-specific overrides (the `source` MCP mandate, brevity stats rule, cache-ordering rule above) that differ from general agent instructions. Do not collapse this into a single shared AGENTS.md.

@@ -1,0 +1,28 @@
+{
+  "step_completed": "8",
+  "audit_date": "2026-05-25",
+  "target": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\AtomSpace",
+  "inventory_id_max": "G2",
+  "status": "complete",
+  "artifacts_written": [
+    "steal-inventory-AtomSpace-2026-05-25-claude.md",
+    "steal-inventory-AtomSpace-2026-05-25-claude.json",
+    "steal-integration-AtomSpace-2026-05-25-claude.md",
+    "steal-checkpoint-AtomSpace.json"
+  ],
+  "flaws_annotated": ["#16", "#19", "#44", "#46", "#113"],
+  "bucket_counts": {
+    "A": 4,
+    "B": 2,
+    "C": 5,
+    "D": 5,
+    "E": 6,
+    "F": 2,
+    "G": 2
+  },
+  "top_findings": [
+    "depth() entity existence gate (E1, score 48)",
+    "StateLink atomic singleton state (E2, score 32)",
+    "content_compare with diagnostics (E5, score 27)"
+  ]
+}

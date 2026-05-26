@@ -1,0 +1,15 @@
+﻿{
+  "step_completed": "8",
+  "target": "RepoHyper",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\RepoHyper",
+  "audit_iso": "2026-05-24T00:00:00Z",
+  "inventory_id_max": "G2",
+  "total_items": 17,
+  "artifacts": [
+    "steal-inventory-RepoHyper-2026-05-24.md",
+    "steal-inventory-RepoHyper-2026-05-24.json",
+    "steal-inventory-RepoHyper-files.json",
+    "steal-integration-RepoHyper-2026-05-24.md",
+    "steal-checkpoint-RepoHyper.json"
+  ]
+}

@@ -26,12 +26,21 @@ export async function runContextBuild(
 
   console.log(`📦 Building Context Pack (Budget: ${budget} tokens)...`);
   
+  const { SoulEngine } = await import("../knowledge/soul.js");
+  const soul = new SoulEngine(projectRoot);
+  try {
+    await soul.load();
+  } catch {}
+  const activeLens = soul.detectActiveLens();
+
   const pack = buildContextPack(state, {
     budget,
     scope: options.scope,
     depth,
     format,
     projectRoot,
+    lens: activeLens,
+    soulEngine: soul,
   });
 
   const outputContent = pack.output;

@@ -1,0 +1,17 @@
+{
+  "step_completed": "8",
+  "target": "openclaw",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\connect4private\\openclaw",
+  "commit_sha": "4ea089b7feedd79e1ff129ad239451026b720b80",
+  "audited_iso": "2026-05-23T00:00:00Z",
+  "inventory_id_max": 37,
+  "artifacts": {
+    "inventory_json": "steal-inventory-openclaw-2026-05-23.json",
+    "inventory_md": "steal-inventory-openclaw-2026-05-23.md",
+    "files_cache": "steal-inventory-openclaw-files.json",
+    "integration_scratch": "steal-integration-openclaw-2026-05-23.md",
+    "checkpoint": "steal-checkpoint-openclaw.json"
+  },
+  "bucket_counts": { "A": 7, "B": 3, "C": 12, "D": 7, "E": 3, "F": 2, "G": 3 },
+  "status": "complete"
+}

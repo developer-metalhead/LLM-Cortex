@@ -1,0 +1,31 @@
+{
+  "audited_iso": "2026-05-24T00:00:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\repomix",
+  "files": {
+    "repomix/src/core/packager.ts": "2026-05-24",
+    "repomix/src/core/metrics/calculateMetrics.ts": "2026-05-24",
+    "repomix/src/core/metrics/tokenCountCache.ts": "2026-05-24",
+    "repomix/src/core/file/fileSearch.ts": "2026-05-24",
+    "repomix/src/core/security/securityCheck.ts": "2026-05-24",
+    "repomix/src/core/security/workers/securityCheckWorker.ts": "2026-05-24",
+    "repomix/src/core/treeSitter/parseFile.ts": "2026-05-24",
+    "repomix/src/core/treeSitter/languageConfig.ts": "2026-05-24",
+    "repomix/src/core/output/outputGenerate.ts": "2026-05-24",
+    "repomix/src/core/output/outputSort.ts": "2026-05-24",
+    "repomix/src/core/output/outputSplit.ts": "2026-05-24",
+    "repomix/src/core/skill/packSkill.ts": "2026-05-24",
+    "repomix/src/core/skill/skillTechStack.ts": "2026-05-24",
+    "repomix/src/core/git/gitHubArchive.ts": "2026-05-24",
+    "repomix/src/core/git/gitRemoteParse.ts": "2026-05-24",
+    "repomix/src/config/configSchema.ts": "2026-05-24",
+    "repomix/src/config/configLoad.ts": "2026-05-24",
+    "repomix/src/mcp/tools/mcpToolRuntime.ts": "2026-05-24",
+    "repomix/src/mcp/tools/grepRepomixOutputTool.ts": "2026-05-24",
+    "repomix/src/mcp/tools/attachPackedOutputTool.ts": "2026-05-24",
+    "repomix/src/shared/processConcurrency.ts": "2026-05-24",
+    "repomix/src/cli/cliReport.ts": "2026-05-24",
+    "repomix/src/cli/reporters/tokenCountTreeReporter.ts": "2026-05-24",
+    "repomix/package.json": "2026-05-24",
+    "repomix/README.md": "2026-05-24"
+  }
+}

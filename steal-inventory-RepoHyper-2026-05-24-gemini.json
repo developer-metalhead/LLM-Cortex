@@ -1,0 +1,87 @@
+{
+  "audited_iso": "2026-05-24T14:26:00Z",
+  "target_path": "C:\\Users\\kumsatwi\\Desktop\\StEp\\personalProject\\RepoHyper",
+  "commit_sha": "d2ba69a",
+  "mode": "full",
+  "calibration_verdict": "Novel / research (<5k LOC but uses ML/Graph techniques). Deep audit.",
+  "inventory": [
+    {
+      "id": 1,
+      "bucket": "E",
+      "name": "Local Dense Embedding Search (UniXcoder/CodeT5)",
+      "source_file": "src/repo_graph/repo_to_graph.py",
+      "source_line": 32,
+      "description": "Uses lightweight local models (UniXcoder) to generate dense embeddings for semantic search.",
+      "closes_flaw": 28,
+      "confidence": "high",
+      "steel_man": "Adding PyTorch/transformers to Cortex's distribution would massively bloat the install size and memory footprint.",
+      "score_components": {
+        "severity": 4,
+        "fit": 2,
+        "effort": 3,
+        "recency": 0.8
+      },
+      "composite_score": 6,
+      "last_modified": "2024-03-01T00:00:00Z",
+      "has_tests": false
+    },
+    {
+      "id": 2,
+      "bucket": "C",
+      "name": "Proximity Search with BFS Radius Expansion",
+      "source_file": "src/repo_graph/search_policy/knn_search.py",
+      "source_line": 57,
+      "description": "After finding KNN centers, it performs a bounded BFS (radius and max_size constraints) across the topological graph to pull in adjacent context.",
+      "confidence": "high",
+      "steel_man": "Cortex's existing Context Packs and Proximity Reranking might already naturally pull in this information without an explicit graph BFS.",
+      "score_components": {
+        "severity": 4,
+        "fit": 4,
+        "effort": 2,
+        "recency": 0.8
+      },
+      "composite_score": 25,
+      "last_modified": "2024-03-01T00:00:00Z",
+      "has_tests": false
+    },
+    {
+      "id": 3,
+      "bucket": "C",
+      "name": "Path-Pattern DFS Expansion",
+      "source_file": "src/repo_graph/search_policy/knn_search.py",
+      "source_line": 131,
+      "description": "Expands the graph context only if the DFS path follows a specific sequence of edge types (e.g., import -> call), driven by a patterns.json file.",
+      "confidence": "high",
+      "steel_man": "Maintaining strict edge-type schemas across dynamic workspaces is fragile compared to Cortex's generalized [[WikiLink]] graph.",
+      "score_components": {
+        "severity": 3,
+        "fit": 3,
+        "effort": 2,
+        "recency": 0.8
+      },
+      "composite_score": 14,
+      "last_modified": "2024-03-01T00:00:00Z",
+      "has_tests": false
+    },
+    {
+      "id": 4,
+      "bucket": "B",
+      "name": "Explicit Tree-Sitter Traversal Queries",
+      "source_file": "src/repo_graph/parse_source_code.py",
+      "source_line": 17,
+      "description": "Uses Tree-Sitter queries with negative `#not-a-child-of` constraints to cleanly extract module-level functions separately from methods.",
+      "confidence": "high",
+      "steel_man": "Cortex's AST skeleton extractor is already heavily optimized in Phase 13.7; switching to this query style might break existing robust delta compression."
+    },
+    {
+      "id": 5,
+      "bucket": "D",
+      "name": "Graph Neural Network Context Link Predictor",
+      "source_file": "src/models/GNNAK.py",
+      "source_line": 309,
+      "description": "Uses a deep GNN to rank and predict the most useful topological context nodes for code completion.",
+      "confidence": "high",
+      "steel_man": "Violates Cortex Principle #1 and #3: Local-first and LLM-cost-conscious. We prefer fast heuristics over training a GNN per repository."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://cortex.local/schemas/steal-inventory.json",
+  "title": "Steal Audit Inventory",
+  "type": "object",
+  "required": ["audited_iso", "target_path", "target_type", "commit", "mode", "features"],
+  "properties": {
+    "audited_iso": { "type": "string", "format": "date-time" },
+    "target_path": { "type": "string" },
+    "target_type": {
+      "type": "string",
+      "enum": ["node", "python", "rust", "go", "java", "kotlin", "monorepo", "other"]
+    },
+    "commit": {
+      "type": "object",
+      "properties": {
+        "sha": { "type": "string" },
+        "branch": { "type": "string" },
+        "date": { "type": "string" }
+      }
+    },
+    "mode": { "type": "string", "enum": ["full", "diff", "partial"] },
+    "prior_sha": { "type": ["string", "null"] },
+    "partial_reason": { "type": ["string", "null"], "description": "Set when mode=partial; explains which budget was hit" },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "file", "line", "description"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "func": { "type": "string" },
+          "description": { "type": "string" },
+          "bucket": { "type": ["string", "null"], "enum": ["A", "B", "C", "D", "E", "F", "G", null] },
+          "phase_ref": { "type": ["string", "null"], "description": "For A/B: phase number cited" },
+          "flaw_ref": { "type": ["integer", "null"], "description": "For E: flaw number cited" },
+          "principle_violated": { "type": ["string", "null"], "description": "For D: which Cortex principle" },
+          "score": { "type": ["integer", "null"], "description": "severity × fit × (4 − effort)" },
+          "severity": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+          "fit": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+          "effort": { "type": ["integer", "null"], "minimum": 1, "maximum": 3 },
+          "confidence": { "type": ["string", "null"], "enum": ["high", "medium", "low", null] },
+          "counter_case": { "type": ["string", "null"], "description": "Mandatory for C/E" },
+          "inherited": { "type": "boolean", "default": false, "description": "True if carried over from prior inventory in diff mode" }
+        }
+      }
+    }
+  }
+}
